@@ -15,26 +15,6 @@
       font-size: 16px;
       margin-top: 10px;
     }
-    #status {
-      margin-top: 20px;
-      padding: 10px;
-      border-radius: 5px;
-    }
-    .error {
-      color: #721c24;
-      background-color: #f8d7da;
-      border: 1px solid #f5c6cb;
-    }
-    .success {
-      color: #155724;
-      background-color: #d4edda;
-      border: 1px solid #c3e6cb;
-    }
-    .processing {
-      color: #004085;
-      background-color: #cce5ff;
-      border: 1px solid #b8daff;
-    }
   </style>
 </head>
 <body>
@@ -43,7 +23,7 @@
 
   <div id="buySection" style="margin-top: 30px;">
     <p>Enter TON amount:</p>
-    <input type="number" id="tonAmount" placeholder="Amount in TON (min 0.1)" min="0.1" step="0.1">
+    <input type="number" id="tonAmount" placeholder="Amount in TON" min="0.1" step="0.1">
     <br>
     <button id="buyBtn">Buy SJ COIN</button>
     <p id="status"></p>
@@ -53,60 +33,41 @@
     import { TonConnectUI } from "https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js";
 
     const tonConnectUI = new TonConnectUI({
-      manifestUrl: "https://simojibou.github.io/sjcoin-web3/tonconnect-manifest.json",
+      manifestUrl: "https://simojibou.github.io/sjcoin25/tonconnect-manifest.json",
       buttonRootId: "connectButton"
     });
 
-    const statusEl = document.getElementById("status");
-    const buyBtn = document.getElementById("buyBtn");
-    const tonAmountEl = document.getElementById("tonAmount");
+    document.getElementById("buyBtn").addEventListener("click", async () => {
+      const wallet = await tonConnectUI.connectedWallet;
+      if (!wallet) {
+        alert("⛔ يرجى ربط المحفظة أولاً.");
+        return;
+      }
 
-    function showStatus(message, type) {
-      statusEl.textContent = message;
-      statusEl.className = type;
-    }
+      const amountTON = parseFloat(document.getElementById("tonAmount").value);
+      if (isNaN(amountTON) || amountTON <= 0) {
+        alert("⚠️ أدخل كمية صحيحة من TON.");
+        return;
+      }
 
-    buyBtn.addEventListener("click", async () => {
+      const nanoTON = Math.floor(amountTON * 1e9);
+
       try {
-        const wallet = await tonConnectUI.connectedWallet;
-        if (!wallet) {
-          showStatus("Please connect your wallet first.", "error");
-          return;
-        }
-
-        const amountTON = parseFloat(tonAmountEl.value);
-        if (isNaN(amountTON) || amountTON < 0.1) {
-          showStatus("Please enter a valid amount (minimum 0.1 TON).", "error");
-          return;
-        }
-
-        const nanoTON = Math.floor(amountTON * 1e9);
-        
-        showStatus("Processing transaction...", "processing");
-        buyBtn.disabled = true;
-
         await wallet.sendTransaction({
           validUntil: Math.floor(Date.now() / 1000) + 300,
           messages: [
             {
-              address: "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW",
+              address: "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW", // SJ Coin Address
               amount: nanoTON.toString()
             }
           ]
         });
-        
-        showStatus("Transaction sent! You will receive SJ COIN soon.", "success");
+        document.getElementById("status").innerText = "✅ تم إرسال المعاملة! ستصلك SJ COIN قريبًا.";
       } catch (err) {
         console.error(err);
-        showStatus("Transaction failed or was cancelled.", "error");
-      } finally {
-        buyBtn.disabled = false;
+        document.getElementById("status").innerText = "❌ فشلت المعاملة أو تم إلغاؤها.";
       }
     });
-  </script>
-  
-  <script nomodule>
-    document.getElementById("status").innerHTML = "Your browser doesn't support modern JavaScript. Please use a newer browser.";
   </script>
 </body>
 </html>
