@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Coin Connect</title>
+  <title>SJ Coin Wallet Connect</title>
   <style>
     body {
       background: #121212;
@@ -21,15 +21,16 @@
   </style>
 </head>
 <body>
-  <h1>اتصل بمحفظتك TON</h1>
+  <h1>اتصل بمحفظة TON</h1>
   <div id="ton-connect"></div>
 
-  <!-- استدعاء TonConnect UI -->
+  <!-- تحميل TonConnect UI (بدون استخدام type="module") -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
   <script>
-    // تحميل TonConnect UI بعد تحميل الصفحة
+    // تأكد أن TonConnectUI متوفر بعد تحميل الصفحة
     window.addEventListener('DOMContentLoaded', () => {
-      const tonConnectUI = new window.TonConnectUI.TonConnectUI({
+      const tonConnectUI = new TonConnectUI.TonConnectUI({
         manifestUrl: 'https://simojibou.github.io/sjcoin25/tonconnect-manifest.json',
         buttonRootId: 'ton-connect'
       });
@@ -37,3 +38,4 @@
   </script>
 </body>
 </html>
+
