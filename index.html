@@ -1,41 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Coin Wallet Connect</title>
+  <meta charset="UTF-8">
+  <title>SJ Coin - Connect Wallet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      background: #121212;
-      color: #ffffff;
-      font-family: sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
     }
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    #ton-connect {
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <h1>اتصل بمحفظة TON</h1>
+  <h1>🚀 اتصل بمحفظتك TON</h1>
   <div id="ton-connect"></div>
 
-  <!-- تحميل TonConnect UI (بدون استخدام type="module") -->
+  <!-- تحميل TonConnect UI -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
   <script>
-    // تأكد أن TonConnectUI متوفر بعد تحميل الصفحة
     window.addEventListener('DOMContentLoaded', () => {
       const tonConnectUI = new TonConnectUI.TonConnectUI({
         manifestUrl: 'https://simojibou.github.io/sjcoin25/tonconnect-manifest.json',
         buttonRootId: 'ton-connect'
       });
+
+      // تحقق مما إذا كان المستخدم متصلًا
+      tonConnectUI.connected.then((isConnected) => {
+        if (isConnected) {
+          console.log('✅ Wallet already connected');
+        }
+      });
     });
   </script>
 </body>
 </html>
-
