@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Buy SJ COIN</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f2f2f2;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Buy SJ COIN</h1>
+  <div id="connectButton"></div>
+
+  <div id="buySection" style="margin-top: 30px;">
+    <p>Enter TON amount:</p>
+    <input type="number" id="tonAmount" placeholder="Amount in TON" min="0.1" step="0.1">
+    <br>
+    <button id="buyBtn">Buy SJ COIN</button>
+    <p id="status"></p>
+  </div>
+
+  <script type="module">
+    import { TonConnectUI } from "https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js";
+
+    const tonConnectUI = new TonConnectUI({
+      manifestUrl: "https://simojibou.github.io/sjcoin-web3/tonconnect-manifest.json",
+      buttonRootId: "connectButton"
+    });
+
+    document.getElementById("buyBtn").addEventListener("click", async () => {
+      const wallet = await tonConnectUI.connectedWallet;
+      if (!wallet) {
+        alert("⛔ يرجى ربط المحفظة أولاً.");
+        return;
+      }
+
+      const amountTON = parseFloat(document.getElementById("tonAmount").value);
+      if (isNaN(amountTON) || amountTON <= 0) {
+        alert("⚠️ أدخل كمية صحيحة من TON.");
+        return;
+      }
+
+      const nanoTON = Math.floor(amountTON * 1e9);
+
+      try {
+        await wallet.sendTransaction({
+          validUntil: Math.floor(Date.now() / 1000) + 300,
+          messages: [
+            {
+              address: "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW",
+              amount: nanoTON.toString()
+            }
+          ]
+        });
+        document.getElementById("status").innerText = "✅ تم إرسال المعاملة! ستصلك SJ COIN قريبًا.";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "❌ فشلت المعاملة أو تم إلغاؤها.";
+      }
+    });
+  </script>
+</body>
+</html>
