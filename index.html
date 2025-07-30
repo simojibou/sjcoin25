@@ -2,18 +2,15 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>SJ Coin - Connect Wallet</title>
+  <title>Connect to TON Wallet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      background-color: #111;
+      background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 50px;
-    }
-    h1 {
-      margin-bottom: 30px;
     }
     #ton-connect {
       display: inline-block;
@@ -21,23 +18,20 @@
   </style>
 </head>
 <body>
-  <h1>🚀 اتصل بمحفظتك TON</h1>
+  <h1>اتصل بمحفظة TON</h1>
   <div id="ton-connect"></div>
 
-  <!-- تحميل TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
+  <script src="https://unpkg.com/@tonconnect/ui@latest"></script>
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const tonConnectUI = new TonConnectUI.TonConnectUI({
         manifestUrl: 'https://simojibou.github.io/sjcoin25/tonconnect-manifest.json',
         buttonRootId: 'ton-connect'
       });
 
-      // تحقق مما إذا كان المستخدم متصلًا
-      tonConnectUI.connected.then((isConnected) => {
-        if (isConnected) {
-          console.log('✅ Wallet already connected');
+      tonConnectUI.onStatusChange(wallet => {
+        if (wallet) {
+          console.log("✅ Wallet connected:", wallet);
         }
       });
     });
