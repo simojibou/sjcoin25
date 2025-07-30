@@ -1,11 +1,7 @@
-
 {
-  "manifest_version": "1",
-  "name": "SJ COIN Web3",
-  "description": "Buy SJ COIN using TON",
-  "url": "https://simojibou.github.io/sjcoin-web3",
-  "icons": ["https://raw.githubusercontent.com/simojibou/logo/main/sj.png"],
-  "bridge_url": "https://bridge.tonapi.io/bridge",
-  "terms_of_use_url": "https://simojibou.github.io/sjcoin-web3/terms",
-  "privacy_policy_url": "https://simojibou.github.io/sjcoin-web3/privacy"
+  "url": "https://simojibou.github.io/sjcoin25/",
+  "name": "SJ COIN",
+  "iconUrl": "https://raw.githubusercontent.com/simojibou/logo/main/sjcoin.png",
+  "termsOfUseUrl": "https://simojibou.github.io/sjcoin25/terms.html",
+  "privacyPolicyUrl": "https://simojibou.github.io/sjcoin25/privacy.html"
 }
