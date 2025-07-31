@@ -1,62 +1,78 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SJ COIN – The Future of Crypto</title>
   <style>
-    body {
+    * {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: #0d0d0d;
-      color: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+      padding: 0;
+      box-sizing: border-box;
     }
 
+    body, html {
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Background video */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      object-fit: cover;
+      z-index: -1;
+      filter: brightness(0.2);
+    }
+
+    /* Card overlay */
     .card {
-      background-color: #1a1a1a;
-      max-width: 500px;
-      width: 100%;
-      padding: 30px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.75);
       border-radius: 16px;
-      box-shadow: 0 0 20px rgba(0, 170, 255, 0.2);
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
       text-align: center;
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
     }
 
     .logo {
       width: 100px;
-      margin-bottom: 20px;
       border-radius: 50%;
+      margin-bottom: 20px;
     }
 
     h1 {
-      margin-bottom: 10px;
-      font-size: 28px;
       color: #00aaff;
+      margin-bottom: 10px;
     }
 
     p {
-      margin: 8px 0;
-      line-height: 1.6;
-      color: #cccccc;
+      margin: 10px 0;
+      color: #ccc;
     }
 
     .wallet-box {
-      background: #333;
+      background: #222;
       padding: 10px;
       border-radius: 8px;
       word-break: break-all;
-      margin-top: 10px;
-      font-size: 14px;
       color: #00ffcc;
+      font-size: 14px;
     }
 
     .buy-button {
       display: inline-block;
-      margin-top: 25px;
+      margin-top: 20px;
       padding: 14px 28px;
       background-color: #00aaff;
       color: #fff;
@@ -70,7 +86,7 @@
       background-color: #008ecc;
     }
 
-    @media screen and (max-width: 480px) {
+    @media (max-width: 480px) {
       .card {
         padding: 20px;
       }
@@ -78,13 +94,21 @@
   </style>
 </head>
 <body>
+
+  <!-- Background video -->
+  <video autoplay muted loop playsinline id="bg-video">
+    <source src="background.mp4" type="video/mp4">
+    Your browser does not support HTML5 video.
+  </video>
+
+  <!-- Overlay content -->
   <div class="card">
-    <img src="https://raw.githubusercontent.com/simojibou/logo/91b7da618ec5234619acd54bd1bef6c64ffe4a10/logo.PNG" alt="SJ Coin Logo" class="logo" />
+    <img src="https://i.ibb.co/9rWJ8Xp/sj-logo.png" alt="SJ Coin Logo" class="logo" />
     <h1>SJ COIN</h1>
     <p>The future of decentralized finance is here.</p>
     <p><strong>Total Supply:</strong> 100,000,000,000,000 SJ</p>
     <p><strong>Launch Date:</strong> July 30, 2025</p>
-    <p><strong>Official Wallet Address:</strong></p>
+    <p><strong>Official Wallet:</strong></p>
     <div class="wallet-box">
       UQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz
     </div>
@@ -96,5 +120,6 @@
       💰 Buy 1B SJ COIN Now
     </a>
   </div>
+
 </body>
 </html>
