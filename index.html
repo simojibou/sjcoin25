@@ -2,124 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ COIN – The Future of Crypto</title>
+  <title>SJ Coin - Buy Now</title>
   <style>
-    * {
+    body {
       margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body, html {
-      height: 100%;
-      font-family: 'Segoe UI', sans-serif;
-      overflow: hidden;
-    }
-
-    /* Background video */
-    #bg-video {
-      position: fixed;
-      top: 0;
-      left: 0;
-      min-width: 100%;
-      min-height: 100%;
-      object-fit: cover;
-      z-index: -1;
-      filter: brightness(0.2);
-    }
-
-    /* Card overlay */
-    .card {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.75);
-      border-radius: 16px;
-      padding: 30px;
-      max-width: 500px;
-      width: 90%;
-      text-align: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: url('https://assets.codepen.io/605876/3d-blur-bg.svg') no-repeat center center fixed;
+      background-size: cover;
       color: #ffffff;
-      box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
+      text-align: center;
     }
-
+    .container {
+      padding: 100px 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 20px;
+      max-width: 600px;
+      margin: 100px auto;
+      box-shadow: 0 0 25px rgba(0, 255, 180, 0.4);
+    }
     .logo {
-      width: 100px;
-      border-radius: 50%;
+      width: 120px;
       margin-bottom: 20px;
     }
-
     h1 {
-      color: #00aaff;
+      font-size: 2.8rem;
       margin-bottom: 10px;
     }
-
     p {
-      margin: 10px 0;
-      color: #ccc;
+      font-size: 1.2rem;
+      margin-bottom: 30px;
     }
-
-    .wallet-box {
-      background: #222;
-      padding: 10px;
-      border-radius: 8px;
-      word-break: break-all;
-      color: #00ffcc;
-      font-size: 14px;
-    }
-
     .buy-button {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 14px 28px;
-      background-color: #00aaff;
-      color: #fff;
+      background-color: #00ffa0;
+      color: #000;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2rem;
       text-decoration: none;
-      font-size: 16px;
-      border-radius: 10px;
-      transition: background 0.3s;
+      box-shadow: 0 0 10px #00ffa0;
+      transition: 0.3s;
     }
-
     .buy-button:hover {
-      background-color: #008ecc;
-    }
-
-    @media (max-width: 480px) {
-      .card {
-        padding: 20px;
-      }
+      background-color: #00d68f;
     }
   </style>
 </head>
 <body>
-
-  <!-- Background video -->
-  <video autoplay muted loop playsinline id="bg-video">
-    <source src="background.mp4" type="video/mp4">
-    Your browser does not support HTML5 video.
-  </video>
-
-  <!-- Overlay content -->
-  <div class="card">
-    <img src="https://i.ibb.co/9rWJ8Xp/sj-logo.png" alt="SJ Coin Logo" class="logo" />
-    <h1>SJ COIN</h1>
-    <p>The future of decentralized finance is here.</p>
-    <p><strong>Total Supply:</strong> 100,000,000,000,000 SJ</p>
-    <p><strong>Launch Date:</strong> July 30, 2025</p>
-    <p><strong>Official Wallet:</strong></p>
-    <div class="wallet-box">
-      UQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz
-    </div>
-    <a 
-      class="buy-button" 
-      href="https://dedust.io/swap/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2/TON?input=TON&output=EQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ctT&amount=1000000000" 
-      target="_blank"
-    >
-      💰 Buy 1B SJ COIN Now
-    </a>
+  <div class="container">
+    <img src="https://simojibou.github.io/sjcoin25/logo.png" alt="SJ Coin Logo" class="logo" />
+    <h1>SJ Coin</h1>
+    <p>The future of decentralized rewards. Tap to earn, swap freely.</p>
+    <a class="buy-button" href="https://dedust.io/swap/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2/TON?input=TON&output=EQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ctT&amount=1000000000" target="_blank">Buy SJ Coin</a>
   </div>
-
 </body>
 </html>
