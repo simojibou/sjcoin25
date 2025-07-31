@@ -1,59 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SJ Coin - Buy Now</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SJ Coin Purchase</title>
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: url('https://assets.codepen.io/605876/3d-blur-bg.svg') no-repeat center center fixed;
-      background-size: cover;
-      color: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      color: white;
       text-align: center;
+      background-color: #0f0f0f;
     }
-    .container {
-      padding: 100px 20px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 20px;
-      max-width: 600px;
-      margin: 100px auto;
-      box-shadow: 0 0 25px rgba(0, 255, 180, 0.4);
+
+    header {
+      padding: 20px;
+      background: #111;
     }
-    .logo {
-      width: 120px;
-      margin-bottom: 20px;
+
+    header img {
+      height: 60px;
     }
+
     h1 {
-      font-size: 2.8rem;
-      margin-bottom: 10px;
+      margin: 20px 0 10px;
+      font-size: 2em;
     }
+
     p {
-      font-size: 1.2rem;
-      margin-bottom: 30px;
+      color: #ccc;
     }
-    .buy-button {
-      background-color: #00ffa0;
-      color: #000;
+
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
       padding: 15px 30px;
-      border: none;
-      border-radius: 50px;
-      font-size: 1.2rem;
+      background: #00b894;
+      color: white;
       text-decoration: none;
-      box-shadow: 0 0 10px #00ffa0;
+      font-size: 1.2em;
+      border-radius: 8px;
       transition: 0.3s;
     }
-    .buy-button:hover {
-      background-color: #00d68f;
+
+    .btn:hover {
+      background: #019875;
+    }
+
+    .sketchfab-embed-wrapper {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    footer {
+      padding: 20px;
+      font-size: 14px;
+      background: #111;
+      color: #888;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="https://simojibou.github.io/sjcoin25/logo.png" alt="SJ Coin Logo" class="logo" />
-    <h1>SJ Coin</h1>
-    <p>The future of decentralized rewards. Tap to earn, swap freely.</p>
-    <a class="buy-button" href="https://dedust.io/swap/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2/TON?input=TON&output=EQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ctT&amount=1000000000" target="_blank">Buy SJ Coin</a>
+
+  <header>
+    <img src="https://i.ibb.co/Z6Y61Mz/sjcoin-logo.png" alt="SJ Coin Logo" />
+    <h1>Buy SJ Coin</h1>
+    <p>Swap TON for SJ Coin securely using DeDust</p>
+  </header>
+
+  <a class="btn" href="https://dedust.io/swap/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2/TON?input=TON&output=EQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ctT&amount=1000000000" target="_blank">
+    Swap Now
+  </a>
+
+  <div class="sketchfab-embed-wrapper">
+    <iframe title="Littlest Tokyo" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"
+      allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport
+      execution-while-not-rendered web-share
+      src="https://sketchfab.com/models/94b24a60dc1b48248de50bf087c0f042/embed">
+    </iframe>
   </div>
+
+  <footer>
+    Smart contract on <a href="https://tonscan.org/jetton/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2#source" target="_blank">TONScan</a>
+  </footer>
+
 </body>
 </html>
