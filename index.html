@@ -1,116 +1,60 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <title>اتصل بمحفظة TON | SJ Coin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- خط من Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Cairo&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ Coin Wallet Connect</title>
+  <script type="module" src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
     body {
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: #e0e0e0;
-      font-family: 'Cairo', Arial, sans-serif;
-      margin: 0;
-      padding: 0 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #101820, #2c3e50);
+      color: #fff;
       text-align: center;
+      padding: 30px;
+    }
+    .card {
+      background-color: #1f2a38;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 0 10px #00ffa2;
+      max-width: 400px;
+      margin: 0 auto;
     }
     h1 {
-      font-size: 2.8rem;
-      margin-bottom: 10px;
-      color: #00d8ff;
-      text-shadow: 0 0 5px #00d8ff;
+      color: #00ffa2;
     }
     #ton-connect {
-      margin: 30px auto;
-      display: inline-block;
-    }
-    #status {
       margin-top: 20px;
-      font-size: 1.2rem;
-      color: #a0ffa0;
-      min-height: 1.5em;
-      font-weight: bold;
     }
-    button {
-      background: #00d8ff;
-      border: none;
-      border-radius: 12px;
-      padding: 14px 30px;
-      font-size: 1.3rem;
-      color: #000;
-      cursor: pointer;
-      transition: background 0.3s ease, box-shadow 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 5px 15px rgba(0, 216, 255, 0.5);
+    .note {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #ccc;
     }
-    button:hover {
-      background: #00a1c6;
-      box-shadow: 0 8px 20px rgba(0, 161, 198, 0.7);
-    }
-    button svg {
-      width: 24px;
-      height: 24px;
-    }
-    footer {
-      margin-top: auto;
-      padding: 20px 0;
-      font-size: 0.9rem;
-      color: #666;
-    }
-    @media (max-width: 480px) {
-      h1 {
-        font-size: 2rem;
-      }
-      button {
-        font-size: 1.1rem;
-        padding: 12px 24px;
-      }
+    .note strong {
+      color: #00ffa2;
     }
   </style>
 </head>
 <body>
 
-  <h1>اتصل بمحفظة TON</h1>
+  <div class="card">
+    <h1>🎉 مرحبًا بك في SJ Coin</h1>
+    <p>اتصل بمحفظتك لتبدأ رحلتك في عالم Web3</p>
 
-  <div id="ton-connect"></div>
+    <!-- زر TonConnect -->
+    <div id="ton-connect"></div>
 
-  <div id="status">لم يتم الاتصال بعد</div>
+    <div class="note">
+      💡 <strong>افتح هذا الموقع من داخل Telegram</strong> ليتصل تلقائيًا بمحفظة Telegram Wallet.
+    </div>
+  </div>
 
-  <footer>© 2025 SJ Coin - جميع الحقوق محفوظة</footer>
-
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const statusEl = document.getElementById('status');
-
-      const tonConnectUI = new TonConnectUI({
-        manifestUrl: 'https://simojibou.github.io/sjcoin25/tonconnect-manifest.json',
-        buttonRootId: 'ton-connect',
-        buttonOptions: {
-          text: 'اتصل بمحفظة TON',
-          icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="#000" viewBox="0 0 24 24"><path d="M12 0l-12 22h24l-12-22z"/></svg>`
-        }
-      });
-
-      tonConnectUI.onStatusChange(wallet => {
-        if (wallet) {
-          console.log("✅ Wallet connected:", wallet);
-          statusEl.textContent = `تم الاتصال: ${wallet.account.address}`;
-          statusEl.style.color = '#a0ffa0';
-        } else {
-          console.log("Wallet disconnected");
-          statusEl.textContent = 'لم يتم الاتصال بعد';
-          statusEl.style.color = '#ff7070';
-        }
-      });
+  <script type="module">
+    const tonConnectUI = new TonConnectUI.TonConnectUI({
+      manifestUrl: 'https://simojibou.github.io/sjcoin25/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
     });
   </script>
 
