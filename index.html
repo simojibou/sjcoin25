@@ -1,80 +1,97 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>شراء SJ COIN</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- ✅ Telegram Mini App SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- ✅ TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
-  <!-- ✅ تنسيق بسيط -->
+  <meta charset="UTF-8">
+  <title>Tap2Earn - Friends</title>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background: #f8f8f8;
-      color: #222;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #e0f7fa, #fff);
+      margin: 0;
+      padding: 20px;
       text-align: center;
-      padding: 30px;
-      direction: rtl;
     }
-    h1 {
-      color: #2e7d32;
+    .header {
+      font-size: 24px;
+      margin-bottom: 10px;
     }
-    #username {
-      font-weight: bold;
-      color: #007aff;
-    }
-    .button {
-      background-color: #007aff;
-      color: white;
-      padding: 15px 30px;
+    .description {
       font-size: 18px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .referral {
+      background: #f1f8e9;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .referral p {
+      font-size: 16px;
+    }
+    .link-box {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px auto;
+      max-width: 300px;
+      word-break: break-all;
+    }
+    .buttons {
       margin-top: 20px;
     }
-    .button:hover {
-      background-color: #005fc0;
+    .buttons button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .progress-bar {
+      background: #c8e6c9;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 20px;
+      margin-top: 20px;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .progress {
+      background: #66bb6a;
+      width: 30%; /* Example: 3 of 10 friends */
+      height: 100%;
+    }
+    .coin-logo {
+      width: 40px;
+      height: 40px;
+      vertical-align: middle;
     }
   </style>
 </head>
 <body>
-
-  <h1>مرحبًا بك <span id="username">👤</span>!</h1>
-  <p>يمكنك الآن شراء <strong>SJ COIN</strong> عبر محفظة TON</p>
-
-  <!-- ✅ TonConnect Button -->
-  <div id="ton-connect" style="margin: 30px auto;"></div>
-
-  <!-- ✅ زر الشراء -->
-  <button class="button" onclick="buyCoin()">💰 شراء 100 SJ</button>
-
-  <script>
-    // ✅ Telegram SDK
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // يوسع الشاشة داخل تيليجرام
-
-    const user = tg.initDataUnsafe.user;
-    document.getElementById("username").innerText = user?.first_name || "زائر";
-
-    // ✅ TonConnect UI
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
-      buttonRootId: 'ton-connect'
-    });
-
-    // ✅ شراء العملة
-    function buyCoin() {
-      alert("📦 سيتم تنفيذ عملية شراء 100 SJ COIN عند الربط بمحفظتك.");
-      // هنا تضيف تنفيذ معاملة TON (مثال فقط)
-      // tonConnectUI.sendTransaction({...})
-    }
-  </script>
-
+  <div class="header">👥 Friends – Invite & Earn</div>
+  <div class="description">
+    💬 Share with all your friends on Telegram and earn rewards!
+  </div>
+  <div class="referral">
+    <p>✅ Share your unique referral link with friends</p>
+    <p>🔗 Each friend who joins gives you <b>+50 SJ COIN</b></p>
+    <p>🎁 Your friend also gets <b>+25 SJ COIN</b> bonus</p>
+    <div class="link-box">
+      https://t.me/SJTap2EarnBot?start=YOUR_USER_ID
+    </div>
+    <div class="buttons">
+      <button onclick="alert('Shared on Telegram!')">Send to Telegram Friends</button>
+      <button onclick="navigator.clipboard.writeText('https://t.me/SJTap2EarnBot?start=YOUR_USER_ID')">Copy Link</button>
+      <button onclick="alert('Link shared to groups!')">Share to Groups</button>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress"></div>
+  </div>
+  <p>Friends Joined: 3 / 10</p>
+  <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ COIN Logo" class="coin-logo" />
 </body>
 </html>
