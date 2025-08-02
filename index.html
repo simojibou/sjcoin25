@@ -1,95 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <title>شراء SJ COIN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SJ Coin Purchase</title>
+
+  <!-- ✅ Telegram Mini App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- ✅ TonConnect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
+  <!-- ✅ تنسيق بسيط -->
   <style>
     body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      color: white;
+      font-family: 'Arial', sans-serif;
+      background: #f8f8f8;
+      color: #222;
       text-align: center;
-      background-color: #0f0f0f;
+      padding: 30px;
+      direction: rtl;
     }
-
-    header {
-      padding: 20px;
-      background: #111;
-    }
-
-    header img {
-      height: 60px;
-    }
-
     h1 {
-      margin: 20px 0 10px;
-      font-size: 2em;
+      color: #2e7d32;
     }
-
-    p {
-      color: #ccc;
+    #username {
+      font-weight: bold;
+      color: #007aff;
     }
-
-    .btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 15px 30px;
-      background: #00b894;
+    .button {
+      background-color: #007aff;
       color: white;
-      text-decoration: none;
-      font-size: 1.2em;
-      border-radius: 8px;
-      transition: 0.3s;
-    }
-
-    .btn:hover {
-      background: #019875;
-    }
-
-    .sketchfab-embed-wrapper {
-      width: 100%;
-      height: 400px;
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
       margin-top: 20px;
     }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    footer {
-      padding: 20px;
-      font-size: 14px;
-      background: #111;
-      color: #888;
+    .button:hover {
+      background-color: #005fc0;
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <img src="https://i.ibb.co/Z6Y61Mz/sjcoin-logo.png" alt="SJ Coin Logo" />
-    <h1>Buy SJ Coin</h1>
-    <p>Swap TON for SJ Coin securely using DeDust</p>
-  </header>
+  <h1>مرحبًا بك <span id="username">👤</span>!</h1>
+  <p>يمكنك الآن شراء <strong>SJ COIN</strong> عبر محفظة TON</p>
 
-  <a class="btn" href="https://dedust.io/swap/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2/TON?input=TON&output=EQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ctT&amount=1000000000" target="_blank">
-    Swap Now
-  </a>
+  <!-- ✅ TonConnect Button -->
+  <div id="ton-connect" style="margin: 30px auto;"></div>
 
-  <div class="sketchfab-embed-wrapper">
-    <iframe title="Littlest Tokyo" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"
-      allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport
-      execution-while-not-rendered web-share
-      src="https://sketchfab.com/models/94b24a60dc1b48248de50bf087c0f042/embed">
-    </iframe>
-  </div>
+  <!-- ✅ زر الشراء -->
+  <button class="button" onclick="buyCoin()">💰 شراء 100 SJ</button>
 
-  <footer>
-    Smart contract on <a href="https://tonscan.org/jetton/EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2#source" target="_blank">TONScan</a>
-  </footer>
+  <script>
+    // ✅ Telegram SDK
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // يوسع الشاشة داخل تيليجرام
+
+    const user = tg.initDataUnsafe.user;
+    document.getElementById("username").innerText = user?.first_name || "زائر";
+
+    // ✅ TonConnect UI
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
+    });
+
+    // ✅ شراء العملة
+    function buyCoin() {
+      alert("📦 سيتم تنفيذ عملية شراء 100 SJ COIN عند الربط بمحفظتك.");
+      // هنا تضيف تنفيذ معاملة TON (مثال فقط)
+      // tonConnectUI.sendTransaction({...})
+    }
+  </script>
 
 </body>
 </html>
