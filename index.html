@@ -12,6 +12,7 @@
     }
     h1 {
       text-align: center;
+      color: #222;
     }
     table {
       width: 100%;
@@ -41,6 +42,8 @@
         <th>User ID</th>
         <th>Username</th>
         <th>Balance</th>
+        <th>Instagram</th>
+        <th>YouTube</th>
       </tr>
     </thead>
     <tbody id="users-table">
@@ -77,14 +80,20 @@
       snapshot.forEach((childSnapshot) => {
         const userId = childSnapshot.key;
         const data = childSnapshot.val();
+
+        // جلب الحقول من json
         const username = data.username || "N/A";
         const balance = data.balance || 0;
+        const instagram = data.instagram || "N/A";
+        const youtube = data.youtube || "N/A";
 
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${userId}</td>
           <td>${username}</td>
           <td>${balance}</td>
+          <td>${instagram}</td>
+          <td>${youtube}</td>
         `;
         tableBody.appendChild(row);
       });
