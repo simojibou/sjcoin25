@@ -1,97 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tap2Earn - Friends</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #e0f7fa, #fff);
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    .header {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    .description {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .referral {
-      background: #f1f8e9;
-      padding: 20px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-    }
-    .referral p {
-      font-size: 16px;
-    }
-    .link-box {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 10px auto;
-      max-width: 300px;
-      word-break: break-all;
-    }
-    .buttons {
-      margin-top: 20px;
-    }
-    .buttons button {
-      margin: 5px;
-      padding: 10px 15px;
-      border: none;
-      background-color: #4caf50;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .progress-bar {
-      background: #c8e6c9;
-      border-radius: 5px;
-      overflow: hidden;
-      height: 20px;
-      margin-top: 20px;
-      max-width: 300px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .progress {
-      background: #66bb6a;
-      width: 30%; /* Example: 3 of 10 friends */
-      height: 100%;
-    }
-    .coin-logo {
-      width: 40px;
-      height: 40px;
-      vertical-align: middle;
-    }
-  </style>
+  <title>SJ COIN Referral</title>
+  <script type="module" src="./referral.js"></script>
 </head>
 <body>
-  <div class="header">👥 Friends – Invite & Earn</div>
-  <div class="description">
-    💬 Share with all your friends on Telegram and earn rewards!
+  <h1>🎁 مرحبًا بك في برنامج الإحالة!</h1>
+  <div>
+    <p>📢 شارك هذا الرابط مع أصدقائك:</p>
+    <code id="refLink"></code>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('refLink').innerText)">📋 نسخ</button>
   </div>
-  <div class="referral">
-    <p>✅ Share your unique referral link with friends</p>
-    <p>🔗 Each friend who joins gives you <b>+50 SJ COIN</b></p>
-    <p>🎁 Your friend also gets <b>+25 SJ COIN</b> bonus</p>
-    <div class="link-box">
-      https://t.me/SJTap2EarnBot?start=YOUR_USER_ID
-    </div>
-    <div class="buttons">
-      <button onclick="alert('Shared on Telegram!')">Send to Telegram Friends</button>
-      <button onclick="navigator.clipboard.writeText('https://t.me/SJTap2EarnBot?start=YOUR_USER_ID')">Copy Link</button>
-      <button onclick="alert('Link shared to groups!')">Share to Groups</button>
-    </div>
-  </div>
-  <div class="progress-bar">
-    <div class="progress"></div>
-  </div>
-  <p>Friends Joined: 3 / 10</p>
-  <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ COIN Logo" class="coin-logo" />
 </body>
 </html>
