@@ -1,17 +1,73 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SJ COIN Referral</title>
-  <script type="module" src="./referral.js"></script>
+  <meta charset="UTF-8" />
+  <title>SJ COIN Buy with Stars</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+      const user = tg.initDataUnsafe.user;
+
+      if (!user) {
+        alert("❌ You must open this inside Telegram.");
+        return;
+      }
+
+      // Firebase config (replace with your actual config)
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      };
+
+      // Init Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      const userId = user.id;
+      const balanceRef = ref(db, `users/${userId}/balance`);
+
+      const balanceElem = document.getElementById("balance");
+
+      // Get current balance
+      try {
+        const snapshot = await get(balanceRef);
+        const balance = snapshot.exists() ? snapshot.val() : 0;
+        balanceElem.innerText = `💰 Your balance: ${balance} SJ COIN`;
+      } catch (err) {
+        balanceElem.innerText = "❌ Failed to load balance.";
+      }
+
+      // Handle Buy button
+      document.getElementById("buy-btn").addEventListener("click", () => {
+        tg.openTelegramLink("https://t.me/sjcoin25bot?start=buy_sj_coin");
+      });
+    });
+  </script>
 </head>
-<body>
-  <h1>🎁 مرحبًا بك في برنامج الإحالة!</h1>
-  <div>
-    <p>📢 شارك هذا الرابط مع أصدقائك:</p>
-    <code id="refLink"></code>
-    <button onclick="navigator.clipboard.writeText(document.getElementById('refLink').innerText)">📋 نسخ</button>
+
+<body style="font-family: Arial, sans-serif; text-align:center; padding: 2rem;">
+  <h2>Buy SJ COIN</h2>
+  <p>Get 50 SJ COIN for $5.00</p>
+
+  <div id="balance" style="margin: 1rem 0; font-weight: bold;">
+    🔄 Loading balance...
   </div>
+
+  <button id="buy-btn" style="font-size: 1.2rem; padding: 1rem 2rem; cursor:pointer;">
+    Buy Now with Telegram Stars or Card
+  </button>
 </body>
 </html>
