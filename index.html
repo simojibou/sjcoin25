@@ -1,104 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SJ COIN Admin Panel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>SJ COIN Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 2rem;
-      background-color: #f4f4f4;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
     }
     h1 {
-      text-align: center;
-      color: #222;
+      color: #0a84ff;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 2rem;
+    .item {
+      background-color: #fff;
+      margin: 20px auto;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 400px;
     }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
+    .item h2 {
+      margin: 0;
+      font-size: 1.5em;
     }
-    th {
-      background-color: #222;
-      color: white;
+    .item p {
+      margin: 8px 0;
     }
-    tr:nth-child(even) {
-      background-color: #eee;
+    .btn {
+      background-color: #0a84ff;
+      color: #fff;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .btn:hover {
+      background-color: #005ecb;
+    }
+    .instructions {
+      margin-top: 40px;
+      font-size: 0.95em;
+      color: #666;
     }
   </style>
 </head>
 <body>
 
-  <h1>🔥 SJ COIN - Admin Panel</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Username</th>
-        <th>Balance</th>
-        <th>Instagram</th>
-        <th>YouTube</th>
-      </tr>
-    </thead>
-    <tbody id="users-table">
-      <!-- سيتم ملء البيانات هنا -->
-    </tbody>
-  </table>
+  <h1>🎁 SJ COIN Digital Store</h1>
+  <p>Select an item to purchase with Telegram Stars ⭐</p>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database-compat.js"></script>
+  <div class="item">
+    <h2>🍦 Ice Cream</h2>
+    <p>Price: <strong>1 ⭐</strong></p>
+    <p>A delicious virtual ice cream</p>
+    <button class="btn" onclick="window.open('https://t.me/sjcoin25bot')">Buy Now</button>
+  </div>
 
-  <script>
-    // إعداد Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d",
-      measurementId: "G-0TNLGL3XBX"
-    };
+  <div class="item">
+    <h2>🍪 Cookie</h2>
+    <p>Price: <strong>3 ⭐</strong></p>
+    <p>A sweet virtual cookie</p>
+    <button class="btn" onclick="window.open('https://t.me/sjcoin25bot')">Buy Now</button>
+  </div>
 
-    // تفعيل Firebase
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+  <div class="item">
+    <h2>🍔 Hamburger</h2>
+    <p>Price: <strong>5 ⭐</strong></p>
+    <p>A tasty virtual hamburger</p>
+    <button class="btn" onclick="window.open('https://t.me/sjcoin25bot')">Buy Now</button>
+  </div>
 
-    // تحميل المستخدمين من Firebase
-    const usersRef = database.ref("users");
-    const tableBody = document.getElementById("users-table");
-
-    usersRef.once("value", (snapshot) => {
-      snapshot.forEach((childSnapshot) => {
-        const userId = childSnapshot.key;
-        const data = childSnapshot.val();
-
-        // جلب الحقول من json
-        const username = data.username || "N/A";
-        const balance = data.balance || 0;
-        const instagram = data.instagram || "N/A";
-        const youtube = data.youtube || "N/A";
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${userId}</td>
-          <td>${username}</td>
-          <td>${balance}</td>
-          <td>${instagram}</td>
-          <td>${youtube}</td>
-        `;
-        tableBody.appendChild(row);
-      });
-    });
-  </script>
+  <div class="instructions">
+    <h3>📋 How It Works</h3>
+    <p>1. Tap "Buy Now" to open the Telegram bot</p>
+    <p>2. Approve the payment using Telegram Stars ⭐</p>
+    <p>3. Get your secret code after payment</p>
+    <p>4. Use /refund command in the bot to request a refund if needed</p>
+  </div>
 
 </body>
 </html>
