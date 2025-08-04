@@ -21,41 +21,51 @@
     const db = firebase.firestore();
 
     async function initAffiliateSystem() {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      const userId = tg.initDataUnsafe?.user?.id?.toString();
-      const username = tg.initDataUnsafe?.user?.username || "";
-      const urlParams = new URLSearchParams(window.location.search);
-      const referrerId = urlParams.get("start");
+      try {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
 
-      const userRef = db.collection("users").doc(userId);
-      const docSnap = await userRef.get();
-
-      if (!docSnap.exists) {
-        await userRef.set({
-          username: username,
-          coins: 100,
-          referredBy: referrerId || null,
-          referralCode: userId,
-          referrals: []
-        });
-
-        if (referrerId && referrerId !== userId) {
-          const refRef = db.collection("users").doc(referrerId);
-          await refRef.update({
-            coins: firebase.firestore.FieldValue.increment(200),
-            referrals: firebase.firestore.FieldValue.arrayUnion(userId)
-          });
+        const userId = tg.initDataUnsafe?.user?.id?.toString();
+        if (!userId) {
+          document.getElementById("warning").style.display = "block";
+          return;
         }
+
+        const username = tg.initDataUnsafe?.user?.username || "";
+        const urlParams = new URLSearchParams(window.location.search);
+        const referrerId = urlParams.get("start");
+
+        const userRef = db.collection("users").doc(userId);
+        const docSnap = await userRef.get();
+
+        if (!docSnap.exists) {
+          await userRef.set({
+            username: username,
+            coins: 100,
+            referredBy: referrerId || null,
+            referralCode: userId,
+            referrals: []
+          });
+
+          if (referrerId && referrerId !== userId) {
+            const refRef = db.collection("users").doc(referrerId);
+            await refRef.update({
+              coins: firebase.firestore.FieldValue.increment(200),
+              referrals: firebase.firestore.FieldValue.arrayUnion(userId)
+            });
+          }
+        }
+
+        const userData = (await userRef.get()).data();
+        const link = `https://t.me/sjcoin25bot?start=${userId}`;
+
+        document.getElementById("referralLink").value = link;
+        document.getElementById("referralCount").innerText = userData.referrals.length;
+        document.getElementById("coinCount").innerText = userData.coins;
+        document.getElementById("referralDisplay").style.display = "block";
+      } catch (error) {
+        console.error("Error in affiliate system:", error);
       }
-
-      const userData = (await userRef.get()).data();
-      const link = `https://t.me/sjcoin25bot?start=${userId}`;
-
-      document.getElementById("referralLink").value = link;
-      document.getElementById("referralCount").innerText = userData.referrals.length;
-      document.getElementById("coinCount").innerText = userData.coins;
-      document.getElementById("referralDisplay").style.display = "block";
     }
 
     function copyLink() {
@@ -105,9 +115,23 @@
       border-radius: 10px;
       font-size: 16px;
     }
+    #warning {
+      color: red;
+      font-weight: bold;
+      display: none;
+      padding: 20px;
+    }
   </style>
 </head>
 <body>
+  <noscript>
+    <p>يرجى تفعيل JavaScript لعرض المحتوى</p>
+  </noscript>
+
+  <div id="warning">
+    ❗ يجب فتح هذا التطبيق من داخل Telegram Mini App لعرض المحتوى.
+  </div>
+
   <div class="referral-box" id="referralDisplay" style="display:none">
     <h2>🎁 شارك واربح SJ COIN</h2>
     <p>اربح 200 SJ Coin عن كل صديق يسجل عبر رابطك!</p>
