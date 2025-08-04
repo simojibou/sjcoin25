@@ -1,104 +1,84 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SJ COIN - نظام الإحالة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ COIN - Mine App</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f2f2f2;
-      color: #333;
+      background-color: #f4f4f4;
       text-align: center;
       padding: 20px;
-      direction: rtl;
+      color: #222;
     }
     .card {
       background: white;
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      max-width: 400px;
-      margin: 20px auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-top: 20px;
     }
-    .title {
-      font-size: 22px;
-      margin-bottom: 10px;
-      color: #0077cc;
+    h1 {
+      color: #4caf50;
     }
-    .info {
-      font-size: 18px;
-      margin: 10px 0;
-    }
-    .referral-link {
-      word-break: break-all;
-      background-color: #eef;
-      padding: 10px;
-      border-radius: 8px;
+    .value {
+      font-size: 24px;
+      font-weight: bold;
       margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <h1>SJ COIN Miner</h1>
   <div class="card">
-    <div class="title">🎉 مرحباً بك في نظام الإحالة SJ COIN</div>
-    <div id="userInfo" class="info">جارٍ التحميل...</div>
-    <div id="referralSection" style="display:none;">
-      <div class="info">🔗 رابط الإحالة:</div>
-      <div id="referralLink" class="referral-link"></div>
-      <div class="info">👥 عدد الإحالات: <span id="referrals">0</span></div>
-      <div class="info">💰 رصيدك: <span id="balance">0</span> SJ</div>
-    </div>
+    <p>👤 المستخدم: <span id="username">...</span></p>
+    <p>💰 الرصيد: <span class="value" id="balance">0</span> SJ</p>
+    <p>👥 عدد الإحالات: <span class="value" id="referrals">0</span></p>
   </div>
 
   <script>
-    // Firebase config
+    // ✅ إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const db = firebase.database();
 
-    window.addEventListener("DOMContentLoaded", async () => {
-      if (!window.Telegram || !Telegram.WebApp?.initDataUnsafe?.user) {
-        document.getElementById("userInfo").innerText = "يرجى فتح التطبيق من خلال Telegram.";
-        return;
-      }
+    // ✅ التحقق من Telegram
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe.user) {
+        const user = Telegram.WebApp.initDataUnsafe.user;
+        const userId = user.id;
+        const username = user.username || (user.first_name + " " + (user.last_name || ""));
 
-      const user = Telegram.WebApp.initDataUnsafe.user;
-      const userId = user.id.toString();
-      const userName = user.first_name || "مستخدم";
-      const userRef = db.collection("users").doc(userId);
+        document.getElementById("username").textContent = username;
 
-      document.getElementById("userInfo").innerText = `👋 أهلاً، ${userName}`;
+        const userRef = db.ref("users/" + userId);
 
-      // إضافة المستخدم لقاعدة البيانات إن لم يكن موجوداً
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        await userRef.set({
-          id: userId,
-          username: user.username || '',
-          referrals: 0,
-          balance: 0,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        userRef.on("value", (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            document.getElementById("balance").textContent = data.balance || 0;
+            document.getElementById("referrals").textContent = data.referrals || 0;
+          } else {
+            // أول مرة - أنشئ بيانات للمستخدم
+            userRef.set({ balance: 0, referrals: 0 });
+          }
         });
+
+      } else {
+        alert("⚠️ يجب فتح هذا التطبيق من داخل Telegram.");
       }
-
-      // تحديث الواجهة بالبيانات
-      const data = (await userRef.get()).data();
-      document.getElementById("referrals").innerText = data.referrals || 0;
-      document.getElementById("balance").innerText = data.balance || 0;
-
-      const referralLink = `https://t.me/sjcoin25bot?start=${userId}`;
-      document.getElementById("referralLink").innerText = referralLink;
-      document.getElementById("referralSection").style.display = "block";
     });
   </script>
 </body>
