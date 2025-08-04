@@ -4,10 +4,6 @@
   <meta charset="UTF-8" />
   <title>SJ Missions</title>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -15,6 +11,7 @@
     body {
       background-image: url('/images/bg.png');
       background-size: cover;
+      font-family: sans-serif;
     }
   </style>
 </head>
@@ -25,13 +22,17 @@
 
   <div class="flex justify-center items-center mt-10 space-x-1 text-yellow-400 text-3xl font-bold">
     <img src="/images/coins.png" class="w-14 h-14" />
-    <span id="user-balance">0</span>
+    <span id="user-balance">999</span>
   </div>
 
   <div class="mt-10">
-    <div id="mission-types" class="flex gap-4"></div>
-    <div class="grid grid-cols-2 gap-3 mt-6" id="missions-list">
-      <!-- Missions will be inserted here -->
+    <div id="mission-types" class="flex gap-4 mb-4">
+      <button onclick="showMissions('social')" class="text-xs font-bold uppercase bg-white text-black px-2 py-1 rounded">Social</button>
+      <button onclick="showMissions('downloads')" class="text-xs font-bold uppercase bg-white text-black px-2 py-1 rounded">Downloads</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-2" id="missions-list">
+      <!-- Missions will go here -->
     </div>
   </div>
 
@@ -45,89 +46,69 @@
   </div>
 
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      projectId: "metawarefare-gaming"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // Fake user data
-    let user = {
+    const user = {
       balance: 999,
       level: 1,
       totalReferals: 0
     };
 
-    document.getElementById("user-balance").textContent = user.balance.toLocaleString();
-
-    const missionTypes = [
-      { id: 'social', name: 'Social' },
-      { id: 'downloads', name: 'Downloads' }
+    const missions = [
+      {
+        name: "Follow Instagram",
+        type: "social",
+        image: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
+        production_per_hour: 50,
+        description: "تابعنا على Instagram واحصل على 50 SJ COIN"
+      },
+      {
+        name: "Subscribe YouTube",
+        type: "social",
+        image: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg",
+        production_per_hour: 50,
+        description: "اشترك في قناتنا على YouTube لتحصل على 50 SJ COIN"
+      },
+      {
+        name: "Download SJ Store",
+        type: "downloads",
+        image: "https://play-lh.googleusercontent.com/dN7FNBXhNmnNkwchv3oRO9nVQ15_W88rT_45ZdijQ-bXDIBK-WrEODJ7rlsacY_ZYVY=w240-h480-rw",
+        production_per_hour: 100,
+        description: "قم بتحميل SJ Store واحصل على 100 SJ COIN"
+      },
+      {
+        name: "Download SJ Hero",
+        type: "downloads",
+        image: "https://play-lh.googleusercontent.com/Zlm4P6XISxI32X1W2iROd6AAj7VCAdkxOMJkG0rC0BlYYcsKpWz2ehPmTwKn2YuLdA=w240-h480-rw",
+        production_per_hour: 200,
+        description: "حمل SJ Hero وابدأ اللعب لتحصل على 200 SJ COIN"
+      }
     ];
 
-    let activeType = missionTypes[0].id;
+    function showMissions(type) {
+      const missionsList = document.getElementById('missions-list');
+      missionsList.innerHTML = '';
 
-    const missionTypesContainer = document.getElementById('mission-types');
-    const missionsList = document.getElementById('missions-list');
-
-    missionTypes.forEach(type => {
-      const btn = document.createElement('button');
-      btn.textContent = type.name;
-      btn.className = "text-xs font-bold uppercase opacity-100 bg-white text-black px-2 py-1 rounded";
-      btn.onclick = () => {
-        activeType = type.id;
-        fetchMissions();
-      };
-      missionTypesContainer.appendChild(btn);
-    });
-
-    function fetchMissions() {
-      missionsList.innerHTML = '<p class="col-span-2 text-center text-sm">Loading missions...</p>';
-
-      db.collection("missions")
-        .where("type", "==", activeType)
-        .get()
-        .then(snapshot => {
-          missionsList.innerHTML = "";
-          snapshot.forEach(doc => {
-            const mission = doc.data();
-
-            const locked =
-              (mission.required_user_level && mission.required_user_level > user.level) ||
-              (mission.required_friends_invitation && mission.required_friends_invitation > user.totalReferals);
-
-            const div = document.createElement("div");
-            div.className = `p-3 bg-gray-800 text-white rounded-xl cursor-pointer ${
-              locked ? "opacity-40 cursor-not-allowed" : ""
-            }`;
-
-            div.innerHTML = `
-              <div class="flex items-start space-x-3">
-                <img src="${mission.image}" class="w-16 h-16 rounded" />
-                <div>
-                  <p class="text-[10px] font-bold">${mission.name}</p>
-                  <p class="mt-1 text-[10px]">Profit per hour</p>
-                  <p class="mt-2 text-[10px] font-bold text-green-400">+${mission.production_per_hour} SJ</p>
-                </div>
-              </div>
-            `;
-
-            if (!locked) {
-              div.onclick = () => openDrawer(mission);
-            }
-
-            missionsList.appendChild(div);
-          });
-        });
+      const filtered = missions.filter(m => m.type === type);
+      filtered.forEach(mission => {
+        const div = document.createElement('div');
+        div.className = "p-3 bg-gray-800 text-white rounded-xl cursor-pointer";
+        div.innerHTML = `
+          <div class="flex items-start space-x-3">
+            <img src="${mission.image}" class="w-16 h-16 rounded" />
+            <div>
+              <p class="text-[10px] font-bold">${mission.name}</p>
+              <p class="mt-1 text-[10px]">Profit per hour</p>
+              <p class="mt-2 text-[10px] font-bold text-green-400">+${mission.production_per_hour} SJ</p>
+            </div>
+          </div>
+        `;
+        div.onclick = () => openDrawer(mission);
+        missionsList.appendChild(div);
+      });
     }
 
     function openDrawer(mission) {
       document.getElementById("mission-name").textContent = mission.name;
-      document.getElementById("mission-desc").textContent = mission.description || "No description";
+      document.getElementById("mission-desc").textContent = mission.description;
       document.getElementById("mission-drawer").classList.remove("hidden");
     }
 
@@ -135,7 +116,8 @@
       document.getElementById("mission-drawer").classList.add("hidden");
     }
 
-    fetchMissions();
+    // Show default missions (social)
+    showMissions('social');
   </script>
 </body>
 </html>
