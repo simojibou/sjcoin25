@@ -1,146 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SJ COIN - Affiliate System</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    async function initAffiliateSystem() {
-      try {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-
-        const userId = tg.initDataUnsafe?.user?.id?.toString();
-        if (!userId) {
-          document.getElementById("warning").style.display = "block";
-          return;
-        }
-
-        const username = tg.initDataUnsafe?.user?.username || "";
-        const urlParams = new URLSearchParams(window.location.search);
-        const referrerId = urlParams.get("start");
-
-        const userRef = db.collection("users").doc(userId);
-        const docSnap = await userRef.get();
-
-        if (!docSnap.exists) {
-          await userRef.set({
-            username: username,
-            coins: 100,
-            referredBy: referrerId || null,
-            referralCode: userId,
-            referrals: []
-          });
-
-          if (referrerId && referrerId !== userId) {
-            const refRef = db.collection("users").doc(referrerId);
-            await refRef.update({
-              coins: firebase.firestore.FieldValue.increment(200),
-              referrals: firebase.firestore.FieldValue.arrayUnion(userId)
-            });
-          }
-        }
-
-        const userData = (await userRef.get()).data();
-        const link = `https://t.me/sjcoin25bot?start=${userId}`;
-
-        document.getElementById("referralLink").value = link;
-        document.getElementById("referralCount").innerText = userData.referrals.length;
-        document.getElementById("coinCount").innerText = userData.coins;
-        document.getElementById("referralDisplay").style.display = "block";
-      } catch (error) {
-        console.error("Error in affiliate system:", error);
-      }
-    }
-
-    function copyLink() {
-      const copyText = document.getElementById("referralLink");
-      copyText.select();
-      copyText.setSelectionRange(0, 99999);
-      document.execCommand("copy");
-      alert("تم نسخ رابط الإحالة!");
-    }
-
-    window.addEventListener("load", initAffiliateSystem);
-  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ COIN - Referral System</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f2f2f2;
+      margin: 0;
       padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #fff;
       text-align: center;
     }
-    .referral-box {
-      background: #fff;
+    .card {
+      background-color: #1e1e1e;
       padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      max-width: 400px;
-      margin: auto;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .stats {
+      border-radius: 16px;
       margin-top: 20px;
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 10px;
-      font-size: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
-    #warning {
-      color: red;
+    .title {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .value {
+      font-size: 20px;
       font-weight: bold;
-      display: none;
-      padding: 20px;
+      color: #00ff99;
     }
   </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
+        const user = window.Telegram.WebApp.initDataUnsafe.user;
+        const userId = user.id;
+        const username = user.username || `${user.first_name} ${user.last_name || ''}`;
+
+        // Fake values for demo (replace with Firebase later)
+        const referrals = 3;
+        const reward = referrals * 5;
+
+        document.getElementById('username').innerText = `👤 @${username}`;
+        document.getElementById('referrals').innerText = `${referrals} إحالة`;
+        document.getElementById('reward').innerText = `${reward} SJ COIN`;
+
+      } else {
+        document.body.innerHTML = "<h2 style='color:red'>❌ يجب فتح التطبيق من داخل Telegram!</h2>";
+      }
+    });
+  </script>
 </head>
 <body>
-  <noscript>
-    <p>يرجى تفعيل JavaScript لعرض المحتوى</p>
-  </noscript>
-
-  <div id="warning">
-    ❗ يجب فتح هذا التطبيق من داخل Telegram Mini App لعرض المحتوى.
-  </div>
-
-  <div class="referral-box" id="referralDisplay" style="display:none">
-    <h2>🎁 شارك واربح SJ COIN</h2>
-    <p>اربح 200 SJ Coin عن كل صديق يسجل عبر رابطك!</p>
-    <input type="text" id="referralLink" readonly />
-    <button onclick="copyLink()">📋 نسخ الرابط</button>
-    <div class="stats">
-      <p>عدد الإحالات: <strong id="referralCount">0</strong></p>
-      <p>رصيدك من SJ Coin: <strong id="coinCount">0</strong></p>
-    </div>
+  <h1>SJ COIN Mini App</h1>
+  <div class="card">
+    <div class="title" id="username">تحميل...</div>
+    <div class="title">عدد الإحالات</div>
+    <div class="value" id="referrals">--</div>
+    <div class="title">مكافآتك</div>
+    <div class="value" id="reward">--</div>
   </div>
 </body>
 </html>
