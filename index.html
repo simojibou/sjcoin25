@@ -1,349 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SJ COIN Friends with Firebase</title>
-<style>
-  /* ... أنماط كما في السابق ... */
-  body, html {
-    margin: 0; padding: 0; height: 100%;
-    font-family: Arial, sans-serif;
-    background: url('/images/bg.png') no-repeat center center / cover;
-    color: white;
-    display: flex; flex-direction: column;
-  }
-  .container {
-    flex: 1;
-    padding: 24px 24px 96px;
-    display: flex; flex-direction: column;
-  }
-  h1 {
-    font-size: 24px; text-align: center; text-transform: uppercase; font-weight: bold;
-  }
-  p {
-    margin-top: 8px; font-weight: 500; text-align: center;
-  }
-  .btn-invite, .btn-copy, .btn-toggle {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(255 255 255 / 0.1);
-    padding: 12px 16px;
-    border-radius: 16px;
-    cursor: pointer;
-    border: none;
-    color: white;
-    font-weight: 600;
-    width: 100%;
-    margin-top: 16px;
-  }
-  .btn-copy, .btn-invite {
-    justify-content: center;
-  }
-  .btn-copy {
-    width: 48px;
-  }
-  .btn-toggle {
-    border: 2px solid rgba(255, 218, 163, 0.1);
-    color: #FFDAA3;
-    font-size: 12px;
-    text-transform: uppercase;
-    font-weight: 700;
-    border-radius: 9999px;
-    padding: 10px 20px;
-    margin: 16px auto;
-    max-width: 160px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-  }
-  th, td {
-    padding: 8px 12px;
-    text-align: left;
-    font-size: 12px;
-  }
-  thead th {
-    color: rgba(255,255,255,0.3);
-    border-bottom: 1px solid rgba(217, 217, 217, 0.1);
-  }
-  tbody tr {
-    border-bottom: 1px solid rgba(217, 217, 217, 0.1);
-  }
-  .friends-list {
-    margin-top: 16px;
-    overflow-y: auto;
-    max-height: 200px;
-  }
-  .friend-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: rgba(255 255 255 / 0.1);
-    border-radius: 16px;
-    padding: 12px 16px;
-    margin-bottom: 12px;
-  }
-  .friend-info {
-    display: flex; align-items: center; gap: 12px;
-  }
-  .friend-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: url('/images/avatar.png') no-repeat center / cover;
-  }
-  .coin {
-    width: 20px; height: 20px;
-    margin-left: 8px;
-  }
-  .text-primary {
-    color: #FFDAA3;
-    font-weight: 600;
-  }
-  .loading-spinner {
-    margin: 32px auto;
-    border: 4px solid rgba(217, 217, 217, 0.1);
-    border-top: 4px solid rgba(255, 218, 163, 0.3);
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-</style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <title>SJ Missions</title>
 
-<div class="container">
-  <h1>Friends</h1>
-  <p>You and your friend will receive bonuses.</p>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-  <button class="btn-invite" id="btn-invite-base">
-    <img src="/images/chest.png" alt="chest" width="36" height="36" style="mix-blend-mode: screen;" />
-    <div>
-      <p>Invite a friend</p>
-      <div style="display:flex; align-items:center; gap:4px;">
-        <img src="/images/coin.png" alt="coin" width="20" height="20" />
-        <span id="base-bonus" class="text-primary"></span>
-        <span>for you and your friend</span>
-      </div>
-    </div>
-  </button>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-  <button class="btn-invite" id="btn-invite-premium">
-    <img src="/images/chest.png" alt="chest" width="36" height="36" style="mix-blend-mode: screen;" />
-    <div>
-      <p>Invite a friend with Telegram premium</p>
-      <div style="display:flex; align-items:center; gap:4px;">
-        <img src="/images/coin.png" alt="coin" width="20" height="20" />
-        <span id="premium-bonus" class="text-primary"></span>
-        <span>for you and your friend</span>
-      </div>
-    </div>
-  </button>
-
-  <button class="btn-toggle" id="toggle-bonuses-btn">More bonuses</button>
-
-  <div id="bonuses-section" style="display:none; margin-top:16px;">
-    <p style="font-weight:bold; text-transform:uppercase; cursor:pointer;" id="hide-bonuses-btn">Bonus for leveling up</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Level</th>
-          <th style="text-align:right;">For friend</th>
-          <th style="text-align:right;">Premium</th>
-        </tr>
-      </thead>
-      <tbody id="levels-tbody"></tbody>
-    </table>
-  </div>
-
-  <p style="font-weight:bold; text-transform:uppercase; margin-top: 32px;">
-    List of your friends <span id="friends-count"></span>
-  </p>
-
-  <div class="friends-list" id="friends-list">
-    <div class="loading-spinner" id="loading-spinner"></div>
-  </div>
-
-  <div style="display:flex; gap:12px; margin-top:24px;">
-    <button class="btn-copy" id="copy-link-btn" title="Copy referral link">
-      📋
-    </button>
-    <button class="btn-invite" id="share-btn" style="flex:1;">
-      Invite a friend
-    </button>
-  </div>
-</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<script>
-  // Your referral & level data (static example)
-  const referral = {
-    base: { welcome: 1000, levelUp: {1: 100, 2: 200, 3: 300} },
-    premium: { welcome: 3000, levelUp: {1: 500, 2: 700, 3: 900} }
-  };
-  const levels = [
-    { level: 1, name: "Beginner" },
-    { level: 2, name: "Intermediate" },
-    { level: 3, name: "Advanced" },
-  ];
-
-  // Example Telegram ID (use real ID in your app)
-  const telegram_id = 123456789;
-
-  // Compose referral link
-  const referralLink = `${importMetaEnv('VITE_BOT_URL') || 'https://t.me/sjcoin25bot'}/?startapp=ref${telegram_id}`;
-
-  // UI refs
-  const baseBonusSpan = document.getElementById("base-bonus");
-  const premiumBonusSpan = document.getElementById("premium-bonus");
-  const toggleBonusesBtn = document.getElementById("toggle-bonuses-btn");
-  const bonusesSection = document.getElementById("bonuses-section");
-  const hideBonusesBtn = document.getElementById("hide-bonuses-btn");
-  const levelsTbody = document.getElementById("levels-tbody");
-  const friendsList = document.getElementById("friends-list");
-  const loadingSpinner = document.getElementById("loading-spinner");
-  const friendsCountSpan = document.getElementById("friends-count");
-
-  baseBonusSpan.textContent = referral.base.welcome.toLocaleString();
-  premiumBonusSpan.textContent = referral.premium.welcome.toLocaleString();
-
-  // Render level bonuses table
-  function renderLevels() {
-    levelsTbody.innerHTML = "";
-    levels.forEach(({ level, name }) => {
-      const baseBonus = referral.base.levelUp[level] || 0;
-      const premiumBonus = referral.premium.levelUp[level] || 0;
-      if (baseBonus === 0 && premiumBonus === 0) return;
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${name}</td>
-        <td style="text-align:right;">
-          <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-            <img src="/images/coin.png" alt="coin" width="16" height="16" />
-            <span class="text-primary">${baseBonus.toLocaleString()}</span>
-          </div>
-        </td>
-        <td style="text-align:right;">
-          <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-            <img src="/images/coin.png" alt="coin" width="16" height="16" />
-            <span class="text-primary">${premiumBonus.toLocaleString()}</span>
-          </div>
-        </td>
-      `;
-      levelsTbody.appendChild(tr);
-    });
-  }
-
-  renderLevels();
-
-  // Toggle bonuses section
-  toggleBonusesBtn.addEventListener("click", () => {
-    bonusesSection.style.display = "block";
-    toggleBonusesBtn.style.display = "none";
-  });
-  hideBonusesBtn.addEventListener("click", () => {
-    bonusesSection.style.display = "none";
-    toggleBonusesBtn.style.display = "block";
-  });
-
-  // Copy referral link
-  document.getElementById("copy-link-btn").addEventListener("click", () => {
-    navigator.clipboard.writeText(referralLink).then(() => {
-      alert("Referral link copied to clipboard!");
-    });
-  });
-
-  // Share via Telegram
-  document.getElementById("share-btn").addEventListener("click", () => {
-    const shareMessage = encodeURIComponent("Play SJ COIN with me!");
-    const url = `https://t.me/share/url?text=${shareMessage}&url=${encodeURIComponent(referralLink)}`;
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-      window.Telegram.WebApp.openTelegramLink(url);
-    } else {
-      window.open(url, "_blank");
+  <style>
+    body {
+      background-image: url('/images/bg.png');
+      background-size: cover;
     }
-  });
+  </style>
+</head>
+<body class="flex flex-col justify-end min-h-screen px-6 pb-24 mt-12 text-white">
+  <div class="mt-4" id="user-details">
+    <!-- User Game Details Placeholder -->
+  </div>
 
-  // Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-    authDomain: "metawarefare-gaming.firebaseapp.com",
-    databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-    projectId: "metawarefare-gaming",
-    storageBucket: "metawarefare-gaming.appspot.com",
-    messagingSenderId: "551352148152",
-    appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-  };
+  <div class="flex justify-center items-center mt-10 space-x-1 text-yellow-400 text-3xl font-bold">
+    <img src="/images/coins.png" class="w-14 h-14" />
+    <span id="user-balance">0</span>
+  </div>
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  <div class="mt-10">
+    <div id="mission-types" class="flex gap-4"></div>
+    <div class="grid grid-cols-2 gap-3 mt-6" id="missions-list">
+      <!-- Missions will be inserted here -->
+    </div>
+  </div>
 
-  // Fetch referred users from Firebase Realtime Database
-  function fetchReferredUsersFromFirebase() {
-    loadingSpinner.style.display = "block";
-    friendsList.innerHTML = "";
-    // Assume data stored under `/referredUsers/{telegram_id}/list`
-    const ref = db.ref(`referredUsers/${telegram_id}/list`);
-    ref.once('value').then(snapshot => {
-      loadingSpinner.style.display = "none";
-      const users = snapshot.val();
-      if (!users) {
-        friendsCountSpan.textContent = "(0)";
-        friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,255,255,0.3); font-size: 14px;">You didn’t invite anyone yet</p>`;
-        return;
-      }
+  <!-- Mission Drawer -->
+  <div id="mission-drawer" class="hidden fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+    <div class="bg-white text-black p-6 rounded-xl max-w-md w-full">
+      <h2 id="mission-name" class="text-xl font-bold mb-2"></h2>
+      <p id="mission-desc" class="mb-4 text-sm"></p>
+      <button onclick="closeDrawer()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button>
+    </div>
+  </div>
 
-      const userList = Object.values(users);
-      friendsCountSpan.textContent = `(${userList.length})`;
-      userList.forEach(user => {
-        const div = document.createElement("div");
-        div.className = "friend-item";
-        div.innerHTML = `
-          <div class="friend-info">
-            <div class="friend-avatar"></div>
-            <div>
-              <p style="margin:0; font-weight:600;">${user.first_name || ""} ${user.last_name || ""}</p>
-              <p style="margin:0; font-size: 10px;">${user.level?.name || ""}</p>
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <img src="/images/coin.png" alt="coin" width="20" height="20" />
-            <span class="text-primary">${compactNumber(user.balance)}</span>
-          </div>
-        `;
-        friendsList.appendChild(div);
-      });
-    }).catch(() => {
-      loadingSpinner.style.display = "none";
-      friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,0,0,0.7);">Failed to load friends</p>`;
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      projectId: "metawarefare-gaming"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Fake user data
+    let user = {
+      balance: 999,
+      level: 1,
+      totalReferals: 0
+    };
+
+    document.getElementById("user-balance").textContent = user.balance.toLocaleString();
+
+    const missionTypes = [
+      { id: 'social', name: 'Social' },
+      { id: 'downloads', name: 'Downloads' }
+    ];
+
+    let activeType = missionTypes[0].id;
+
+    const missionTypesContainer = document.getElementById('mission-types');
+    const missionsList = document.getElementById('missions-list');
+
+    missionTypes.forEach(type => {
+      const btn = document.createElement('button');
+      btn.textContent = type.name;
+      btn.className = "text-xs font-bold uppercase opacity-100 bg-white text-black px-2 py-1 rounded";
+      btn.onclick = () => {
+        activeType = type.id;
+        fetchMissions();
+      };
+      missionTypesContainer.appendChild(btn);
     });
-  }
 
-  // Compact number helper
-  function compactNumber(num) {
-    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-    if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
-    return num.toString();
-  }
+    function fetchMissions() {
+      missionsList.innerHTML = '<p class="col-span-2 text-center text-sm">Loading missions...</p>';
 
-  // Fake import.meta.env helper fallback
-  function importMetaEnv(key) {
-    if (key === "VITE_BOT_URL") return "https://t.me/sjcoin25bot";
-    return null;
-  }
+      db.collection("missions")
+        .where("type", "==", activeType)
+        .get()
+        .then(snapshot => {
+          missionsList.innerHTML = "";
+          snapshot.forEach(doc => {
+            const mission = doc.data();
 
-  // Load data on page load
-  fetchReferredUsersFromFirebase();
-</script>
+            const locked =
+              (mission.required_user_level && mission.required_user_level > user.level) ||
+              (mission.required_friends_invitation && mission.required_friends_invitation > user.totalReferals);
 
+            const div = document.createElement("div");
+            div.className = `p-3 bg-gray-800 text-white rounded-xl cursor-pointer ${
+              locked ? "opacity-40 cursor-not-allowed" : ""
+            }`;
+
+            div.innerHTML = `
+              <div class="flex items-start space-x-3">
+                <img src="${mission.image}" class="w-16 h-16 rounded" />
+                <div>
+                  <p class="text-[10px] font-bold">${mission.name}</p>
+                  <p class="mt-1 text-[10px]">Profit per hour</p>
+                  <p class="mt-2 text-[10px] font-bold text-green-400">+${mission.production_per_hour} SJ</p>
+                </div>
+              </div>
+            `;
+
+            if (!locked) {
+              div.onclick = () => openDrawer(mission);
+            }
+
+            missionsList.appendChild(div);
+          });
+        });
+    }
+
+    function openDrawer(mission) {
+      document.getElementById("mission-name").textContent = mission.name;
+      document.getElementById("mission-desc").textContent = mission.description || "No description";
+      document.getElementById("mission-drawer").classList.remove("hidden");
+    }
+
+    function closeDrawer() {
+      document.getElementById("mission-drawer").classList.add("hidden");
+    }
+
+    fetchMissions();
+  </script>
 </body>
 </html>
