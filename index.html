@@ -1,171 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Customize Telegram Mini App Theme</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SJ COIN - Affiliate System</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function initAffiliateSystem() {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      const userId = tg.initDataUnsafe?.user?.id?.toString();
+      const username = tg.initDataUnsafe?.user?.username || "";
+      const urlParams = new URLSearchParams(window.location.search);
+      const referrerId = urlParams.get("start");
+
+      const userRef = db.collection("users").doc(userId);
+      const docSnap = await userRef.get();
+
+      if (!docSnap.exists) {
+        await userRef.set({
+          username: username,
+          coins: 100,
+          referredBy: referrerId || null,
+          referralCode: userId,
+          referrals: []
+        });
+
+        if (referrerId && referrerId !== userId) {
+          const refRef = db.collection("users").doc(referrerId);
+          await refRef.update({
+            coins: firebase.firestore.FieldValue.increment(200),
+            referrals: firebase.firestore.FieldValue.arrayUnion(userId)
+          });
+        }
+      }
+
+      const link = `https://t.me/sjcoin25bot?start=${userId}`;
+      document.getElementById("referralLink").value = link;
+      document.getElementById("referralDisplay").style.display = "block";
+    }
+
+    function copyLink() {
+      const copyText = document.getElementById("referralLink");
+      copyText.select();
+      copyText.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("تم نسخ رابط الإحالة!");
+    }
+
+    window.addEventListener("load", initAffiliateSystem);
+  </script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      min-height: 100vh;
-      padding: 16px;
-      background-color: white;
-      color: #000;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+      text-align: center;
     }
-    h1 {
-      font-size: 24px;
-      margin-bottom: 24px;
+    .referral-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: auto;
     }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-    input[type="color"] {
+    input {
       width: 100%;
-      height: 40px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
     }
-    .section {
-      background: rgba(255 255 255 / 0.1);
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 24px;
-    }
-    pre {
-      background: rgba(0 0 0 / 0.2);
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-    }
-    .error {
-      background-color: #ffe2e2;
-      border: 1px solid #ff8a8a;
-      color: #d8000c;
-      padding: 16px;
-      border-radius: 8px;
-    }
   </style>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div id="app"></div>
-
-  <script>
-    const app = document.getElementById('app');
-
-    // تحقق هل التطبيق يعمل داخل Telegram Mini App
-    const tg = window.Telegram?.WebApp;
-
-    // الحالة الافتراضية للثيم
-    const currentTheme = {
-      headerColor: '#000000',
-      bottomBarColor: '#1d2025',
-      backgroundColor: '#ffffff',
-    };
-
-    function updateTheme(property, value) {
-      if (tg) {
-        tg[property] = value;
-      }
-      currentTheme[property] = value;
-      renderCurrentSettings();
-    }
-
-    function renderError() {
-      app.innerHTML = `
-        <div class="error">
-          <h1>This app only works in Telegram</h1>
-          <p>Please open this application through Telegram Mini Apps.</p>
-        </div>
-      `;
-    }
-
-    function renderApp() {
-      app.innerHTML = `
-        <h1>Customize Telegram Mini App Theme</h1>
-        
-        <div class="section">
-          <h2>Color Customization</h2>
-          <div>
-            <label for="headerColor">Header Color</label>
-            <input type="color" id="headerColor" value="${currentTheme.headerColor}" />
-          </div>
-          <div>
-            <label for="bottomBarColor">Bottom Bar Color</label>
-            <input type="color" id="bottomBarColor" value="${currentTheme.bottomBarColor}" />
-          </div>
-          <div>
-            <label for="backgroundColor">Background Color</label>
-            <input type="color" id="backgroundColor" value="${currentTheme.backgroundColor}" />
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>Current Settings</h2>
-          <pre id="currentSettings">${JSON.stringify(currentTheme, null, 2)}</pre>
-        </div>
-      `;
-
-      // أضف مستمعي الأحداث لعناصر input
-      document.getElementById('headerColor').addEventListener('input', (e) => {
-        updateTheme('headerColor', e.target.value);
-      });
-      document.getElementById('bottomBarColor').addEventListener('input', (e) => {
-        updateTheme('bottomBarColor', e.target.value);
-      });
-      document.getElementById('backgroundColor').addEventListener('input', (e) => {
-        updateTheme('backgroundColor', e.target.value);
-        document.body.style.backgroundColor = e.target.value;
-      });
-    }
-
-    function renderCurrentSettings() {
-      const pre = document.getElementById('currentSettings');
-      if (pre) {
-        pre.textContent = JSON.stringify(currentTheme, null, 2);
-      }
-    }
-
-    function init() {
-      if (!tg) {
-        renderError();
-        return;
-      }
-
-      const initDataString = tg.initData;
-      if (!initDataString) {
-        renderError();
-        return;
-      }
-
-      try {
-        const urlParams = new URLSearchParams(initDataString);
-        const user = JSON.parse(urlParams.get('user') || '{}');
-        if (!user.id) {
-          renderError();
-          return;
-        }
-      } catch {
-        renderError();
-        return;
-      }
-
-      tg.ready();
-      tg.expand();
-      tg.enableVerticalSwipes();
-
-      // تعيين ألوان افتراضية
-      tg.headerColor = currentTheme.headerColor;
-      tg.bottomBarColor = currentTheme.bottomBarColor;
-      document.body.style.backgroundColor = currentTheme.backgroundColor;
-
-      renderApp();
-    }
-
-    init();
-  </script>
+  <div class="referral-box" id="referralDisplay" style="display:none">
+    <h2>🎁 شارك واربح SJ COIN</h2>
+    <p>اربح 200 SJ Coin عن كل صديق يسجل عبر رابطك!</p>
+    <input type="text" id="referralLink" readonly />
+    <button onclick="copyLink()">📋 نسخ الرابط</button>
+  </div>
 </body>
 </html>
