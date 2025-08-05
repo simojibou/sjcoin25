@@ -2,122 +2,129 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SJ Missions</title>
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buy SJ COIN with Telegram Stars</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      background-image: url('/images/bg.png');
-      background-size: cover;
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+      text-align: center;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .balance {
+      font-size: 22px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #3399ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #227acc;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
     }
   </style>
 </head>
-<body class="flex flex-col justify-end min-h-screen px-6 pb-24 mt-12 text-white">
-  <div class="mt-4" id="user-details">
-    <!-- User Game Details Placeholder -->
-  </div>
-
-  <div class="flex justify-center items-center mt-10 space-x-1 text-yellow-400 text-3xl font-bold">
-    <img src="/images/coins.png" class="w-14 h-14" />
-    <span id="user-balance">999</span>
-  </div>
-
-  <div class="mt-10">
-    <div id="mission-types" class="flex gap-4 mb-4">
-      <button onclick="showMissions('social')" class="text-xs font-bold uppercase bg-white text-black px-2 py-1 rounded">Social</button>
-      <button onclick="showMissions('downloads')" class="text-xs font-bold uppercase bg-white text-black px-2 py-1 rounded">Downloads</button>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3 mt-2" id="missions-list">
-      <!-- Missions will go here -->
-    </div>
-  </div>
-
-  <!-- Mission Drawer -->
-  <div id="mission-drawer" class="hidden fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
-    <div class="bg-white text-black p-6 rounded-xl max-w-md w-full">
-      <h2 id="mission-name" class="text-xl font-bold mb-2"></h2>
-      <p id="mission-desc" class="mb-4 text-sm"></p>
-      <button onclick="closeDrawer()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button>
-    </div>
+<body>
+  <div class="container">
+    <h1>Buy SJ COIN</h1>
+    <p>1 Telegram Star = 10 SJ COIN</p>
+    <p class="balance">Your Balance: <span id="coinBalance">Loading...</span> SJ</p>
+    <p class="balance">Pending Stars: <span id="starBalance">Loading...</span></p>
+    <button onclick="convertStars()">Convert Stars</button>
+    <p class="error" id="error"></p>
   </div>
 
   <script>
-    const user = {
-      balance: 999,
-      level: 1,
-      totalReferals: 0
+    // Firebase config from your data
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    const missions = [
-      {
-        name: "Follow Instagram",
-        type: "social",
-        image: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
-        production_per_hour: 50,
-        description: "تابعنا على Instagram واحصل على 50 SJ COIN"
-      },
-      {
-        name: "Subscribe YouTube",
-        type: "social",
-        image: "https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg",
-        production_per_hour: 50,
-        description: "اشترك في قناتنا على YouTube لتحصل على 50 SJ COIN"
-      },
-      {
-        name: "Download SJ Store",
-        type: "downloads",
-        image: "https://play-lh.googleusercontent.com/dN7FNBXhNmnNkwchv3oRO9nVQ15_W88rT_45ZdijQ-bXDIBK-WrEODJ7rlsacY_ZYVY=w240-h480-rw",
-        production_per_hour: 100,
-        description: "قم بتحميل SJ Store واحصل على 100 SJ COIN"
-      },
-      {
-        name: "Download SJ Hero",
-        type: "downloads",
-        image: "https://play-lh.googleusercontent.com/Zlm4P6XISxI32X1W2iROd6AAj7VCAdkxOMJkG0rC0BlYYcsKpWz2ehPmTwKn2YuLdA=w240-h480-rw",
-        production_per_hour: 200,
-        description: "حمل SJ Hero وابدأ اللعب لتحصل على 200 SJ COIN"
-      }
-    ];
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    function showMissions(type) {
-      const missionsList = document.getElementById('missions-list');
-      missionsList.innerHTML = '';
+    const tg = window.Telegram.WebApp;
+    tg.ready();
 
-      const filtered = missions.filter(m => m.type === type);
-      filtered.forEach(mission => {
-        const div = document.createElement('div');
-        div.className = "p-3 bg-gray-800 text-white rounded-xl cursor-pointer";
-        div.innerHTML = `
-          <div class="flex items-start space-x-3">
-            <img src="${mission.image}" class="w-16 h-16 rounded" />
-            <div>
-              <p class="text-[10px] font-bold">${mission.name}</p>
-              <p class="mt-1 text-[10px]">Profit per hour</p>
-              <p class="mt-2 text-[10px] font-bold text-green-400">+${mission.production_per_hour} SJ</p>
-            </div>
-          </div>
-        `;
-        div.onclick = () => openDrawer(mission);
-        missionsList.appendChild(div);
+    const user = tg.initDataUnsafe?.user;
+    if (!user) {
+      document.getElementById('error').textContent = 'Error: Cannot get Telegram user info.';
+    }
+    const userId = user?.id;
+
+    const coinRef = db.ref(`users/${userId}/coins`);
+    const starsRef = db.ref(`users/${userId}/pendingStars`);
+
+    function updateBalances() {
+      coinRef.on("value", (snap) => {
+        document.getElementById("coinBalance").textContent = snap.val() || 0;
+      });
+
+      starsRef.on("value", (snap) => {
+        document.getElementById("starBalance").textContent = snap.val() || 0;
       });
     }
 
-    function openDrawer(mission) {
-      document.getElementById("mission-name").textContent = mission.name;
-      document.getElementById("mission-desc").textContent = mission.description;
-      document.getElementById("mission-drawer").classList.remove("hidden");
+    function convertStars() {
+      starsRef.get().then((snap) => {
+        const stars = snap.val() || 0;
+        if (stars <= 0) {
+          document.getElementById("error").textContent = "No pending Telegram Stars.";
+          return;
+        }
+
+        const coinsToAdd = stars * 10;
+
+        coinRef.get().then((coinSnap) => {
+          const currentCoins = coinSnap.val() || 0;
+          const newBalance = currentCoins + coinsToAdd;
+
+          // Update coins and reset pendingStars
+          coinRef.set(newBalance)
+            .then(() => starsRef.set(0))
+            .then(() => {
+              document.getElementById("error").textContent = "";
+              alert(`You converted ${stars} stars into ${coinsToAdd} SJ COIN!`);
+            })
+            .catch((err) => {
+              document.getElementById("error").textContent = "Error updating balance: " + err.message;
+            });
+        });
+      });
     }
 
-    function closeDrawer() {
-      document.getElementById("mission-drawer").classList.add("hidden");
-    }
-
-    // Show default missions (social)
-    showMissions('social');
+    updateBalances();
   </script>
 </body>
 </html>
