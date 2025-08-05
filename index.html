@@ -3,75 +3,140 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>المهام اليومية - SJ Coin</title>
+  <title>مهام اليوم - SJ Coin</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: Arial, sans-serif;
       background: #000;
       color: #fff;
       margin: 0; padding: 20px;
     }
+    .container { max-width: 900px; margin: 0 auto; }
     h1 { text-align: center; margin-bottom: 5px; }
-    .sub { text-align: center; font-size: 14px; margin-bottom: 20px; color: #aaa; }
-    .task-list { max-width: 700px; margin: 20px auto; }
-    .task {
-      background: #1f1f1f;
-      margin-bottom: 15px;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(255,255,255,0.05);
+    .sub { text-align: center; font-size: 14px; margin-bottom: 15px; color: #aaa; }
+    .profile {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 12px;
+      background: #1f1f1f;
+      padding: 10px 15px;
+      border-radius: 8px;
+      max-width: 700px;
+      margin: 10px auto 20px;
     }
-    .task img { width: 50px; height: 50px; object-fit: contain; border-radius: 6px; background: #222; }
-    .task-info { flex-grow: 1; }
-    .task-info h3 { margin: 0 0 5px; font-size: 18px; }
-    .task-info p { margin: 2px 0; font-size: 14px; }
-    .task-info a { text-decoration: none; color: #00c0ff; font-size: 13px; }
-    .reward-btn {
-      padding: 8px 18px;
-      background-color: #0077ff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      min-width: 150px;
+    .profile img {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #00c0ff;
+      background: #222;
     }
-    .reward-btn.rewarded {
-      background-color: #28a745;
-      cursor: default;
+    .profile .info {
+      flex-grow: 1;
     }
+    .profile .info .name { font-weight: bold; font-size: 18px; }
+    .profile .info .username { font-size: 13px; color: #ccc; }
     .balance-box {
       text-align: center;
       background: #1f1f1f;
       padding: 12px;
       max-width: 320px;
-      margin: 0 auto 10px;
+      margin: 0 auto 20px;
       border-radius: 8px;
       font-size: 18px;
       box-shadow: 0 2px 8px rgba(255,255,255,0.05);
     }
-    .small {
-      font-size: 12px;
-      color: #888;
+    .task-list { margin: 0 auto; max-width: 900px; }
+    .task {
+      background: #1c1c1c;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 10px rgba(255,255,255,0.04);
+    }
+    .task img {
+      width: 55px;
+      height: 55px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #222;
+    }
+    .task-info { flex-grow: 1; }
+    .task-info h3 { margin: 0 0 5px; font-size: 17px; }
+    .task-info p { margin: 4px 0; font-size: 14px; }
+    .task-info a {
+      display: inline-block;
+      margin-top: 4px;
+      text-decoration: none;
+      font-size: 13px;
+      color: #00c0ff;
+    }
+    .reward-btn {
+      padding: 10px 18px;
+      background-color: #0077ff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      min-width: 160px;
+      color: #fff;
+    }
+    .reward-btn.rewarded {
+      background-color: #28a745;
+      cursor: default;
+    }
+    .small { font-size: 12px; color: #888; margin-top: 4px; }
+    .login-widget { text-align: center; margin: 15px 0; }
+    .notice {
+      background: #222;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>مهام اليوم - SJ Coin</h1>
+    <div class="sub">كل مستخدم يرى فقط مهامه ورصيده الخاص</div>
 
-  <h1>مهام اليوم - SJ Coin</h1>
-  <div class="sub">كل مستخدم يرى فقط مهامه المنجزة ورصيده الحقيقي</div>
-  <div class="balance-box">رصيدك: <span id="balance">جارٍ التحميل...</span> SJ COIN</div>
-  <div class="task-list" id="task-list"></div>
+    <!-- مكان عرض البروفايل -->
+    <div id="profile-wrapper"></div>
+
+    <!-- صندوق الرصيد -->
+    <div class="balance-box">رصيدك: <span id="balance">جارٍ التحميل...</span> SJ COIN</div>
+
+    <!-- إذا لم يدخل بعد: Telegram login widget fallback -->
+    <div class="login-widget" id="login-widget-container">
+      <div class="notice">
+        إذا لم تفتح هذه الصفحة من داخل Telegram WebApp، سجّل دخولك عبر Telegram لتربط حسابك.  
+        (مطلوب endpoint على السيرفر للتحقق من البيانات: /telegram-auth-callback)
+      </div>
+      <!-- ضع اسم البوت بدون @ -->
+      <script async src="https://telegram.org/js/telegram-widget.js?7"
+              data-telegram-login="sjcoin25bot"
+              data-size="large"
+              data-userpic="true"
+              data-auth-url="/telegram-auth-callback"
+              data-request-access="write">
+      </script>
+    </div>
+
+    <!-- قائمة المهام -->
+    <div class="task-list" id="task-list"></div>
+  </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // تهيئة Firebase (تأكد تعدّل appId إذا عندك الحقيقي)
+    // إعداد Firebase (عدل appId إذا كان لديك الحقيقي)
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -81,113 +146,152 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:xxxxxxxxxxxxxx"
     };
-
-    // معرف المستخدم الحالي - غيّره ديناميكياً حسب تسجيل الدخول الحقيقي
-    const userId = "1723867100";
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const taskListElem = document.getElementById('task-list');
+
+    // عناصر الواجهة
     const balanceElem = document.getElementById('balance');
+    const taskListElem = document.getElementById('task-list');
+    const profileWrapper = document.getElementById('profile-wrapper');
 
-    const userRef = db.ref(`users/${userId}`);
-    const dailyTasksRef = db.ref('DailyTasks');
+    // الحصول على بيانات تليجرام من WebApp أو localStorage
+    let telegramUser = null;
 
-    // تحميل الرصيد وعرضه مباشرة (يُحدّث تلقائياً)
-    function loadBalance() {
-      userRef.child('balance').on('value', snapshot => {
-        const balance = snapshot.val();
-        balanceElem.innerText = (typeof balance === 'number') ? balance : 0;
-      });
-    }
+    function showProfile(user) {
+      const usernameDisplay = user.username ? `@${user.username}` : '';
+      const displayName = user.fullName || user.first_name || user.username || 'مستخدم';
+      const photo = user.photo || user.photo_url || 'https://via.placeholder.com/60?text=?';
 
-    // تحميل وعرض المهام
-    async function loadTasksAndRender() {
-      const [tasksSnap, userSnap] = await Promise.all([
-        dailyTasksRef.get(),
-        userRef.get()
-      ]);
-
-      const tasks = tasksSnap.val() || {};
-      const userData = userSnap.val() || {};
-      const completed = (userData.completedTasks) || {};
-
-      taskListElem.innerHTML = '';
-
-      if (Object.keys(tasks).length === 0) {
-        taskListElem.innerHTML = '<p>لا توجد مهام حالياً.</p>';
-        return;
-      }
-
-      Object.entries(tasks).forEach(([taskId, task]) => {
-        const isDone = completed[taskId] === true;
-
-        const taskDiv = document.createElement('div');
-        taskDiv.className = 'task';
-
-        taskDiv.innerHTML = `
-          <img src="${task.image || '/images/default.png'}" alt="${task.name}" />
-          <div class="task-info">
-            <h3>${task.name}</h3>
-            <p>مكافأة: <strong>${task.reward_coins || 0}</strong> SJ COIN</p>
-            <a href="${task.link || '#'}" target="_blank" rel="noopener">اذهب للمهمة</a>
-            <div class="small">المهمة: ${taskId}</div>
+      profileWrapper.innerHTML = `
+        <div class="profile">
+          <img src="${photo}" alt="صورة المستخدم" onerror="this.src='https://via.placeholder.com/60?text=?'"/>
+          <div class="info">
+            <div class="name">${displayName}</div>
+            <div class="username">${usernameDisplay}</div>
           </div>
-          <button class="reward-btn ${isDone ? 'rewarded' : ''}" ${isDone ? 'disabled' : ''}>
-            ${isDone ? 'تم استلام المكافأة' : 'استلم المكافأة'}
-          </button>
-        `;
-
-        const btn = taskDiv.querySelector('button');
-        btn.addEventListener('click', () => {
-          if (isDone) return;
-          claimTask(taskId, task.reward_coins || 0);
-        });
-
-        taskListElem.appendChild(taskDiv);
-      });
+        </div>
+      `;
     }
 
-    // تنفيذ الطلب: تأكيد أن المستخدم لم يستلم المكافأة من قبل ثم تحديث الرصيد و وضع علم إنجاز
-    function claimTask(taskId, rewardAmount) {
-      const userNode = db.ref(`users/${userId}`);
-      userNode.transaction(current => {
-        if (current === null) {
-          // إذا لم يكن هناك مستخدم بعد، نُنشئ البداية
-          current = { balance: 0, completedTasks: {} };
-        }
-        const completed = current.completedTasks || {};
+    // استخراج بيانات عند تشغيل داخل Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      const user = tg.initDataUnsafe.user || {};
+      telegramUser = {
+        id: user.id?.toString(),
+        username: user.username || '',
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        photo: user.photo_url || ''
+      };
+      // نحفظ محلياً (اختياري) لتجنب فقدان بعد إعادة تحميل
+      localStorage.setItem('telegramUser', JSON.stringify(telegramUser));
+      showProfile(telegramUser);
+      document.getElementById('login-widget-container').style.display = 'none';
+      startApp(telegramUser.id);
+    } else {
+      // خارج WebApp: نجلب من localStorage بعد التحقق عبر السيرفر
+      const stored = localStorage.getItem('telegramUser');
+      if (stored) {
+        telegramUser = JSON.parse(stored);
+        showProfile(telegramUser);
+        document.getElementById('login-widget-container').style.display = 'none';
+        startApp(telegramUser.userId || telegramUser.id);
+      } else {
+        // لم يسجل بعد؛ ننتظر تسجيل الدخول عبر widget ثم إعادة تحميل الصفحة من السيرفر
+        taskListElem.innerHTML = `<p style="text-align:center; margin-top:20px;">سجّل دخول عبر Telegram لكي تظهر مهامك.</p>`;
+      }
+    }
 
-        if (completed[taskId]) {
-          // سبق له أن استلم المكافأة، لا نغير شيء
+    // دالة رئيسية بعد معرفة userId
+    function startApp(userId) {
+      if (!userId) return;
+      const userRef = db.ref(`users/${userId}`);
+      const dailyTasksRef = db.ref('DailyTasks');
+
+      // مراقبة الرصيد
+      userRef.child('balance').on('value', snap => {
+        const b = snap.val();
+        balanceElem.innerText = (typeof b === 'number') ? b : 0;
+      });
+
+      // تحميل المهام
+      async function loadTasks() {
+        const [tasksSnap, userSnap] = await Promise.all([
+          dailyTasksRef.get(),
+          userRef.get()
+        ]);
+        const tasks = tasksSnap.val() || {};
+        const userData = userSnap.val() || {};
+        const completed = userData.completedTasks || {};
+
+        taskListElem.innerHTML = '';
+        if (Object.keys(tasks).length === 0) {
+          taskListElem.innerHTML = '<p style="text-align:center;">لا توجد مهام حالياً.</p>';
           return;
         }
 
-        // نعلّم المهمة كمكتملة ونضيف الرصيد
-        completed[taskId] = true;
-        const prevBalance = typeof current.balance === 'number' ? current.balance : 0;
-        current.balance = prevBalance + rewardAmount;
-        current.completedTasks = completed;
-        return current;
-      }, (error, committed, snapshot) => {
-        if (error) {
-          alert("❌ حدث خطأ أثناء المطالبة: " + error.message);
-        } else if (!committed) {
-          alert("⚠️ يبدو أنك استلمت هذه المكافأة من قبل.");
-        } else {
-          alert("✅ تم إضافة المكافأة بنجاح!");
-          loadTasksAndRender(); // تحديث الواجهة لتعكس التغيير
-        }
-      });
+        Object.entries(tasks).forEach(([taskId, task]) => {
+          const isDone = completed[taskId] === true;
+          const reward = task.reward_coins || 0;
+
+          const taskDiv = document.createElement('div');
+          taskDiv.className = 'task';
+          taskDiv.innerHTML = `
+            <img src="${task.image || 'https://via.placeholder.com/55'}" alt="${task.name}" />
+            <div class="task-info">
+              <h3>${task.name || taskId}</h3>
+              <p>مكافأة: <strong>${reward}</strong> SJ COIN</p>
+              <a href="${task.link || '#'}" target="_blank" rel="noopener">اذهب للمهمة</a>
+              <div class="small">معرف المهمة: ${taskId}</div>
+            </div>
+            <button class="reward-btn ${isDone ? 'rewarded' : ''}" ${isDone ? 'disabled' : ''}>
+              ${isDone ? 'تم استلام المكافأة' : 'استلم المكافأة'}
+            </button>
+          `;
+          const btn = taskDiv.querySelector('button');
+          btn.addEventListener('click', () => {
+            if (isDone) return;
+            claimTask(userRef, taskId, reward);
+          });
+          taskListElem.appendChild(taskDiv);
+        });
+      }
+
+      // مطالبة المهمة باستخدام transaction آمن
+      function claimTask(userRef, taskId, rewardAmount) {
+        userRef.transaction(current => {
+          if (current === null) {
+            current = { balance: 0, completedTasks: {} };
+          }
+          const completed = current.completedTasks || {};
+          if (completed[taskId]) {
+            return; // تم بالفعل، لا نغير
+          }
+          // نعلّم المهمة مكتملة ونضيف الرصيد
+          completed[taskId] = true;
+          const prevBalance = typeof current.balance === 'number' ? current.balance : 0;
+          current.balance = prevBalance + rewardAmount;
+          current.completedTasks = completed;
+          return current;
+        }, (error, committed, snapshot) => {
+          if (error) {
+            alert("❌ خطأ أثناء المطالبة: " + error.message);
+          } else if (!committed) {
+            alert("⚠️ سبق أن استلمت هذه المكافأة.");
+          } else {
+            alert("✅ تم إضافة المكافأة!");
+            loadTasks(); // تحديث الواجهة
+          }
+        });
+      }
+
+      // أول تحميل
+      loadTasks();
+
+      // إعادة تحميل دورية (اختياري)
+      // setInterval(loadTasks, 60000);
     }
-
-    // تهيئة: تحميل الرصيد والمهام
-    loadBalance();
-    loadTasksAndRender();
-
-    // إمكانية إعادة التحميل كل دقيقة كـ fallback (اختياري)
-    // setInterval(loadTasksAndRender, 60000);
   </script>
-
 </body>
 </html>
