@@ -1,66 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Buy SJ COIN with Telegram Stars</title>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- Telegram WebApp SDK -->
+  <title>SJ COIN Tap2Earn</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f5f5f5;
-      text-align: center;
-    }
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    .balance {
-      font-size: 22px;
-      margin: 10px 0;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #3399ff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #227acc;
-    }
-    .error {
-      color: red;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Buy SJ COIN</h1>
-    <p>1 Telegram Star = 10 SJ COIN</p>
-    <p class="balance">Your Balance: <span id="coinBalance">Loading...</span> SJ</p>
-    <p class="balance">Pending Stars: <span id="starBalance">Loading...</span></p>
-    <button onclick="convertStars()">Convert Stars</button>
-    <p class="error" id="error"></p>
-  </div>
+  <script type="module">
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-  <script>
-    // Firebase config from your data
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -71,60 +18,76 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
     const tg = window.Telegram.WebApp;
-    tg.ready();
+    tg.expand();
 
-    const user = tg.initDataUnsafe?.user;
-    if (!user) {
-      document.getElementById('error').textContent = 'Error: Cannot get Telegram user info.';
-    }
+    const user = tg.initDataUnsafe.user;
     const userId = user?.id;
 
-    const coinRef = db.ref(`users/${userId}/coins`);
-    const starsRef = db.ref(`users/${userId}/pendingStars`);
-
-    function updateBalances() {
-      coinRef.on("value", (snap) => {
-        document.getElementById("coinBalance").textContent = snap.val() || 0;
-      });
-
-      starsRef.on("value", (snap) => {
-        document.getElementById("starBalance").textContent = snap.val() || 0;
-      });
+    async function rewardUser(amount) {
+      const userRef = ref(db, 'users/' + userId);
+      const snapshot = await get(userRef);
+      const currentCoins = snapshot.exists() ? snapshot.val().coins || 0 : 0;
+      await update(userRef, { coins: currentCoins + amount });
+      document.getElementById("coins").textContent = currentCoins + amount;
     }
 
-    function convertStars() {
-      starsRef.get().then((snap) => {
-        const stars = snap.val() || 0;
-        if (stars <= 0) {
-          document.getElementById("error").textContent = "No pending Telegram Stars.";
-          return;
+    // Telegram Stars Payment
+    async function handleBuy() {
+      // Open Telegram Invoice
+      tg.openInvoice({
+        slug: "sjstars-10sj", // ← تأكد أنك أنشأت هذا المنتج في @BotFather
+        success: () => {
+          alert("✅ Payment successful! You received 10 SJ COIN.");
+          rewardUser(10);
+        },
+        error: (err) => {
+          alert("❌ Payment failed: " + err);
         }
-
-        const coinsToAdd = stars * 10;
-
-        coinRef.get().then((coinSnap) => {
-          const currentCoins = coinSnap.val() || 0;
-          const newBalance = currentCoins + coinsToAdd;
-
-          // Update coins and reset pendingStars
-          coinRef.set(newBalance)
-            .then(() => starsRef.set(0))
-            .then(() => {
-              document.getElementById("error").textContent = "";
-              alert(`You converted ${stars} stars into ${coinsToAdd} SJ COIN!`);
-            })
-            .catch((err) => {
-              document.getElementById("error").textContent = "Error updating balance: " + err.message;
-            });
-        });
       });
     }
 
-    updateBalances();
+    window.onload = async () => {
+      if (!userId) {
+        document.getElementById("coins").textContent = "Login via Telegram required";
+        return;
+      }
+      const userRef = ref(db, 'users/' + userId);
+      const snapshot = await get(userRef);
+      if (!snapshot.exists()) {
+        await set(userRef, { coins: 0 });
+        document.getElementById("coins").textContent = 0;
+      } else {
+        document.getElementById("coins").textContent = snapshot.val().coins || 0;
+      }
+    };
+
+    window.handleBuy = handleBuy;
   </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+    .button {
+      padding: 10px 20px;
+      font-size: 20px;
+      margin-top: 20px;
+      background-color: #0088cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🪙 SJ COIN Tap2Earn</h1>
+  <p>Current Balance: <span id="coins">Loading...</span> SJ</p>
+  <button class="button" onclick="handleBuy()">Buy 10 SJ COIN (via Telegram Stars)</button>
 </body>
 </html>
