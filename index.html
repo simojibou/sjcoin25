@@ -1,53 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ COIN - Affiliate System</title>
+  <meta charset="UTF-8">
+  <title>SJ COIN Daily Reward</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
       text-align: center;
       padding: 20px;
-      background: #f2f2f2;
     }
     .card {
-      background: #fff;
+      background: white;
       padding: 20px;
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: auto;
     }
-    input {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-    }
-    .copy-btn {
-      margin-top: 10px;
+    button {
       padding: 10px 20px;
       font-size: 16px;
+      margin-top: 10px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-
-  <h1>SJ COIN Affiliate System</h1>
+  <h1>🎁 SJ COIN - مكافأة يومية</h1>
 
   <div class="card">
-    <p><strong>👤 Username:</strong> <span id="username">Loading...</span></p>
-    <p><strong>💰 Balance:</strong> <span id="balance">0</span> SJ</p>
-    <p><strong>👥 Referrals:</strong> <span id="referrals">0</span></p>
-    <p><strong>🔗 Your Referral Link:</strong></p>
-    <input type="text" id="refLink" readonly />
-    <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+    <p><strong>👤 المستخدم:</strong> <span id="username">...</span></p>
+    <p><strong>💰 الرصيد:</strong> <span id="balance">0</span> SJ</p>
+    <p><strong>📅 آخر مكافأة:</strong> <span id="lastReward">---</span></p>
+    <button onclick="claimDailyReward()">احصل على مكافأتك اليومية</button>
+    <p id="status"></p>
   </div>
 
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
@@ -56,7 +49,7 @@
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1234567890abcdef"
+      appId: "1:551352148152:web:abcdefg"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -64,53 +57,51 @@
 
     const telegram = window.Telegram.WebApp;
     telegram.expand();
+
     const user = telegram.initDataUnsafe.user;
     const userId = user.id;
     const username = user.username || "unknown";
-    const startParam = telegram.initDataUnsafe.start_param || null;
 
     const userRef = ref(db, 'users/' + userId);
 
-    // Create user
-    set(userRef, {
-      telegramUsername: username,
-      balance: 100,
-      referrals: 0,
-      referredBy: startParam || null
-    });
-
-    // Reward referrer
-    if (startParam) {
-      const referrerRef = ref(db, 'users/' + startParam);
-      get(referrerRef).then(snapshot => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          update(referrerRef, {
-            balance: (data.balance || 0) + 100,
-            referrals: (data.referrals || 0) + 1
-          });
-        }
-      });
-    }
-
-    // Display user info
+    // عرض بيانات المستخدم
     get(userRef).then(snapshot => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         document.getElementById("username").innerText = "@" + username;
-        document.getElementById("balance").innerText = data.balance;
-        document.getElementById("referrals").innerText = data.referrals;
-        document.getElementById("refLink").value = `https://t.me/sjcoin25bot?start=${userId}`;
+        document.getElementById("balance").innerText = data.balance || 0;
+        document.getElementById("lastReward").innerText = data.lastDailyReward || "لا يوجد";
       }
     });
 
-    // Copy referral link
-    window.copyLink = function () {
-      const copyText = document.getElementById("refLink");
-      copyText.select();
-      copyText.setSelectionRange(0, 99999);
-      document.execCommand("copy");
-      alert("Link copied!");
+    // التحقق من التاريخ الحالي
+    function getTodayDate() {
+      const today = new Date();
+      return today.toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+
+    // أخذ المكافأة اليومية
+    window.claimDailyReward = async function () {
+      const snapshot = await get(userRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const lastDate = data.lastDailyReward || "";
+        const today = getTodayDate();
+
+        if (lastDate === today) {
+          document.getElementById("status").innerText = "❌ لقد حصلت على مكافأتك اليوم!";
+        } else {
+          const newBalance = (data.balance || 0) + 50;
+          await update(userRef, {
+            balance: newBalance,
+            lastDailyReward: today
+          });
+
+          document.getElementById("balance").innerText = newBalance;
+          document.getElementById("lastReward").innerText = today;
+          document.getElementById("status").innerText = "✅ مبروك! حصلت على 50 SJ COIN";
+        }
+      }
     };
   </script>
 </body>
