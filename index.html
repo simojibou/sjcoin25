@@ -7,32 +7,37 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #000; /* خلفية سوداء */
-      color: white;
+      background: #000;
+      color: #fff;
       margin: 0; padding: 20px;
     }
-    h1, h2 { text-align: center; }
-    .task-list { max-width: 600px; margin: 20px auto; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .sub { text-align: center; font-size: 14px; margin-bottom: 20px; color: #aaa; }
+    .task-list { max-width: 700px; margin: 20px auto; }
     .task {
-      background: #111;
+      background: #1f1f1f;
       margin-bottom: 15px;
       padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(255,255,255,0.05);
+      box-shadow: 0 2px 8px rgba(255,255,255,0.05);
       display: flex;
       align-items: center;
       gap: 15px;
     }
-    .task img { width: 50px; height: 50px; object-fit: contain; }
+    .task img { width: 50px; height: 50px; object-fit: contain; border-radius: 6px; background: #222; }
     .task-info { flex-grow: 1; }
-    .task-info a { text-decoration: none; color: #00aaff; }
+    .task-info h3 { margin: 0 0 5px; font-size: 18px; }
+    .task-info p { margin: 2px 0; font-size: 14px; }
+    .task-info a { text-decoration: none; color: #00c0ff; font-size: 13px; }
     .reward-btn {
-      padding: 8px 15px;
+      padding: 8px 18px;
       background-color: #0077ff;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
+      min-width: 150px;
     }
     .reward-btn.rewarded {
       background-color: #28a745;
@@ -40,19 +45,24 @@
     }
     .balance-box {
       text-align: center;
-      background: #111;
-      padding: 10px;
-      max-width: 300px;
-      margin: 0 auto 20px;
+      background: #1f1f1f;
+      padding: 12px;
+      max-width: 320px;
+      margin: 0 auto 10px;
       border-radius: 8px;
       font-size: 18px;
-      box-shadow: 0 2px 5px rgba(255,255,255,0.05);
+      box-shadow: 0 2px 8px rgba(255,255,255,0.05);
+    }
+    .small {
+      font-size: 12px;
+      color: #888;
     }
   </style>
 </head>
 <body>
 
   <h1>مهام اليوم - SJ Coin</h1>
+  <div class="sub">كل مستخدم يرى فقط مهامه المنجزة ورصيده الحقيقي</div>
   <div class="balance-box">رصيدك: <span id="balance">جارٍ التحميل...</span> SJ COIN</div>
   <div class="task-list" id="task-list"></div>
 
@@ -61,6 +71,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
+    // تهيئة Firebase (تأكد تعدّل appId إذا عندك الحقيقي)
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -71,7 +82,8 @@
       appId: "1:551352148152:web:xxxxxxxxxxxxxx"
     };
 
-    const userId = "1723867100"; // عدّل حسب المستخدم
+    // معرف المستخدم الحالي - غيّره ديناميكياً حسب تسجيل الدخول الحقيقي
+    const userId = "1723867100";
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -81,76 +93,100 @@
     const userRef = db.ref(`users/${userId}`);
     const dailyTasksRef = db.ref('DailyTasks');
 
+    // تحميل الرصيد وعرضه مباشرة (يُحدّث تلقائياً)
     function loadBalance() {
       userRef.child('balance').on('value', snapshot => {
-        const balance = snapshot.val() || 0;
-        balanceElem.innerText = balance;
+        const balance = snapshot.val();
+        balanceElem.innerText = (typeof balance === 'number') ? balance : 0;
       });
     }
 
-    function loadTasks() {
-      Promise.all([
+    // تحميل وعرض المهام
+    async function loadTasksAndRender() {
+      const [tasksSnap, userSnap] = await Promise.all([
         dailyTasksRef.get(),
-        userRef.child('completedTasks').get()
-      ]).then(([tasksSnapshot, completedSnapshot]) => {
-        const tasks = tasksSnapshot.val();
-        const completedTasks = completedSnapshot.val() || {};
+        userRef.get()
+      ]);
 
-        taskListElem.innerHTML = '';
+      const tasks = tasksSnap.val() || {};
+      const userData = userSnap.val() || {};
+      const completed = (userData.completedTasks) || {};
 
-        if (!tasks) {
-          taskListElem.innerHTML = '<p>لا توجد مهام حالياً.</p>';
+      taskListElem.innerHTML = '';
+
+      if (Object.keys(tasks).length === 0) {
+        taskListElem.innerHTML = '<p>لا توجد مهام حالياً.</p>';
+        return;
+      }
+
+      Object.entries(tasks).forEach(([taskId, task]) => {
+        const isDone = completed[taskId] === true;
+
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task';
+
+        taskDiv.innerHTML = `
+          <img src="${task.image || '/images/default.png'}" alt="${task.name}" />
+          <div class="task-info">
+            <h3>${task.name}</h3>
+            <p>مكافأة: <strong>${task.reward_coins || 0}</strong> SJ COIN</p>
+            <a href="${task.link || '#'}" target="_blank" rel="noopener">اذهب للمهمة</a>
+            <div class="small">المهمة: ${taskId}</div>
+          </div>
+          <button class="reward-btn ${isDone ? 'rewarded' : ''}" ${isDone ? 'disabled' : ''}>
+            ${isDone ? 'تم استلام المكافأة' : 'استلم المكافأة'}
+          </button>
+        `;
+
+        const btn = taskDiv.querySelector('button');
+        btn.addEventListener('click', () => {
+          if (isDone) return;
+          claimTask(taskId, task.reward_coins || 0);
+        });
+
+        taskListElem.appendChild(taskDiv);
+      });
+    }
+
+    // تنفيذ الطلب: تأكيد أن المستخدم لم يستلم المكافأة من قبل ثم تحديث الرصيد و وضع علم إنجاز
+    function claimTask(taskId, rewardAmount) {
+      const userNode = db.ref(`users/${userId}`);
+      userNode.transaction(current => {
+        if (current === null) {
+          // إذا لم يكن هناك مستخدم بعد، نُنشئ البداية
+          current = { balance: 0, completedTasks: {} };
+        }
+        const completed = current.completedTasks || {};
+
+        if (completed[taskId]) {
+          // سبق له أن استلم المكافأة، لا نغير شيء
           return;
         }
 
-        Object.keys(tasks).forEach(taskId => {
-          const task = tasks[taskId];
-          const isRewarded = completedTasks[taskId] === true;
-
-          const taskDiv = document.createElement('div');
-          taskDiv.className = 'task';
-
-          taskDiv.innerHTML = `
-            <img src="${task.image}" alt="${task.name}" />
-            <div class="task-info">
-              <h3>${task.name}</h3>
-              <p>مكافأة: ${task.reward_coins} SJ COIN</p>
-              <a href="${task.link}" target="_blank">اذهب للمهمة</a>
-            </div>
-            <button class="reward-btn ${isRewarded ? 'rewarded' : ''}" ${isRewarded ? 'disabled' : ''}>
-              ${isRewarded ? 'تم استلام المكافأة' : 'استلم المكافأة'}
-            </button>
-          `;
-
-          const btn = taskDiv.querySelector('button');
-          btn.addEventListener('click', async () => {
-            if (isRewarded) return;
-
-            try {
-              // تحديث إنجاز المستخدم
-              await userRef.child('completedTasks').update({ [taskId]: true });
-
-              // تحديث الرصيد
-              const balanceSnapshot = await userRef.child('balance').get();
-              const currentBalance = balanceSnapshot.val() || 0;
-              const newBalance = currentBalance + task.reward_coins;
-
-              await userRef.update({ balance: newBalance });
-
-              alert("✅ تم إضافة المكافأة إلى رصيدك!");
-              loadTasks(); // إعادة التحميل لتحديث الواجهة
-            } catch (error) {
-              alert("❌ خطأ: " + error.message);
-            }
-          });
-
-          taskListElem.appendChild(taskDiv);
-        });
+        // نعلّم المهمة كمكتملة ونضيف الرصيد
+        completed[taskId] = true;
+        const prevBalance = typeof current.balance === 'number' ? current.balance : 0;
+        current.balance = prevBalance + rewardAmount;
+        current.completedTasks = completed;
+        return current;
+      }, (error, committed, snapshot) => {
+        if (error) {
+          alert("❌ حدث خطأ أثناء المطالبة: " + error.message);
+        } else if (!committed) {
+          alert("⚠️ يبدو أنك استلمت هذه المكافأة من قبل.");
+        } else {
+          alert("✅ تم إضافة المكافأة بنجاح!");
+          loadTasksAndRender(); // تحديث الواجهة لتعكس التغيير
+        }
       });
     }
 
+    // تهيئة: تحميل الرصيد والمهام
     loadBalance();
-    loadTasks();
+    loadTasksAndRender();
+
+    // إمكانية إعادة التحميل كل دقيقة كـ fallback (اختياري)
+    // setInterval(loadTasksAndRender, 60000);
   </script>
 
 </body>
