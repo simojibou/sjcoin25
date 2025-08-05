@@ -30,6 +30,7 @@
 
     const user = tg.initDataUnsafe?.user;
     const userId = user?.id;
+    let isPaymentInProgress = false; // Flag to prevent multiple payments
 
     // Function to update user's coin balance
     async function rewardUser(amount) {
@@ -53,49 +54,57 @@
         return;
       }
 
-      // Configure and show MainButton
+      if (isPaymentInProgress) {
+        alert("⏳ Payment already in progress. Please wait.");
+        return;
+      }
+
+      isPaymentInProgress = true;
       tg.MainButton.setText(`Pay for ${description}`);
       tg.MainButton.show();
+      tg.MainButton.showProgress(true); // Show loading state
 
-      // Handle MainButton click for payment
-      tg.MainButton.onClick(async () => {
-        try {
-          tg.MainButton.showProgress(true); // Show loading state
-          const invoiceLink = await createInvoice(productType, amount, description);
-          tg.openInvoice(invoiceLink, {
-            success: async () => {
-              if (productType === "sjcoin") {
-                await rewardUser(amount);
-                alert(`✅ Payment successful! You received ${amount} SJ COIN.`);
-              } else {
-                alert(`✅ Payment successful! You purchased Telegram Stars.`);
-              }
-              tg.MainButton.hide();
-            },
-            error: (error) => {
-              console.error("Payment error:", error);
-              alert(`❌ Payment failed: ${error.message || "Unknown error"}`);
-            },
-            finally: () => {
-              tg.MainButton.showProgress(false); // Hide loading state
+      try {
+        const invoiceLink = await createInvoice(productType, amount, description);
+        tg.openInvoice(invoiceLink, {
+          success: async () => {
+            if (productType === "sjcoin") {
+              await rewardUser(amount);
+              alert(`✅ Payment successful! You received ${amount} SJ COIN.`);
+            } else {
+              alert(`✅ Payment successful! You purchased ${amount} Telegram Stars.`);
             }
-          });
-        } catch (error) {
-          console.error("Invoice creation error:", error);
-          alert("❌ Failed to initiate payment. Please try again.");
-          tg.MainButton.showProgress(false);
-        }
-      });
+            tg.MainButton.hide();
+          },
+          error: (error) => {
+            console.error("Payment error:", error);
+            alert(`❌ Payment failed: ${error.message || "Unknown error"}`);
+          },
+          finally: () => {
+            tg.MainButton.showProgress(false);
+            tg.MainButton.hide();
+            isPaymentInProgress = false;
+          }
+        });
+      } catch (error) {
+        console.error("Invoice creation error:", error);
+        alert("❌ Failed to initiate payment. Please try again.");
+        tg.MainButton.showProgress(false);
+        tg.MainButton.hide();
+        isPaymentInProgress = false;
+      }
     }
 
     // Simulate invoice creation (replace with actual BotFather invoice creation)
     async function createInvoice(productType, amount, description) {
-      // Placeholder: Generate invoice via Telegram Bot API
-      // Replace with actual implementation using @BotFather product slugs
+      // Placeholder: Use Telegram Bot API to generate invoice link
+      // 1. Create products in @BotFather with Telegram Stars payment
+      // 2. Use createInvoiceLink API (e.g., https://api.telegram.org/bot<token>/createInvoiceLink)
+      // Example payload: { title: description, description: ..., payload: unique_id, provider_token: "", currency: "XTR", prices: [{ label: description, amount: <stars_amount> }] }
       if (productType === "sjcoin") {
-        return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Invoice for 10 SJ COIN
+        return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Replace with actual invoice link
       } else if (productType === "stars") {
-        return "https://t.me/$yourBotName?start=invoice_stars_100"; // Invoice for Telegram Stars
+        return "https://t.me/$yourBotName?start=invoice_stars_100"; // Replace with actual invoice link
       }
       throw new Error("Invalid product type");
     }
@@ -146,6 +155,10 @@
     }
     .button:hover {
       background-color: #006699;
+    }
+    .button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
     }
   </style>
 </head>
