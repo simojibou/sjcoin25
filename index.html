@@ -1,25 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>SJ COIN Affiliate</title>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ COIN - Affiliate System</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    .card {
+      background: #fff;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .copy-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
-<body style="font-family: sans-serif;">
-  <h2>👥 رابط الدعوة الخاص بك</h2>
-  <input id="refLink" style="width:100%;" readonly />
-  <button onclick="copyRef()">📋 نسخ الرابط</button>
+<body>
 
-  <h3>🔗 إحالاتك</h3>
-  <ul id="refList"></ul>
+  <h1>SJ COIN Affiliate System</h1>
 
-  <h3>💰 رصيدك:</h3>
-  <div id="balance">0 SJ COIN</div>
+  <div class="card">
+    <p><strong>👤 Username:</strong> <span id="username">Loading...</span></p>
+    <p><strong>💰 Balance:</strong> <span id="balance">0</span> SJ</p>
+    <p><strong>👥 Referrals:</strong> <span id="referrals">0</span></p>
+    <p><strong>🔗 Your Referral Link:</strong></p>
+    <input type="text" id="refLink" readonly />
+    <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+  </div>
 
+  <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-app.js";
-    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
@@ -28,70 +56,61 @@
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:ffb379ecde6f82c0be07a0"
+      appId: "1:551352148152:web:1234567890abcdef"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const tg = window.Telegram.WebApp;
-    const user = tg.initDataUnsafe.user;
-
+    const telegram = window.Telegram.WebApp;
+    telegram.expand();
+    const user = telegram.initDataUnsafe.user;
     const userId = user.id;
-    const userName = user.first_name + (user.last_name || "");
+    const username = user.username || "unknown";
+    const startParam = telegram.initDataUnsafe.start_param || null;
 
-    // توليد رابط الإحالة
-    const refLink = `https://t.me/sjcoin25bot?start=ref_${userId}`;
-    document.getElementById("refLink").value = refLink;
+    const userRef = ref(db, 'users/' + userId);
 
-    // حفظ بيانات المستخدم
-    const userRef = ref(db, "users/" + userId);
-    update(userRef, {
-      name: userName,
-      profile_photo: user.photo_url || "",
+    // Create user
+    set(userRef, {
+      telegramUsername: username,
+      balance: 100,
+      referrals: 0,
+      referredBy: startParam || null
     });
 
-    // التحقق من الإحالة
-    const urlParams = new URLSearchParams(window.location.search);
-    const startParam = tg.initDataUnsafe?.start_param || urlParams.get("start");
-    if (startParam && startParam.startsWith("ref_")) {
-      const referrerId = startParam.split("_")[1];
-      if (referrerId !== String(userId)) {
-        const referralRef = ref(db, `users/${referrerId}/referrals/${userId}`);
-        set(referralRef, { timestamp: new Date().toISOString() });
-        // إضافة مكافأة
-        const balanceRef = ref(db, `users/${referrerId}/balance`);
-        get(balanceRef).then((snap) => {
-          const newBalance = (snap.val() || 0) + 50;
-          set(balanceRef, newBalance);
-        });
-      }
+    // Reward referrer
+    if (startParam) {
+      const referrerRef = ref(db, 'users/' + startParam);
+      get(referrerRef).then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          update(referrerRef, {
+            balance: (data.balance || 0) + 100,
+            referrals: (data.referrals || 0) + 1
+          });
+        }
+      });
     }
 
-    // عرض الرصيد
-    onValue(ref(db, "users/" + userId + "/balance"), (snap) => {
-      document.getElementById("balance").innerText = (snap.val() || 0) + " SJ COIN";
+    // Display user info
+    get(userRef).then(snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("username").innerText = "@" + username;
+        document.getElementById("balance").innerText = data.balance;
+        document.getElementById("referrals").innerText = data.referrals;
+        document.getElementById("refLink").value = `https://t.me/sjcoin25bot?start=${userId}`;
+      }
     });
 
-    // عرض قائمة الإحالات
-    onValue(ref(db, `users/${userId}/referrals`), (snap) => {
-      const data = snap.val() || {};
-      const list = document.getElementById("refList");
-      list.innerHTML = "";
-      Object.keys(data).forEach(async (refUserId) => {
-        const refSnap = await get(ref(db, "users/" + refUserId));
-        const refUser = refSnap.val();
-        const name = refUser?.name || "مستخدم مجهول";
-        const li = document.createElement("li");
-        li.innerHTML = `👤 ${name}`;
-        list.appendChild(li);
-      });
-    });
-
-    // نسخ الرابط
-    window.copyRef = () => {
-      navigator.clipboard.writeText(refLink);
-      alert("تم نسخ الرابط ✅");
+    // Copy referral link
+    window.copyLink = function () {
+      const copyText = document.getElementById("refLink");
+      copyText.select();
+      copyText.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("Link copied!");
     };
   </script>
 </body>
