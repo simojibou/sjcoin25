@@ -142,7 +142,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Tasks to add
+    // Tasks to add to the tasks collection
     const tasksToAdd = [
       {
         id: "video1",
@@ -152,6 +152,18 @@
         image: "/images/youtube.png",
         is_rewarded: false
       },
+      {
+        id: "other1",
+        name: "Join Community",
+        type: "other",
+        reward_coins: 2000,
+        image: "/images/bounty.png",
+        is_rewarded: false
+      }
+    ];
+
+    // Daily tasks to add to the DailyTasks collection
+    const dailyTasksToAdd = [
       {
         id: "daily1",
         name: "Follow my Instagram",
@@ -191,20 +203,13 @@
         reward_coins: 2000,
         image: "/images/sj-store.png",
         is_rewarded: false
-      },
-      {
-        id: "other1",
-        name: "Join Community",
-        type: "other",
-        reward_coins: 2000,
-        image: "/images/bounty.png",
-        is_rewarded: false
       }
     ];
 
     // Function to add tasks to Firestore if they don't exist
     async function addTasksToFirestore() {
       try {
+        // Add tasks to the tasks collection
         for (const task of tasksToAdd) {
           const docRef = db.collection('tasks').doc(task.id);
           const doc = await docRef.get();
@@ -213,6 +218,17 @@
             console.log(`Added task: ${task.name}`);
           } else {
             console.log(`Task already exists: ${task.name}`);
+          }
+        }
+        // Add daily tasks to the DailyTasks collection
+        for (const task of dailyTasksToAdd) {
+          const docRef = db.collection('DailyTasks').doc(task.id);
+          const doc = await docRef.get();
+          if (!doc.exists) {
+            await docRef.set(task);
+            console.log(`Added daily task: ${task.name}`);
+          } else {
+            console.log(`Daily task already exists: ${task.name}`);
           }
         }
       } catch (error) {
@@ -266,13 +282,16 @@
         const tasksSnapshot = await db.collection('tasks').get();
         const tasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        // Fetch daily tasks
+        const dailyTasksSnapshot = await db.collection('DailyTasks').get();
+        const dailyTasks = dailyTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
         // Fetch referral tasks
         const referralTasksSnapshot = await db.collection('referral-tasks').get();
         const referralTasks = referralTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Filter tasks
         const videoTasks = tasks.filter(task => task.type === 'video');
-        const dailyTasks = tasks.filter(task => task.type === 'daily');
         const otherTasks = tasks.filter(task => task.type === 'other');
 
         // Render tasks
