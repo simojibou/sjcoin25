@@ -1,52 +1,95 @@
-<!-- Daily Tasks Section -->
-<div id="dailyRewardSection">
-  <h2>Daily Tasks</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SJ COIN - Earn Tasks</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
+    h1, h2 { text-align: center; }
+    .task { padding: 10px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+    .task:last-child { border-bottom: none; }
+    button { padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #aaa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SJ COIN</h1>
+    <h2 id="userBalance">Your Balance: Loading...</h2>
 
-  <div class="task" onclick="alert('Daily Reward: +100 SJ')">
-    <img src="/images/daily-task.png" alt="daily">
-    <div class="info">
-      <div>Claim Daily Reward</div>
-      <div class="reward">+100 SJ</div>
+    <h3>📅 Daily Tasks</h3>
+    <div class="task">
+      <span>Follow Instagram</span>
+      <button onclick="completeTask('instagram')">Get 50 SJ</button>
+    </div>
+    <div class="task">
+      <span>Subscribe YouTube</span>
+      <button onclick="completeTask('youtube')">Get 50 SJ</button>
+    </div>
+    <div class="task">
+      <span>Download SJ Store</span>
+      <button onclick="completeTask('sjstore')">Get 100 SJ</button>
+    </div>
+    <div class="task">
+      <span>Install SJ Hero</span>
+      <button onclick="completeTask('sjhero')">Get 200 SJ</button>
     </div>
   </div>
 
-  <div class="task" onclick="alert('Follow Instagram: +50 SJ')">
-    <img src="/images/instagram.png" alt="instagram">
-    <div class="info">
-      <div>Follow My Instagram</div>
-      <div class="reward">+50 SJ</div>
-    </div>
-  </div>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:30b05c7a73129c1f45b6b6"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  <div class="task" onclick="alert('Subscribe YouTube: +50 SJ')">
-    <img src="/images/youtube.png" alt="youtube">
-    <div class="info">
-      <div>Subscribe to YouTube</div>
-      <div class="reward">+50 SJ</div>
-    </div>
-  </div>
+    const userId = "demo-user"; // TODO: Replace with real auth
 
-  <div class="task" onclick="alert('Download App: +100 SJ')">
-    <img src="/images/download.png" alt="download">
-    <div class="info">
-      <div>Download My App</div>
-      <div class="reward">+100 SJ</div>
-    </div>
-  </div>
+    function loadBalance() {
+      db.ref("users/" + userId + "/balance").once("value").then((snap) => {
+        const balance = snap.val() || 0;
+        document.getElementById("userBalance").innerText = `Your Balance: ${balance.toLocaleString()} SJ COIN`;
+      });
+    }
 
-  <div class="task" onclick="alert('Play SJ Hero: +200 SJ')">
-    <img src="/images/sj-hero.png" alt="sj-hero">
-    <div class="info">
-      <div>Play SJ Hero</div>
-      <div class="reward">+200 SJ</div>
-    </div>
-  </div>
+    function completeTask(taskKey) {
+      const rewards = {
+        instagram: 50,
+        youtube: 50,
+        sjstore: 100,
+        sjhero: 200
+      };
+      const reward = rewards[taskKey];
 
-  <div class="task" onclick="alert('Visit SJ Store: +100 SJ')">
-    <img src="/images/sj-store.png" alt="sj-store">
-    <div class="info">
-      <div>Visit SJ Store</div>
-      <div class="reward">+100 SJ</div>
-    </div>
-  </div>
-</div>
+      const userRef = db.ref("users/" + userId);
+      userRef.once("value").then(snapshot => {
+        const userData = snapshot.val() || {};
+        const completed = userData.completedTasks || {};
+        if (completed[taskKey]) {
+          alert("You already claimed this task!");
+          return;
+        }
+
+        const newBalance = (userData.balance || 0) + reward;
+        completed[taskKey] = true;
+        userRef.update({ balance: newBalance, completedTasks: completed });
+        alert("🎉 Reward added!");
+        loadBalance();
+      });
+    }
+
+    loadBalance();
+  </script>
+</body>
+</html>
