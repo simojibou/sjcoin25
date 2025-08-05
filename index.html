@@ -3,45 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SJ COIN - Earn Tasks</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <title>Earn SJ Coins</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
-    h1, h2 { text-align: center; }
-    .task { padding: 10px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
-    .task:last-child { border-bottom: none; }
-    button { padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #aaa; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-image: url('/images/bg.png');
+      background-size: cover;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      color: white;
+    }
+    .container {
+      padding: 24px;
+      margin-top: 48px;
+      margin-bottom: 96px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .header {
+      text-align: center;
+    }
+    .header img {
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 16px 0 10px;
+    }
+    .section-title {
+      font-size: 1rem;
+      font-weight: 500;
+      text-align: center;
+      margin: 32px 0 16px;
+    }
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .task-item {
+      display: flex;
+      align-items: center;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    .task-item.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(50%);
+    }
+    .task-item img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 12px;
+    }
+    .task-info {
+      flex: 1;
+    }
+    .task-info h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .task-info .price {
+      color: #ffd700;
+      font-size: 0.875rem;
+    }
+    .check-icon {
+      width: 24px;
+      height: 24px;
+      color: #27d46c;
+    }
+    .loading {
+      text-align: center;
+      font-size: 1.2rem;
+      padding: 50px;
+    }
+    .error {
+      text-align: center;
+      font-size: 1rem;
+      color: #ff4d4d;
+      padding: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>SJ COIN</h1>
-    <h2 id="userBalance">Your Balance: Loading...</h2>
-
-    <h3>📅 Daily Tasks</h3>
-    <div class="task">
-      <span>Follow Instagram</span>
-      <button onclick="completeTask('instagram')">Get 50 SJ</button>
+    <div class="header">
+      <img src="/images/coins.png" alt="Coins">
+      <h1>Earn More SJ Coins</h1>
     </div>
-    <div class="task">
-      <span>Subscribe YouTube</span>
-      <button onclick="completeTask('youtube')">Get 50 SJ</button>
+    <div id="video-tasks">
+      <p class="section-title">SJ Coin YouTube</p>
+      <div class="task-list" id="video-task-list"></div>
     </div>
-    <div class="task">
-      <span>Download SJ Store</span>
-      <button onclick="completeTask('sjstore')">Get 100 SJ</button>
+    <div id="daily-tasks">
+      <p class="section-title">Daily Tasks</p>
+      <div class="task-list" id="daily-task-list"></div>
     </div>
-    <div class="task">
-      <span>Install SJ Hero</span>
-      <button onclick="completeTask('sjhero')">Get 200 SJ</button>
+    <div id="other-tasks">
+      <p class="section-title">All Tasks</p>
+      <div class="task-list" id="other-task-list"></div>
+    </div>
+    <div id="referral-tasks">
+      <p class="section-title">Referral Tasks</p>
+      <div class="task-list" id="referral-task-list"></div>
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
   <script>
-    // Firebase config
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -49,47 +135,89 @@
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:30b05c7a73129c1f45b6b6"
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
+
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const db = firebase.firestore();
 
-    const userId = "demo-user"; // TODO: Replace with real auth
+    // Function to format numbers with commas
+    function formatNumber(num) {
+      return num.toLocaleString();
+    }
 
-    function loadBalance() {
-      db.ref("users/" + userId + "/balance").once("value").then((snap) => {
-        const balance = snap.val() || 0;
-        document.getElementById("userBalance").innerText = `Your Balance: ${balance.toLocaleString()} SJ COIN`;
+    // Function to render tasks
+    function renderTasks(tasks, containerId, isReferral = false) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      if (tasks.length === 0) {
+        container.innerHTML = '<p>No tasks available.</p>';
+        return;
+      }
+      tasks.forEach(task => {
+        const taskElement = document.createElement('div');
+        taskElement.className = `task-item ${task.is_rewarded || task.is_completed ? 'disabled' : ''}`;
+        taskElement.innerHTML = `
+          <img src="${task.image || '/images/bounty.png'}" alt="${isReferral ? task.title : task.name}">
+          <div class="task-info">
+            <h3>${isReferral ? task.title : task.name}</h3>
+            <div class="price">+${formatNumber(isReferral ? task.reward : task.reward_coins)} SJ Coins</div>
+          </div>
+          ${(task.is_rewarded || task.is_completed) ? '<svg class="check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' : ''}
+        `;
+        taskElement.addEventListener('click', () => {
+          if (!(task.is_rewarded || task.is_completed)) {
+            alert(`Task: ${isReferral ? task.title : task.name}\nReward: ${formatNumber(isReferral ? task.reward : task.reward_coins)} SJ Coins`);
+            // Add task action logic here (e.g., update Firestore, redirect to task URL)
+          }
+        });
+        container.appendChild(taskElement);
       });
     }
 
-    function completeTask(taskKey) {
-      const rewards = {
-        instagram: 50,
-        youtube: 50,
-        sjstore: 100,
-        sjhero: 200
-      };
-      const reward = rewards[taskKey];
+    // Function to load tasks
+    async function loadTasks() {
+      try {
+        // Show loading state
+        document.querySelectorAll('.task-list').forEach(container => {
+          container.innerHTML = '<p class="loading">Loading...</p>';
+        });
 
-      const userRef = db.ref("users/" + userId);
-      userRef.once("value").then(snapshot => {
-        const userData = snapshot.val() || {};
-        const completed = userData.completedTasks || {};
-        if (completed[taskKey]) {
-          alert("You already claimed this task!");
-          return;
-        }
+        // Fetch tasks
+        const tasksSnapshot = await db.collection('tasks').get();
+        const tasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const newBalance = (userData.balance || 0) + reward;
-        completed[taskKey] = true;
-        userRef.update({ balance: newBalance, completedTasks: completed });
-        alert("🎉 Reward added!");
-        loadBalance();
-      });
+        // Fetch referral tasks
+        const referralTasksSnapshot = await db.collection('referral-tasks').get();
+        const referralTasks = referralTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Filter tasks
+        const videoTasks = tasks.filter(task => task.type === 'video');
+        const dailyTasks = tasks.filter(task => task.type === 'daily');
+        const otherTasks = tasks.filter(task => task.type === 'other');
+
+        // Render tasks
+        renderTasks(videoTasks, 'video-task-list');
+        renderTasks(dailyTasks, 'daily-task-list');
+        renderTasks(otherTasks, 'other-task-list');
+        renderTasks(referralTasks, 'referral-task-list', true);
+
+        // Hide sections with no tasks
+        document.getElementById('video-tasks').style.display = videoTasks.length ? 'block' : 'none';
+        document.getElementById('daily-tasks').style.display = dailyTasks.length ? 'block' : 'none';
+        document.getElementById('other-tasks').style.display = otherTasks.length ? 'block' : 'none';
+        document.getElementById('referral-tasks').style.display = referralTasks.length ? 'block' : 'none';
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        document.querySelectorAll('.task-list').forEach(container => {
+          container.innerHTML = '<p class="error">Error loading tasks.</p>';
+        });
+      }
     }
 
-    loadBalance();
+    // Load tasks on page load
+    window.onload = loadTasks;
   </script>
 </body>
 </html>
