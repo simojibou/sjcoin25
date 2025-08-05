@@ -1,47 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SJ COIN Daily Reward</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ COIN Earn</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      text-align: center;
+      background: url('/images/bg.png') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
       padding: 20px;
     }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 400px;
+    .container {
+      max-width: 500px;
       margin: auto;
+      background: rgba(0,0,0,0.7);
+      padding: 20px;
+      border-radius: 20px;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin-top: 10px;
+    h1, h2 {
+      text-align: center;
+    }
+    .task {
+      display: flex;
+      align-items: center;
+      background: #222;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
       cursor: pointer;
     }
+    .task img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+    }
+    .task .info {
+      flex: 1;
+    }
+    .task .reward {
+      font-weight: bold;
+      color: #27D46C;
+    }
   </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
-  <h1>🎁 SJ COIN - مكافأة يومية</h1>
+  <div class="container">
+    <img src="/images/coins.png" alt="coins" style="display:block; margin:auto; width:100px;">
+    <h1>EARN MORE SJ COINS</h1>
 
-  <div class="card">
-    <p><strong>👤 المستخدم:</strong> <span id="username">...</span></p>
-    <p><strong>💰 الرصيد:</strong> <span id="balance">0</span> SJ</p>
-    <p><strong>📅 آخر مكافأة:</strong> <span id="lastReward">---</span></p>
-    <button onclick="claimDailyReward()">احصل على مكافأتك اليومية</button>
-    <p id="status"></p>
+    <div id="videoTasksSection"></div>
+    <div id="dailyRewardSection"></div>
+    <div id="otherTasksSection"></div>
+    <div id="referralTasksSection"></div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-
+  <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -49,60 +68,79 @@
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:abcdefg"
+      appId: "1:551352148152:web:6f2d7bdc0c99d80f236ad4"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const telegram = window.Telegram.WebApp;
-    telegram.expand();
-
-    const user = telegram.initDataUnsafe.user;
-    const userId = user.id;
-    const username = user.username || "unknown";
-
-    const userRef = ref(db, 'users/' + userId);
-
-    // عرض بيانات المستخدم
-    get(userRef).then(snapshot => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        document.getElementById("username").innerText = "@" + username;
-        document.getElementById("balance").innerText = data.balance || 0;
-        document.getElementById("lastReward").innerText = data.lastDailyReward || "لا يوجد";
-      }
-    });
-
-    // التحقق من التاريخ الحالي
-    function getTodayDate() {
-      const today = new Date();
-      return today.toISOString().split('T')[0]; // YYYY-MM-DD
+    function createTaskElement(task, defaultImage = "/images/bounty.png") {
+      return `
+        <div class="task" onclick="alert('${task.name || task.title}: +${task.reward_coins || task.reward} SJ')">
+          <img src="${task.image || defaultImage}" alt="task">
+          <div class="info">
+            <div>${task.name || task.title}</div>
+            <div class="reward">+${(task.reward_coins || task.reward).toLocaleString()} SJ</div>
+          </div>
+        </div>
+      `;
     }
 
-    // أخذ المكافأة اليومية
-    window.claimDailyReward = async function () {
-      const snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const lastDate = data.lastDailyReward || "";
-        const today = getTodayDate();
+    async function loadTasks() {
+      const tasksRef = db.ref("/clicker/tasks");
+      const snapshot = await tasksRef.get();
+      const tasks = Object.values(snapshot.val() || {});
 
-        if (lastDate === today) {
-          document.getElementById("status").innerText = "❌ لقد حصلت على مكافأتك اليوم!";
-        } else {
-          const newBalance = (data.balance || 0) + 50;
-          await update(userRef, {
-            balance: newBalance,
-            lastDailyReward: today
-          });
+      const videoTasks = tasks.filter(t => t.type === "video");
+      const otherTasks = tasks.filter(t => t.type === "other");
 
-          document.getElementById("balance").innerText = newBalance;
-          document.getElementById("lastReward").innerText = today;
-          document.getElementById("status").innerText = "✅ مبروك! حصلت على 50 SJ COIN";
-        }
+      if (videoTasks.length > 0) {
+        document.getElementById("videoTasksSection").innerHTML = `
+          <h2>SJ COIN YouTube</h2>
+          ${videoTasks.map(t => createTaskElement(t, "/images/youtube.png")).join("")}
+        `;
       }
-    };
+
+      if (otherTasks.length > 0) {
+        document.getElementById("otherTasksSection").innerHTML = `
+          <h2>All Tasks</h2>
+          ${otherTasks.map(t => createTaskElement(t)).join("")}
+        `;
+      }
+    }
+
+    async function loadDailyReward() {
+      const dailyRef = db.ref("/clicker/daily-reward");
+      const snapshot = await dailyRef.get();
+      const amount = snapshot.val() || 0;
+
+      document.getElementById("dailyRewardSection").innerHTML = `
+        <h2>Daily Tasks</h2>
+        <div class="task" onclick="alert('Daily Reward: +${amount} SJ')">
+          <img src="/images/daily-task.png" alt="daily">
+          <div class="info">
+            <div>Daily Reward</div>
+            <div class="reward">+${amount.toLocaleString()} SJ</div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadReferralTasks() {
+      const referralRef = db.ref("/clicker/referral-tasks");
+      const snapshot = await referralRef.get();
+      const tasks = Object.values(snapshot.val() || {});
+
+      if (tasks.length > 0) {
+        document.getElementById("referralTasksSection").innerHTML = `
+          <h2>Referral Tasks</h2>
+          ${tasks.map(t => createTaskElement(t)).join("")}
+        `;
+      }
+    }
+
+    loadTasks();
+    loadDailyReward();
+    loadReferralTasks();
   </script>
 </body>
 </html>
