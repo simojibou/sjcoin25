@@ -5,22 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>المهام اليومية - SJ Coin</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #000; /* خلفية سوداء */
+      color: white;
+      margin: 0; padding: 20px;
+    }
     h1, h2 { text-align: center; }
     .task-list { max-width: 600px; margin: 20px auto; }
     .task {
-      background: white;
+      background: #111;
       margin-bottom: 15px;
       padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(255,255,255,0.05);
       display: flex;
       align-items: center;
       gap: 15px;
     }
     .task img { width: 50px; height: 50px; object-fit: contain; }
     .task-info { flex-grow: 1; }
-    .task-info a { text-decoration: none; color: #0077ff; }
+    .task-info a { text-decoration: none; color: #00aaff; }
     .reward-btn {
       padding: 8px 15px;
       background-color: #0077ff;
@@ -35,13 +40,13 @@
     }
     .balance-box {
       text-align: center;
-      background: #fff;
+      background: #111;
       padding: 10px;
       max-width: 300px;
       margin: 0 auto 20px;
       border-radius: 8px;
       font-size: 18px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(255,255,255,0.05);
     }
   </style>
 </head>
@@ -56,7 +61,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // إعدادات Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -67,10 +71,8 @@
       appId: "1:551352148152:web:xxxxxxxxxxxxxx"
     };
 
-    // معرف المستخدم الحالي (غيّره حسب الحالة)
-    const userId = "1723867100";
+    const userId = "1723867100"; // عدّل حسب المستخدم
 
-    // تهيئة Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const taskListElem = document.getElementById('task-list');
@@ -79,7 +81,6 @@
     const userRef = db.ref(`users/${userId}`);
     const dailyTasksRef = db.ref('DailyTasks');
 
-    // تحميل الرصيد من الملف الشخصي
     function loadBalance() {
       userRef.child('balance').on('value', snapshot => {
         const balance = snapshot.val() || 0;
@@ -87,10 +88,14 @@
       });
     }
 
-    // تحميل المهام اليومية
     function loadTasks() {
-      dailyTasksRef.on('value', snapshot => {
-        const tasks = snapshot.val();
+      Promise.all([
+        dailyTasksRef.get(),
+        userRef.child('completedTasks').get()
+      ]).then(([tasksSnapshot, completedSnapshot]) => {
+        const tasks = tasksSnapshot.val();
+        const completedTasks = completedSnapshot.val() || {};
+
         taskListElem.innerHTML = '';
 
         if (!tasks) {
@@ -100,6 +105,7 @@
 
         Object.keys(tasks).forEach(taskId => {
           const task = tasks[taskId];
+          const isRewarded = completedTasks[taskId] === true;
 
           const taskDiv = document.createElement('div');
           taskDiv.className = 'task';
@@ -111,18 +117,18 @@
               <p>مكافأة: ${task.reward_coins} SJ COIN</p>
               <a href="${task.link}" target="_blank">اذهب للمهمة</a>
             </div>
-            <button class="reward-btn ${task.is_rewarded ? 'rewarded' : ''}" ${task.is_rewarded ? 'disabled' : ''}>
-              ${task.is_rewarded ? 'تم استلام المكافأة' : 'استلم المكافأة'}
+            <button class="reward-btn ${isRewarded ? 'rewarded' : ''}" ${isRewarded ? 'disabled' : ''}>
+              ${isRewarded ? 'تم استلام المكافأة' : 'استلم المكافأة'}
             </button>
           `;
 
           const btn = taskDiv.querySelector('button');
           btn.addEventListener('click', async () => {
-            if (task.is_rewarded) return;
+            if (isRewarded) return;
 
             try {
-              // تحديث المهمة إلى "تم استلام المكافأة"
-              await dailyTasksRef.child(taskId).update({ is_rewarded: true });
+              // تحديث إنجاز المستخدم
+              await userRef.child('completedTasks').update({ [taskId]: true });
 
               // تحديث الرصيد
               const balanceSnapshot = await userRef.child('balance').get();
@@ -132,8 +138,9 @@
               await userRef.update({ balance: newBalance });
 
               alert("✅ تم إضافة المكافأة إلى رصيدك!");
+              loadTasks(); // إعادة التحميل لتحديث الواجهة
             } catch (error) {
-              alert("❌ حدث خطأ: " + error.message);
+              alert("❌ خطأ: " + error.message);
             }
           });
 
@@ -142,7 +149,6 @@
       });
     }
 
-    // تشغيل التحميلات
     loadBalance();
     loadTasks();
   </script>
