@@ -2,339 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SJ COIN Friends with Firebase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SJ COIN Referral Tracker</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
   <style>
-    body, html {
-      margin: 0; padding: 0; height: 100%;
+    body {
       font-family: Arial, sans-serif;
-      background: #121212;
-      color: white;
-      display: flex; flex-direction: column;
-    }
-    .container {
-      flex: 1;
-      padding: 24px 24px 96px;
-      display: flex; flex-direction: column;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 20px;
     }
     h1 {
-      font-size: 24px; text-align: center; text-transform: uppercase; font-weight: bold;
+      color: #333;
     }
-    p {
-      margin-top: 8px; font-weight: 500; text-align: center;
+    .referral-link {
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #e0e0e0;
+      border-radius: 6px;
+      word-break: break-all;
     }
-    .btn-invite, .btn-copy, .btn-toggle {
+    .user-list {
+      margin-top: 30px;
+    }
+    .user {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 12px 16px;
-      border-radius: 16px;
-      cursor: pointer;
-      border: none;
-      color: white;
-      font-weight: 600;
-      width: 100%;
-      margin-top: 16px;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .btn-copy {
-      width: 48px;
-      justify-content: center;
-    }
-    .btn-toggle {
-      border: 2px solid rgba(255, 218, 163, 0.1);
-      color: #FFDAA3;
-      font-size: 12px;
-      text-transform: uppercase;
-      font-weight: 700;
-      border-radius: 9999px;
-      padding: 10px 20px;
-      margin: 16px auto;
-      max-width: 160px;
-    }
-    .friends-list, .clicks-list {
-      margin-top: 16px;
-      overflow-y: auto;
-      max-height: 200px;
-    }
-    .friend-item, .click-item {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 12px 16px;
-      margin-bottom: 12px;
-    }
-    .friend-info, .click-info {
-      display: flex; align-items: center; gap: 12px;
-    }
-    .friend-avatar, .click-avatar {
-      width: 32px; height: 32px;
+    .user img {
       border-radius: 50%;
-      background: url('/images/avatar.png') no-repeat center / cover;
+      width: 40px;
+      height: 40px;
+      margin-right: 15px;
     }
-    .coin {
-      width: 20px; height: 20px;
-      margin-left: 8px;
-    }
-    .text-primary {
-      color: #FFDAA3;
-      font-weight: 600;
-    }
-    .loading-spinner {
-      margin: 32px auto;
-      border: 4px solid rgba(217, 217, 217, 0.1);
-      border-top: 4px solid rgba(255, 218, 163, 0.3);
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .user-info {
+      flex: 1;
     }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>Friends</h1>
-  <p>You and your friend will receive bonuses.</p>
+  <h1>🎯 رابط الإحالة الخاص بك</h1>
+  <div id="referral" class="referral-link">...</div>
 
-  <button class="btn-invite" id="btn-invite-base">
-    <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="36" height="36" />
-    <div>
-      <p>Invite a friend</p>
-      <div style="display:flex; align-items:center; gap:4px;">
-        <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="20" height="20" />
-        <span id="base-bonus" class="text-primary"></span>
-        <span>for you and your friend</span>
-      </div>
-    </div>
-  </button>
+  <h2>👥 قائمة الأصدقاء</h2>
+  <div id="userList" class="user-list"></div>
 
-  <button class="btn-invite" id="btn-invite-premium">
-    <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="36" height="36" />
-    <div>
-      <p>Invite a friend with Telegram Premium</p>
-      <div style="display:flex; align-items:center; gap:4px;">
-        <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="20" height="20" />
-        <span id="premium-bonus" class="text-primary"></span>
-        <span>for you and your friend</span>
-      </div>
-    </div>
-  </button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getDatabase, ref, set, onValue, update
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-  <button class="btn-toggle" id="toggle-bonuses-btn">More bonuses</button>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:xxxxxxxxxxxxxxxxx"
+    };
 
-  <div id="bonuses-section" style="display:none;">
-    <p style="font-weight:bold; text-transform:uppercase; cursor:pointer;" id="hide-bonuses-btn">Bonus for leveling up</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Level</th>
-          <th style="text-align:right;">For friend</th>
-          <th style="text-align:right;">Premium</th>
-        </tr>
-      </thead>
-      <tbody id="levels-tbody"></tbody>
-    </table>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  <p style="font-weight:bold; text-transform:uppercase; margin-top: 32px;">
-    List of your friends <span id="friends-count"></span>
-  </p>
-  <div class="friends-list" id="friends-list">
-    <div class="loading-spinner" id="loading-spinner"></div>
-  </div>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-  <p style="font-weight:bold; text-transform:uppercase; margin-top: 32px;">
-    Users who clicked your link <span id="clicks-count"></span>
-  </p>
-  <div class="clicks-list" id="clicks-list">
-    <div class="loading-spinner" id="clicks-loading-spinner"></div>
-  </div>
+    const user = tg.initDataUnsafe.user;
+    const userId = user.id;
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`;
+    const username = user.username || '';
+    const photoUrl = user.photo_url || '';
 
-  <div style="display:flex; gap:12px; margin-top:24px;">
-    <button class="btn-copy" id="copy-link-btn" title="Copy referral link">📋</button>
-    <button class="btn-invite" id="share-btn">Invite a friend</button>
-  </div>
-</div>
+    const referralLink = `${window.location.origin + window.location.pathname}?ref=${userId}`;
+    document.getElementById('referral').textContent = referralLink;
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-    authDomain: "metawarefare-gaming.firebaseapp.com",
-    databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-    projectId: "metawarefare-gaming",
-    storageBucket: "metawarefare-gaming.appspot.com",
-    messagingSenderId: "551352148152",
-    appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const referral = {
-    base: { welcome: 1000, levelUp: {1: 100, 2: 200, 3: 300} },
-    premium: { welcome: 3000, levelUp: {1: 500, 2: 700, 3: 900} }
-  };
-  const levels = [
-    { level: 1, name: "Beginner" },
-    { level: 2, name: "Intermediate" },
-    { level: 3, name: "Advanced" },
-  ];
-
-  let telegram_id = null;
-  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
-    telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id || null;
-  }
-
-  const referralLink = `https://t.me/sjcoin25bot/?startapp=ref${telegram_id}`;
-
-  document.getElementById("base-bonus").textContent = referral.base.welcome;
-  document.getElementById("premium-bonus").textContent = referral.premium.welcome;
-
-  function renderLevels() {
-    const tbody = document.getElementById("levels-tbody");
-    tbody.innerHTML = "";
-    levels.forEach(({ level, name }) => {
-      const base = referral.base.levelUp[level] || 0;
-      const premium = referral.premium.levelUp[level] || 0;
-      if (base === 0 && premium === 0) return;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${name}</td>
-        <td style="text-align:right;"><span class="text-primary">${base}</span></td>
-        <td style="text-align:right;"><span class="text-primary">${premium}</span></td>
-      `;
-      tbody.appendChild(tr);
+    // ✅ سجل معلومات المستخدم في Firebase
+    const userRef = ref(db, `users/${userId}`);
+    update(userRef, {
+      name: fullName,
+      username: username,
+      photo: photoUrl,
+      clicks: 0,
+      balance: 0,
+      referral: referralLink,
     });
-  }
 
-  renderLevels();
+    // ✅ تتبع فتح الرابط
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrerId = urlParams.get('ref');
 
-  document.getElementById("toggle-bonuses-btn").onclick = () => {
-    document.getElementById("bonuses-section").style.display = "block";
-    document.getElementById("toggle-bonuses-btn").style.display = "none";
-  };
-  document.getElementById("hide-bonuses-btn").onclick = () => {
-    document.getElementById("bonuses-section").style.display = "none";
-    document.getElementById("toggle-bonuses-btn").style.display = "block";
-  };
-
-  document.getElementById("copy-link-btn").onclick = () => {
-    navigator.clipboard.writeText(referralLink).then(() => alert("Link copied"));
-  };
-
-  document.getElementById("share-btn").onclick = () => {
-    const url = `https://t.me/share/url?text=Join SJ COIN&url=${encodeURIComponent(referralLink)}`;
-    if (window.Telegram?.WebApp?.openTelegramLink) {
-      window.Telegram.WebApp.openTelegramLink(url);
-    } else {
-      window.open(url, "_blank");
-    }
-  };
-
-  function handleReferralLink() {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("startapp");
-    if (ref && ref.startsWith("ref") && telegram_id) {
-      const referrerId = ref.replace("ref", "");
-      const clickId = Date.now();
-      db.ref(`referralClicks/${referrerId}/${clickId}`).set({
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        userId: telegram_id,
-        status: "clicked"
+    if (referrerId && referrerId !== String(userId)) {
+      const referrerRef = ref(db, `users/${referrerId}`);
+      onValue(referrerRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const newClicks = (data.clicks || 0) + 1;
+          const newBalance = (data.balance || 0) + 10; // 🎁 كل نقرة = 10 SJ
+          update(referrerRef, {
+            clicks: newClicks,
+            balance: newBalance
+          });
+        }
+      }, {
+        onlyOnce: true
       });
-      if (referrerId !== telegram_id.toString()) {
-        db.ref(`referredUsers/${referrerId}/list/${telegram_id}`).set({
-          first_name: "New",
-          last_name: "User",
-          level: { name: "Beginner", level: 1 },
-          balance: 50,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
     }
-  }
 
-  function fetchReferredUsers() {
-    const spinner = document.getElementById("loading-spinner");
-    const list = document.getElementById("friends-list");
-    const count = document.getElementById("friends-count");
-    spinner.style.display = "block";
-    list.innerHTML = "";
-    if (!telegram_id) return;
-    db.ref(`referredUsers/${telegram_id}/list`).once("value").then(snap => {
-      spinner.style.display = "none";
-      const data = snap.val();
-      if (!data) {
-        count.textContent = "(0)";
-        list.innerHTML = `<p style="text-align:center; color: #aaa;">No friends yet</p>`;
-        return;
-      }
-      const items = Object.values(data);
-      count.textContent = `(${items.length})`;
-      items.forEach(user => {
-        const div = document.createElement("div");
-        div.className = "friend-item";
+    // ✅ عرض جميع المستخدمين
+    const userList = document.getElementById('userList');
+    const usersRef = ref(db, 'users');
+    onValue(usersRef, (snapshot) => {
+      userList.innerHTML = '';
+      snapshot.forEach((child) => {
+        const u = child.val();
+        const div = document.createElement('div');
+        div.className = 'user';
         div.innerHTML = `
-          <div class="friend-info">
-            <div class="friend-avatar"></div>
-            <div>
-              <p style="margin:0; font-weight:600;">${user.first_name}</p>
-              <p style="margin:0; font-size: 10px;">${user.level?.name || ""}</p>
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <img src="/images/coin.png" alt="coin" width="20" height="20" />
-            <span class="text-primary">${user.balance}</span>
+          <img src="${u.photo || 'https://t.me/i/userpic/320/default_user.png'}" />
+          <div class="user-info">
+            <strong>${u.name}</strong><br/>
+            👁️ ${u.clicks || 0} | 💰 ${u.balance || 0} SJ
           </div>
         `;
-        list.appendChild(div);
+        userList.appendChild(div);
       });
     });
-  }
-
-  function fetchClicks() {
-    const spinner = document.getElementById("clicks-loading-spinner");
-    const list = document.getElementById("clicks-list");
-    const count = document.getElementById("clicks-count");
-    spinner.style.display = "block";
-    list.innerHTML = "";
-    if (!telegram_id) return;
-    db.ref(`referralClicks/${telegram_id}`).once("value").then(snap => {
-      spinner.style.display = "none";
-      const data = snap.val();
-      if (!data) {
-        count.textContent = "(0)";
-        list.innerHTML = `<p style="text-align:center; color: #aaa;">No clicks yet</p>`;
-        return;
-      }
-      const items = Object.values(data);
-      count.textContent = `(${items.length})`;
-      items.forEach(click => {
-        const div = document.createElement("div");
-        div.className = "click-item";
-        const date = new Date(click.timestamp).toLocaleString();
-        div.innerHTML = `
-          <div class="click-info">
-            <div class="click-avatar"></div>
-            <div>
-              <p style="margin:0; font-weight:600;">Visitor</p>
-              <p style="margin:0; font-size: 10px;">Clicked on ${date}</p>
-            </div>
-          </div>
-        `;
-        list.appendChild(div);
-      });
-    });
-  }
-
-  handleReferralLink();
-  fetchReferredUsers();
-  fetchClicks();
-</script>
+  </script>
 </body>
 </html>
