@@ -1,133 +1,116 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SJ COIN - مهام يومية مع نظام تحقق</title>
+  <title>Daily Tasks - SJ Coin</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f0f0f5; padding:20px; }
-    .task { background: #fff; margin-bottom:15px; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
-    button { padding: 8px 15px; background: #4caf50; border: none; border-radius: 5px; color: white; cursor: pointer; }
-    button:disabled { background: gray; cursor: default; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+    h1 { text-align: center; }
+    .task-list { max-width: 600px; margin: 20px auto; }
+    .task {
+      background: white;
+      margin-bottom: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgb(0 0 0 / 0.1);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .task img { width: 50px; height: 50px; object-fit: contain; }
+    .task-info { flex-grow: 1; }
+    .task-info a { text-decoration: none; color: #0077ff; }
+    .task-info a:hover { text-decoration: underline; }
+    .reward-btn {
+      padding: 8px 15px;
+      background-color: #0077ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .reward-btn.rewarded {
+      background-color: #28a745;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
 
-<h1>مهام SJ COIN اليومية</h1>
+  <h1>مهام اليوم - SJ Coin</h1>
+  <div class="task-list" id="task-list"></div>
 
-<div id="tasks"></div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<script>
-  // ---- Firebase Config: ضع بيانات مشروعك هنا ----
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-  };
-  
-  // ---- تهيئة Firebase ----
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  <script>
+    // Firebase config - عدّلها بالقيم الخاصة بك
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:xxxxxxxxxxxxxx"
+    };
 
-  // مثال: معرف المستخدم (في التطبيق الحقيقي يجب جلبه من تسجيل دخول المستخدم)
-  const userId = "user_123";
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // بيانات المهام اليومية ثابتة هنا (يمكن تحميلها من قاعدة بيانات أيضاً)
-  const dailyTasks = {
-    daily1: { name: "متابعة إنستغرام", reward: 1000, link: "https://instagram.com/simo.jibou" },
-    daily2: { name: "مشاهدة يوتيوب", reward: 1000, link: "https://youtube.com/@simojibou" },
-    daily3: { name: "تنزيل", reward: 1500, link: "https://example.com/download" },
-    daily4: { name: "لعب SJ Hero", reward: 2000, link: "https://play.google.com/store/apps/details?id=com.gamehero.sj" },
-    daily5: { name: "زيارة SJ Store", reward: 2000, link: "https://play.google.com/store/apps/details?id=com.sj.store" }
-  };
+    // المرجع إلى المهام اليومية في قاعدة البيانات
+    const dailyTasksRef = db.ref('DailyTasks');
 
-  const tasksContainer = document.getElementById("tasks");
+    const taskListElem = document.getElementById('task-list');
 
-  // جلب حالة مهام المستخدم من Firestore
-  async function getUserTasks() {
-    const userDoc = await db.collection("users").doc(userId).get();
-    if (!userDoc.exists) {
-      return {}; // لا توجد مهام منجزة بعد
-    }
-    return userDoc.data().dailyTasks || {};
-  }
+    // تحميل وعرض المهام
+    function loadTasks() {
+      dailyTasksRef.on('value', snapshot => {
+        const tasks = snapshot.val();
+        taskListElem.innerHTML = ''; // تنظيف القائمة
 
-  // تحديث حالة المهمة في Firestore
-  async function markTaskDone(taskId, reward) {
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
+        if (!tasks) {
+          taskListElem.innerHTML = '<p>لا توجد مهام حالياً.</p>';
+          return;
+        }
 
-    let dailyTasksState = {};
-    if (userDoc.exists) {
-      dailyTasksState = userDoc.data().dailyTasks || {};
-    }
+        Object.keys(tasks).forEach(taskId => {
+          const task = tasks[taskId];
 
-    // التحقق هل المهمة منجزة مسبقاً
-    if (dailyTasksState[taskId]?.is_rewarded) {
-      alert("لقد استلمت مكافأتك لهذه المهمة بالفعل!");
-      return;
-    }
+          const taskDiv = document.createElement('div');
+          taskDiv.className = 'task';
 
-    // تحديث حالة المهمة
-    dailyTasksState[taskId] = { is_rewarded: true };
+          taskDiv.innerHTML = `
+            <img src="${task.image}" alt="${task.name}" />
+            <div class="task-info">
+              <h3>${task.name}</h3>
+              <p>مكافأة: ${task.reward_coins} SJ COIN</p>
+              <a href="${task.link}" target="_blank">اذهب للمهمة</a>
+            </div>
+            <button class="reward-btn ${task.is_rewarded ? 'rewarded' : ''}" ${task.is_rewarded ? 'disabled' : ''}>
+              ${task.is_rewarded ? 'تم استلام المكافأة' : 'استلم المكافأة'}
+            </button>
+          `;
 
-    await userRef.set({ dailyTasks: dailyTasksState }, { merge: true });
+          // حدث عند الضغط على زر استلام المكافأة
+          const btn = taskDiv.querySelector('button');
+          btn.addEventListener('click', () => {
+            if (task.is_rewarded) return;
+            // تحديث حالة المكافأة في Firebase
+            dailyTasksRef.child(taskId).update({ is_rewarded: true })
+              .then(() => alert('تم استلام المكافأة!'))
+              .catch(err => alert('خطأ في تحديث المكافأة: ' + err.message));
+          });
 
-    // إضافة العملات للمستخدم (تحتاج تنفذ وظيفة خاصة بإضافة العملات)
-    await addCoinsToUser(reward);
-
-    alert(`مبروك! حصلت على ${reward} عملة SJ`);
-    renderTasks(); // إعادة تحديث واجهة المهام
-  }
-
-  // دالة وهمية لإضافة العملات، عدّلها حسب نظامك الحقيقي
-  async function addCoinsToUser(coins) {
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
-    let currentCoins = 0;
-    if (userDoc.exists) {
-      currentCoins = userDoc.data().coins || 0;
-    }
-    await userRef.set({ coins: currentCoins + coins }, { merge: true });
-  }
-
-  // عرض المهام مع زر التنفيذ
-  async function renderTasks() {
-    const userTasksState = await getUserTasks();
-    tasksContainer.innerHTML = "";
-
-    for (const [taskId, task] of Object.entries(dailyTasks)) {
-      const isDone = userTasksState[taskId]?.is_rewarded || false;
-
-      const taskDiv = document.createElement("div");
-      taskDiv.classList.add("task");
-
-      taskDiv.innerHTML = `
-        <h3>${task.name}</h3>
-        <p>المكافأة: ${task.reward} عملة SJ</p>
-        <p><a href="${task.link}" target="_blank">اذهب إلى المهمة</a></p>
-        <button ${isDone ? "disabled" : ""} id="btn_${taskId}">
-          ${isDone ? "تم الحصول على المكافأة" : "لقد أكملت المهمة - احصل على مكافأتك"}
-        </button>
-      `;
-
-      tasksContainer.appendChild(taskDiv);
-
-      if (!isDone) {
-        document.getElementById(`btn_${taskId}`).addEventListener("click", () => {
-          markTaskDone(taskId, task.reward);
+          taskListElem.appendChild(taskDiv);
         });
-      }
+      });
     }
-  }
 
-  renderTasks();
-
-</script>
-
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+    loadTasks();
+  </script>
 </body>
 </html>
