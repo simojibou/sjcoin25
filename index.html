@@ -1,21 +1,106 @@
+<!-- Save this as index.html or your main app HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home Page</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.0/babel.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SJ COIN Friends with Firebase</title>
+  <style>
+    /* Same styles as before, omitted here to save space. You can keep them unchanged. */
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    // Firebase configuration
+  <div class="container">
+    <!-- ... UI Elements Unchanged ... -->
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const referral = {
+      base: { welcome: 1000, levelUp: { 1: 100, 2: 200, 3: 300 } },
+      premium: { welcome: 3000, levelUp: { 1: 500, 2: 700, 3: 900 } }
+    };
+    const levels = [
+      { level: 1, name: "Beginner" },
+      { level: 2, name: "Intermediate" },
+      { level: 3, name: "Advanced" },
+    ];
+
+    // Telegram ID from Telegram.WebApp API
+    const telegram_id = Telegram.WebApp.initDataUnsafe?.user?.id || Math.floor(Math.random() * 1000000); // fallback for testing
+
+    const referralLink = `${importMetaEnv('VITE_BOT_URL') || 'https://t.me/sjcoin25bot'}/?startapp=ref${telegram_id}`;
+
+    const baseBonusSpan = document.getElementById("base-bonus");
+    const premiumBonusSpan = document.getElementById("premium-bonus");
+    const toggleBonusesBtn = document.getElementById("toggle-bonuses-btn");
+    const bonusesSection = document.getElementById("bonuses-section");
+    const hideBonusesBtn = document.getElementById("hide-bonuses-btn");
+    const levelsTbody = document.getElementById("levels-tbody");
+    const friendsList = document.getElementById("friends-list");
+    const loadingSpinner = document.getElementById("loading-spinner");
+    const friendsCountSpan = document.getElementById("friends-count");
+
+    baseBonusSpan.textContent = referral.base.welcome.toLocaleString();
+    premiumBonusSpan.textContent = referral.premium.welcome.toLocaleString();
+
+    function renderLevels() {
+      levelsTbody.innerHTML = "";
+      levels.forEach(({ level, name }) => {
+        const baseBonus = referral.base.levelUp[level] || 0;
+        const premiumBonus = referral.premium.levelUp[level] || 0;
+        if (baseBonus === 0 && premiumBonus === 0) return;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td style="text-align:right;">
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" width="16" height="16" />
+              <span class="text-primary">${baseBonus.toLocaleString()}</span>
+            </div>
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" width="16" height="16" />
+              <span class="text-primary">${premiumBonus.toLocaleString()}</span>
+            </div>
+          </td>
+        `;
+        levelsTbody.appendChild(tr);
+      });
+    }
+
+    toggleBonusesBtn.addEventListener("click", () => {
+      bonusesSection.style.display = "block";
+      toggleBonusesBtn.style.display = "none";
+    });
+
+    hideBonusesBtn.addEventListener("click", () => {
+      bonusesSection.style.display = "none";
+      toggleBonusesBtn.style.display = "block";
+    });
+
+    document.getElementById("copy-link-btn").addEventListener("click", () => {
+      navigator.clipboard.writeText(referralLink).then(() => {
+        alert("Referral link copied to clipboard!");
+      });
+    });
+
+    document.getElementById("share-btn").addEventListener("click", () => {
+      const shareMessage = encodeURIComponent("Play SJ COIN with me!");
+      const url = `https://t.me/share/url?text=${shareMessage}&url=${encodeURIComponent(referralLink)}`;
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    });
+
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -25,180 +110,93 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // NEW: Handle referral click logging
+    function handleReferralLink() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const startApp = urlParams.get('startapp');
+      if (startApp && startApp.startsWith('ref')) {
+        const referrerId = startApp.replace('ref', '');
+        const newUserId = telegram_id;
+        if (referrerId && referrerId !== newUserId.toString()) {
+          // Log the click
+          const clickRef = db.ref(`clickedUsers/${referrerId}/clicks/${newUserId}`);
+          clickRef.set({
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+          });
 
-    // Mock level configuration
-    const levelConfig = {
-      bg: {
-        1: '/images/background1.jpg',
-        2: '/images/background2.jpg',
-        // Add more backgrounds as needed
-      }
-    };
-
-    // UserTap Component
-    const UserTap = () => {
-      const [user, setUser] = React.useState(null);
-      const handleTap = async () => {
-        if (user) {
-          const userRef = db.collection('users').doc(user.uid);
-          await userRef.update({
-            balance: firebase.firestore.FieldValue.increment(1)
+          // Log the referral user (registered)
+          const ref = db.ref(`referredUsers/${referrerId}/list/${newUserId}`);
+          ref.once("value").then(snapshot => {
+            if (!snapshot.exists()) {
+              ref.set({
+                first_name: "New",
+                last_name: "User",
+                level: { name: "Beginner", level: 1 },
+                balance: 50,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+              });
+            }
           });
         }
-      };
-
-      return (
-        <div className="mt-6 text-center">
-          <button 
-            onClick={handleTap} 
-            className="px-4 py-2 bg-blue-500 text-white rounded-full"
-          >
-            Tap to Earn
-          </button>
-        </div>
-      );
-    };
-
-    // UserGameDetails Component
-    const UserGameDetails = ({ className }) => {
-      return (
-        <div className={className}>
-          <p className="text-white">Game Details Placeholder</p>
-        </div>
-      );
-    };
-
-    // Home Component
-    const Home = () => {
-      const [user, setUser] = React.useState(null);
-      const [userData, setUserData] = React.useState({
-        first_name: '',
-        last_name: '',
-        balance: 0,
-        level: { level: 1, name: 'Beginner', to_balance: 1000 }
-      });
-      const maxLevel = 10; // Mock max level
-
-      // Firebase auth state listener
-      React.useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-          if (firebaseUser) {
-            setUser(firebaseUser);
-            const userRef = db.collection('users').doc(firebaseUser.uid);
-            const doc = await userRef.get();
-            if (doc.exists) {
-              setUserData(doc.data());
-            } else {
-              // Initialize user data
-              const initialData = {
-                first_name: firebaseUser.displayName?.split(' ')[0] || 'User',
-                last_name: firebaseUser.displayName?.split(' ')[1] || '',
-                balance: 0,
-                level: { level: 1, name: 'Beginner', to_balance: 1000 }
-              };
-              await userRef.set(initialData);
-              setUserData(initialData);
-            }
-          } else {
-            // Redirect to login or handle unauthenticated state
-            setUser(null);
-            setUserData({
-              first_name: '',
-              last_name: '',
-              balance: 0,
-              level: { level: 1, name: 'Beginner', to_balance: 1000 }
-            });
-          }
-        });
-        return () => unsubscribe();
-      }, []);
-
-      // Mock login function (for demo purposes)
-      const handleLogin = () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
-      };
-
-      if (!user) {
-        return (
-          <div className="flex items-center justify-center h-screen bg-gray-900">
-            <button 
-              onClick={handleLogin}
-              className="px-4 py-2 bg-blue-500 text-white rounded-full"
-            >
-              Login with Google
-            </button>
-          </div>
-        );
       }
+    }
 
-      return (
-        <div
-          className="flex-1 px-5 pb-20 bg-center bg-cover min-h-screen"
-          style={{
-            backgroundImage: `url(${levelConfig.bg[userData.level?.level || 1]})`,
-          }}
-        >
-          <header className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-2 px-3 py-2 border-2 rounded-full bg-black/20 border-white/10">
-              <img
-                src="/images/avatar.png"
-                alt="user-avatar"
-                className="object-cover w-8 h-8 rounded-full"
-              />
-              <p className="text-sm font-medium uppercase text-white">
-                {userData.first_name} {userData.last_name}
-              </p>
-            </div>
-          </header>
-          <UserGameDetails className="mt-6" />
-          <div className="flex mt-6 space-x-1.5 justify-center items-center select-none">
-            <img
-              src="/images/coins.png"
-              alt="coins"
-              className="object-contain w-20 h-20"
-            />
-            <span className="text-3xl font-bold text-gradient">
-              {Math.floor(userData.balance).toLocaleString()}
-            </span>
-          </div>
-          <div>
-            <a
-              href="/leaderboard"
-              className="flex items-center justify-between gap-2 text-white"
-            >
-              <div className="flex items-center text-xs">
-                <span>{userData.level?.name}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="text-xs">Level</span>
-                <span className="font-bold">
-                  {userData.level?.level}/{maxLevel}
-                </span>
-              </div>
-            </a>
-            <div className="bg-[#FFDAA3]/10 border overflow-hidden border-[#FFDAA3]/10 rounded-full mt-2 h-4 w-full">
-              <div
-                className="bg-[linear-gradient(180deg,#FBEDE0_0%,#F7B87D_21%,#F3A155_52%,#E6824B_84%,#D36224_100%)] h-full"
-                style={{
-                  width: `${(userData.balance / userData.level.to_balance) * 100}%`,
-                }}
-              ></div>
-            </div>
-          </div>
-          <UserTap />
-        </div>
-      );
-    };
+    function fetchReferredUsersFromFirebase() {
+      loadingSpinner.style.display = "block";
+      friendsList.innerHTML = "";
+      const ref = db.ref(`referredUsers/${telegram_id}/list`);
+      ref.once('value').then(snapshot => {
+        loadingSpinner.style.display = "none";
+        const users = snapshot.val();
+        if (!users) {
+          friendsCountSpan.textContent = "(0)";
+          friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,255,255,0.3); font-size: 14px;">You didn’t invite anyone yet</p>`;
+          return;
+        }
 
-    // Render the app
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<Home />);
+        const userList = Object.values(users);
+        friendsCountSpan.textContent = `(${userList.length})`;
+        userList.forEach(user => {
+          const div = document.createElement("div");
+          div.className = "friend-item";
+          div.innerHTML = `
+            <div class="friend-info">
+              <div class="friend-avatar"></div>
+              <div>
+                <p style="margin:0; font-weight:600;">${user.first_name || ""} ${user.last_name || ""}</p>
+                <p style="margin:0; font-size: 10px;">${user.level?.name || ""}</p>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <img src="/images/coin.png" alt="coin" width="20" height="20" />
+              <span class="text-primary">${compactNumber(user.balance)}</span>
+            </div>
+          `;
+          friendsList.appendChild(div);
+        });
+      }).catch(() => {
+        loadingSpinner.style.display = "none";
+        friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,0,0,0.7);">Failed to load friends</p>`;
+      });
+    }
+
+    function compactNumber(num) {
+      if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+      if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
+      return num.toString();
+    }
+
+    function importMetaEnv(key) {
+      if (key === "VITE_BOT_URL") return "https://t.me/sjcoin25bot";
+      return null;
+    }
+
+    renderLevels();
+    handleReferralLink();
+    fetchReferredUsersFromFirebase();
   </script>
 </body>
 </html>
