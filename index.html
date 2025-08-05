@@ -142,6 +142,84 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Tasks to add
+    const tasksToAdd = [
+      {
+        id: "video1",
+        name: "Watch Tutorial Video",
+        type: "video",
+        reward_coins: 500,
+        image: "/images/youtube.png",
+        is_rewarded: false
+      },
+      {
+        id: "daily1",
+        name: "Follow my Instagram",
+        type: "daily",
+        reward_coins: 1000,
+        image: "/images/instagram.png",
+        is_rewarded: false
+      },
+      {
+        id: "daily2",
+        name: "YouTube",
+        type: "daily",
+        reward_coins: 1000,
+        image: "/images/youtube.png",
+        is_rewarded: false
+      },
+      {
+        id: "daily3",
+        name: "Download",
+        type: "daily",
+        reward_coins: 1500,
+        image: "/images/download.png",
+        is_rewarded: false
+      },
+      {
+        id: "daily4",
+        name: "SJ Hero",
+        type: "daily",
+        reward_coins: 2000,
+        image: "/images/sj-hero.png",
+        is_rewarded: false
+      },
+      {
+        id: "daily5",
+        name: "SJ Store",
+        type: "daily",
+        reward_coins: 2000,
+        image: "/images/sj-store.png",
+        is_rewarded: false
+      },
+      {
+        id: "other1",
+        name: "Join Community",
+        type: "other",
+        reward_coins: 2000,
+        image: "/images/bounty.png",
+        is_rewarded: false
+      }
+    ];
+
+    // Function to add tasks to Firestore if they don't exist
+    async function addTasksToFirestore() {
+      try {
+        for (const task of tasksToAdd) {
+          const docRef = db.collection('tasks').doc(task.id);
+          const doc = await docRef.get();
+          if (!doc.exists) {
+            await docRef.set(task);
+            console.log(`Added task: ${task.name}`);
+          } else {
+            console.log(`Task already exists: ${task.name}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error adding tasks to Firestore:', error);
+      }
+    }
+
     // Function to format numbers with commas
     function formatNumber(num) {
       return num.toLocaleString();
@@ -216,8 +294,11 @@
       }
     }
 
-    // Load tasks on page load
-    window.onload = loadTasks;
+    // Initialize tasks and load them
+    window.onload = async () => {
+      await addTasksToFirestore();
+      await loadTasks();
+    };
   </script>
 </body>
 </html>
