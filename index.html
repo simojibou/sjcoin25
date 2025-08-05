@@ -4,10 +4,11 @@
   <title>SJ COIN Tap2Earn</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="module">
-    // Firebase
+    // Firebase imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -18,52 +19,103 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const tg = window.Telegram.WebApp;
-    tg.expand();
 
-    const user = tg.initDataUnsafe.user;
+    // Initialize Telegram Web App
+    const tg = window.Telegram.WebApp;
+    tg.ready(); // Ensure Telegram Web App is initialized
+    tg.expand(); // Expand the Web App to full screen
+
+    const user = tg.initDataUnsafe?.user;
     const userId = user?.id;
 
+    // Function to update user's coin balance
     async function rewardUser(amount) {
-      const userRef = ref(db, 'users/' + userId);
-      const snapshot = await get(userRef);
-      const currentCoins = snapshot.exists() ? snapshot.val().coins || 0 : 0;
-      await update(userRef, { coins: currentCoins + amount });
-      document.getElementById("coins").textContent = currentCoins + amount;
+      try {
+        const userRef = ref(db, `users/${userId}`);
+        const snapshot = await get(userRef);
+        const currentCoins = snapshot.exists() ? snapshot.val().coins || 0 : 0;
+        const newBalance = currentCoins + amount;
+        await update(userRef, { coins: newBalance });
+        document.getElementById("coins").textContent = newBalance;
+      } catch (error) {
+        console.error("Error updating coins:", error);
+        alert("❌ Failed to update coins. Please try again.");
+      }
     }
 
-    // Telegram Stars Payment
+    // Handle Telegram Stars payment
     async function handleBuy() {
-      // Open Telegram Invoice
-      tg.openInvoice({
-        slug: "sjstars-10sj", // ← تأكد أنك أنشأت هذا المنتج في @BotFather
-        success: () => {
-          alert("✅ Payment successful! You received 10 SJ COIN.");
-          rewardUser(10);
-        },
-        error: (err) => {
-          alert("❌ Payment failed: " + err);
+      if (!tg.MainButton) {
+        alert("❌ Telegram Web App MainButton not supported.");
+        return;
+      }
+
+      // Show the MainButton for payment
+      tg.MainButton.setText("Pay with Telegram Stars");
+      tg.MainButton.show();
+
+      // Handle MainButton click for payment
+      tg.MainButton.onClick(async () => {
+        try {
+          tg.MainButton.showProgress(true); // Show loading state
+          // Simulate Telegram Stars invoice (replace with actual invoice creation via @BotFather)
+          const invoiceLink = await createInvoice(10, "10 SJ COIN Purchase"); // You need to implement this
+          tg.openInvoice(invoiceLink, {
+            success: async () => {
+              await rewardUser(10);
+              tg.MainButton.hide();
+              alert("✅ Payment successful! You received 10 SJ COIN.");
+            },
+            error: (error) => {
+              console.error("Payment error:", error);
+              alert(`❌ Payment failed: ${error.message || "Unknown error"}`);
+            },
+            finally: () => {
+              tg.MainButton.showProgress(false); // Hide loading state
+            }
+          });
+        } catch (error) {
+          console.error("Invoice creation error:", error);
+          alert("❌ Failed to initiate payment. Please try again.");
+          tg.MainButton.showProgress(false);
         }
       });
     }
 
+    // Simulate invoice creation (replace with actual BotFather invoice creation)
+    async function createInvoice(amount, description) {
+      // This is a placeholder. You need to create an invoice via @BotFather or Telegram Payments API
+      // Example: Use Telegram Bot API to generate an invoice link for Telegram Stars
+      // For now, return a dummy invoice link (replace with actual implementation)
+      return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Replace with actual invoice link
+    }
+
+    // Initialize user data on page load
     window.onload = async () => {
       if (!userId) {
         document.getElementById("coins").textContent = "Login via Telegram required";
         return;
       }
-      const userRef = ref(db, 'users/' + userId);
-      const snapshot = await get(userRef);
-      if (!snapshot.exists()) {
-        await set(userRef, { coins: 0 });
-        document.getElementById("coins").textContent = 0;
-      } else {
-        document.getElementById("coins").textContent = snapshot.val().coins || 0;
+
+      try {
+        const userRef = ref(db, `users/${userId}`);
+        const snapshot = await get(userRef);
+        if (!snapshot.exists()) {
+          await set(userRef, { coins: 0, username: user.username || "Anonymous" });
+          document.getElementById("coins").textContent = 0;
+        } else {
+          document.getElementById("coins").textContent = snapshot.val().coins || 0;
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        document.getElementById("coins").textContent = "Error loading balance";
       }
     };
 
+    // Expose handleBuy to global scope for button click
     window.handleBuy = handleBuy;
   </script>
 
@@ -82,6 +134,10 @@
       color: white;
       border: none;
       border-radius: 8px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background-color: #006699;
     }
   </style>
 </head>
