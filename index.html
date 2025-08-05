@@ -1,13 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>SJ COIN Tap2Earn</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module">
-    // Firebase imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Page</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.0/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
     // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
@@ -20,152 +27,178 @@
     };
 
     // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    // Initialize Telegram Web App
-    const tg = window.Telegram.WebApp;
-    tg.ready(); // Ensure Telegram Web App is initialized
-    tg.expand(); // Expand the Web App to full screen
-
-    const user = tg.initDataUnsafe?.user;
-    const userId = user?.id;
-    let isPaymentInProgress = false; // Flag to prevent multiple payments
-
-    // Function to update user's coin balance
-    async function rewardUser(amount) {
-      try {
-        const userRef = ref(db, `users/${userId}`);
-        const snapshot = await get(userRef);
-        const currentCoins = snapshot.exists() ? snapshot.val().coins || 0 : 0;
-        const newBalance = currentCoins + amount;
-        await update(userRef, { coins: newBalance });
-        document.getElementById("coins").textContent = newBalance;
-      } catch (error) {
-        console.error("Error updating coins:", error);
-        alert("❌ Failed to update coins. Please try again.");
-      }
-    }
-
-    // Handle purchase (for both SJ COIN and Telegram Stars)
-    async function handlePurchase(productType, amount, description) {
-      if (!tg.MainButton) {
-        alert("❌ Telegram Web App MainButton not supported.");
-        return;
-      }
-
-      if (isPaymentInProgress) {
-        alert("⏳ Payment already in progress. Please wait.");
-        return;
-      }
-
-      isPaymentInProgress = true;
-      tg.MainButton.setText(`Pay for ${description}`);
-      tg.MainButton.show();
-      tg.MainButton.showProgress(true); // Show loading state
-
-      try {
-        const invoiceLink = await createInvoice(productType, amount, description);
-        tg.openInvoice(invoiceLink, {
-          success: async () => {
-            if (productType === "sjcoin") {
-              await rewardUser(amount);
-              alert(`✅ Payment successful! You received ${amount} SJ COIN.`);
-            } else {
-              alert(`✅ Payment successful! You purchased ${amount} Telegram Stars.`);
-            }
-            tg.MainButton.hide();
-          },
-          error: (error) => {
-            console.error("Payment error:", error);
-            alert(`❌ Payment failed: ${error.message || "Unknown error"}`);
-          },
-          finally: () => {
-            tg.MainButton.showProgress(false);
-            tg.MainButton.hide();
-            isPaymentInProgress = false;
-          }
-        });
-      } catch (error) {
-        console.error("Invoice creation error:", error);
-        alert("❌ Failed to initiate payment. Please try again.");
-        tg.MainButton.showProgress(false);
-        tg.MainButton.hide();
-        isPaymentInProgress = false;
-      }
-    }
-
-    // Simulate invoice creation (replace with actual BotFather invoice creation)
-    async function createInvoice(productType, amount, description) {
-      // Placeholder: Use Telegram Bot API to generate invoice link
-      // 1. Create products in @BotFather with Telegram Stars payment
-      // 2. Use createInvoiceLink API (e.g., https://api.telegram.org/bot<token>/createInvoiceLink)
-      // Example payload: { title: description, description: ..., payload: unique_id, provider_token: "", currency: "XTR", prices: [{ label: description, amount: <stars_amount> }] }
-      if (productType === "sjcoin") {
-        return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Replace with actual invoice link
-      } else if (productType === "stars") {
-        return "https://t.me/$yourBotName?start=invoice_stars_100"; // Replace with actual invoice link
-      }
-      throw new Error("Invalid product type");
-    }
-
-    // Initialize user data on page load
-    window.onload = async () => {
-      if (!userId) {
-        document.getElementById("coins").textContent = "Login via Telegram required";
-        return;
-      }
-
-      try {
-        const userRef = ref(db, `users/${userId}`);
-        const snapshot = await get(userRef);
-        if (!snapshot.exists()) {
-          await set(userRef, { coins: 0, username: user.username || "Anonymous" });
-          document.getElementById("coins").textContent = 0;
-        } else {
-          document.getElementById("coins").textContent = snapshot.val().coins || 0;
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error);
-        document.getElementById("coins").textContent = "Error loading balance";
+    // Mock level configuration
+    const levelConfig = {
+      bg: {
+        1: '/images/background1.jpg',
+        2: '/images/background2.jpg',
+        // Add more backgrounds as needed
       }
     };
 
-    // Expose purchase functions to global scope
-    window.handleBuySJCoin = () => handlePurchase("sjcoin", 10, "10 SJ COIN");
-    window.handleBuyStars = () => handlePurchase("stars", 100, "100 Telegram Stars");
-  </script>
+    // UserTap Component
+    const UserTap = () => {
+      const [user, setUser] = React.useState(null);
+      const handleTap = async () => {
+        if (user) {
+          const userRef = db.collection('users').doc(user.uid);
+          await userRef.update({
+            balance: firebase.firestore.FieldValue.increment(1)
+          });
+        }
+      };
 
-  <style>
-    body {
-      font-family: sans-serif;
-      background-color: #f4f4f4;
-      padding: 20px;
-      text-align: center;
-    }
-    .button {
-      padding: 10px 20px;
-      font-size: 20px;
-      margin: 10px;
-      background-color: #0088cc;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .button:hover {
-      background-color: #006699;
-    }
-    .button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <h1>🪙 SJ COIN Tap2Earn</h1>
-  <p>Current Balance: <span id="coins">Loading...</span> SJ</p>
-  <button class="button" onclick="handleBuySJCoin()">Buy 10 SJ COIN</button>
-  <button class="button" onclick="handleBuyStars()">Buy 100 Telegram Stars</button>
+      return (
+        <div className="mt-6 text-center">
+          <button 
+            onClick={handleTap} 
+            className="px-4 py-2 bg-blue-500 text-white rounded-full"
+          >
+            Tap to Earn
+          </button>
+        </div>
+      );
+    };
+
+    // UserGameDetails Component
+    const UserGameDetails = ({ className }) => {
+      return (
+        <div className={className}>
+          <p className="text-white">Game Details Placeholder</p>
+        </div>
+      );
+    };
+
+    // Home Component
+    const Home = () => {
+      const [user, setUser] = React.useState(null);
+      const [userData, setUserData] = React.useState({
+        first_name: '',
+        last_name: '',
+        balance: 0,
+        level: { level: 1, name: 'Beginner', to_balance: 1000 }
+      });
+      const maxLevel = 10; // Mock max level
+
+      // Firebase auth state listener
+      React.useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+          if (firebaseUser) {
+            setUser(firebaseUser);
+            const userRef = db.collection('users').doc(firebaseUser.uid);
+            const doc = await userRef.get();
+            if (doc.exists) {
+              setUserData(doc.data());
+            } else {
+              // Initialize user data
+              const initialData = {
+                first_name: firebaseUser.displayName?.split(' ')[0] || 'User',
+                last_name: firebaseUser.displayName?.split(' ')[1] || '',
+                balance: 0,
+                level: { level: 1, name: 'Beginner', to_balance: 1000 }
+              };
+              await userRef.set(initialData);
+              setUserData(initialData);
+            }
+          } else {
+            // Redirect to login or handle unauthenticated state
+            setUser(null);
+            setUserData({
+              first_name: '',
+              last_name: '',
+              balance: 0,
+              level: { level: 1, name: 'Beginner', to_balance: 1000 }
+            });
+          }
+        });
+        return () => unsubscribe();
+      }, []);
+
+      // Mock login function (for demo purposes)
+      const handleLogin = () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider);
+      };
+
+      if (!user) {
+        return (
+          <div className="flex items-center justify-center h-screen bg-gray-900">
+            <button 
+              onClick={handleLogin}
+              className="px-4 py-2 bg-blue-500 text-white rounded-full"
+            >
+              Login with Google
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          className="flex-1 px-5 pb-20 bg-center bg-cover min-h-screen"
+          style={{
+            backgroundImage: `url(${levelConfig.bg[userData.level?.level || 1]})`,
+          }}
+        >
+          <header className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 px-3 py-2 border-2 rounded-full bg-black/20 border-white/10">
+              <img
+                src="/images/avatar.png"
+                alt="user-avatar"
+                className="object-cover w-8 h-8 rounded-full"
+              />
+              <p className="text-sm font-medium uppercase text-white">
+                {userData.first_name} {userData.last_name}
+              </p>
+            </div>
+          </header>
+          <UserGameDetails className="mt-6" />
+          <div className="flex mt-6 space-x-1.5 justify-center items-center select-none">
+            <img
+              src="/images/coins.png"
+              alt="coins"
+              className="object-contain w-20 h-20"
+            />
+            <span className="text-3xl font-bold text-gradient">
+              {Math.floor(userData.balance).toLocaleString()}
+            </span>
+          </div>
+          <div>
+            <a
+              href="/leaderboard"
+              className="flex items-center justify-between gap-2 text-white"
+            >
+              <div className="flex items-center text-xs">
+                <span>{userData.level?.name}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs">Level</span>
+                <span className="font-bold">
+                  {userData.level?.level}/{maxLevel}
+                </span>
+              </div>
+            </a>
+            <div className="bg-[#FFDAA3]/10 border overflow-hidden border-[#FFDAA3]/10 rounded-full mt-2 h-4 w-full">
+              <div
+                className="bg-[linear-gradient(180deg,#FBEDE0_0%,#F7B87D_21%,#F3A155_52%,#E6824B_84%,#D36224_100%)] h-full"
+                style={{
+                  width: `${(userData.balance / userData.level.to_balance) * 100}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+          <UserTap />
+        </div>
+      );
+    };
+
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Home />);
+  </script>
 </body>
 </html>
