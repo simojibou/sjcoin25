@@ -46,28 +46,31 @@
       }
     }
 
-    // Handle Telegram Stars payment
-    async function handleBuy() {
+    // Handle purchase (for both SJ COIN and Telegram Stars)
+    async function handlePurchase(productType, amount, description) {
       if (!tg.MainButton) {
         alert("❌ Telegram Web App MainButton not supported.");
         return;
       }
 
-      // Show the MainButton for payment
-      tg.MainButton.setText("Pay with Telegram Stars");
+      // Configure and show MainButton
+      tg.MainButton.setText(`Pay for ${description}`);
       tg.MainButton.show();
 
       // Handle MainButton click for payment
       tg.MainButton.onClick(async () => {
         try {
           tg.MainButton.showProgress(true); // Show loading state
-          // Simulate Telegram Stars invoice (replace with actual invoice creation via @BotFather)
-          const invoiceLink = await createInvoice(10, "10 SJ COIN Purchase"); // You need to implement this
+          const invoiceLink = await createInvoice(productType, amount, description);
           tg.openInvoice(invoiceLink, {
             success: async () => {
-              await rewardUser(10);
+              if (productType === "sjcoin") {
+                await rewardUser(amount);
+                alert(`✅ Payment successful! You received ${amount} SJ COIN.`);
+              } else {
+                alert(`✅ Payment successful! You purchased Telegram Stars.`);
+              }
               tg.MainButton.hide();
-              alert("✅ Payment successful! You received 10 SJ COIN.");
             },
             error: (error) => {
               console.error("Payment error:", error);
@@ -86,11 +89,15 @@
     }
 
     // Simulate invoice creation (replace with actual BotFather invoice creation)
-    async function createInvoice(amount, description) {
-      // This is a placeholder. You need to create an invoice via @BotFather or Telegram Payments API
-      // Example: Use Telegram Bot API to generate an invoice link for Telegram Stars
-      // For now, return a dummy invoice link (replace with actual implementation)
-      return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Replace with actual invoice link
+    async function createInvoice(productType, amount, description) {
+      // Placeholder: Generate invoice via Telegram Bot API
+      // Replace with actual implementation using @BotFather product slugs
+      if (productType === "sjcoin") {
+        return "https://t.me/$yourBotName?start=invoice_sjstars_10sj"; // Invoice for 10 SJ COIN
+      } else if (productType === "stars") {
+        return "https://t.me/$yourBotName?start=invoice_stars_100"; // Invoice for Telegram Stars
+      }
+      throw new Error("Invalid product type");
     }
 
     // Initialize user data on page load
@@ -115,8 +122,9 @@
       }
     };
 
-    // Expose handleBuy to global scope for button click
-    window.handleBuy = handleBuy;
+    // Expose purchase functions to global scope
+    window.handleBuySJCoin = () => handlePurchase("sjcoin", 10, "10 SJ COIN");
+    window.handleBuyStars = () => handlePurchase("stars", 100, "100 Telegram Stars");
   </script>
 
   <style>
@@ -129,7 +137,7 @@
     .button {
       padding: 10px 20px;
       font-size: 20px;
-      margin-top: 20px;
+      margin: 10px;
       background-color: #0088cc;
       color: white;
       border: none;
@@ -144,6 +152,7 @@
 <body>
   <h1>🪙 SJ COIN Tap2Earn</h1>
   <p>Current Balance: <span id="coins">Loading...</span> SJ</p>
-  <button class="button" onclick="handleBuy()">Buy 10 SJ COIN (via Telegram Stars)</button>
+  <button class="button" onclick="handleBuySJCoin()">Buy 10 SJ COIN</button>
+  <button class="button" onclick="handleBuyStars()">Buy 100 Telegram Stars</button>
 </body>
 </html>
