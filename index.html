@@ -1,4 +1,3 @@
-<!-- Save this as index.html or your main app HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,197 +5,336 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SJ COIN Friends with Firebase</title>
   <style>
-    /* Same styles as before, omitted here to save space. You can keep them unchanged. */
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: white;
+      display: flex; flex-direction: column;
+    }
+    .container {
+      flex: 1;
+      padding: 24px 24px 96px;
+      display: flex; flex-direction: column;
+    }
+    h1 {
+      font-size: 24px; text-align: center; text-transform: uppercase; font-weight: bold;
+    }
+    p {
+      margin-top: 8px; font-weight: 500; text-align: center;
+    }
+    .btn-invite, .btn-copy, .btn-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      border: none;
+      color: white;
+      font-weight: 600;
+      width: 100%;
+      margin-top: 16px;
+    }
+    .btn-copy {
+      width: 48px;
+      justify-content: center;
+    }
+    .btn-toggle {
+      border: 2px solid rgba(255, 218, 163, 0.1);
+      color: #FFDAA3;
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 700;
+      border-radius: 9999px;
+      padding: 10px 20px;
+      margin: 16px auto;
+      max-width: 160px;
+    }
+    .friends-list, .clicks-list {
+      margin-top: 16px;
+      overflow-y: auto;
+      max-height: 200px;
+    }
+    .friend-item, .click-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .friend-info, .click-info {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .friend-avatar, .click-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: url('/images/avatar.png') no-repeat center / cover;
+    }
+    .coin {
+      width: 20px; height: 20px;
+      margin-left: 8px;
+    }
+    .text-primary {
+      color: #FFDAA3;
+      font-weight: 600;
+    }
+    .loading-spinner {
+      margin: 32px auto;
+      border: 4px solid rgba(217, 217, 217, 0.1);
+      border-top: 4px solid rgba(255, 218, 163, 0.3);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- ... UI Elements Unchanged ... -->
+<div class="container">
+  <h1>Friends</h1>
+  <p>You and your friend will receive bonuses.</p>
+
+  <button class="btn-invite" id="btn-invite-base">
+    <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="36" height="36" />
+    <div>
+      <p>Invite a friend</p>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="20" height="20" />
+        <span id="base-bonus" class="text-primary"></span>
+        <span>for you and your friend</span>
+      </div>
+    </div>
+  </button>
+
+  <button class="btn-invite" id="btn-invite-premium">
+    <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="36" height="36" />
+    <div>
+      <p>Invite a friend with Telegram Premium</p>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="coin" width="20" height="20" />
+        <span id="premium-bonus" class="text-primary"></span>
+        <span>for you and your friend</span>
+      </div>
+    </div>
+  </button>
+
+  <button class="btn-toggle" id="toggle-bonuses-btn">More bonuses</button>
+
+  <div id="bonuses-section" style="display:none;">
+    <p style="font-weight:bold; text-transform:uppercase; cursor:pointer;" id="hide-bonuses-btn">Bonus for leveling up</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Level</th>
+          <th style="text-align:right;">For friend</th>
+          <th style="text-align:right;">Premium</th>
+        </tr>
+      </thead>
+      <tbody id="levels-tbody"></tbody>
+    </table>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <p style="font-weight:bold; text-transform:uppercase; margin-top: 32px;">
+    List of your friends <span id="friends-count"></span>
+  </p>
+  <div class="friends-list" id="friends-list">
+    <div class="loading-spinner" id="loading-spinner"></div>
+  </div>
 
-  <script>
-    const referral = {
-      base: { welcome: 1000, levelUp: { 1: 100, 2: 200, 3: 300 } },
-      premium: { welcome: 3000, levelUp: { 1: 500, 2: 700, 3: 900 } }
-    };
-    const levels = [
-      { level: 1, name: "Beginner" },
-      { level: 2, name: "Intermediate" },
-      { level: 3, name: "Advanced" },
-    ];
+  <p style="font-weight:bold; text-transform:uppercase; margin-top: 32px;">
+    Users who clicked your link <span id="clicks-count"></span>
+  </p>
+  <div class="clicks-list" id="clicks-list">
+    <div class="loading-spinner" id="clicks-loading-spinner"></div>
+  </div>
 
-    // Telegram ID from Telegram.WebApp API
-    const telegram_id = Telegram.WebApp.initDataUnsafe?.user?.id || Math.floor(Math.random() * 1000000); // fallback for testing
+  <div style="display:flex; gap:12px; margin-top:24px;">
+    <button class="btn-copy" id="copy-link-btn" title="Copy referral link">📋</button>
+    <button class="btn-invite" id="share-btn">Invite a friend</button>
+  </div>
+</div>
 
-    const referralLink = `${importMetaEnv('VITE_BOT_URL') || 'https://t.me/sjcoin25bot'}/?startapp=ref${telegram_id}`;
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    const baseBonusSpan = document.getElementById("base-bonus");
-    const premiumBonusSpan = document.getElementById("premium-bonus");
-    const toggleBonusesBtn = document.getElementById("toggle-bonuses-btn");
-    const bonusesSection = document.getElementById("bonuses-section");
-    const hideBonusesBtn = document.getElementById("hide-bonuses-btn");
-    const levelsTbody = document.getElementById("levels-tbody");
-    const friendsList = document.getElementById("friends-list");
-    const loadingSpinner = document.getElementById("loading-spinner");
-    const friendsCountSpan = document.getElementById("friends-count");
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+    authDomain: "metawarefare-gaming.firebaseapp.com",
+    databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+    projectId: "metawarefare-gaming",
+    storageBucket: "metawarefare-gaming.appspot.com",
+    messagingSenderId: "551352148152",
+    appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    baseBonusSpan.textContent = referral.base.welcome.toLocaleString();
-    premiumBonusSpan.textContent = referral.premium.welcome.toLocaleString();
+  const referral = {
+    base: { welcome: 1000, levelUp: {1: 100, 2: 200, 3: 300} },
+    premium: { welcome: 3000, levelUp: {1: 500, 2: 700, 3: 900} }
+  };
+  const levels = [
+    { level: 1, name: "Beginner" },
+    { level: 2, name: "Intermediate" },
+    { level: 3, name: "Advanced" },
+  ];
 
-    function renderLevels() {
-      levelsTbody.innerHTML = "";
-      levels.forEach(({ level, name }) => {
-        const baseBonus = referral.base.levelUp[level] || 0;
-        const premiumBonus = referral.premium.levelUp[level] || 0;
-        if (baseBonus === 0 && premiumBonus === 0) return;
+  let telegram_id = null;
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
+    telegram_id = window.Telegram.WebApp.initDataUnsafe.user?.id || null;
+  }
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${name}</td>
-          <td style="text-align:right;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" width="16" height="16" />
-              <span class="text-primary">${baseBonus.toLocaleString()}</span>
-            </div>
-          </td>
-          <td style="text-align:right;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" width="16" height="16" />
-              <span class="text-primary">${premiumBonus.toLocaleString()}</span>
-            </div>
-          </td>
-        `;
-        levelsTbody.appendChild(tr);
-      });
+  const referralLink = `https://t.me/sjcoin25bot/?startapp=ref${telegram_id}`;
+
+  document.getElementById("base-bonus").textContent = referral.base.welcome;
+  document.getElementById("premium-bonus").textContent = referral.premium.welcome;
+
+  function renderLevels() {
+    const tbody = document.getElementById("levels-tbody");
+    tbody.innerHTML = "";
+    levels.forEach(({ level, name }) => {
+      const base = referral.base.levelUp[level] || 0;
+      const premium = referral.premium.levelUp[level] || 0;
+      if (base === 0 && premium === 0) return;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${name}</td>
+        <td style="text-align:right;"><span class="text-primary">${base}</span></td>
+        <td style="text-align:right;"><span class="text-primary">${premium}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  renderLevels();
+
+  document.getElementById("toggle-bonuses-btn").onclick = () => {
+    document.getElementById("bonuses-section").style.display = "block";
+    document.getElementById("toggle-bonuses-btn").style.display = "none";
+  };
+  document.getElementById("hide-bonuses-btn").onclick = () => {
+    document.getElementById("bonuses-section").style.display = "none";
+    document.getElementById("toggle-bonuses-btn").style.display = "block";
+  };
+
+  document.getElementById("copy-link-btn").onclick = () => {
+    navigator.clipboard.writeText(referralLink).then(() => alert("Link copied"));
+  };
+
+  document.getElementById("share-btn").onclick = () => {
+    const url = `https://t.me/share/url?text=Join SJ COIN&url=${encodeURIComponent(referralLink)}`;
+    if (window.Telegram?.WebApp?.openTelegramLink) {
+      window.Telegram.WebApp.openTelegramLink(url);
+    } else {
+      window.open(url, "_blank");
     }
+  };
 
-    toggleBonusesBtn.addEventListener("click", () => {
-      bonusesSection.style.display = "block";
-      toggleBonusesBtn.style.display = "none";
-    });
-
-    hideBonusesBtn.addEventListener("click", () => {
-      bonusesSection.style.display = "none";
-      toggleBonusesBtn.style.display = "block";
-    });
-
-    document.getElementById("copy-link-btn").addEventListener("click", () => {
-      navigator.clipboard.writeText(referralLink).then(() => {
-        alert("Referral link copied to clipboard!");
+  function handleReferralLink() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("startapp");
+    if (ref && ref.startsWith("ref") && telegram_id) {
+      const referrerId = ref.replace("ref", "");
+      const clickId = Date.now();
+      db.ref(`referralClicks/${referrerId}/${clickId}`).set({
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        userId: telegram_id,
+        status: "clicked"
       });
-    });
-
-    document.getElementById("share-btn").addEventListener("click", () => {
-      const shareMessage = encodeURIComponent("Play SJ COIN with me!");
-      const url = `https://t.me/share/url?text=${shareMessage}&url=${encodeURIComponent(referralLink)}`;
-      if (window.Telegram?.WebApp?.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(url);
-      } else {
-        window.open(url, "_blank");
-      }
-    });
-
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // NEW: Handle referral click logging
-    function handleReferralLink() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const startApp = urlParams.get('startapp');
-      if (startApp && startApp.startsWith('ref')) {
-        const referrerId = startApp.replace('ref', '');
-        const newUserId = telegram_id;
-        if (referrerId && referrerId !== newUserId.toString()) {
-          // Log the click
-          const clickRef = db.ref(`clickedUsers/${referrerId}/clicks/${newUserId}`);
-          clickRef.set({
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-          });
-
-          // Log the referral user (registered)
-          const ref = db.ref(`referredUsers/${referrerId}/list/${newUserId}`);
-          ref.once("value").then(snapshot => {
-            if (!snapshot.exists()) {
-              ref.set({
-                first_name: "New",
-                last_name: "User",
-                level: { name: "Beginner", level: 1 },
-                balance: 50,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-              });
-            }
-          });
-        }
-      }
-    }
-
-    function fetchReferredUsersFromFirebase() {
-      loadingSpinner.style.display = "block";
-      friendsList.innerHTML = "";
-      const ref = db.ref(`referredUsers/${telegram_id}/list`);
-      ref.once('value').then(snapshot => {
-        loadingSpinner.style.display = "none";
-        const users = snapshot.val();
-        if (!users) {
-          friendsCountSpan.textContent = "(0)";
-          friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,255,255,0.3); font-size: 14px;">You didn’t invite anyone yet</p>`;
-          return;
-        }
-
-        const userList = Object.values(users);
-        friendsCountSpan.textContent = `(${userList.length})`;
-        userList.forEach(user => {
-          const div = document.createElement("div");
-          div.className = "friend-item";
-          div.innerHTML = `
-            <div class="friend-info">
-              <div class="friend-avatar"></div>
-              <div>
-                <p style="margin:0; font-weight:600;">${user.first_name || ""} ${user.last_name || ""}</p>
-                <p style="margin:0; font-size: 10px;">${user.level?.name || ""}</p>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <img src="/images/coin.png" alt="coin" width="20" height="20" />
-              <span class="text-primary">${compactNumber(user.balance)}</span>
-            </div>
-          `;
-          friendsList.appendChild(div);
+      if (referrerId !== telegram_id.toString()) {
+        db.ref(`referredUsers/${referrerId}/list/${telegram_id}`).set({
+          first_name: "New",
+          last_name: "User",
+          level: { name: "Beginner", level: 1 },
+          balance: 50,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
         });
-      }).catch(() => {
-        loadingSpinner.style.display = "none";
-        friendsList.innerHTML = `<p style="text-align:center; color: rgba(255,0,0,0.7);">Failed to load friends</p>`;
+      }
+    }
+  }
+
+  function fetchReferredUsers() {
+    const spinner = document.getElementById("loading-spinner");
+    const list = document.getElementById("friends-list");
+    const count = document.getElementById("friends-count");
+    spinner.style.display = "block";
+    list.innerHTML = "";
+    if (!telegram_id) return;
+    db.ref(`referredUsers/${telegram_id}/list`).once("value").then(snap => {
+      spinner.style.display = "none";
+      const data = snap.val();
+      if (!data) {
+        count.textContent = "(0)";
+        list.innerHTML = `<p style="text-align:center; color: #aaa;">No friends yet</p>`;
+        return;
+      }
+      const items = Object.values(data);
+      count.textContent = `(${items.length})`;
+      items.forEach(user => {
+        const div = document.createElement("div");
+        div.className = "friend-item";
+        div.innerHTML = `
+          <div class="friend-info">
+            <div class="friend-avatar"></div>
+            <div>
+              <p style="margin:0; font-weight:600;">${user.first_name}</p>
+              <p style="margin:0; font-size: 10px;">${user.level?.name || ""}</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <img src="/images/coin.png" alt="coin" width="20" height="20" />
+            <span class="text-primary">${user.balance}</span>
+          </div>
+        `;
+        list.appendChild(div);
       });
-    }
+    });
+  }
 
-    function compactNumber(num) {
-      if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-      if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
-      return num.toString();
-    }
+  function fetchClicks() {
+    const spinner = document.getElementById("clicks-loading-spinner");
+    const list = document.getElementById("clicks-list");
+    const count = document.getElementById("clicks-count");
+    spinner.style.display = "block";
+    list.innerHTML = "";
+    if (!telegram_id) return;
+    db.ref(`referralClicks/${telegram_id}`).once("value").then(snap => {
+      spinner.style.display = "none";
+      const data = snap.val();
+      if (!data) {
+        count.textContent = "(0)";
+        list.innerHTML = `<p style="text-align:center; color: #aaa;">No clicks yet</p>`;
+        return;
+      }
+      const items = Object.values(data);
+      count.textContent = `(${items.length})`;
+      items.forEach(click => {
+        const div = document.createElement("div");
+        div.className = "click-item";
+        const date = new Date(click.timestamp).toLocaleString();
+        div.innerHTML = `
+          <div class="click-info">
+            <div class="click-avatar"></div>
+            <div>
+              <p style="margin:0; font-weight:600;">Visitor</p>
+              <p style="margin:0; font-size: 10px;">Clicked on ${date}</p>
+            </div>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    });
+  }
 
-    function importMetaEnv(key) {
-      if (key === "VITE_BOT_URL") return "https://t.me/sjcoin25bot";
-      return null;
-    }
-
-    renderLevels();
-    handleReferralLink();
-    fetchReferredUsersFromFirebase();
-  </script>
+  handleReferralLink();
+  fetchReferredUsers();
+  fetchClicks();
+</script>
 </body>
 </html>
