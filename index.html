@@ -1,108 +1,112 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>شراء SJ COIN باستخدام محفظة Telegram</title>
+  <meta charset="UTF-8">
+  <title>شراء SJ COIN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       background-color: #111;
-      color: white;
+      color: #fff;
       font-family: Arial, sans-serif;
       padding: 20px;
       text-align: center;
     }
-    input {
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: none;
-      width: 200px;
+
+    #profile {
+      margin: 20px auto;
     }
-    .btn {
-      background-color: #0088cc;
-      color: white;
-      padding: 10px 15px;
+
+    img {
+      width: 100px;
+      border-radius: 50%;
+    }
+
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
       border: none;
-      border-radius: 5px;
-      margin-top: 15px;
-      font-size: 16px;
+      border-radius: 8px;
+      background-color: #00aaff;
+      color: white;
       cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background-color: #0088cc;
+    }
+
+    .balance {
+      margin-top: 30px;
+      font-size: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>شراء SJ COIN باستخدام محفظة Telegram</h2>
+  <h1>شراء SJ COIN</h1>
+  <div id="profile">
+    <img id="userPhoto" src="" alt="Profile Photo"><br>
+    <div id="userName"></div>
+  </div>
 
-  <label>أدخل عدد عملات SJ COIN:</label><br>
-  <input type="number" id="amountCoin" min="1" /><br>
+  <button onclick="buySJ()">اشترِ الآن بـ TON Wallet</button>
 
-  <p>المبلغ المطلوب بالـ TON: <span id="amountTON">0</span></p>
+  <div class="balance" id="balance">الرصيد: 0 SJ</div>
 
-  <a id="payLink" class="btn" target="_blank" style="display: none;">
-    ادفع الآن بمحفظة Telegram
-  </a>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-    // إعداد Firebase
+  <script>
+    // بيانات Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
       databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+      messagingSenderId: "722939349192",
+      appId: "1:722939349192:web:81bc1b9272020bfc8e6ed3"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    // Telegram WebApp API
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-    // عناصر الصفحة
-    const amountCoinInput = document.getElementById("amountCoin");
-    const amountTONSpan = document.getElementById("amountTON");
-    const payLink = document.getElementById("payLink");
+    const user = tg.initDataUnsafe.user;
+    const uid = user.id;
 
-    const TON_WALLET_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
-    const COIN_PRICE_TON = 0.0002; // سعر العملة بـ TON
+    // عرض معلومات المستخدم
+    document.getElementById("userName").innerText = `${user.first_name} ${user.last_name || ""}`;
+    document.getElementById("userPhoto").src = user.photo_url;
 
-    amountCoinInput.addEventListener("input", async () => {
-      const amount = parseFloat(amountCoinInput.value);
-      if (amount > 0) {
-        const amountTON = (amount * COIN_PRICE_TON).toFixed(6);
-        amountTONSpan.textContent = amountTON;
-
-        const nanoTON = parseInt(amountTON * 1_000_000_000);
-
-        // حفظ الطلب في Firebase
-        const now = new Date().toISOString();
-        const orderRef = push(ref(db, 'TON_Orders'));
-        const orderKey = orderRef.key;
-
-        await set(orderRef, {
-          id: orderKey,
-          amount_sj_coin: amount,
-          amount_ton: amountTON,
-          nano_ton: nanoTON,
-          status: "pending",
-          created_at: now
-        });
-
-        // إنشاء رابط الدفع
-        const payUrl = `https://t.me/wallet?startapp=transfer_ton-${TON_WALLET_ADDRESS}-${nanoTON}`;
-        payLink.href = payUrl;
-        payLink.style.display = "inline-block";
-      } else {
-        amountTONSpan.textContent = "0";
-        payLink.style.display = "none";
-      }
+    // تحميل الرصيد
+    const balanceRef = db.ref("users/" + uid + "/balance");
+    balanceRef.on("value", (snapshot) => {
+      const balance = snapshot.val() || 0;
+      document.getElementById("balance").innerText = `الرصيد: ${balance} SJ`;
     });
+
+    // وظيفة الشراء
+    function buySJ() {
+      const tonAddress = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+      const amountTON = 1 * 1e9; // 1 TON بالـ nanoTON
+      const text = encodeURIComponent("Buy SJ COIN for @" + user.username);
+
+      // فتح محفظة TON
+      const url = `ton://transfer/${tonAddress}?amount=${amountTON}&text=${text}`;
+      window.location.href = url;
+
+      // تسجيل المعاملة على Firebase كـ pending
+      db.ref("payments/" + uid).push({
+        amount: 1,
+        username: user.username,
+        status: "pending",
+        time: Date.now()
+      });
+    }
   </script>
 </body>
 </html>
