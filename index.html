@@ -1,117 +1,269 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Academy - نظام الإحالة</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Affiliate System</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
   <style>
     body {
-      background-color: #111;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
+      font-family: Arial, sans-serif;
       text-align: center;
+      padding: 20px;
+      background-color: #f0f2f5;
+      margin: 0;
     }
-    input, button {
-      padding: 10px;
-      margin: 10px 0;
-      width: 90%;
-      max-width: 400px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: none;
-    }
-    input {
-      background: #222;
-      color: white;
+    h1, h2, h3 {
+      color: #333;
     }
     button {
-      background: #00ff88;
-      color: black;
-      font-weight: bold;
+      padding: 10px 20px;
+      background-color: #0088cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
+      margin: 10px;
     }
-    .ref-link {
-      background: #333;
-      color: #0f0;
-      padding: 10px;
+    button:hover {
+      background-color: #005f8a;
+    }
+    #app {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
       border-radius: 10px;
-      word-break: break-all;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    #payment-wall, #dashboard, #missions {
+      margin-top: 20px;
+    }
+    #error-message {
+      color: red;
+      margin-top: 10px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 10px;
+      background: #f9f9f9;
+      margin: 5px 0;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 SJ Academy</h1>
-  <p>سجّل الآن واربح SJ Coin عن طريق دعوة أصدقائك</p>
-
-  <div id="register">
-    <input type="text" id="nameInput" placeholder="اسمك الكامل" />
-    <button onclick="register()">تسجيل</button>
+  <div id="app">
+    <h1>Affiliate System</h1>
+    <div id="auth-section">
+      <p>Loading...</p>
+    </div>
+    <div id="payment-wall" style="display: none;">
+      <h2>Subscribe for $50/month</h2>
+      <button id="pay-button" onclick="initiateTelegramStarsPayment()">Pay with Telegram Stars</button>
+      <div id="error-message"></div>
+    </div>
+    <div id="dashboard" style="display: none;">
+      <h2>Dashboard</h2>
+      <p>Referral Link: <a id="referral-link" href="#"></a></p>
+      <p>Referrals: <span id="referrals-count"></span></p>
+      <p>Earnings: $<span id="earnings"></span></p>
+      <p>Rank: <span id="rank"></span></p>
+      <p>Subscription Status: <span id="subscription-status"></span></p>
+    </div>
+    <div id="missions" style="display: none;">
+      <h3>Daily Missions</h3>
+      <ul id="mission-list"></ul>
+      <button onclick="addMission('share_tiktok')">Share on TikTok</button>
+      <button onclick="addMission('invite_friend')">Invite a Friend</button>
+    </div>
   </div>
-
-  <div id="status"></div>
-
-  <script type="module">
-    // استيراد Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-
-    // إعداد Firebase
+  <script>
+    // Firebase Configuration (provided)
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
       databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "1070861587937",
-      appId: "1:1070861587937:web:3b2bb43ac6070246d0c36f"
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const referrer = urlParams.get("ref"); // الشخص الذي دعاك
+    // Telegram WebApp
+    const telegram = window.Telegram.WebApp;
+    telegram.ready();
 
-    // دالة التسجيل
-    function register() {
-      const name = document.getElementById("nameInput").value.trim();
-      if (!name) {
-        alert("الرجاء إدخال اسمك.");
+    // Authenticate user with Telegram
+    telegram.onEvent('mainButtonClicked', () => {
+      const user = telegram.initDataUnsafe.user;
+      if (user) {
+        auth.signInAnonymously().then(() => {
+          const userRef = db.collection('users').doc(user.id.toString());
+          userRef.get().then(doc => {
+            if (!doc.exists) {
+              // New user
+              const referralCode = generateReferralCode();
+              const urlParams = new URLSearchParams(window.location.search);
+              const referredBy = urlParams.get('ref') || null;
+              userRef.set({
+                id: user.id.toString(),
+                name: user.first_name + ' ' + (user.last_name || ''),
+                telegram_id: user.id.toString(),
+                referral_code: referralCode,
+                referred_by: referredBy,
+                rank: 'Level 1',
+                referrals_count: 0,
+                subscription_status: 'inactive',
+                join_date: new Date()
+              });
+              if (referredBy) {
+                db.collection('referrals').add({
+                  referrer_id: referredBy,
+                  referred_user_id: user.id.toString(),
+                  timestamp: new Date()
+                });
+              }
+            }
+            checkSubscriptionStatus(user.id.toString());
+          });
+        });
+      }
+    });
+
+    // Generate unique referral code
+    function generateReferralCode() {
+      return 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    }
+
+    // Check subscription status
+    function checkSubscriptionStatus(userId) {
+      document.getElementById('auth-section').style.display = 'none';
+      db.collection('users').doc(userId).get().then(doc => {
+        const data = doc.data();
+        if (data.subscription_status === 'active') {
+          document.getElementById('payment-wall').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          document.getElementById('missions').style.display = 'block';
+          loadDashboard(userId);
+          loadMissions(userId);
+        } else {
+          document.getElementById('payment-wall').style.display = 'block';
+          document.getElementById('dashboard').style.display = 'none';
+          document.getElementById('missions').style.display = 'none';
+        }
+      });
+    }
+
+    // Load dashboard data
+    async function loadDashboard(userId) {
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+
+      document.getElementById('referral-link').textContent = `https://metawarefare-gaming.web.app/?ref=${userData.referral_code}`;
+      document.getElementById('referral-link').href = `https://metawarefare-gaming.web.app/?ref=${userData.referral_code}`;
+      document.getElementById('referrals-count').textContent = userData.referrals_count;
+      document.getElementById('earnings').textContent = await calculateEarnings(userId);
+      document.getElementById('rank').textContent = userData.rank;
+      document.getElementById('subscription-status').textContent = userData.subscription_status;
+
+      // Update rank based on referrals
+      updateRank(userId, userData.referrals_count);
+    }
+
+    // Calculate earnings
+    async function calculateEarnings(userId) {
+      const referrals = await db.collection('referrals').where('referrer_id', '==', userId).get();
+      let earnings = 0;
+      for (const ref of referrals.docs) {
+        const referredUserId = ref.data().referred_user_id;
+        const payments = await db.collection('payments').where('user_id', '==', referredUserId).get();
+        for (const payment of payments.docs) {
+          const userRef = db.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          const rank = userDoc.data().rank;
+          const commissionRate = rank === 'Level 2' ? 0.1 : rank === 'Level 3' ? 0.2 : 0;
+          earnings += payment.data().amount * commissionRate;
+        }
+      }
+      return earnings.toFixed(2);
+    }
+
+    // Update user rank
+    async function updateRank(userId, referralsCount) {
+      let rank = 'Level 1';
+      if (referralsCount >= 5 && referralsCount < 10) rank = 'Level 2';
+      else if (referralsCount >= 10) rank = 'Level 3';
+      await db.collection('users').doc(userId).update({ rank });
+    }
+
+    // Telegram Stars Payment (Placeholder)
+    function initiateTelegramStarsPayment() {
+      const user = telegram.initDataUnsafe.user;
+      if (!user) {
+        document.getElementById('error-message').textContent = 'User not authenticated';
         return;
       }
 
-      const uid = "user_" + Date.now();
-
-      // حفظ بيانات المستخدم الجديد
-      set(ref(db, "users/" + uid), {
-        name: name,
-        referrals: 0,
-        refBy: referrer || null
-      }).then(() => {
-        // إذا دخل المستخدم برابط إحالة، حدّث بيانات الداعي
-        if (referrer) {
-          const refUser = ref(db, "users/" + referrer);
-          get(refUser).then((snapshot) => {
-            if (snapshot.exists()) {
-              const oldCount = snapshot.val().referrals || 0;
-              update(refUser, {
-                referrals: oldCount + 1
-              });
-            }
+      // Telegram Stars payment request
+      telegram.openInvoice('YOUR_TELEGRAM_STARS_INVOICE_LINK', async (status) => {
+        if (status === 'paid') {
+          await db.collection('users').doc(user.id.toString()).update({
+            subscription_status: 'active'
           });
+          await db.collection('payments').add({
+            user_id: user.id.toString(),
+            amount: 50.00,
+            payment_date: new Date(),
+            status: 'completed'
+          });
+          checkSubscriptionStatus(user.id.toString());
+        } else if (status === 'failed' || status === 'cancelled') {
+          document.getElementById('error-message').textContent = 'Payment failed or cancelled';
         }
-
-        // عرض رابط الإحالة الخاص
-        document.getElementById("register").style.display = "none";
-        document.getElementById("status").innerHTML = `
-          <h3>✅ تم التسجيل بنجاح</h3>
-          <p>شارك هذا الرابط مع أصدقائك:</p>
-          <div class="ref-link">
-            https://yourapp.web.app/?ref=${uid}
-          </div>
-        `;
       });
+    }
+
+    // Load missions
+    async function loadMissions(userId) {
+      const missions = await db.collection('missions').where('user_id', '==', userId).get();
+      const missionList = document.getElementById('mission-list');
+      missionList.innerHTML = '';
+      missions.forEach(mission => {
+        const li = document.createElement('li');
+        li.textContent = `${mission.data().mission_type}: ${mission.data().points} points (${mission.data().completed ? 'Completed' : 'Pending'})`;
+        missionList.appendChild(li);
+      });
+    }
+
+    // Add mission
+    async function addMission(missionType) {
+      const userId = telegram.initDataUnsafe.user.id.toString();
+      await db.collection('missions').add({
+        user_id: userId,
+        mission_type: missionType,
+        completed: true,
+        points: 10,
+        timestamp: new Date()
+      });
+      loadMissions(userId);
+    }
+
+    // Auto-authenticate on load
+    if (telegram.initDataUnsafe.user) {
+      checkSubscriptionStatus(telegram.initDataUnsafe.user.id.toString());
     }
   </script>
 </body>
