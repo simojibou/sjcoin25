@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <title>شراء SJ COIN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  <!-- Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -15,16 +17,13 @@
       padding: 20px;
       text-align: center;
     }
-
     #profile {
       margin: 20px auto;
     }
-
     img {
       width: 100px;
       border-radius: 50%;
     }
-
     button {
       padding: 15px 25px;
       font-size: 18px;
@@ -35,11 +34,9 @@
       cursor: pointer;
       margin-top: 20px;
     }
-
     button:hover {
       background-color: #0088cc;
     }
-
     .balance {
       margin-top: 30px;
       font-size: 20px;
@@ -58,7 +55,7 @@
   <div class="balance" id="balance">الرصيد: 0 SJ</div>
 
   <script>
-    // بيانات Firebase
+    // 1. إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -71,37 +68,36 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Telegram WebApp API
+    // 2. Telegram WebApp API
     const tg = window.Telegram.WebApp;
     tg.expand();
 
     const user = tg.initDataUnsafe.user;
     const uid = user.id;
 
-    // عرض معلومات المستخدم
+    // 3. عرض معلومات المستخدم
     document.getElementById("userName").innerText = `${user.first_name} ${user.last_name || ""}`;
     document.getElementById("userPhoto").src = user.photo_url;
 
-    // تحميل الرصيد
+    // 4. تحميل الرصيد
     const balanceRef = db.ref("users/" + uid + "/balance");
     balanceRef.on("value", (snapshot) => {
       const balance = snapshot.val() || 0;
       document.getElementById("balance").innerText = `الرصيد: ${balance} SJ`;
     });
 
-    // وظيفة الشراء
+    // 5. الشراء عبر TON Wallet
     function buySJ() {
       const tonAddress = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
-      const amountTON = 1 * 1e9; // 1 TON بالـ nanoTON
+      const amountTON = 1 * 1e9; // 1 TON = 1000000000 nanoTON
       const text = encodeURIComponent("Buy SJ COIN for @" + user.username);
-
-      // فتح محفظة TON
       const url = `ton://transfer/${tonAddress}?amount=${amountTON}&text=${text}`;
       window.location.href = url;
 
-      // تسجيل المعاملة على Firebase كـ pending
+      // 6. حفظ المعاملة في Firebase كـ Pending
       db.ref("payments/" + uid).push({
-        amount: 1,
+        amount_ton: 1,
+        coins: 100000,
         username: user.username,
         status: "pending",
         time: Date.now()
