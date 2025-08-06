@@ -1,67 +1,71 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <title>شراء SJ COIN</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  
-  <!-- Telegram WebApp -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+  <meta charset="UTF-8">
+  <title>شراء SJ COIN باستخدام TON</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       background-color: #000;
       color: #fff;
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
+      padding: 30px;
     }
-    img {
-      border-radius: 50%;
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 200px;
       margin-bottom: 10px;
+      border-radius: 5px;
+      border: none;
     }
-    h1, h2, p {
-      margin: 10px 0;
-    }
-    button {
-      padding: 12px 24px;
-      font-size: 18px;
-      margin-top: 20px;
-      background-color: #1c1c1c;
+
+    .button {
+      background-color: #0088cc;
       color: white;
-      border: 1px solid #555;
-      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
       cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 15px;
+    }
+
+    .address-box {
+      margin: 15px 0;
+      background: #222;
+      padding: 10px;
+      border-radius: 5px;
+      word-break: break-all;
     }
   </style>
 </head>
 <body>
+  <h1>شراء SJ COIN باستخدام TON</h1>
 
-  <div id="profile">
-    <img id="photo" src="" width="100" height="100" alt="profile" />
-    <h2 id="name">...</h2>
-    <p>رصيدك: <span id="balance">0</span> SJ COIN</p>
+  <label for="amountCoin">كمية SJ COIN:</label><br>
+  <input type="number" id="amountCoin" min="1" placeholder="أدخل الكمية"><br>
+
+  <p>سعر الدفع بالـ TON: <span id="amountTON">0</span> TON</p>
+
+  <div class="address-box" id="walletAddress">
+    عنوان المحفظة: <br>
+    <b>UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW</b>
   </div>
 
-  <hr style="margin: 20px 0; border-color: #444;" />
+  <a href="#" class="button" id="payLink" target="_blank" style="display: none;">
+    ادفع الآن بمحفظة TON
+  </a>
 
-  <h1>اشترِ 1000 SJ COIN</h1>
-  <p>مقابل 10 Telegram Stars</p>
-  <button onclick="buyStars()">اشترِ الآن</button>
+  <script type="module">
+    // إعدادات Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script>
-    // إعداد Telegram WebApp
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    const user = tg.initDataUnsafe.user;
-    const userId = user.id.toString();
-
-    // إعداد Firebase (معلوماتك الخاصة)
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -71,67 +75,40 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // عرض الملف الشخصي والرصيد
-    document.getElementById("name").innerText = `${user.first_name} ${user.last_name || ""}`;
-    document.getElementById("photo").src = user.photo_url;
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    async function fetchBalance() {
-      const userRef = db.ref('users/' + userId);
-      const snapshot = await userRef.once('value');
-      let currentBalance = 0;
-      if (snapshot.exists()) {
-        currentBalance = snapshot.val().balance || 0;
-      } else {
-        // أنشئ المستخدم إن لم يكن موجودًا
-        await userRef.set({
-          balance: 0,
-          name: `${user.first_name} ${user.last_name || ""}`,
-          photo: user.photo_url
+    // إعدادات السعر
+    const COIN_PRICE_TON = 0.03; // السعر بالـ TON لكل SJ COIN
+    const TON_WALLET = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
+    const payLink = document.getElementById("payLink");
+    const amountCoinInput = document.getElementById("amountCoin");
+    const amountTONSpan = document.getElementById("amountTON");
+
+    amountCoinInput.addEventListener("input", () => {
+      const coins = parseInt(amountCoinInput.value);
+      if (coins > 0) {
+        const tonAmount = (coins * COIN_PRICE_TON).toFixed(6);
+        amountTONSpan.textContent = tonAmount;
+
+        const message = encodeURIComponent("شراء " + coins + " SJ COIN");
+        payLink.href = `ton://transfer/${TON_WALLET}?amount=${tonAmount}&text=${message}`;
+        payLink.style.display = "inline-block";
+
+        // حفظ الطلب في Firebase
+        const newOrderRef = push(ref(db, "orders"));
+        set(newOrderRef, {
+          coins: coins,
+          ton_amount: tonAmount,
+          wallet: TON_WALLET,
+          timestamp: Date.now()
         });
-      }
-      document.getElementById("balance").innerText = currentBalance;
-    }
-
-    fetchBalance();
-
-    // الدفع عبر Telegram Stars
-    function buyStars() {
-      Telegram.WebApp.openInvoice({
-        slug: "sjcoin-stars", // ⚠️ يجب إنشاؤها من BotFather أو @PremiumBot
-        title: "شراء SJ COIN",
-        description: "احصل على 1000 SJ COIN مقابل 10 Telegram Stars",
-        currency: "USD",
-        prices: [{ label: "SJ COIN", amount: 1000 }], // = 10.00$
-        payload: "buy_1000_sjcoin_" + userId
-      });
-    }
-
-    // التحقق بعد الدفع
-    Telegram.WebApp.onEvent('invoiceClosed', async function(data) {
-      if (data.status === 'paid') {
-        alert("✅ تم الدفع بنجاح! جاري إضافة العملات إلى رصيدك...");
-
-        const userRef = db.ref('users/' + userId);
-        const snapshot = await userRef.once('value');
-        let balance = 0;
-
-        if (snapshot.exists()) {
-          balance = snapshot.val().balance || 0;
-        }
-
-        const newBalance = balance + 1000;
-        await userRef.update({ balance: newBalance });
-
-        document.getElementById("balance").innerText = newBalance;
-        alert("✅ تمت إضافة 1000 SJ COIN إلى رصيدك!");
       } else {
-        alert("❌ لم يتم الدفع.");
+        amountTONSpan.textContent = "0";
+        payLink.style.display = "none";
       }
     });
   </script>
-
 </body>
 </html>
