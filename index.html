@@ -1,13 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Affiliate System</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+
+    const user = tg.initDataUnsafe.user;
+
+    window.addEventListener("load", async () => {
+      if (user) {
+        await loginOrRegister(user);
+      } else {
+        document.getElementById("auth-section").style.display = "block";
+      }
+    });
+
+    async function loginOrRegister(user) {
+      try {
+        await signInAnonymously();
+        const userRef = doc(db, "users", user.id.toString());
+        const snap = await getDoc(userRef);
+        const params = new URLSearchParams(window.location.search);
+        const referredBy = params.get("ref") || null;
+
+        if (!snap.exists()) {
+          const referralCode = generateReferralCode();
+          await setDoc(userRef, {
+            id: user.id.toString(),
+            name: user.first_name + " " + (user.last_name || ""),
+            telegram_id: user.id.toString(),
+            referral_code: referralCode,
+            referred_by: referredBy,
+            rank: "Level 1",
+            referrals_count: 0,
+            subscription_status: "inactive",
+            join_date: serverTimestamp()
+          });
+          if (referredBy) {
+            await addDoc(collection(db, "referrals"), {
+              referrer_id: referredBy,
+              referred_user_id: user.id.toString(),
+              timestamp: serverTimestamp()
+            });
+          }
+        }
+
+        checkSubscriptionStatus(user.id.toString());
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    function generateReferralCode() {
+      return "REF" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    }
+
+    async function checkSubscriptionStatus(userId) {
+      const userRef = doc(db, "users", userId);
+      const snap = await getDoc(userRef);
+      const data = snap.data();
+      if (data.subscription_status === "active") {
+        document.getElementById("payment-wall").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        document.getElementById("missions").style.display = "block";
+        loadDashboard(userId);
+        loadMissions(userId);
+      } else {
+        document.getElementById("payment-wall").style.display = "block";
+      }
+    }
+
+    async function loadDashboard(userId) {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      const referralLink = `https://metawarefare-gaming.web.app/?ref=${userData.referral_code}`;
+
+      document.getElementById("referral-link").textContent = referralLink;
+      document.getElementById("referral-link").href = referralLink;
+      document.getElementById("referrals-count").textContent = userData.referrals_count;
+      document.getElementById("rank").textContent = userData.rank;
+      document.getElementById("subscription-status").textContent = userData.subscription_status;
+      document.getElementById("earnings").textContent = await calculateEarnings(userId);
+      await updateRank(userId, userData.referrals_count);
+    }
+
+    async function calculateEarnings(userId) {
+      const refQuery = query(collection(db, "referrals"), where("referrer_id", "==", userId));
+      const refSnap = await getDocs(refQuery);
+      let total = 0;
+      for (const docSnap of refSnap.docs) {
+        const referredId = docSnap.data().referred_user_id;
+        const paymentsQuery = query(collection(db, "payments"), where("user_id", "==", referredId));
+        const paymentsSnap = await getDocs(paymentsQuery);
+        for (const pay of paymentsSnap.docs) {
+          const payment = pay.data();
+          const userRef = doc(db, "users", userId);
+          const userSnap = await getDoc(userRef);
+          const rank = userSnap.data().rank;
+          const rate = rank === "Level 3" ? 0.2 : rank === "Level 2" ? 0.1 : 0;
+          total += payment.amount * rate;
+        }
+      }
+      return total.toFixed(2);
+    }
+
+    async function updateRank(userId, count) {
+      const rank = count >= 10 ? "Level 3" : count >= 5 ? "Level 2" : "Level 1";
+      await updateDoc(doc(db, "users", userId), { rank });
+    }
+
+    window.initiateTelegramStarsPayment = async function () {
+      try {
+        const response = await fetch("YOUR_CLOUD_FUNCTION_URL/createStarsInvoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id.toString() })
+        });
+        const result = await response.json();
+        if (result.error) return showError(result.error);
+        Telegram.WebApp.openTelegramLink(result.invoiceLink);
+      } catch (e) {
+        showError(e.message);
+      }
+    };
+
+    window.addMission = async function (type) {
+      try {
+        await addDoc(collection(db, "missions"), {
+          user_id: user.id.toString(),
+          mission_type: type,
+          completed: true,
+          points: 10,
+          timestamp: serverTimestamp()
+        });
+        loadMissions(user.id.toString());
+      } catch (e) {
+        showError(e.message);
+      }
+    };
+
+    async function loadMissions(userId) {
+      const q = query(collection(db, "missions"), where("user_id", "==", userId));
+      const snap = await getDocs(q);
+      const list = document.getElementById("mission-list");
+      list.innerHTML = "";
+      snap.forEach(mission => {
+        const li = document.createElement("li");
+        li.textContent = `${mission.data().mission_type}: ${mission.data().points} points (${mission.data().completed ? "Completed" : "Pending"})`;
+        list.appendChild(li);
+      });
+    }
+
+    function showError(msg) {
+      document.getElementById("error-message").textContent = msg;
+    }
+  </script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,60 +184,45 @@
       background-color: #f0f2f5;
       margin: 0;
     }
-    h1, h2, h3 {
-      color: #333;
-    }
-    button {
-      padding: 10px 20px;
-      background-color: #0088cc;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: 10px;
-    }
-    button:hover {
-      background-color: #005f8a;
-    }
     #app {
       max-width: 600px;
       margin: auto;
       background: white;
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-    #payment-wall, #dashboard, #missions {
-      margin-top: 20px;
-    }
-    #error-message {
-      color: red;
-      margin-top: 10px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      padding: 10px;
-      background: #f9f9f9;
-      margin: 5px 0;
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: #0088cc;
+      color: #fff;
+      border: none;
       border-radius: 5px;
+      cursor: pointer;
     }
+    button:hover {
+      background: #005f8a;
+    }
+    a { color: #0088cc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 10px; margin: 5px 0; background: #eee; border-radius: 5px; }
+    h1, h2, h3 { color: #333; }
+    #error-message { color: red; }
   </style>
 </head>
 <body>
   <div id="app">
     <h1>Affiliate System</h1>
-    <div id="auth-section">
-      <p>Loading...</p>
+    <div id="auth-section" style="display:none;">
+      <button onclick="telegramLogin()">Login with Telegram</button>
     </div>
-    <div id="payment-wall" style="display: none;">
+    <div id="payment-wall" style="display:none;">
       <h2>Subscribe for $50/month</h2>
-      <button id="pay-button" onclick="initiateTelegramStarsPayment()">Pay with Telegram Stars</button>
+      <button onclick="initiateTelegramStarsPayment()">Pay with Telegram Stars</button>
       <div id="error-message"></div>
     </div>
-    <div id="dashboard" style="display: none;">
+    <div id="dashboard" style="display:none;">
       <h2>Dashboard</h2>
       <p>Referral Link: <a id="referral-link" href="#"></a></p>
       <p>Referrals: <span id="referrals-count"></span></p>
@@ -77,194 +230,12 @@
       <p>Rank: <span id="rank"></span></p>
       <p>Subscription Status: <span id="subscription-status"></span></p>
     </div>
-    <div id="missions" style="display: none;">
+    <div id="missions" style="display:none;">
       <h3>Daily Missions</h3>
       <ul id="mission-list"></ul>
       <button onclick="addMission('share_tiktok')">Share on TikTok</button>
       <button onclick="addMission('invite_friend')">Invite a Friend</button>
     </div>
   </div>
-  <script>
-    // Firebase Configuration (provided)
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    // Telegram WebApp
-    const telegram = window.Telegram.WebApp;
-    telegram.ready();
-
-    // Authenticate user with Telegram
-    telegram.onEvent('mainButtonClicked', () => {
-      const user = telegram.initDataUnsafe.user;
-      if (user) {
-        auth.signInAnonymously().then(() => {
-          const userRef = db.collection('users').doc(user.id.toString());
-          userRef.get().then(doc => {
-            if (!doc.exists) {
-              // New user
-              const referralCode = generateReferralCode();
-              const urlParams = new URLSearchParams(window.location.search);
-              const referredBy = urlParams.get('ref') || null;
-              userRef.set({
-                id: user.id.toString(),
-                name: user.first_name + ' ' + (user.last_name || ''),
-                telegram_id: user.id.toString(),
-                referral_code: referralCode,
-                referred_by: referredBy,
-                rank: 'Level 1',
-                referrals_count: 0,
-                subscription_status: 'inactive',
-                join_date: new Date()
-              });
-              if (referredBy) {
-                db.collection('referrals').add({
-                  referrer_id: referredBy,
-                  referred_user_id: user.id.toString(),
-                  timestamp: new Date()
-                });
-              }
-            }
-            checkSubscriptionStatus(user.id.toString());
-          });
-        });
-      }
-    });
-
-    // Generate unique referral code
-    function generateReferralCode() {
-      return 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    }
-
-    // Check subscription status
-    function checkSubscriptionStatus(userId) {
-      document.getElementById('auth-section').style.display = 'none';
-      db.collection('users').doc(userId).get().then(doc => {
-        const data = doc.data();
-        if (data.subscription_status === 'active') {
-          document.getElementById('payment-wall').style.display = 'none';
-          document.getElementById('dashboard').style.display = 'block';
-          document.getElementById('missions').style.display = 'block';
-          loadDashboard(userId);
-          loadMissions(userId);
-        } else {
-          document.getElementById('payment-wall').style.display = 'block';
-          document.getElementById('dashboard').style.display = 'none';
-          document.getElementById('missions').style.display = 'none';
-        }
-      });
-    }
-
-    // Load dashboard data
-    async function loadDashboard(userId) {
-      const userRef = db.collection('users').doc(userId);
-      const userDoc = await userRef.get();
-      const userData = userDoc.data();
-
-      document.getElementById('referral-link').textContent = `https://metawarefare-gaming.web.app/?ref=${userData.referral_code}`;
-      document.getElementById('referral-link').href = `https://metawarefare-gaming.web.app/?ref=${userData.referral_code}`;
-      document.getElementById('referrals-count').textContent = userData.referrals_count;
-      document.getElementById('earnings').textContent = await calculateEarnings(userId);
-      document.getElementById('rank').textContent = userData.rank;
-      document.getElementById('subscription-status').textContent = userData.subscription_status;
-
-      // Update rank based on referrals
-      updateRank(userId, userData.referrals_count);
-    }
-
-    // Calculate earnings
-    async function calculateEarnings(userId) {
-      const referrals = await db.collection('referrals').where('referrer_id', '==', userId).get();
-      let earnings = 0;
-      for (const ref of referrals.docs) {
-        const referredUserId = ref.data().referred_user_id;
-        const payments = await db.collection('payments').where('user_id', '==', referredUserId).get();
-        for (const payment of payments.docs) {
-          const userRef = db.collection('users').doc(userId);
-          const userDoc = await userRef.get();
-          const rank = userDoc.data().rank;
-          const commissionRate = rank === 'Level 2' ? 0.1 : rank === 'Level 3' ? 0.2 : 0;
-          earnings += payment.data().amount * commissionRate;
-        }
-      }
-      return earnings.toFixed(2);
-    }
-
-    // Update user rank
-    async function updateRank(userId, referralsCount) {
-      let rank = 'Level 1';
-      if (referralsCount >= 5 && referralsCount < 10) rank = 'Level 2';
-      else if (referralsCount >= 10) rank = 'Level 3';
-      await db.collection('users').doc(userId).update({ rank });
-    }
-
-    // Telegram Stars Payment (Placeholder)
-    function initiateTelegramStarsPayment() {
-      const user = telegram.initDataUnsafe.user;
-      if (!user) {
-        document.getElementById('error-message').textContent = 'User not authenticated';
-        return;
-      }
-
-      // Telegram Stars payment request
-      telegram.openInvoice('YOUR_TELEGRAM_STARS_INVOICE_LINK', async (status) => {
-        if (status === 'paid') {
-          await db.collection('users').doc(user.id.toString()).update({
-            subscription_status: 'active'
-          });
-          await db.collection('payments').add({
-            user_id: user.id.toString(),
-            amount: 50.00,
-            payment_date: new Date(),
-            status: 'completed'
-          });
-          checkSubscriptionStatus(user.id.toString());
-        } else if (status === 'failed' || status === 'cancelled') {
-          document.getElementById('error-message').textContent = 'Payment failed or cancelled';
-        }
-      });
-    }
-
-    // Load missions
-    async function loadMissions(userId) {
-      const missions = await db.collection('missions').where('user_id', '==', userId).get();
-      const missionList = document.getElementById('mission-list');
-      missionList.innerHTML = '';
-      missions.forEach(mission => {
-        const li = document.createElement('li');
-        li.textContent = `${mission.data().mission_type}: ${mission.data().points} points (${mission.data().completed ? 'Completed' : 'Pending'})`;
-        missionList.appendChild(li);
-      });
-    }
-
-    // Add mission
-    async function addMission(missionType) {
-      const userId = telegram.initDataUnsafe.user.id.toString();
-      await db.collection('missions').add({
-        user_id: userId,
-        mission_type: missionType,
-        completed: true,
-        points: 10,
-        timestamp: new Date()
-      });
-      loadMissions(userId);
-    }
-
-    // Auto-authenticate on load
-    if (telegram.initDataUnsafe.user) {
-      checkSubscriptionStatus(telegram.initDataUnsafe.user.id.toString());
-    }
-  </script>
 </body>
 </html>
