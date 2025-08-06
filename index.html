@@ -1,71 +1,68 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>شراء SJ COIN باستخدام TON</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      background-color: #000;
-      color: #fff;
       font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
       text-align: center;
-      padding: 30px;
+      padding: 20px;
     }
-
-    input {
+    input, button {
       padding: 10px;
       font-size: 16px;
-      width: 200px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      border: none;
+      margin: 10px;
+      border-radius: 8px;
     }
-
-    .button {
-      background-color: #0088cc;
+    .address {
+      word-break: break-all;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    #payLink {
+      display: none;
+      margin-top: 10px;
+      background: #06f;
       color: white;
       padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
       text-decoration: none;
-      display: inline-block;
-      margin-top: 15px;
-    }
-
-    .address-box {
-      margin: 15px 0;
-      background: #222;
-      padding: 10px;
-      border-radius: 5px;
-      word-break: break-all;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h1>شراء SJ COIN باستخدام TON</h1>
 
-  <label for="amountCoin">كمية SJ COIN:</label><br>
-  <input type="number" id="amountCoin" min="1" placeholder="أدخل الكمية"><br>
+  <h1>شراء SJ COIN</h1>
 
-  <p>سعر الدفع بالـ TON: <span id="amountTON">0</span> TON</p>
+  <label>أدخل عدد العملات التي تريد شراءها:</label><br>
+  <input type="number" id="coinAmount" placeholder="مثلاً: 1000"><br>
 
-  <div class="address-box" id="walletAddress">
-    عنوان المحفظة: <br>
-    <b>UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW</b>
+  <p>السعر بالـ TON: <span id="tonAmount">0</span></p>
+
+  <div>
+    <p>أرسل الدفع إلى العنوان التالي:</p>
+    <div class="address" id="tonAddress">
+      UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW
+    </div>
+
+    <a href="#" id="payLink" target="_blank">ادفع الآن باستخدام محفظة TON</a>
   </div>
 
-  <a href="#" class="button" id="payLink" target="_blank" style="display: none;">
-    ادفع الآن بمحفظة TON
-  </a>
+  <p>أدخل عنوان محفظتك بعد الدفع:</p>
+  <input type="text" id="userWallet" placeholder="TON Address"><br>
 
-  <script type="module">
-    // إعدادات Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  <button onclick="submitPayment()">تأكيد الشراء</button>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+  <script>
+    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -76,39 +73,56 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-    // إعدادات السعر
-    const COIN_PRICE_TON = 0.03; // السعر بالـ TON لكل SJ COIN
+    const COIN_PRICE_TON = 0.000001; // مثال: 1 SJ = 0.000001 TON
     const TON_WALLET = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
-    const payLink = document.getElementById("payLink");
-    const amountCoinInput = document.getElementById("amountCoin");
-    const amountTONSpan = document.getElementById("amountTON");
 
-    amountCoinInput.addEventListener("input", () => {
-      const coins = parseInt(amountCoinInput.value);
-      if (coins > 0) {
-        const tonAmount = (coins * COIN_PRICE_TON).toFixed(6);
-        amountTONSpan.textContent = tonAmount;
+    const coinAmountInput = document.getElementById('coinAmount');
+    const tonAmountSpan = document.getElementById('tonAmount');
+    const payLink = document.getElementById('payLink');
 
-        const message = encodeURIComponent("شراء " + coins + " SJ COIN");
+    coinAmountInput.addEventListener('input', () => {
+      const coinAmount = parseFloat(coinAmountInput.value);
+      if (coinAmount > 0) {
+        const tonAmount = (coinAmount * COIN_PRICE_TON).toFixed(6);
+        tonAmountSpan.textContent = tonAmount;
+
+        const message = encodeURIComponent(`شراء ${coinAmount} SJ COIN`);
         payLink.href = `ton://transfer/${TON_WALLET}?amount=${tonAmount}&text=${message}`;
-        payLink.style.display = "inline-block";
-
-        // حفظ الطلب في Firebase
-        const newOrderRef = push(ref(db, "orders"));
-        set(newOrderRef, {
-          coins: coins,
-          ton_amount: tonAmount,
-          wallet: TON_WALLET,
-          timestamp: Date.now()
-        });
+        payLink.style.display = 'inline-block';
       } else {
-        amountTONSpan.textContent = "0";
-        payLink.style.display = "none";
+        tonAmountSpan.textContent = '0';
+        payLink.style.display = 'none';
       }
     });
+
+    function submitPayment() {
+      const coinAmount = parseFloat(coinAmountInput.value);
+      const userWallet = document.getElementById('userWallet').value.trim();
+
+      if (!userWallet || coinAmount <= 0) {
+        alert("يرجى إدخال عنوان المحفظة الصحيح وكمية عملات صالحة.");
+        return;
+      }
+
+      const paymentData = {
+        wallet: userWallet,
+        amount: coinAmount,
+        timestamp: new Date().toISOString(),
+        status: 'pending'
+      };
+
+      const newPaymentRef = database.ref('payments').push();
+      newPaymentRef.set(paymentData)
+        .then(() => {
+          alert("تم إرسال الطلب! سيتم التحقق من الدفع.");
+        })
+        .catch((error) => {
+          alert("حدث خطأ: " + error.message);
+        });
+    }
   </script>
 </body>
 </html>
