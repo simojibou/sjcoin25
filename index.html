@@ -1,59 +1,38 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>شراء SJ COIN</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
-  <!-- Telegram -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>شراء SJ COIN باستخدام محفظة TON</title>
   <style>
     body {
       background-color: #111;
-      color: #fff;
+      color: white;
       font-family: Arial, sans-serif;
       padding: 20px;
       text-align: center;
     }
-    #profile {
-      margin: 20px auto;
-    }
-    img {
-      width: 100px;
-      border-radius: 50%;
-    }
     button {
-      padding: 15px 25px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background-color: #00aaff;
+      background-color: #0088cc;
       color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 10px;
       cursor: pointer;
       margin-top: 20px;
-    }
-    button:hover {
-      background-color: #0088cc;
-    }
-    .balance {
-      margin-top: 30px;
-      font-size: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>شراء SJ COIN</h1>
-  <div id="profile">
-    <img id="userPhoto" src="" alt="Profile Photo"><br>
-    <div id="userName"></div>
-  </div>
+  <h1>اشترِ SJ COIN</h1>
+  <p>السعر: 0.5 TON = 1000 SJ COIN</p>
+  <button onclick="buy()">💰 اشترِ الآن بمحفظة TON</button>
+  <br/>
+  <button onclick="checkPayment()">✅ تحقق من الدفع</button>
 
-  <button onclick="buySJ()">اشترِ الآن بـ TON Wallet</button>
-
-  <div class="balance" id="balance">الرصيد: 0 SJ</div>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
     // 1. إعداد Firebase
     const firebaseConfig = {
@@ -62,46 +41,47 @@
       databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "722939349192",
-      appId: "1:722939349192:web:81bc1b9272020bfc8e6ed3"
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdefg"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Telegram WebApp API
+    // 2. الحصول على بيانات مستخدم تيليجرام
     const tg = window.Telegram.WebApp;
     tg.expand();
-
     const user = tg.initDataUnsafe.user;
-    const uid = user.id;
+    const userId = user.id;
+    const name = user.first_name + " " + (user.last_name || "");
 
-    // 3. عرض معلومات المستخدم
-    document.getElementById("userName").innerText = `${user.first_name} ${user.last_name || ""}`;
-    document.getElementById("userPhoto").src = user.photo_url;
+    // 3. رابط الدفع TON
+    const TON_WALLET_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz"; // ضع عنوانك هنا
+    const TON_LINK = `https://t.me/wallet/send?amount=0.5&token=ton&to=${TON_WALLET_ADDRESS}`;
 
-    // 4. تحميل الرصيد
-    const balanceRef = db.ref("users/" + uid + "/balance");
-    balanceRef.on("value", (snapshot) => {
-      const balance = snapshot.val() || 0;
-      document.getElementById("balance").innerText = `الرصيد: ${balance} SJ`;
-    });
-
-    // 5. الشراء عبر TON Wallet
-    function buySJ() {
-      const tonAddress = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
-      const amountTON = 1 * 1e9; // 1 TON = 1000000000 nanoTON
-      const text = encodeURIComponent("Buy SJ COIN for @" + user.username);
-      const url = `ton://transfer/${tonAddress}?amount=${amountTON}&text=${text}`;
-      window.location.href = url;
-
-      // 6. حفظ المعاملة في Firebase كـ Pending
-      db.ref("payments/" + uid).push({
-        amount_ton: 1,
-        coins: 100000,
-        username: user.username,
-        status: "pending",
-        time: Date.now()
+    function buy() {
+      window.open(TON_LINK, "_blank");
+      // حفظ حالة "قيد الدفع"
+      db.ref("users/" + userId).set({
+        name: name,
+        balance: 0,
+        status: "pending"
       });
+      alert("تم فتح الدفع بمحفظة TON، بعد الدفع اضغط على تحقق من الدفع ✅");
+    }
+
+    function checkPayment() {
+      // ✅ هنا نستخدم التحقق اليدوي، لاحقًا نضيف التحقق التلقائي
+      const paid = confirm("هل أكملت الدفع 0.5 TON؟"); // يمكنك لاحقًا ربط API حقيقية
+      if (paid) {
+        // تحديث الرصيد
+        db.ref("users/" + userId).update({
+          balance: 1000,
+          status: "paid"
+        });
+        alert("تمت إضافة 1000 SJ COIN إلى حسابك 🎉");
+      } else {
+        alert("لم يتم الدفع بعد.");
+      }
     }
   </script>
 </body>
