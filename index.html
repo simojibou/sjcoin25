@@ -43,13 +43,12 @@
   <p>المبلغ المطلوب بالـ TON: <span id="amountTON">0</span></p>
   
   <a id="payLink" class="btn" target="_blank" style="display: none;">
-    ادفع الآن باستخدام محفظة TON
+    ادفع الآن باستخدام محفظة Telegram
   </a>
 
   <script type="module">
-    // إعداد Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
@@ -69,19 +68,33 @@
     const payLink = document.getElementById("payLink");
 
     const TON_WALLET_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
-    const COIN_PRICE_TON = 0.0002; // سعر العملة بالـ TON، يمكن تغييره حسب سعر SJ COIN
+    const COIN_PRICE_TON = 0.0002;
+
+    let amountTON = 0;
 
     amountCoinInput.addEventListener("input", () => {
       const amount = parseFloat(amountCoinInput.value);
       if (amount > 0) {
-        const amountTON = (amount * COIN_PRICE_TON).toFixed(6);
+        amountTON = (amount * COIN_PRICE_TON).toFixed(6);
         amountTONSpan.textContent = amountTON;
 
-        // توليد رابط الدفع باستخدام Tonkeeper
-        const message = encodeURIComponent("شراء SJ COIN");
-        const payUrl = `https://wallet.tonkeeper.com/transfer/${TON_WALLET_ADDRESS}?amount=${amountTON}&text=${message}`;
+        const nanoTON = parseInt(amountTON * 1_000_000_000); // للتحويل إلى nanoTON
+        const payUrl = `https://t.me/wallet?startapp=transfer_ton-${TON_WALLET_ADDRESS}-${nanoTON}`;
         payLink.href = payUrl;
         payLink.style.display = "inline-block";
+
+        // ربط الزر بعملية تسجيل الطلب
+        payLink.onclick = () => {
+          const now = new Date().toISOString();
+          const orderRef = push(ref(db, 'TON_Orders'));
+          set(orderRef, {
+            amount_sj_coin: amount,
+            amount_ton: amountTON,
+            status: "pending", // جاري الدفع
+            created_at: now
+          });
+        };
+
       } else {
         amountTONSpan.textContent = "0";
         payLink.style.display = "none";
