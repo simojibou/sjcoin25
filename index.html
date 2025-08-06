@@ -4,51 +4,89 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SJ COIN Payment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
-      background-color: #111;
-      color: white;
-      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      font-family: 'Cairo', sans-serif;
       padding: 20px;
       text-align: center;
       direction: rtl;
       transition: background-color 0.3s, color 0.3s;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     body.light-mode {
       background-color: #f5f5f5;
-      color: #333;
+      color: #1a1a1a;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    .purchase-options {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .purchase-option {
+      padding: 10px 20px;
+      background-color: #0088cc;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .purchase-option:hover {
+      background-color: #00aaff;
+    }
+    .purchase-option.selected {
+      background-color: #00ff88;
+      color: #000;
     }
     button {
       background-color: #0088cc;
       color: white;
       border: none;
-      padding: 15px 25px;
-      font-size: 18px;
+      padding: 15px 30px;
+      font-size: 1.2rem;
       border-radius: 10px;
       cursor: pointer;
       margin: 10px;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, transform 0.2s;
     }
     button:hover {
       background-color: #00aaff;
+      transform: scale(1.05);
     }
     button:disabled {
       background-color: #555;
       cursor: not-allowed;
+      transform: none;
     }
     .balance {
-      font-size: 26px;
-      margin-top: 30px;
+      font-size: 1.8rem;
+      margin: 20px 0;
       color: #00ff88;
-    }
-    .loading {
-      opacity: 0.7;
-      pointer-events: none;
     }
     .error, .info {
       margin: 10px 0;
       padding: 10px;
       border-radius: 5px;
+      font-size: 1rem;
     }
     .error {
       background-color: #ff4444;
@@ -60,11 +98,10 @@
     }
     .progress-bar {
       width: 100%;
-      max-width: 300px;
       height: 10px;
       background-color: #333;
       border-radius: 5px;
-      margin: 10px auto;
+      margin: 10px 0;
       overflow: hidden;
     }
     .progress-bar-fill {
@@ -75,51 +112,151 @@
     }
     .transaction-history {
       margin-top: 20px;
-      padding: 10px;
+      padding: 15px;
       background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 5px;
-      max-height: 200px;
+      border-radius: 8px;
+      max-height: 250px;
       overflow-y: auto;
     }
     .transaction-item {
-      padding: 5px;
+      padding: 10px;
       border-bottom: 1px solid #444;
+      font-size: 0.9rem;
     }
-    .theme-toggle {
+    .chart-container {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+    .theme-toggle, .lang-toggle {
       position: absolute;
       top: 20px;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 5px;
+    }
+    .theme-toggle {
       left: 20px;
-      background-color: #666;
+    }
+    .lang-toggle {
+      left: 80px;
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.8rem; }
+      button { font-size: 1rem; padding: 12px 20px; }
+      .purchase-options { flex-direction: column; }
+      .theme-toggle, .lang-toggle { font-size: 0.9rem; padding: 8px; }
     }
   </style>
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle">🌙 تبديل الوضع</button>
-  <h1>شراء SJ COIN</h1>
-  <p>0.5 TON = 1000 SJ COIN</p>
-
-  <button id="buyBtn">💰 اشترِ الآن بمحفظة TON</button>
-  <br/>
-  <button id="checkBtn">✅ تحقق من الدفع</button>
-  <br/>
-  <button id="refreshBtn">🔄 إعادة تحميل الرصيد</button>
-
-  <div class="balance" id="balance">رصيدك: ...</div>
-  <div class="info" id="info"></div>
-  <div class="error" id="error"></div>
-  <div class="progress-bar" id="progressBar">
-    <div class="progress-bar-fill" id="progressBarFill"></div>
-  </div>
-  <div class="transaction-history" id="transactionHistory">
-    <h3>سجل المعاملات</h3>
-    <div id="transactions"></div>
+  <button class="theme-toggle" id="themeToggle">🌙</button>
+  <button class="lang-toggle" id="langToggle">EN</button>
+  <div class="container">
+    <h1 data-lang="title">شراء SJ COIN</h1>
+    <div class="purchase-options" id="purchaseOptions">
+      <div class="purchase-option" data-amount="0.5" data-coins="1000">0.5 TON = 1000 SJ COIN</div>
+      <div class="purchase-option" data-amount="1" data-coins="2000">1 TON = 2000 SJ COIN</div>
+      <div class="purchase-option" data-amount="2" data-coins="4000">2 TON = 4000 SJ COIN</div>
+    </div>
+    <button id="buyBtn" data-lang="buyBtn">💰 اشترِ الآن بمحفظة TON</button>
+    <br/>
+    <button id="checkBtn" data-lang="checkBtn">✅ تحقق من الدفع</button>
+    <br/>
+    <button id="refreshBtn" data-lang="refreshBtn">🔄 إعادة تحميل الرصيد</button>
+    <div class="balance" id="balance" data-lang="balance">رصيدك: ...</div>
+    <div class="info" id="info"></div>
+    <div class="error" id="error"></div>
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
+    </div>
+    <div class="transaction-history">
+      <h3 data-lang="historyTitle">سجل المعاملات</h3>
+      <div id="transactions"></div>
+    </div>
+    <div class="chart-container">
+      <canvas id="balanceChart"></canvas>
+    </div>
   </div>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
+    // Embedded Service Worker code
+    const serviceWorkerCode = `
+      const CACHE_NAME = "sj-coin-cache-v1";
+      const urlsToCache = ["/", "/index.html", "https://cdn.jsdelivr.net/npm/chart.js"];
+
+      self.addEventListener("install", event => {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+        );
+      });
+
+      self.addEventListener("fetch", event => {
+        event.respondWith(
+          caches.match(event.request).then(response => response || fetch(event.request))
+        );
+      });
+    `;
+
+    // Register Service Worker dynamically
+    if ("serviceWorker" in navigator) {
+      // Create a Blob for the Service Worker code
+      const blob = new Blob([serviceWorkerCode], { type: "application/javascript" });
+      const serviceWorkerURL = URL.createObjectURL(blob);
+
+      // Register the Service Worker
+      navigator.serviceWorker.register(serviceWorkerURL).catch(error => {
+        console.error("Service Worker registration failed:", error);
+      });
+    }
+
+    // Language translations
+    const translations = {
+      ar: {
+        title: "شراء SJ COIN",
+        buyBtn: "💰 اشترِ الآن بمحفظة TON",
+        checkBtn: "✅ تحقق من الدفع",
+        refreshBtn: "🔄 إعادة تحميل الرصيد",
+        balance: "رصيدك: {balance} SJ COIN",
+        historyTitle: "سجل المعاملات",
+        noTransactions: "لا توجد معاملات بعد",
+        pendingMessage: "في انتظار تأكيد الدفع. انقر على 'تحقق من الدفع' بعد إتمام العملية.",
+        paidMessage: "تم تأكيد دفعك! رصيدك محدث.",
+        defaultMessage: "اختر كمية SJ COIN واضغط 'اشترِ الآن'.",
+        offlineMessage: "غير متصل. يتم عرض آخر البيانات المحفوظة.",
+        errorUser: "يرجى تسجيل الدخول عبر Telegram",
+        errorBalance: "خطأ في تحميل الرصيد",
+        errorPurchase: "خطأ أثناء معالجة الشراء",
+        errorCheck: "خطأ أثناء التحقق من الدفع",
+        errorTransactions: "خطأ في تحميل سجل المعاملات"
+      },
+      en: {
+        title: "Buy SJ COIN",
+        buyBtn: "💰 Buy Now with TON Wallet",
+        checkBtn: "✅ Check Payment",
+        refreshBtn: "🔄 Refresh Balance",
+        balance: "Your Balance: {balance} SJ COIN",
+        historyTitle: "Transaction History",
+        noTransactions: "No transactions yet",
+        pendingMessage: "Pending payment confirmation. Click 'Check Payment' after completing.",
+        paidMessage: "Payment confirmed! Your balance is updated.",
+        defaultMessage: "Choose an SJ COIN amount and click 'Buy Now'.",
+        offlineMessage: "Offline. Showing last cached data.",
+        errorUser: "Please open via Telegram",
+        errorBalance: "Error loading balance",
+        errorPurchase: "Error processing purchase",
+        errorCheck: "Error checking payment",
+        errorTransactions: "Error loading transaction history"
+      }
+    };
+
     // IMPORTANT: Firebase config should be moved to server-side in production
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
@@ -137,7 +274,7 @@
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
     } catch (error) {
-      displayError("خطأ في تهيئة قاعدة البيانات");
+      displayError("errorUser");
     }
 
     // Telegram WebApp
@@ -160,6 +297,15 @@
     const progressBarFill = document.getElementById("progressBarFill");
     const transactionsDiv = document.getElementById("transactions");
     const themeToggle = document.getElementById("themeToggle");
+    const langToggle = document.getElementById("langToggle");
+    const purchaseOptions = document.getElementById("purchaseOptions");
+    const balanceChart = document.getElementById("balanceChart").getContext("2d");
+
+    // State
+    let currentLang = localStorage.getItem("lang") || "ar";
+    let selectedPurchase = { amount: 0.5, coins: 1000 };
+    let isOnline = navigator.onLine;
+    let cachedData = JSON.parse(localStorage.getItem("cachedData") || "{}");
 
     // Utility functions
     function setLoading(state, progress = 0) {
@@ -172,34 +318,52 @@
       progressBarFill.style.width = `${progress}%`;
     }
 
-    function displayError(message) {
-      errorDiv.textContent = message;
+    function displayError(key) {
+      errorDiv.textContent = translations[currentLang][key];
       setTimeout(() => errorDiv.textContent = "", 5000);
     }
 
-    function displayInfo(message) {
-      infoDiv.textContent = message;
+    function displayInfo(key) {
+      infoDiv.textContent = translations[currentLang][key];
       setTimeout(() => infoDiv.textContent = "", 5000);
+    }
+
+    function updateLanguage() {
+      document.querySelectorAll("[data-lang]").forEach(el => {
+        const key = el.getAttribute("data-lang");
+        el.textContent = translations[currentLang][key].replace("{balance}", balanceDiv.textContent.match(/\d+/)?.[0] || "...");
+      });
+      langToggle.textContent = currentLang === "ar" ? "EN" : "AR";
+      localStorage.setItem("lang", currentLang);
     }
 
     // Load balance
     async function loadBalance() {
       if (!userId) {
-        balanceDiv.textContent = "❌ لم يتم التعرف على المستخدم";
-        displayInfo("يرجى فتح التطبيق عبر Telegram");
+        balanceDiv.textContent = translations[currentLang].balance.replace("{balance}", "...");
+        displayError("errorUser");
         return;
       }
 
       try {
         setLoading(true, 30);
+        if (!isOnline && cachedData.balance) {
+          balanceDiv.textContent = translations[currentLang].balance.replace("{balance}", cachedData.balance);
+          displayInfo("offlineMessage");
+          return;
+        }
+
         const snapshot = await db.ref("users/" + userId).once("value");
         const data = snapshot.val();
         const bal = data?.balance || 0;
-        balanceDiv.textContent = `رصيدك: ${bal} SJ COIN`;
+        balanceDiv.textContent = translations[currentLang].balance.replace("{balance}", bal);
+        cachedData.balance = bal;
+        localStorage.setItem("cachedData", JSON.stringify(cachedData));
         displayInfo(getDynamicMessage(data?.status));
+        updateChart(bal);
         setLoading(false, 100);
       } catch (error) {
-        displayError("خطأ في تحميل الرصيد");
+        displayError("errorBalance");
         console.error(error);
         setLoading(false, 0);
       }
@@ -210,49 +374,81 @@
       if (!userId) return;
 
       try {
+        if (!isOnline && cachedData.transactions) {
+          renderTransactions(cachedData.transactions);
+          displayInfo("offlineMessage");
+          return;
+        }
+
         const snapshot = await db.ref("transactions/" + userId).limitToLast(5).once("value");
         const transactions = snapshot.val();
-        transactionsDiv.innerHTML = "";
-        if (transactions) {
-          Object.entries(transactions).forEach(([key, tx]) => {
-            const date = new Date(tx.timestamp).toLocaleString("ar");
-            const item = document.createElement("div");
-            item.className = "transaction-item";
-            item.textContent = `${date}: ${tx.amount} SJ COIN - ${tx.status}`;
-            transactionsDiv.appendChild(item);
-          });
-        } else {
-          transactionsDiv.textContent = "لا توجد معاملات بعد";
-        }
+        renderTransactions(transactions);
+        cachedData.transactions = transactions;
+        localStorage.setItem("cachedData", JSON.stringify(cachedData));
       } catch (error) {
-        displayError("خطأ في تحميل سجل المعاملات");
+        displayError("errorTransactions");
         console.error(error);
+      }
+    }
+
+    function renderTransactions(transactions) {
+      transactionsDiv.innerHTML = "";
+      if (transactions) {
+        Object.entries(transactions).forEach(([key, tx]) => {
+          const date = new Date(tx.timestamp).toLocaleString(currentLang);
+          const item = document.createElement("div");
+          item.className = "transaction-item";
+          item.textContent = `${date}: ${tx.amount} SJ COIN - ${tx.status}`;
+          transactionsDiv.appendChild(item);
+        });
+      } else {
+        transactionsDiv.textContent = translations[currentLang].noTransactions;
       }
     }
 
     // Dynamic info message based on user status
     function getDynamicMessage(status) {
       switch (status) {
-        case "pending":
-          return "في انتظار تأكيد الدفع. انقر على 'تحقق من الدفع' بعد إتمام العملية.";
-        case "paid":
-          return "تم تأكيد دفعك! رصيدك محدث.";
-        default:
-          return "اضغط 'اشترِ الآن' لبدء عملية الشراء.";
+        case "pending": return "pendingMessage";
+        case "paid": return "paidMessage";
+        default: return "defaultMessage";
       }
+    }
+
+    // Update chart
+    let chartInstance;
+    function updateChart(balance) {
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(balanceChart, {
+        type: "bar",
+        data: {
+          labels: [translations[currentLang].balance],
+          datasets: [{
+            label: "SJ COIN",
+            data: [balance],
+            backgroundColor: "#00ff88",
+            borderColor: "#0088cc",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
     }
 
     // Buy button handler
     buyBtn.addEventListener("click", async () => {
       if (!userId) {
-        displayError("يرجى تسجيل الدخول عبر Telegram");
+        displayError("errorUser");
         return;
       }
 
       try {
         setLoading(true, 50);
         const TON_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
-        const TON_LINK = `https://t.me/wallet/send?amount=0.5&token=ton&to=${TON_ADDRESS}`;
+        const TON_LINK = `https://t.me/wallet/send?amount=${selectedPurchase.amount}&token=ton&to=${TON_ADDRESS}`;
         window.open(TON_LINK, "_blank");
 
         await db.ref("users/" + userId).set({
@@ -268,46 +464,46 @@
           timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
-        displayInfo("تم فتح رابط الدفع. أكمل الدفع ثم تحقق.");
+        displayInfo("pendingMessage");
         loadTransactions();
         setLoading(false, 100);
       } catch (error) {
-        displayError("خطأ أثناء معالجة الشراء");
+        displayError("errorPurchase");
         console.error(error);
         setLoading(false, 0);
       }
     });
 
-    // Check payment handler
+    // Check payment handler (replace with blockchain verification in production)
     checkBtn.addEventListener("click", async () => {
       if (!userId) {
-        displayError("يرجى تسجيل الدخول عبر Telegram");
+        displayError("errorUser");
         return;
       }
 
-      const confirmPaid = confirm("هل أكملت الدفع 0.5 TON؟");
+      const confirmPaid = confirm(translations[currentLang].checkBtn.replace("✅ تحقق من الدفع", `هل أكملت دفع ${selectedPurchase.amount} TON؟`).replace("✅ Check Payment", `Did you complete the payment of ${selectedPurchase.amount} TON?`));
       if (!confirmPaid) return;
 
       try {
         setLoading(true, 70);
         await db.ref("users/" + userId).update({
-          balance: 1000,
+          balance: selectedPurchase.coins,
           status: "paid",
           lastUpdated: firebase.database.ServerValue.TIMESTAMP
         });
 
         await db.ref("transactions/" + userId).push({
-          amount: 1000,
+          amount: selectedPurchase.coins,
           status: "paid",
           timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
-        alert("✅ تم تحديث رصيدك!");
+        alert("✅ تم تحديث رصيدك! / Payment updated successfully!");
         await loadBalance();
         await loadTransactions();
         setLoading(false, 100);
       } catch (error) {
-        displayError("خطأ أثناء التحقق من الدفع");
+        displayError("errorCheck");
         console.error(error);
         setLoading(false, 0);
       }
@@ -317,7 +513,7 @@
     refreshBtn.addEventListener("click", async () => {
       await loadBalance();
       await loadTransactions();
-      displayInfo("تم تحديث الرصيد وسجل المعاملات");
+      displayInfo("paidMessage");
     });
 
     // Theme toggle handler
@@ -327,19 +523,64 @@
       localStorage.setItem("theme", document.body.classList.contains("light-mode") ? "light" : "dark");
     });
 
-    // Load saved theme
-    if (localStorage.getItem("theme") === "light") {
-      document.body.classList.add("light-mode");
-      themeToggle.textContent = "🌙";
+    // Language toggle handler
+    langToggle.addEventListener("click", () => {
+      currentLang = currentLang === "ar" ? "en" : "ar";
+      updateLanguage();
+      loadTransactions();
+      updateChart(parseInt(balanceDiv.textContent.match(/\d+/)?.[0] || 0));
+    });
+
+    // Purchase options handler
+    purchaseOptions.addEventListener("click", (e) => {
+      const option = e.target.closest(".purchase-option");
+      if (!option) return;
+      document.querySelectorAll(".purchase-option").forEach(opt => opt.classList.remove("selected"));
+      option.classList.add("selected");
+      selectedPurchase = {
+        amount: parseFloat(option.dataset.amount),
+        coins: parseInt(option.dataset.coins)
+      };
+    });
+
+    // Realtime updates
+    if (userId && db) {
+      db.ref("users/" + userId).on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          balanceDiv.textContent = translations[currentLang].balance.replace("{balance}", data.balance || 0);
+          displayInfo(getDynamicMessage(data.status));
+          updateChart(data.balance || 0);
+        }
+      });
     }
+
+    // Handle online/offline status
+    window.addEventListener("online", () => {
+      isOnline = true;
+      loadBalance();
+      loadTransactions();
+    });
+    window.addEventListener("offline", () => {
+      isOnline = false;
+      displayInfo("offlineMessage");
+    });
 
     // Initial load
     if (userId && db) {
       loadBalance();
       loadTransactions();
+      updateLanguage();
+      document.querySelector(".purchase-option").classList.add("selected");
     } else {
-      balanceDiv.textContent = "❌ لم يتم التعرف على المستخدم";
-      displayInfo("يرجى فتح التطبيق عبر Telegram");
+      balanceDiv.textContent = translations[currentLang].balance.replace("{balance}", "...");
+      displayError("errorUser");
+    }
+
+    // Load saved theme
+    if (localStorage.getItem("theme") === "light") {
+      document.body.classList.add("light-mode");
+      themeToggle.textContent = "🌙";
     }
   </script>
 </body>
