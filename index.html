@@ -50,6 +50,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -63,16 +64,15 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // عناصر الصفحة
     const amountCoinInput = document.getElementById("amountCoin");
     const amountTONSpan = document.getElementById("amountTON");
     const payLink = document.getElementById("payLink");
 
     const TON_WALLET_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
-    const COIN_PRICE_TON = 0.0002;
+    const COIN_PRICE_TON = 0.0002; // سعر العملة بـ TON
 
-    let currentOrder = null;
-
-    amountCoinInput.addEventListener("input", () => {
+    amountCoinInput.addEventListener("input", async () => {
       const amount = parseFloat(amountCoinInput.value);
       if (amount > 0) {
         const amountTON = (amount * COIN_PRICE_TON).toFixed(6);
@@ -83,14 +83,18 @@
         // حفظ الطلب في Firebase
         const now = new Date().toISOString();
         const orderRef = push(ref(db, 'TON_Orders'));
-        set(orderRef, {
+        const orderKey = orderRef.key;
+
+        await set(orderRef, {
+          id: orderKey,
           amount_sj_coin: amount,
           amount_ton: amountTON,
+          nano_ton: nanoTON,
           status: "pending",
           created_at: now
         });
 
-        // إنشاء رابط الدفع عبر Telegram Wallet
+        // إنشاء رابط الدفع
         const payUrl = `https://t.me/wallet?startapp=transfer_ton-${TON_WALLET_ADDRESS}-${nanoTON}`;
         payLink.href = payUrl;
         payLink.style.display = "inline-block";
