@@ -1,213 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Pyramid System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>شراء simojibou NFT</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     body {
-      background: #111;
+      background-color: #111;
       color: white;
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
+      padding: 30px;
     }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #222;
-      padding: 20px;
+    img {
+      max-width: 300px;
       border-radius: 12px;
-      box-shadow: 0 0 10px #444;
+      margin-bottom: 20px;
     }
-
-    button {
-      padding: 10px 20px;
-      background: #00bcd4;
+    .btn {
+      background-color: #04d47d;
       border: none;
       color: white;
+      padding: 15px 25px;
+      font-size: 18px;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 10px;
     }
-
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      margin-top: 10px;
+    .btn:hover {
+      background-color: #00c06a;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🏛 SJ Pyramid Academy</h1>
-    <p id="welcome"></p>
 
-    <div id="subscription-section">
-      <h2>50 TON / month</h2>
-      <button id="subscribeBtn" onclick="subscribe()">Join Now</button>
-    </div>
+  <h1>simojibou NFT</h1>
+  <p>احصل على NFT الرسمي مقابل 20 TON</p>
 
-    <div id="dashboard" style="display:none;">
-      <p>Your Referral Link:</p>
-      <input id="refLink" readonly />
-      <p>Total Referrals: <span id="refCount">0</span></p>
-      <p>Your Rank: <span id="rank">Newbie</span></p>
-    </div>
-  </div>
+  <img src="https://s.getgems.io/nft/s/6893/689363bcd6ed7da0fa853790/nft/1492566.webp" alt="simojibou NFT" />
 
-  <script type="module">
-    // Initialize Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import {
-      getFirestore, doc, setDoc, getDoc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  <br/><br/>
+  <button class="btn" onclick="buyWithTon()">شراء بـ 20 TON</button>
 
+  <script>
+    // تهيئة Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
       databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "438348772438",
-      appId: "1:438348772438:web:e2d14b754fb178879a2a46"
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    // Telegram Integration
+    // Telegram WebApp
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    const userId = tg.initDataUnsafe.user?.id?.toString() || "demo_user";
-    const userName = tg.initDataUnsafe.user?.first_name || "User";
-    document.getElementById("welcome").innerText = `👋 Welcome, ${userName}`;
+    async function buyWithTon() {
+      const user = tg.initDataUnsafe.user || {};
+      const userId = user.id || "unknown";
+      const name = user.first_name || "NoName";
+      const timestamp = new Date().toISOString();
 
-    // TON Wallet Configuration
-    const TON_AMOUNT = 50; // Subscription cost in TON
-    const PAYMENT_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW"; // Updated TON wallet address
-    const PAYMENT_MEMO = `Subscription_${userId}`; // Unique memo for tracking
+      // حفظ بيانات المستخدم في Realtime Database
+      db.ref('nft_purchases/' + userId).set({
+        name: name,
+        telegram_id: userId,
+        action: "clicked_buy",
+        timestamp: timestamp
+      });
 
-    // Check if user is already subscribed on page load
-    window.onload = async () => {
-      const userRef = doc(db, "users", userId);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        document.getElementById("subscription-section").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        document.getElementById("refLink").value = snap.data().link;
-        updateStats(userId);
-      }
-    };
+      // رابط دفع TON عبر Telegram Wallet (غير مباشر)
+      const tonLink = "https://t.me/wallet?start=ton__UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+      window.open(tonLink, "_blank");
 
-    async function subscribe() {
-      const subscribeBtn = document.getElementById("subscribeBtn");
-      subscribeBtn.disabled = true;
-      subscribeBtn.innerText = "Processing...";
-
-      try {
-        // Check if user is already subscribed
-        const userRef = doc(db, "users", userId);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          alert("Already subscribed!");
-          return;
-        }
-
-        // Initiate TON payment via Telegram Wallet
-        if (!tg.isVersionAtLeast("6.9")) {
-          alert("Please update your Telegram app to use Wallet payments.");
-          return;
-        }
-
-        // Create payment request
-        const paymentRequest = {
-          amount: TON_AMOUNT * 1e9, // TON uses nanoton (1 TON = 10^9 nanoton)
-          address: PAYMENT_ADDRESS,
-          memo: PAYMENT_MEMO,
-          currency: "TON"
-        };
-
-        // Open Telegram Wallet for payment
-        tg.requestWalletPayment({
-          amount: paymentRequest.amount,
-          destination: paymentRequest.address,
-          comment: paymentRequest.memo
-        }, async (result) => {
-          if (result.status === "success") {
-            // Payment initiated, now confirm it (you may need a backend to verify the transaction)
-            const ref = new URLSearchParams(window.location.search).get("ref") || "none";
-            const link = `${window.location.origin}?ref=${userId}`;
-
-            // Save user data to Firebase
-            await setDoc(userRef, {
-              userId,
-              referrer: ref,
-              referrals: 0,
-              link,
-              rank: "Newbie",
-              paymentStatus: "pending",
-              paymentMemo: PAYMENT_MEMO
-            });
-
-            // Note: In a production environment, you should verify the TON transaction
-            // via a backend service checking the blockchain for the payment.
-            // For simplicity, we assume success here after user confirms payment.
-            await updateDoc(userRef, { paymentStatus: "completed" });
-
-            // Update referrer's count if applicable
-            if (ref !== "none") {
-              const refDoc = doc(db, "users", ref);
-              await updateDoc(refDoc, {
-                referrals: increment(1)
-              });
-            }
-
-            // Update UI
-            document.getElementById("subscription-section").style.display = "none";
-            document.getElementById("dashboard").style.display = "block";
-            document.getElementById("refLink").value = link;
-            updateStats(userId);
-            alert("Subscription successful!");
-          } else {
-            alert("Payment failed or was cancelled.");
-          }
-        });
-      } catch (error) {
-        console.error("Payment error:", error);
-        alert("An error occurred during payment. Please try again.");
-      } finally {
-        subscribeBtn.disabled = false;
-        subscribeBtn.innerText = "Join Now";
-      }
-    }
-
-    async function updateStats(userId) {
-      const userSnap = await getDoc(doc(db, "users", userId));
-      if (!userSnap.exists()) return;
-
-      const data = userSnap.data();
-      document.getElementById("refCount").innerText = data.referrals;
-
-      let rank = "Newbie";
-      if (data.referrals >= 10) rank = "Elite";
-      else if (data.referrals >= 5) rank = "Pro";
-      else if (data.referrals >= 1) rank = "Rising";
-
-      await updateDoc(doc(db, "users", userId), { rank });
-      document.getElementById("rank").innerText = rank;
+      // إعادة توجيه المستخدم بعد 4 ثواني إلى صفحة NFT
+      setTimeout(() => {
+        window.location.href = "https://getgems.io/nft/EQCwl7SnckJfm9kjU2LjiUjYZpWh_GBkTfRY8r6-LYKnyGlB";
+      }, 4000);
     }
   </script>
+
+  <!-- Firebase SDK Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+
 </body>
 </html>
