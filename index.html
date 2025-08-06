@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Pyramid System</title>
+  <title>نظام الهرم الرقمي - SJ Pyramid</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
@@ -11,7 +11,7 @@
     body {
       background: #111;
       color: white;
-      font-family: Arial, sans-serif;
+      font-family: 'Arial', sans-serif;
       text-align: center;
       padding: 20px;
     }
@@ -25,14 +25,15 @@
       box-shadow: 0 0 10px #444;
     }
 
-    button {
+    button, a button {
       padding: 10px 20px;
       background: #00bcd4;
       border: none;
       color: white;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 10px;
+      margin: 10px 0;
+      font-size: 16px;
     }
 
     input {
@@ -41,33 +42,50 @@
       border-radius: 8px;
       margin-top: 10px;
     }
+
+    #tonLink {
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🏛 SJ Pyramid Academy</h1>
-    <p id="welcome"></p>
+    <p id="welcome">مرحبًا</p>
 
     <div id="subscription-section">
-      <h2>$50 / month</h2>
-      <button onclick="subscribe()">Join Now</button>
+      <h2>💰 الاشتراك: 50 دولار (1.5 TON)</h2>
+      <p>ادفع عبر محفظة TON داخل تيليجرام</p>
+      <a id="tonLink" href="#" target="_blank">
+        <button>💸 ادفع الآن بـ TON</button>
+      </a>
+      <p>بعد الدفع، اضغط الزر أدناه لتأكيد الاشتراك:</p>
+      <button onclick="subscribe()">✅ تأكيد الاشتراك</button>
     </div>
 
     <div id="dashboard" style="display:none;">
-      <p>Your Referral Link:</p>
+      <p>🔗 رابط الإحالة الخاص بك:</p>
       <input id="refLink" readonly />
-      <p>Total Referrals: <span id="refCount">0</span></p>
-      <p>Your Rank: <span id="rank">Newbie</span></p>
+      <button onclick="copyLink()">📋 نسخ الرابط</button>
+      <p>👥 عدد الإحالات: <span id="refCount">0</span></p>
+      <p>🏆 رتبتك: <span id="rank">Newbie</span></p>
+
+      <div id="earnings" style="margin-top: 30px;">
+        <h3>📈 أرباحك</h3>
+        <p>💵 الأرباح بالدولار: <span id="usdEarnings">0</span> $</p>
+        <p>🪙 الأرباح بـ TON: <span id="tonEarnings">0</span> TON</p>
+        <button id="withdrawBtn" onclick="requestWithdrawal()" style="display:none;">💸 طلب الدفع</button>
+      </div>
     </div>
   </div>
 
   <script type="module">
-    // 1. Initialize Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
       getFirestore, doc, setDoc, getDoc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
+    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -81,26 +99,33 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 2. Telegram Integration
+    // Telegram Integration
     const tg = window.Telegram.WebApp;
     tg.expand();
-
     const userId = tg.initDataUnsafe.user?.id || "demo_user";
-    const userName = tg.initDataUnsafe.user?.first_name || "User";
-    document.getElementById("welcome").innerText = `👋 Welcome, ${userName}`;
+    const userName = tg.initDataUnsafe.user?.first_name || "مستخدم";
+    document.getElementById("welcome").innerText = `👋 مرحبًا، ${userName}`;
 
+    // إعداد رابط الدفع بـ TON
+    const tonAddress = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+    const tonAmount = 1.5;
+    const memo = `sub_${userId}`;
+    const tonPayLink = `https://t.me/wallet/send?to=${tonAddress}&amount=${tonAmount}&text=${memo}`;
+    document.getElementById("tonLink").href = tonPayLink;
+
+    // الاشتراك بعد الدفع
     async function subscribe() {
       const ref = new URLSearchParams(window.location.search).get("ref") || "none";
       const userRef = doc(db, "users", userId);
 
       const snap = await getDoc(userRef);
       if (snap.exists()) {
-        alert("Already subscribed!");
+        alert("✅ أنت مشترك بالفعل!");
+        showDashboard();
         return;
       }
 
       const link = `${window.location.origin}?ref=${userId}`;
-
       await setDoc(userRef, {
         userId,
         referrer: ref,
@@ -111,33 +136,61 @@
 
       if (ref !== "none") {
         const refDoc = doc(db, "users", ref);
-        await updateDoc(refDoc, {
-          referrals: increment(1)
-        });
+        await updateDoc(refDoc, { referrals: increment(1) });
       }
 
-      document.getElementById("subscription-section").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("refLink").value = link;
-
-      updateStats(userId);
+      showDashboard();
     }
 
-    async function updateStats(userId) {
-      const userSnap = await getDoc(doc(db, "users", userId));
-      if (!userSnap.exists()) return;
+    function copyLink() {
+      const refInput = document.getElementById("refLink");
+      refInput.select();
+      document.execCommand("copy");
+      alert("✅ تم نسخ رابط الإحالة!");
+    }
 
+    async function showDashboard() {
+      document.getElementById("subscription-section").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+
+      const userSnap = await getDoc(doc(db, "users", userId));
       const data = userSnap.data();
-      document.getElementById("refCount").innerText = data.referrals;
+
+      document.getElementById("refLink").value = data.link;
+      const referrals = data.referrals || 0;
+      document.getElementById("refCount").innerText = referrals;
 
       let rank = "Newbie";
-      if (data.referrals >= 10) rank = "Elite";
-      else if (data.referrals >= 5) rank = "Pro";
-      else if (data.referrals >= 1) rank = "Rising";
+      if (referrals >= 10) rank = "Elite";
+      else if (referrals >= 5) rank = "Pro";
+      else if (referrals >= 1) rank = "Rising";
 
       await updateDoc(doc(db, "users", userId), { rank });
       document.getElementById("rank").innerText = rank;
+
+      const usd = referrals * 10;
+      const ton = (referrals * 0.3).toFixed(2);
+      document.getElementById("usdEarnings").innerText = usd;
+      document.getElementById("tonEarnings").innerText = ton;
+
+      if (usd >= 50) {
+        document.getElementById("withdrawBtn").style.display = "inline-block";
+      }
     }
+
+    async function requestWithdrawal() {
+      alert("🚀 تم إرسال طلب السحب! سيتم مراجعة أرباحك خلال 24 ساعة.");
+      // يمكنك هنا حفظ طلب السحب في Firebase أو إرساله إلى Admin
+    }
+
+    // جلب بيانات المستخدم إذا كان مشترك
+    (async () => {
+      const userRef = doc(db, "users", userId);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        showDashboard();
+      }
+    })();
   </script>
 </body>
 </html>
