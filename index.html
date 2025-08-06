@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>نظام الهرم الرقمي - SJ Pyramid</title>
+  <title>SJ Pyramid System</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
@@ -11,7 +11,7 @@
     body {
       background: #111;
       color: white;
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
     }
@@ -25,15 +25,19 @@
       box-shadow: 0 0 10px #444;
     }
 
-    button, a button {
+    button {
       padding: 10px 20px;
       background: #00bcd4;
       border: none;
       color: white;
       border-radius: 8px;
       cursor: pointer;
-      margin: 10px 0;
-      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
     }
 
     input {
@@ -42,50 +46,33 @@
       border-radius: 8px;
       margin-top: 10px;
     }
-
-    #tonLink {
-      text-decoration: none;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🏛 SJ Pyramid Academy</h1>
-    <p id="welcome">مرحبًا</p>
+    <p id="welcome"></p>
 
     <div id="subscription-section">
-      <h2>💰 الاشتراك: 50 دولار (1.5 TON)</h2>
-      <p>ادفع عبر محفظة TON داخل تيليجرام</p>
-      <a id="tonLink" href="#" target="_blank">
-        <button>💸 ادفع الآن بـ TON</button>
-      </a>
-      <p>بعد الدفع، اضغط الزر أدناه لتأكيد الاشتراك:</p>
-      <button onclick="subscribe()">✅ تأكيد الاشتراك</button>
+      <h2>50 TON / month</h2>
+      <button id="subscribeBtn" onclick="subscribe()">Join Now</button>
     </div>
 
     <div id="dashboard" style="display:none;">
-      <p>🔗 رابط الإحالة الخاص بك:</p>
+      <p>Your Referral Link:</p>
       <input id="refLink" readonly />
-      <button onclick="copyLink()">📋 نسخ الرابط</button>
-      <p>👥 عدد الإحالات: <span id="refCount">0</span></p>
-      <p>🏆 رتبتك: <span id="rank">Newbie</span></p>
-
-      <div id="earnings" style="margin-top: 30px;">
-        <h3>📈 أرباحك</h3>
-        <p>💵 الأرباح بالدولار: <span id="usdEarnings">0</span> $</p>
-        <p>🪙 الأرباح بـ TON: <span id="tonEarnings">0</span> TON</p>
-        <button id="withdrawBtn" onclick="requestWithdrawal()" style="display:none;">💸 طلب الدفع</button>
-      </div>
+      <p>Total Referrals: <span id="refCount">0</span></p>
+      <p>Your Rank: <span id="rank">Newbie</span></p>
     </div>
   </div>
 
   <script type="module">
+    // Initialize Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
       getFirestore, doc, setDoc, getDoc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -102,95 +89,125 @@
     // Telegram Integration
     const tg = window.Telegram.WebApp;
     tg.expand();
-    const userId = tg.initDataUnsafe.user?.id || "demo_user";
-    const userName = tg.initDataUnsafe.user?.first_name || "مستخدم";
-    document.getElementById("welcome").innerText = `👋 مرحبًا، ${userName}`;
 
-    // إعداد رابط الدفع بـ TON
-    const tonAddress = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
-    const tonAmount = 1.5;
-    const memo = `sub_${userId}`;
-    const tonPayLink = `https://t.me/wallet/send?to=${tonAddress}&amount=${tonAmount}&text=${memo}`;
-    document.getElementById("tonLink").href = tonPayLink;
+    const userId = tg.initDataUnsafe.user?.id?.toString() || "demo_user";
+    const userName = tg.initDataUnsafe.user?.first_name || "User";
+    document.getElementById("welcome").innerText = `👋 Welcome, ${userName}`;
 
-    // الاشتراك بعد الدفع
-    async function subscribe() {
-      const ref = new URLSearchParams(window.location.search).get("ref") || "none";
+    // TON Wallet Configuration
+    const TON_AMOUNT = 50; // Subscription cost in TON
+    const PAYMENT_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW"; // Updated TON wallet address
+    const PAYMENT_MEMO = `Subscription_${userId}`; // Unique memo for tracking
+
+    // Check if user is already subscribed on page load
+    window.onload = async () => {
       const userRef = doc(db, "users", userId);
-
       const snap = await getDoc(userRef);
       if (snap.exists()) {
-        alert("✅ أنت مشترك بالفعل!");
-        showDashboard();
-        return;
+        document.getElementById("subscription-section").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        document.getElementById("refLink").value = snap.data().link;
+        updateStats(userId);
       }
+    };
 
-      const link = `${window.location.origin}?ref=${userId}`;
-      await setDoc(userRef, {
-        userId,
-        referrer: ref,
-        referrals: 0,
-        link,
-        rank: "Newbie"
-      });
+    async function subscribe() {
+      const subscribeBtn = document.getElementById("subscribeBtn");
+      subscribeBtn.disabled = true;
+      subscribeBtn.innerText = "Processing...";
 
-      if (ref !== "none") {
-        const refDoc = doc(db, "users", ref);
-        await updateDoc(refDoc, { referrals: increment(1) });
+      try {
+        // Check if user is already subscribed
+        const userRef = doc(db, "users", userId);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          alert("Already subscribed!");
+          return;
+        }
+
+        // Initiate TON payment via Telegram Wallet
+        if (!tg.isVersionAtLeast("6.9")) {
+          alert("Please update your Telegram app to use Wallet payments.");
+          return;
+        }
+
+        // Create payment request
+        const paymentRequest = {
+          amount: TON_AMOUNT * 1e9, // TON uses nanoton (1 TON = 10^9 nanoton)
+          address: PAYMENT_ADDRESS,
+          memo: PAYMENT_MEMO,
+          currency: "TON"
+        };
+
+        // Open Telegram Wallet for payment
+        tg.requestWalletPayment({
+          amount: paymentRequest.amount,
+          destination: paymentRequest.address,
+          comment: paymentRequest.memo
+        }, async (result) => {
+          if (result.status === "success") {
+            // Payment initiated, now confirm it (you may need a backend to verify the transaction)
+            const ref = new URLSearchParams(window.location.search).get("ref") || "none";
+            const link = `${window.location.origin}?ref=${userId}`;
+
+            // Save user data to Firebase
+            await setDoc(userRef, {
+              userId,
+              referrer: ref,
+              referrals: 0,
+              link,
+              rank: "Newbie",
+              paymentStatus: "pending",
+              paymentMemo: PAYMENT_MEMO
+            });
+
+            // Note: In a production environment, you should verify the TON transaction
+            // via a backend service checking the blockchain for the payment.
+            // For simplicity, we assume success here after user confirms payment.
+            await updateDoc(userRef, { paymentStatus: "completed" });
+
+            // Update referrer's count if applicable
+            if (ref !== "none") {
+              const refDoc = doc(db, "users", ref);
+              await updateDoc(refDoc, {
+                referrals: increment(1)
+              });
+            }
+
+            // Update UI
+            document.getElementById("subscription-section").style.display = "none";
+            document.getElementById("dashboard").style.display = "block";
+            document.getElementById("refLink").value = link;
+            updateStats(userId);
+            alert("Subscription successful!");
+          } else {
+            alert("Payment failed or was cancelled.");
+          }
+        });
+      } catch (error) {
+        console.error("Payment error:", error);
+        alert("An error occurred during payment. Please try again.");
+      } finally {
+        subscribeBtn.disabled = false;
+        subscribeBtn.innerText = "Join Now";
       }
-
-      showDashboard();
     }
 
-    function copyLink() {
-      const refInput = document.getElementById("refLink");
-      refInput.select();
-      document.execCommand("copy");
-      alert("✅ تم نسخ رابط الإحالة!");
-    }
-
-    async function showDashboard() {
-      document.getElementById("subscription-section").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-
+    async function updateStats(userId) {
       const userSnap = await getDoc(doc(db, "users", userId));
-      const data = userSnap.data();
+      if (!userSnap.exists()) return;
 
-      document.getElementById("refLink").value = data.link;
-      const referrals = data.referrals || 0;
-      document.getElementById("refCount").innerText = referrals;
+      const data = userSnap.data();
+      document.getElementById("refCount").innerText = data.referrals;
 
       let rank = "Newbie";
-      if (referrals >= 10) rank = "Elite";
-      else if (referrals >= 5) rank = "Pro";
-      else if (referrals >= 1) rank = "Rising";
+      if (data.referrals >= 10) rank = "Elite";
+      else if (data.referrals >= 5) rank = "Pro";
+      else if (data.referrals >= 1) rank = "Rising";
 
       await updateDoc(doc(db, "users", userId), { rank });
       document.getElementById("rank").innerText = rank;
-
-      const usd = referrals * 10;
-      const ton = (referrals * 0.3).toFixed(2);
-      document.getElementById("usdEarnings").innerText = usd;
-      document.getElementById("tonEarnings").innerText = ton;
-
-      if (usd >= 50) {
-        document.getElementById("withdrawBtn").style.display = "inline-block";
-      }
     }
-
-    async function requestWithdrawal() {
-      alert("🚀 تم إرسال طلب السحب! سيتم مراجعة أرباحك خلال 24 ساعة.");
-      // يمكنك هنا حفظ طلب السحب في Firebase أو إرساله إلى Admin
-    }
-
-    // جلب بيانات المستخدم إذا كان مشترك
-    (async () => {
-      const userRef = doc(db, "users", userId);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        showDashboard();
-      }
-    })();
   </script>
 </body>
 </html>
