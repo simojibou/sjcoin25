@@ -1,182 +1,99 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ Coin Tap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SJ Coin Tap2Earn</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database-compat.js"></script>
   <style>
     body {
-      margin: 0;
-      background-color: #000;
-      color: #fff;
       font-family: Arial, sans-serif;
-      text-align: center;
+      background-color: #0d0d0d;
+      color: white;
+      margin: 0;
       padding: 20px;
     }
-
     .header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
     }
-
     .profile-pic {
-      width: 48px;
-      height: 48px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      border: 2px solid #fff;
-      object-fit: cover;
+      border: 2px solid #ffd700;
     }
-
-    .wallet-button {
-      background-color: #00aaff;
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 24px;
-      border: none;
-      font-size: 16px;
-      font-weight: bold;
-      margin-top: 10px;
-      cursor: pointer;
-    }
-
-    .coin-info {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-
     .coin-display {
-      margin: 25px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      gap: 10px;
     }
-
     .coin-logo-large {
       width: 120px;
       height: 120px;
       border-radius: 50%;
-      border: 5px solid #ffd700;
-      background-color: #111;
+      border: 4px solid #ffd700;
     }
-
-    .tappable-coin {
-      cursor: pointer;
-      outline: none;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
-    }
-
-    .coin-amount {
-      font-size: 24px;
-      color: #ffff55;
-      font-weight: bold;
-    }
-
-    .progress-bar {
-      background: #333;
-      height: 20px;
-      border-radius: 10px;
+    .progress-container {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #333;
+      border-radius: 20px;
       overflow: hidden;
-      margin: 15px auto;
-      width: 80%;
+      height: 20px;
     }
-
-    .progress-bar-inner {
+    .progress-bar {
       height: 100%;
-      background-color: #00ff88;
-      width: 30%;
-    }
-
-    .level-text {
-      font-size: 14px;
-      margin-top: 5px;
-      color: #ccc;
-    }
-
-    .tap-button {
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 24px;
-      font-size: 18px;
-      margin-top: 15px;
-      cursor: pointer;
-    }
-
-    .buy-button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 24px;
-      font-size: 16px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
-
-    .bottom-menu {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 30px;
-    }
-
-    .bottom-menu button {
-      background-color: #222;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      padding: 10px;
-      width: 22%;
-      font-size: 14px;
-      cursor: pointer;
+      width: 0%;
+      background-color: #ffd700;
     }
   </style>
 </head>
 <body>
-
-  <!-- ✅ Header with profile picture -->
   <div class="header">
-    <h2 id="username">Welcome, simo!</h2>
-    <img src="https://t.me/i/userpic/320/simojibou.jpg" alt="Profile" class="profile-pic" id="profilePic" />
+    <img id="userPic" class="profile-pic" src="" alt="Profile" />
   </div>
 
-  <button class="wallet-button">💎 Connect Wallet</button>
-
-  <div class="coin-info">
-    <div>💰 Tap: +1</div>
-    <div>🟧 To next level: 15K</div>
-    <div>⏰ Hourly: +0</div>
-  </div>
-
-  <div class="coin-display tappable-coin" onclick="tapToEarn()">
+  <div class="coin-display" id="coinCount" onclick="tapToEarn()">
     <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo-large" />
-    <div class="coin-amount" id="coinAmount">103 SJ COIN</div>
+    <span id="coinAmount">Loading...</span>
   </div>
 
-  <div class="progress-bar">
-    <div class="progress-bar-inner" id="progressBar"></div>
-  </div>
-  <div class="level-text">📉 Level: 1/5 (Starter)</div>
-
-  <button class="tap-button" onclick="tapToEarn()">☝️ Tap to Earn</button>
-  <button class="buy-button">💸 Buy 100 SJ</button>
-
-  <div class="bottom-menu">
-    <button>🍄 Explore</button>
-    <button>🎯 Missions</button>
-    <button>👥 Friends</button>
-    <button>💎 Bounty</button>
+  <div class="progress-container">
+    <div id="progressBar" class="progress-bar"></div>
   </div>
 
   <script>
-    let coinCount = 103;
-    let progress = 30;
+    Telegram.WebApp.ready();
+    const user = Telegram.WebApp.initDataUnsafe.user;
+    if (user && user.photo_url) {
+      document.getElementById("userPic").src = user.photo_url;
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let coinCount = 0;
+    let progress = 0;
 
     function tapToEarn() {
       coinCount += 1;
@@ -184,21 +101,31 @@
       if (progress > 100) progress = 100;
       document.getElementById('coinAmount').innerText = `${coinCount} SJ COIN`;
       document.getElementById('progressBar').style.width = `${progress}%`;
-    }
 
-    // ✅ التحقق من بيانات Telegram الحقيقية
-    if (window.Telegram && Telegram.WebApp) {
-      Telegram.WebApp.ready();
-      const user = Telegram.WebApp.initDataUnsafe.user;
-      if (user) {
-        if (user.photo_url) {
-          document.getElementById("profilePic").src = user.photo_url;
-        }
-        if (user.username || user.first_name) {
-          document.getElementById("username").innerText = `Welcome, ${user.first_name || user.username}!`;
-        }
+      const userId = user?.id;
+      if (userId) {
+        db.ref("users/" + userId).set({
+          coins: coinCount,
+          progress: progress
+        });
       }
     }
+
+    window.onload = function () {
+      if (user && user.id) {
+        db.ref("users/" + user.id).once("value", snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            coinCount = data.coins || 0;
+            progress = data.progress || 0;
+            document.getElementById('coinAmount').innerText = `${coinCount} SJ COIN`;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+          } else {
+            document.getElementById('coinAmount').innerText = `0 SJ COIN`;
+          }
+        });
+      }
+    };
   </script>
 </body>
 </html>
