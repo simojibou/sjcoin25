@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SJ Coin Tap</title>
   <style>
     body {
@@ -12,6 +12,20 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .profile-pic {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      object-fit: cover;
     }
 
     .wallet-button {
@@ -75,7 +89,7 @@
     .progress-bar-inner {
       height: 100%;
       background-color: #00ff88;
-      width: 30%; /* example percentage */
+      width: 30%;
     }
 
     .level-text {
@@ -126,7 +140,11 @@
 </head>
 <body>
 
-  <h2>Welcome, simo!</h2>
+  <!-- ✅ Header with profile picture -->
+  <div class="header">
+    <h2>Welcome, simo!</h2>
+    <img src="https://t.me/i/userpic/320/simojibou.jpg" alt="Profile" class="profile-pic" id="profilePic" />
+  </div>
 
   <button class="wallet-button">💎 Connect Wallet</button>
 
@@ -166,6 +184,15 @@
       if (progress > 100) progress = 100;
       document.getElementById('coinAmount').innerText = `${coinCount} SJ COIN`;
       document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    // إذا كنت تستخدم Telegram WebApp
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      const user = Telegram.WebApp.initDataUnsafe.user;
+      if (user && user.photo_url) {
+        document.getElementById("profilePic").src = user.photo_url;
+      }
     }
   </script>
 </body>
