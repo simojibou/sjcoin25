@@ -16,17 +16,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 
   <style>
-
-
-
-
-
-
-
-
-
-
-
     body {
       margin: 0;
       font-family: 'Arial', sans-serif;
@@ -87,6 +76,15 @@
       width: 160px;
       border-radius: 50%;
       border: 5px solid #ffd700;
+    }
+
+    .profile-pic {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid #ffd700;
+      object-fit: cover;
+      margin-top: 10px;
     }
 
     .progress-bar {
@@ -165,29 +163,15 @@
     #ton-connect {
       margin: 15px auto;
     }
-
-
-    
-   
-
-
-
-
-
   </style>
 </head>
 <body>
   <div class="game-container">
     <h1>Welcome, <span id="username">👤</span>!</h1>
 
-
-
     <div class="header">
       <img id="userPic" class="profile-pic" src="" alt="Profile" />
     </div>
-
-
-
 
     <!-- TonConnect Wallet Button -->
     <div id="ton-connect" class="wallet-button"></div>
@@ -235,9 +219,18 @@
     tg.expand();
     const user = tg.initDataUnsafe?.user;
     const userId = user?.id?.toString();
+
+    // عرض الاسم
     document.getElementById("username").innerText = user?.first_name || "Guest";
 
-    // Firebase Config for your project
+    // عرض صورة البروفايل
+    if (user?.photo_url) {
+      document.getElementById("userPic").src = user.photo_url;
+    } else {
+      document.getElementById("userPic").src = "https://via.placeholder.com/150?text=No+Photo";
+    }
+
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -248,11 +241,10 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // TonConnect UI Setup
+    // TonConnect UI
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
       buttonRootId: 'ton-connect'
@@ -299,7 +291,7 @@
       alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
 
-    // Load initial coin value from Firebase
+    // Load initial coin value
     loadCoins();
   </script>
 </body>
