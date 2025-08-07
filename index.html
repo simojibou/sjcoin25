@@ -2,268 +2,245 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SJ COIN - Friends</title>
+  <title>SJ COIN Tap2Earn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Telegram WebApp -->
+  <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      doc,
-      getDoc,
-      getDocs,
-      query,
-      where,
-      setDoc
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+  <!-- TonConnect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // بيانات المستخدم من Telegram WebApp
-    const telegramUser = window.Telegram.WebApp.initDataUnsafe?.user;
-    const telegramId = telegramUser?.id?.toString() || "";
-    const firstName = telegramUser?.first_name || "";
-    const lastName = telegramUser?.last_name || "";
-    const isPremium = telegramUser?.is_premium || false;
-
-    const botUrl = "https://t.me/sjcoin25bot";
-    const referralLink = `${botUrl}/?startapp=ref${telegramId}`;
-    const shareMessage = encodeURIComponent("Play SJ COIN with me!");
-
-    const bonusesContainer = document.getElementById("bonuses");
-    const levelBonusesTable = document.getElementById("levelBonusesTable");
-    const friendsList = document.getElementById("friendsList");
-    const friendCount = document.getElementById("friendCount");
-    const levelBonusesDiv = document.getElementById("levelBonuses");
-
-    let referralConfig = {};
-    let levels = [];
-
-    async function ensureUserExists() {
-      const userRef = doc(db, "users", telegramId);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const referralCode = urlParams.get("startapp")?.replace("ref", "") || null;
-
-        await setDoc(userRef, {
-          id: telegramId,
-          first_name: firstName,
-          last_name: lastName,
-          referred_by: referralCode,
-          balance: 0,
-          premium: isPremium,
-          level: { name: "Level 1", level: 1 },
-          created_at: new Date().toISOString()
-        });
-
-        if (referralCode) {
-          await handleReferralBonus(referralCode);
-        }
-      }
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      text-align: center;
     }
 
-    async function handleReferralBonus(referrerId) {
-      const referrerRef = doc(db, "users", referrerId);
-      const referrerSnap = await getDoc(referrerRef);
-      if (!referrerSnap.exists()) return;
-
-      const referrer = referrerSnap.data();
-
-      const bonusAmount = isPremium
-        ? referralConfig.premium?.welcome || 0
-        : referralConfig.base?.welcome || 0;
-
-      await setDoc(referrerRef, {
-        ...referrer,
-        balance: (referrer.balance || 0) + bonusAmount
-      });
-
-      const selfRef = doc(db, "users", telegramId);
-      const selfSnap = await getDoc(selfRef);
-      const self = selfSnap.data();
-
-      await setDoc(selfRef, {
-        ...self,
-        balance: (self.balance || 0) + bonusAmount
-      });
+    .game-container {
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 20px;
+      margin-top: 20px;
     }
 
-    async function loadReferralConfig() {
-      const refSnap = await getDoc(doc(db, "config", "referral"));
-      referralConfig = refSnap.exists() ? refSnap.data() : {};
+    h1 {
+      color: #ffd700;
+      font-size: 26px;
     }
 
-    async function loadLevels() {
-      const levelSnap = await getDocs(collection(db, "levels"));
-      levels = levelSnap.docs.map(doc => doc.data());
+    .wallet-button {
+      margin-top: 10px;
     }
 
-    async function loadFriends() {
-      const q = query(collection(db, "users"), where("referred_by", "==", telegramId));
-      const snap = await getDocs(q);
-      const friends = snap.docs.map(doc => doc.data());
-
-      friendCount.textContent = `List of your friends (${friends.length})`;
-
-      if (friends.length === 0) {
-        friendsList.innerHTML = `
-          <div class="text-center text-white/30 border-2 border-dashed border-white/10 px-4 py-4 rounded-xl">
-            You didn’t invite anyone yet
-          </div>
-        `;
-        return;
-      }
-
-      friendsList.innerHTML = "";
-      for (const user of friends) {
-        friendsList.innerHTML += `
-          <div class="flex items-center justify-between px-4 py-3 bg-white/10 rounded-xl">
-            <div class="flex items-center gap-2">
-              <img src="/images/avatar.png" class="w-8 h-8 rounded-full" />
-              <div>
-                <p class="text-sm font-medium">${user.first_name || ""} ${user.last_name || ""}</p>
-                <p class="text-xs">${user.level?.name || ""}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <img src="/images/coin.png" class="w-5 h-5" />
-              <span class="text-sm font-medium text-yellow-400">${user.balance || 0}</span>
-            </div>
-          </div>
-        `;
-      }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      font-size: 15px;
     }
 
-    async function displayBonuses() {
-      bonusesContainer.innerHTML = `
-        <div class="flex items-center w-full gap-4 px-4 py-2 bg-white/10 rounded-xl">
-          <img src="/images/chest.png" class="w-9 h-9" />
-          <div class="text-sm font-medium">
-            <p>Invite a friend</p>
-            <div class="flex items-center space-x-1">
-              <img src="/images/coin.png" class="w-5 h-5" />
-              <span class="font-bold text-yellow-400">
-                +${referralConfig.base?.welcome?.toLocaleString() || 0}
-              </span>
-              <span class="text-sm">for you and your friend</span>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center w-full gap-4 px-4 py-2 bg-white/10 rounded-xl mt-2">
-          <img src="/images/chest.png" class="w-9 h-9" />
-          <div class="text-sm font-medium">
-            <p>Invite a friend with Telegram premium</p>
-            <div class="flex items-center space-x-1">
-              <img src="/images/coin.png" class="w-5 h-5" />
-              <span class="font-bold text-yellow-400">
-                +${referralConfig.premium?.welcome?.toLocaleString() || 0}
-              </span>
-              <span class="text-sm">for you and your friend</span>
-            </div>
-          </div>
-        </div>
-      `;
+    .coin-display {
+      font-size: 26px;
+      margin: 10px 0;
+      color: #ffff66;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
-    async function displayLevelBonuses() {
-      levelBonusesTable.innerHTML = "";
-      for (const lvl of levels) {
-        levelBonusesTable.innerHTML += `
-          <tr class="border-b border-white/10">
-            <td class="px-2 py-2">${lvl.name}</td>
-            <td class="px-2 py-2 text-right">
-              ${referralConfig.base?.levelUp?.[lvl.level]?.toLocaleString() || 0}
-            </td>
-            <td class="px-2 py-2 text-right">
-              ${referralConfig.premium?.levelUp?.[lvl.level]?.toLocaleString() || 0}
-            </td>
-          </tr>
-        `;
-      }
+    .coin-logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
     }
 
-    document.getElementById("copyLinkBtn").addEventListener("click", () => {
-      navigator.clipboard.writeText(referralLink).then(() => {
-        alert("Referral link copied!");
-      });
-    });
+    .avatar {
+      margin: 20px 0;
+    }
 
-    document.getElementById("inviteBtn").addEventListener("click", () => {
-      window.open(`https://t.me/share/url?text=${shareMessage}&url=${referralLink}`, "_blank");
-    });
+    .avatar img {
+      width: 160px;
+      border-radius: 50%;
+      border: 5px solid #ffd700;
+    }
 
-    document.getElementById("toggleBonusesBtn").addEventListener("click", () => {
-      levelBonusesDiv.classList.toggle("hidden");
-    });
+    .progress-bar {
+      background-color: #444;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      margin: 15px 0;
+    }
 
-    (async () => {
-      await ensureUserExists();
-      await loadReferralConfig();
-      await loadLevels();
-      await displayBonuses();
-      await displayLevelBonuses();
-      await loadFriends();
-    })();
-  </script>
+    .progress {
+      width: 33%;
+      height: 100%;
+      background-color: #00e676;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .tap-button {
+      margin-top: 20px;
+      font-size: 20px;
+      background-color: #4caf50;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .tap-button:hover {
+      background-color: #43a047;
+    }
+
+    .button {
+      background-color: #007aff;
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 10px auto;
+    }
+
+    .button:hover {
+      background-color: #005fc0;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 30px;
+      font-size: 15px;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .tabs button {
+      flex: 1;
+      background-color: #333;
+      border: none;
+      color: #fff;
+      padding: 10px 5px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .tabs button:hover {
+      background-color: #555;
+    }
+
+    #ton-connect {
+      margin: 15px auto;
+    }
+  </style>
 </head>
+<body>
 
-<body class="bg-[url('/images/bg.png')] bg-cover min-h-screen text-white">
-  <div class="px-6 py-8 mt-12">
-    <h1 class="text-2xl font-bold text-center uppercase">Friends</h1>
-    <p class="mt-2.5 font-medium text-center">You and your friend will receive bonuses.</p>
+  <div class="game-container">
+    <h1>Welcome, <span id="username">👤</span>!</h1>
 
-    <div id="bonuses" class="mt-4"></div>
+    <!-- TonConnect Wallet Button -->
+    <div id="ton-connect" class="wallet-button"></div>
 
-    <div class="text-center mt-4">
-      <button id="toggleBonusesBtn" class="rounded-full border-2 border-yellow-200/10 text-yellow-200 text-xs font-bold py-2.5 px-4">
-        More bonuses
-      </button>
+    <div class="stats">
+      <div>💰 Tap: +1</div>
+      <div>🔁 To next level: 15K</div>
+      <div>⏰ Hourly: +0</div>
     </div>
 
-    <div id="levelBonuses" class="hidden mt-6">
-      <p class="mt-8 text-sm font-bold uppercase">Bonus for leveling up</p>
-      <div class="overflow-y-auto max-h-60 mt-4">
-        <table class="w-full text-white text-xs">
-          <thead>
-            <tr class="border-b border-white/10">
-              <th class="px-2 py-2 text-left">Level</th>
-              <th class="px-2 py-2 text-right">For friend</th>
-              <th class="px-2 py-2 text-right">Premium</th>
-            </tr>
-          </thead>
-          <tbody id="levelBonusesTable"></tbody>
-        </table>
-      </div>
+    <!-- Coin with logo (tap to reset balance) -->
+    <div class="coin-display" id="coinCount" onclick="resetBalance()">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
+      <span id="coinAmount">5,025 SJ COIN</span>
     </div>
 
-    <p id="friendCount" class="mt-8 text-sm font-bold uppercase">List of your friends</p>
-    <div id="friendsList" class="mt-4 space-y-4"></div>
+    <div class="avatar">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar">
+    </div>
 
-    <div class="flex gap-3 mt-6">
-      <button id="copyLinkBtn" class="bg-white text-black px-4 py-2 rounded">Copy Link</button>
-      <button id="inviteBtn" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded">Invite a Friend</button>
+    <div class="progress-bar">
+      <div class="progress" id="progressBar"></div>
+    </div>
+    <div class="info-text">📈 Level: 1/5 (Starter)</div>
+
+    <!-- Tap to Earn -->
+    <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
+
+    <!-- Buy Button -->
+    <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      
+      <button onclick="window.location.href='earning.html'">🍄 Explore</button>
+      <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
+      <button onclick="window.location.href='friends.html'">👥 Friends</button>
+
+      <button onclick="window.location.href='pys.html'">💎 Bounty</button>
     </div>
   </div>
+
+  <script>
+    // Telegram WebApp setup
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user;
+    document.getElementById("username").innerText = user?.first_name || "Guest";
+
+    // TonConnect Wallet setup
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
+    });
+
+    // Coin Logic
+    let coins = 0;
+
+    function updateCoinDisplay() {
+      document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
+    }
+
+    function tapToEarn() {
+      coins += 1;
+      updateCoinDisplay();
+    }
+
+    function resetBalance() {
+      coins = 0;
+      updateCoinDisplay();
+    }
+
+    // Send purchase request to Telegram bot via WebApp.sendData
+    function buyCoin() {
+      const purchaseData = {
+        action: "buy",
+        amount: 100,
+        timestamp: Date.now(),
+        user: user?.id || null
+      };
+
+      tg.sendData(JSON.stringify(purchaseData));
+
+      alert("📦 تم إرسال طلب شراء 100 SJ COIN إلى البوت، يرجى التحقق من المحادثة.");
+    }
+  </script>
+
 </body>
 </html>
