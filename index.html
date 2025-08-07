@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SJ COIN - Friends</title>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -16,10 +21,10 @@
       getDoc,
       getDocs,
       query,
-      where
+      where,
+      setDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
 
-    // 🔥 بيانات Firebase الخاصة بك
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -33,13 +38,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 🧠 بيانات المستخدم - استبدلها بـ telegram_id الفعلي
-    const telegramId = "123456789"; // غيّره إلى المعرّف الحقيقي
+    // بيانات المستخدم من Telegram WebApp
+    const telegramUser = window.Telegram.WebApp.initDataUnsafe?.user;
+    const telegramId = telegramUser?.id?.toString() || "";
+    const firstName = telegramUser?.first_name || "";
+    const lastName = telegramUser?.last_name || "";
+    const isPremium = telegramUser?.is_premium || false;
+
     const botUrl = "https://t.me/sjcoin25bot";
     const referralLink = `${botUrl}/?startapp=ref${telegramId}`;
     const shareMessage = encodeURIComponent("Play SJ COIN with me!");
 
-    // 🧠 المراجع للعناصر
     const bonusesContainer = document.getElementById("bonuses");
     const levelBonusesTable = document.getElementById("levelBonusesTable");
     const friendsList = document.getElementById("friendsList");
@@ -48,6 +57,57 @@
 
     let referralConfig = {};
     let levels = [];
+
+    async function ensureUserExists() {
+      const userRef = doc(db, "users", telegramId);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const referralCode = urlParams.get("startapp")?.replace("ref", "") || null;
+
+        await setDoc(userRef, {
+          id: telegramId,
+          first_name: firstName,
+          last_name: lastName,
+          referred_by: referralCode,
+          balance: 0,
+          premium: isPremium,
+          level: { name: "Level 1", level: 1 },
+          created_at: new Date().toISOString()
+        });
+
+        if (referralCode) {
+          await handleReferralBonus(referralCode);
+        }
+      }
+    }
+
+    async function handleReferralBonus(referrerId) {
+      const referrerRef = doc(db, "users", referrerId);
+      const referrerSnap = await getDoc(referrerRef);
+      if (!referrerSnap.exists()) return;
+
+      const referrer = referrerSnap.data();
+
+      const bonusAmount = isPremium
+        ? referralConfig.premium?.welcome || 0
+        : referralConfig.base?.welcome || 0;
+
+      await setDoc(referrerRef, {
+        ...referrer,
+        balance: (referrer.balance || 0) + bonusAmount
+      });
+
+      const selfRef = doc(db, "users", telegramId);
+      const selfSnap = await getDoc(selfRef);
+      const self = selfSnap.data();
+
+      await setDoc(selfRef, {
+        ...self,
+        balance: (self.balance || 0) + bonusAmount
+      });
+    }
 
     async function loadReferralConfig() {
       const refSnap = await getDoc(doc(db, "config", "referral"));
@@ -157,8 +217,8 @@
       levelBonusesDiv.classList.toggle("hidden");
     });
 
-    // ⏳ تحميل البيانات عند فتح الصفحة
     (async () => {
+      await ensureUserExists();
       await loadReferralConfig();
       await loadLevels();
       await displayBonuses();
