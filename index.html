@@ -142,7 +142,7 @@
 
   <!-- ✅ Header with profile picture -->
   <div class="header">
-    <h2>Welcome, simo!</h2>
+    <h2 id="username">Welcome, simo!</h2>
     <img src="https://t.me/i/userpic/320/simojibou.jpg" alt="Profile" class="profile-pic" id="profilePic" />
   </div>
 
@@ -186,12 +186,17 @@
       document.getElementById('progressBar').style.width = `${progress}%`;
     }
 
-    // إذا كنت تستخدم Telegram WebApp
+    // ✅ التحقق من بيانات Telegram الحقيقية
     if (window.Telegram && Telegram.WebApp) {
       Telegram.WebApp.ready();
       const user = Telegram.WebApp.initDataUnsafe.user;
-      if (user && user.photo_url) {
-        document.getElementById("profilePic").src = user.photo_url;
+      if (user) {
+        if (user.photo_url) {
+          document.getElementById("profilePic").src = user.photo_url;
+        }
+        if (user.username || user.first_name) {
+          document.getElementById("username").innerText = `Welcome, ${user.first_name || user.username}!`;
+        }
       }
     }
   </script>
