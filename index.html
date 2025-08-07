@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SJ COIN - Friends</title>
 
   <!-- Tailwind CSS -->
@@ -27,7 +27,6 @@
       increment
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -42,7 +41,7 @@
     const db = getFirestore(app);
 
     // Telegram User info
-    const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
     const telegramId = telegramUser?.id?.toString() || "demo_user";
     const firstName = telegramUser?.first_name || "Demo";
     const lastName = telegramUser?.last_name || "User";
@@ -54,6 +53,7 @@
     // DOM Elements
     let bonusesContainer, levelBonusesTable, friendsList, friendCount, levelBonusesDiv, loadingDiv, errorMessageDiv;
 
+    // Default referral config (can be overridden by Firestore)
     let referralConfig = {
       base: { welcome: 1000, levelUp: {} },
       premium: { welcome: 2500, levelUp: {} }
@@ -64,106 +64,84 @@
       if (loadingDiv) loadingDiv.style.display = show ? "flex" : "none";
     }
 
+    function showError(show = false) {
+      if (errorMessageDiv) errorMessageDiv.style.display = show ? "flex" : "none";
+    }
+
     function getReferralCode() {
       const urlParams = new URLSearchParams(window.location.search);
       const startApp = urlParams.get("startapp") || urlParams.get("start");
-
       if (startApp && startApp.startsWith("ref")) {
         return startApp.replace("ref", "");
       }
-
       return urlParams.get("ref") || null;
     }
 
     async function ensureUserExists() {
-      try {
-        const userRef = doc(db, "users", telegramId);
-        const userSnap = await getDoc(userRef);
+      const userRef = doc(db, "users", telegramId);
+      const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
-          const referralCode = getReferralCode();
-          const validReferral = referralCode && referralCode !== telegramId;
+      if (!userSnap.exists()) {
+        const referralCode = getReferralCode();
+        const validReferral = referralCode && referralCode !== telegramId;
 
-          const newUser = {
-            id: telegramId,
-            first_name: firstName,
-            last_name: lastName,
-            username: telegramUser?.username || "",
-            referred_by: validReferral ? referralCode : null,
-            balance: 0,
-            premium: isPremium,
-            level: { name: "Bronze", level: 1 },
-            referral_count: 0,
-            total_earned: 0,
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString(),
-            referral_bonus_received: false
-          };
+        const newUser = {
+          id: telegramId,
+          first_name: firstName,
+          last_name: lastName,
+          username: telegramUser?.username || "",
+          referred_by: validReferral ? referralCode : null,
+          balance: 0,
+          premium: isPremium,
+          level: { name: "Bronze", level: 1 },
+          referral_count: 0,
+          total_earned: 0,
+          created_at: new Date().toISOString(),
+          last_active: new Date().toISOString(),
+          referral_bonus_received: false
+        };
 
-          await setDoc(userRef, newUser);
-          console.log("User created successfully");
+        await setDoc(userRef, newUser);
 
-          if (validReferral) {
-            await handleReferralBonus(referralCode);
-          }
-        } else {
-          // Update last active date
-          await updateDoc(userRef, { last_active: new Date().toISOString() });
+        if (validReferral) {
+          await handleReferralBonus(referralCode);
         }
-      } catch (error) {
-        console.error("Error ensuring user exists:", error);
+      } else {
+        // Update last active timestamp
+        await updateDoc(userRef, { last_active: new Date().toISOString() });
       }
     }
 
     async function handleReferralBonus(referrerId) {
-      try {
-        const userRef = doc(db, "users", telegramId);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
+      const userRef = doc(db, "users", telegramId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
 
-        if (userData.referral_bonus_received) {
-          console.log("Referral bonus already granted.");
-          return;
-        }
+      if (userData.referral_bonus_received) return;
 
-        const referrerRef = doc(db, "users", referrerId);
-        const referrerSnap = await getDoc(referrerRef);
+      const referrerRef = doc(db, "users", referrerId);
+      const referrerSnap = await getDoc(referrerRef);
 
-        if (!referrerSnap.exists()) {
-          console.log("Referrer not found:", referrerId);
-          return;
-        }
+      if (!referrerSnap.exists()) return;
 
-        const welcomeBonus = isPremium 
-          ? (referralConfig.premium?.welcome || 2500)
-          : (referralConfig.base?.welcome || 1000);
+      const welcomeBonus = isPremium
+        ? (referralConfig.premium?.welcome || 2500)
+        : (referralConfig.base?.welcome || 1000);
 
-        // Update referrer
-        await updateDoc(referrerRef, {
-          balance: increment(welcomeBonus),
-          referral_count: increment(1),
-          total_earned: increment(welcomeBonus)
-        });
+      await updateDoc(referrerRef, {
+        balance: increment(welcomeBonus),
+        referral_count: increment(1),
+        total_earned: increment(welcomeBonus)
+      });
 
-        // Update user + mark bonus received
-        await updateDoc(userRef, {
-          balance: increment(welcomeBonus),
-          total_earned: increment(welcomeBonus),
-          referral_bonus_received: true
-        });
+      await updateDoc(userRef, {
+        balance: increment(welcomeBonus),
+        total_earned: increment(welcomeBonus),
+        referral_bonus_received: true
+      });
 
-        console.log(`Referral bonus applied: ${welcomeBonus} coins each`);
-
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.showAlert(`🎉 Welcome bonus! You and your friend each received ${welcomeBonus.toLocaleString()} coins!`);
-        }
-
-        // Refresh friends and bonuses display
-        await loadFriends();
-        await displayBonuses();
-
-      } catch (error) {
-        console.error("Error handling referral bonus:", error);
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showAlert(`🎉 Welcome bonus! You and your friend each received ${welcomeBonus.toLocaleString()} coins!`);
       }
     }
 
@@ -173,9 +151,8 @@
         if (refSnap.exists()) {
           referralConfig = { ...referralConfig, ...refSnap.data() };
         }
-        console.log("Referral config loaded:", referralConfig);
       } catch (error) {
-        console.error("Error loading referral config:", error);
+        console.warn("Could not load referral config, using defaults.", error);
       }
     }
 
@@ -183,7 +160,6 @@
       try {
         const levelSnap = await getDocs(collection(db, "levels"));
         levels = levelSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
         if (levels.length === 0) {
           levels = [
             { level: 1, name: "Bronze", min_balance: 0 },
@@ -193,11 +169,9 @@
             { level: 5, name: "Diamond", min_balance: 1000000 }
           ];
         }
-
         levels.sort((a, b) => a.level - b.level);
-        console.log("Levels loaded:", levels);
       } catch (error) {
-        console.error("Error loading levels:", error);
+        console.warn("Could not load levels, using defaults.", error);
         levels = [{ level: 1, name: "Bronze", min_balance: 0 }];
       }
     }
@@ -248,7 +222,6 @@
           `;
         });
       } catch (error) {
-        console.error("Error loading friends:", error);
         friendsList.innerHTML = `
           <div class="text-center text-red-400 px-4 py-4 rounded-xl">
             Error loading friends. Please try again.
@@ -339,8 +312,7 @@
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.showAlert("Referral link copied to clipboard!");
         }
-      } catch (error) {
-        console.error("Failed to copy:", error);
+      } catch {
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.showAlert("Failed to copy link. Please try again.");
         }
@@ -349,11 +321,12 @@
 
     function shareInvitation() {
       const shareText = `🪙 Join me in SJ COIN and let's earn together!\n\n💰 Get ${referralConfig.base?.welcome?.toLocaleString() || 1000} coins bonus when you join!\n🌟 Premium users get ${referralConfig.premium?.welcome?.toLocaleString() || 2500} coins!\n\n`;
+      const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(referralLink)}`;
 
       if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(referralLink)}`);
+        window.Telegram.WebApp.openTelegramLink(shareUrl);
       } else {
-        window.open(`https://t.me/share/url?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(referralLink)}`, "_blank");
+        window.open(shareUrl, "_blank");
       }
     }
 
@@ -368,7 +341,6 @@
     }
 
     async function initializeApp() {
-      // Query DOM elements after DOM loaded
       bonusesContainer = document.getElementById("bonuses");
       levelBonusesTable = document.getElementById("levelBonusesTable");
       friendsList = document.getElementById("friendsList");
@@ -379,6 +351,7 @@
 
       try {
         showLoading(true);
+        showError(false);
         addEventListeners();
 
         await ensureUserExists();
@@ -390,19 +363,14 @@
         await loadFriends();
 
         showLoading(false);
-        console.log("App initialized successfully");
       } catch (error) {
-        console.error("Error initializing app:", error);
+        console.error("Initialization error:", error);
         showLoading(false);
-        if (errorMessageDiv) {
-          errorMessageDiv.style.display = "flex";
-        }
+        showError(true);
       }
     }
 
-    // Start
     window.addEventListener("DOMContentLoaded", () => {
-      // Set referral link display
       const referralDisplay = document.getElementById("referralDisplay");
       referralDisplay.textContent = referralLink;
 
@@ -438,9 +406,7 @@
       <h1 class="text-3xl font-extrabold">🎉 SJ COIN Referral Program</h1>
       <p>Share your referral link and earn coins together!</p>
 
-      <div class="bg-white/10 p-4 rounded-xl select-all cursor-pointer">
-        <p id="referralDisplay" class="font-mono break-words"></p>
-      </div>
+      <div class="bg-white/10 p-4 rounded-xl select-all cursor-pointer" id="referralDisplay"></div>
 
       <div class="flex justify-center space-x-4 mt-2">
         <button id="copyLinkBtn" class="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg font-semibold transition">Copy Link</button>
@@ -453,8 +419,8 @@
       <div id="bonuses" class="space-y-4"></div>
       <button id="toggleBonusesBtn" class="mt-4 text-sm text-blue-400 hover:underline">Show more bonuses</button>
 
-      <div id="levelBonuses" class="hidden mt-4 overflow-x-auto">
-        <table class="w-full text-left border-collapse border border-white/20 rounded-xl overflow-hidden">
+      <div id="levelBonuses" class="hidden mt-4 overflow-x-auto rounded-xl border border-white/20">
+        <table class="w-full text-left border-collapse">
           <thead class="bg-white/10">
             <tr>
               <th class="px-3 py-3">Level</th>
