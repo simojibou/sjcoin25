@@ -11,6 +11,10 @@
   <!-- TonConnect UI -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -65,6 +69,7 @@
 
     .avatar {
       margin: 20px 0;
+      cursor: pointer;
     }
 
     .avatar img {
@@ -152,7 +157,6 @@
   </style>
 </head>
 <body>
-
   <div class="game-container">
     <h1>Welcome, <span id="username">👤</span>!</h1>
 
@@ -165,13 +169,14 @@
       <div>⏰ Hourly: +0</div>
     </div>
 
-    <!-- Coin with logo (tap to reset balance) -->
+    <!-- Coin Display -->
     <div class="coin-display" id="coinCount" onclick="resetBalance()">
       <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
-      <span id="coinAmount">5,025 SJ COIN</span>
+      <span id="coinAmount">Loading...</span>
     </div>
 
-    <div class="avatar">
+    <!-- Avatar (also tap to earn) -->
+    <div class="avatar" onclick="tapToEarn()">
       <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar">
     </div>
 
@@ -180,54 +185,79 @@
     </div>
     <div class="info-text">📈 Level: 1/5 (Starter)</div>
 
-    <!-- Tap to Earn -->
+    <!-- Tap Button -->
     <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
 
     <!-- Buy Button -->
     <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
 
-    <!-- Navigation Tabs -->
+    <!-- Tabs -->
     <div class="tabs">
-      
       <button onclick="window.location.href='earning.html'">🍄 Explore</button>
       <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
       <button onclick="window.location.href='friends.html'">👥 Friends</button>
-
       <button onclick="window.location.href='pys.html'">💎 Bounty</button>
     </div>
   </div>
 
   <script>
-    // Telegram WebApp setup
+    // Telegram WebApp Setup
     const tg = window.Telegram.WebApp;
     tg.expand();
     const user = tg.initDataUnsafe?.user;
+    const userId = user?.id?.toString();
     document.getElementById("username").innerText = user?.first_name || "Guest";
 
-    // TonConnect Wallet setup
+    // Firebase Config for your project
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // TonConnect UI Setup
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
       buttonRootId: 'ton-connect'
     });
 
-    // Coin Logic
     let coins = 0;
+
+    async function loadCoins() {
+      if (!userId) return;
+      const doc = await db.collection("users").doc(userId).get();
+      coins = doc.exists ? doc.data().coins || 0 : 0;
+      updateCoinDisplay();
+    }
 
     function updateCoinDisplay() {
       document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
     }
 
-    function tapToEarn() {
+    async function tapToEarn() {
       coins += 1;
       updateCoinDisplay();
+      if (userId) {
+        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      }
     }
 
-    function resetBalance() {
+    async function resetBalance() {
       coins = 0;
       updateCoinDisplay();
+      if (userId) {
+        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      }
     }
 
-    // Send purchase request to Telegram bot via WebApp.sendData
     function buyCoin() {
       const purchaseData = {
         action: "buy",
@@ -237,10 +267,11 @@
       };
 
       tg.sendData(JSON.stringify(purchaseData));
-
-      alert("📦 تم إرسال طلب شراء 100 SJ COIN إلى البوت، يرجى التحقق من المحادثة.");
+      alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
-  </script>
 
+    // Load initial coin value from Firebase
+    loadCoins();
+  </script>
 </body>
 </html>
