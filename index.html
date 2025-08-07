@@ -2,276 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SJ COIN Tap2Earn</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Telegram Mini App SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SJ Coin Tap</title>
   <style>
     body {
       margin: 0;
-      font-family: 'Arial', sans-serif;
-      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') no-repeat center center fixed;
-      background-size: cover;
+      background-color: #000;
       color: #fff;
+      font-family: Arial, sans-serif;
       text-align: center;
-    }
-
-    .game-container {
       padding: 20px;
-      max-width: 500px;
-      margin: auto;
-      background: rgba(0, 0, 0, 0.6);
-      border-radius: 20px;
-      margin-top: 20px;
-    }
-
-    h1 {
-      color: #ffd700;
-      font-size: 26px;
     }
 
     .wallet-button {
+      background-color: #00aaff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 24px;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
       margin-top: 10px;
+      cursor: pointer;
     }
 
-    .stats {
+    .coin-info {
       display: flex;
-      justify-content: space-between;
-      margin: 20px 0;
-      font-size: 15px;
+      justify-content: space-around;
+      margin-top: 15px;
+      font-size: 14px;
     }
 
     .coin-display {
-      font-size: 26px;
-      margin: 10px 0;
-      color: #ffff66;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      margin: 25px 0;
     }
 
-    .coin-logo {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-    }
-
-    .avatar {
-      margin: 20px 0;
-      cursor: pointer;
-    }
-
-    .avatar img {
-      width: 160px;
+    .coin-logo-large {
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
       border: 5px solid #ffd700;
+      background-color: #111;
+    }
+
+    .tappable-coin {
+      cursor: pointer;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .coin-amount {
+      font-size: 24px;
+      color: #ffff55;
+      font-weight: bold;
     }
 
     .progress-bar {
-      background-color: #444;
+      background: #333;
+      height: 20px;
       border-radius: 10px;
       overflow: hidden;
-      height: 20px;
-      margin: 15px 0;
+      margin: 15px auto;
+      width: 80%;
     }
 
-    .progress {
-      width: 33%;
+    .progress-bar-inner {
       height: 100%;
-      background-color: #00e676;
+      background-color: #00ff88;
+      width: 30%; /* example percentage */
     }
 
-    .info-text {
+    .level-text {
       font-size: 14px;
+      margin-top: 5px;
       color: #ccc;
     }
 
     .tap-button {
-      margin-top: 20px;
-      font-size: 20px;
-      background-color: #4caf50;
-      border: none;
-      padding: 15px 30px;
-      border-radius: 12px;
+      background-color: #28a745;
       color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 18px;
+      margin-top: 15px;
       cursor: pointer;
     }
 
-    .tap-button:hover {
-      background-color: #43a047;
-    }
-
-    .button {
-      background-color: #007aff;
+    .buy-button {
+      background-color: #007bff;
       color: white;
-      padding: 12px 25px;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
       font-size: 16px;
-      border: none;
-      border-radius: 12px;
+      margin-top: 10px;
       cursor: pointer;
-      margin: 10px auto;
     }
 
-    .button:hover {
-      background-color: #005fc0;
-    }
-
-    .tabs {
+    .bottom-menu {
       display: flex;
       justify-content: space-around;
       margin-top: 30px;
-      font-size: 15px;
-      gap: 5px;
-      flex-wrap: wrap;
     }
 
-    .tabs button {
-      flex: 1;
-      background-color: #333;
+    .bottom-menu button {
+      background-color: #222;
+      color: white;
       border: none;
-      color: #fff;
-      padding: 10px 5px;
-      border-radius: 10px;
+      border-radius: 12px;
+      padding: 10px;
+      width: 22%;
+      font-size: 14px;
       cursor: pointer;
-      margin: 5px;
-    }
-
-    .tabs button:hover {
-      background-color: #555;
-    }
-
-    #ton-connect {
-      margin: 15px auto;
     }
   </style>
 </head>
 <body>
-  <div class="game-container">
-    <h1>Welcome, <span id="username">👤</span>!</h1>
 
-    <!-- TonConnect Wallet Button -->
-    <div id="ton-connect" class="wallet-button"></div>
+  <h2>Welcome, simo!</h2>
 
-    <div class="stats">
-      <div>💰 Tap: +1</div>
-      <div>🔁 To next level: 15K</div>
-      <div>⏰ Hourly: +0</div>
-    </div>
+  <button class="wallet-button">💎 Connect Wallet</button>
 
-    <!-- Coin Display -->
-    <div class="coin-display" id="coinCount" onclick="resetBalance()">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
-      <span id="coinAmount">Loading...</span>
-    </div>
+  <div class="coin-info">
+    <div>💰 Tap: +1</div>
+    <div>🟧 To next level: 15K</div>
+    <div>⏰ Hourly: +0</div>
+  </div>
 
-    <!-- Avatar (also tap to earn) -->
-    <div class="avatar" onclick="tapToEarn()">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar">
-    </div>
+  <div class="coin-display tappable-coin" onclick="tapToEarn()">
+    <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo-large" />
+    <div class="coin-amount" id="coinAmount">103 SJ COIN</div>
+  </div>
 
-    <div class="progress-bar">
-      <div class="progress" id="progressBar"></div>
-    </div>
-    <div class="info-text">📈 Level: 1/5 (Starter)</div>
+  <div class="progress-bar">
+    <div class="progress-bar-inner" id="progressBar"></div>
+  </div>
+  <div class="level-text">📉 Level: 1/5 (Starter)</div>
 
-    <!-- Tap Button -->
-    <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
+  <button class="tap-button" onclick="tapToEarn()">☝️ Tap to Earn</button>
+  <button class="buy-button">💸 Buy 100 SJ</button>
 
-    <!-- Buy Button -->
-    <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button onclick="window.location.href='earning.html'">🍄 Explore</button>
-      <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
-      <button onclick="window.location.href='friends.html'">👥 Friends</button>
-      <button onclick="window.location.href='pys.html'">💎 Bounty</button>
-    </div>
+  <div class="bottom-menu">
+    <button>🍄 Explore</button>
+    <button>🎯 Missions</button>
+    <button>👥 Friends</button>
+    <button>💎 Bounty</button>
   </div>
 
   <script>
-    // Telegram WebApp Setup
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    const user = tg.initDataUnsafe?.user;
-    const userId = user?.id?.toString();
-    document.getElementById("username").innerText = user?.first_name || "Guest";
+    let coinCount = 103;
+    let progress = 30;
 
-    // Firebase Config for your project
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // TonConnect UI Setup
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
-      buttonRootId: 'ton-connect'
-    });
-
-    let coins = 0;
-
-    async function loadCoins() {
-      if (!userId) return;
-      const doc = await db.collection("users").doc(userId).get();
-      coins = doc.exists ? doc.data().coins || 0 : 0;
-      updateCoinDisplay();
+    function tapToEarn() {
+      coinCount += 1;
+      progress += 0.5;
+      if (progress > 100) progress = 100;
+      document.getElementById('coinAmount').innerText = `${coinCount} SJ COIN`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
     }
-
-    function updateCoinDisplay() {
-      document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
-    }
-
-    async function tapToEarn() {
-      coins += 1;
-      updateCoinDisplay();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-      }
-    }
-
-    async function resetBalance() {
-      coins = 0;
-      updateCoinDisplay();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-      }
-    }
-
-    function buyCoin() {
-      const purchaseData = {
-        action: "buy",
-        amount: 100,
-        timestamp: Date.now(),
-        user: user?.id || null
-      };
-
-      tg.sendData(JSON.stringify(purchaseData));
-      alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
-    }
-
-    // Load initial coin value from Firebase
-    loadCoins();
   </script>
 </body>
 </html>
