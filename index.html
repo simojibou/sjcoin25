@@ -23,10 +23,6 @@
       background-size: cover;
       color: #fff;
       text-align: center;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       padding: 15px;
     }
 
@@ -37,40 +33,38 @@
       background: rgba(0, 0, 0, 0.75);
       border-radius: 20px;
       box-shadow: 0 0 15px #ffd700cc;
+      margin: auto;
+      margin-top: 20px;
     }
 
     h1 {
       color: #ffd700;
-      font-size: 28px;
+      font-size: 26px;
       margin-bottom: 15px;
       font-weight: bold;
     }
 
-    .header {
-      margin-bottom: 15px;
+    /* Wallet + Profile Row */
+    .wallet-profile-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
     }
 
-    .profile-pic {
-      width: 130px;
-      height: 130px;
+    .profile-pic-small {
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      border: 4px solid #ffd700;
+      border: 3px solid #ffd700;
       object-fit: cover;
       background-color: #222;
-      box-shadow: 0 0 10px #ffd700aa;
-      transition: transform 0.3s ease;
-      cursor: pointer;
-      margin: 0 auto;
-      display: block;
-    }
-
-    .profile-pic:hover {
-      transform: scale(1.05);
+      box-shadow: 0 0 6px #ffd700aa;
     }
 
     .wallet-button {
-      margin-top: 15px;
-      margin-bottom: 20px;
+      display: inline-block;
     }
 
     .stats {
@@ -207,23 +201,17 @@
     .tabs button:hover {
       background-color: #555;
     }
-
-    #ton-connect {
-      margin: 20px auto;
-    }
-
   </style>
 </head>
 <body>
   <div class="game-container">
     <h1>Welcome, <span id="username">👤</span>!</h1>
 
-    <div class="header">
-      <img id="userPic" class="profile-pic" src="https://telegram.org/img/t_logo.svg" alt="Profile Picture" />
+    <!-- Wallet + Profile -->
+    <div class="wallet-profile-row">
+      <img id="userPic" class="profile-pic-small" src="https://telegram.org/img/t_logo.svg" alt="Profile Picture" />
+      <div id="ton-connect" class="wallet-button"></div>
     </div>
-
-    <!-- TonConnect Wallet Button -->
-    <div id="ton-connect" class="wallet-button"></div>
 
     <div class="stats">
       <div>💰 Tap: +1</div>
@@ -270,19 +258,15 @@
     const userId = user?.id?.toString();
     document.getElementById("username").innerText = user?.first_name || "Guest";
 
-    // تحميل صورة الملف الشخصي من تيليجرام، مع فشل fallback
+    // تحميل صورة البروفايل
     const userPic = document.getElementById("userPic");
     if (user?.photo_url) {
-      // تيليجرام يوفر photo_url مثل https://t.me/i/userpic/320/xxxxxx.jpg
       userPic.src = user.photo_url;
-    } else if (user?.id) {
-      // محاولة تحميل صورة افتراضية بناءً على معرف المستخدم (إن أردت يمكن إضافتها)
-      userPic.src = `https://t.me/i/userpic/320/${user.id}.jpg`;
     } else {
-      userPic.src = "https://telegram.org/img/t_logo.svg"; // صورة افتراضية
+      userPic.src = "https://telegram.org/img/t_logo.svg";
     }
 
-    // Firebase Config for your project
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -293,11 +277,10 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // TonConnect UI Setup
+    // TonConnect UI
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
       buttonRootId: 'ton-connect'
@@ -339,12 +322,10 @@
         timestamp: Date.now(),
         user: user?.id || null
       };
-
       tg.sendData(JSON.stringify(purchaseData));
       alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
 
-    // Load initial coin value from Firebase
     loadCoins();
   </script>
 </body>
