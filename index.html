@@ -1,86 +1,124 @@
-<!DOCTYPE html><html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SJ COIN Referral & Affiliate System</title>  <!-- Tailwind CSS -->  <script src="https://cdn.tailwindcss.com"></script>  <!-- Telegram WebApp SDK -->  <script src="https://telegram.org/js/telegram-web-app.js"></script></head>
-<body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white font-sans">  <!-- Top bar with Back button -->  <header class="fixed top-4 left-4 right-4 z-50 flex items-center justify-between">
+  <title>SJ COIN Referral & Affiliate System</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white font-sans">
+
+  <!-- Top bar with Back button -->
+  <header class="fixed top-4 left-4 right-4 z-50 flex items-center justify-between">
     <a href="./index.html" class="flex items-center gap-3 bg-white/5 backdrop-blur-sm px-3 py-2 rounded-2xl border border-white/10 hover:bg-white/10 transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
       <span class="text-sm">العودة إلى الصفحة الرئيسية</span>
-    </a><!-- Premium badge placeholder - toggled by JS -->
-<div id="premiumBadgeContainer" class="hidden items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-2 rounded-2xl font-semibold shadow-lg">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.79 1.402 8.177L12 18.896l-7.336 3.88 1.402-8.178L.132 9.21l8.2-1.192z"/></svg>
-  <span id="premiumText">Premium</span>
-</div>
+    </a>
 
-  </header>  <!-- Loading Screen -->  <div id="loading" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <!-- Premium badge placeholder - toggled by JS -->
+    <div id="premiumBadgeContainer" class="hidden items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-2 rounded-2xl font-semibold shadow-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.79 1.402 8.177L12 18.896l-7.336 3.88 1.402-8.178L.132 9.21l8.2-1.192z"/></svg>
+      <span id="premiumText">Premium</span>
+    </div>
+  </header>
+
+  <!-- Loading Screen -->
+  <div id="loading" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
     <div class="text-center">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-20 h-20 rounded-full mx-auto mb-4 animate-pulse" />
       <p class="text-lg font-medium">جاري التحميل...</p>
     </div>
-  </div>  <!-- Error Message -->  <div id="errorMessage" class="fixed inset-0 bg-red-900/90 flex items-center justify-center z-40" style="display:none;">
+  </div>
+
+  <!-- Error Message -->
+  <div id="errorMessage" class="fixed inset-0 bg-red-900/90 flex items-center justify-center z-40" style="display:none;">
     <div class="text-center px-6">
       <p class="text-lg font-medium mb-4">حدث خطأ. يرجى المحاولة مرة أخرى.</p>
       <button onclick="location.reload()" class="bg-white text-black px-6 py-2 rounded-lg font-medium">
         إعادة تحميل
       </button>
     </div>
-  </div>  <main class="max-w-2xl mx-auto px-6 py-10 pt-24">
+  </div>
+
+  <main class="max-w-2xl mx-auto px-6 py-10 pt-24">
     <div class="text-center mb-6">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-white/10 shadow-2xl" />
       <h1 class="text-3xl font-extrabold uppercase bg-gradient-to-r from-yellow-300 via-white to-orange-500 bg-clip-text text-transparent mb-2 tracking-wide">
         برنامج الإحالة SJ COIN
       </h1>
-      <p class="text-white/80 font-medium mb-4">ادعُ أصدقائك واحصل على مكافآت — 50 SJ لكل طرف 🎉</p><!-- NEW: Referral Code Display (styled) -->
-  <div class="mb-4 inline-block">
-    <div class="flex items-center gap-3 bg-white/6 px-4 py-2 rounded-2xl border border-white/10 shadow-inner cursor-pointer select-all"
-         title="اضغط لنسخ كود الإحالة" id="referralCodeDisplay" style="user-select: all;">
-      <span class="text-xs text-white/70">كود الإحالة</span>
-      <span id="referralCodeText" class="text-sm font-mono font-semibold text-yellow-300"></span>
+      <p class="text-white/80 font-medium mb-4">ادعُ أصدقائك واحصل على مكافآت — 50 SJ لكل طرف 🎉</p>
+
+      <!-- Referral Code Display -->
+      <div class="mb-4 inline-block">
+        <div class="flex items-center gap-3 bg-white/6 px-4 py-2 rounded-2xl border border-white/10 shadow-inner cursor-pointer select-all"
+             title="اضغط لنسخ كود الإحالة" id="referralCodeDisplay" style="user-select: all;">
+          <span class="text-xs text-white/70">كود الإحالة</span>
+          <span id="referralCodeText" class="text-sm font-mono font-semibold text-yellow-300"></span>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- Referral Link Display -->
-<div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8 break-words shadow-sm">
-  <div class="flex justify-between items-start">
-    <div>
-      <p class="text-xs text-white/60 mb-1">رابط الإحالة الخاص بك:</p>
-      <p id="referralDisplay" class="text-sm font-mono text-yellow-300 select-all cursor-pointer" title="اضغط لنسخ الرابط"></p>
+    <!-- Referral Link Display -->
+    <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8 break-words shadow-sm">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-xs text-white/60 mb-1">رابط الإحالة الخاص بك:</p>
+          <p id="referralDisplay" class="text-sm font-mono text-yellow-300 select-all cursor-pointer" title="اضغط لنسخ الرابط"></p>
+        </div>
+        <button id="copyLinkBtn" class="ml-4 bg-white/6 px-3 py-2 rounded-xl border border-white/8 hover:bg-white/10 transition">📋 نسخ</button>
+      </div>
     </div>
-    <button id="copyLinkBtn" class="ml-4 bg-white/6 px-3 py-2 rounded-xl border border-white/8 hover:bg-white/10 transition">📋 نسخ</button>
-  </div>
-</div>
 
-<!-- Referral Code Input -->
-<div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
-  <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
-  <div class="flex gap-3">
-    <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="flex-1 px-4 py-3 rounded-xl text-black" autocomplete="off" />
-    <button id="applyReferralBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-colors duration-200">تفعيل</button>
-  </div>
-</div>
+    <!-- Referral Code Input -->
+    <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
+      <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
+      <div class="flex gap-3">
+        <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="flex-1 px-4 py-3 rounded-xl text-black" autocomplete="off" />
+        <button id="applyReferralBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-colors duration-200">تفعيل</button>
+      </div>
+    </div>
 
-<!-- Buttons -->
-<div class="flex gap-3 mb-8">
-  <button id="inviteBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
-    👥 دعوة الأصدقاء
-  </button>
-  <button id="shareBtn" class="flex-1 bg-white/6 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-white/10 transition-all">
-    🔗 مشاركة
-  </button>
-</div>
+    <!-- Buttons -->
+    <div class="flex gap-3 mb-8">
+      <button id="inviteBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+        👥 دعوة الأصدقاء
+      </button>
+      <button id="shareBtn" class="flex-1 bg-white/6 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-white/10 transition-all">
+        🔗 مشاركة
+      </button>
+    </div>
 
-<!-- Affiliate Stats -->
-<div id="affiliateStats" class="mb-6 p-5 bg-white/6 rounded-2xl border border-white/8 hidden shadow-md"></div>
+    <!-- Affiliate Stats -->
+    <div id="affiliateStats" class="mb-6 p-5 bg-white/6 rounded-2xl border border-white/8 hidden shadow-md"></div>
 
-<!-- Friends List -->
-<section>
-  <h2 id="friendCount" class="text-xl font-semibold mb-3">أصدقاؤك</h2>
-  <div id="friendsList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-</section>
+    <!-- Upgrade to Premium Button -->
+    <div class="mb-6 text-center">
+      <button id="upgradeBtn" class="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold px-8 py-3 rounded-full shadow-lg hover:from-yellow-500 hover:to-orange-600 transition">
+        ⭐ ترقية إلى Premium
+      </button>
+    </div>
 
-  </main>  <!-- Firebase + App Logic -->  <script type="module">
+    <!-- Buy SJ COIN with Stars Button -->
+    <div class="mb-10 text-center">
+      <button id="buySJBtn" class="inline-block bg-gradient-to-r from-blue-700 to-blue-900 text-white font-semibold px-8 py-3 rounded-full shadow-lg hover:from-blue-800 hover:to-blue-950 transition">
+        ✨ شراء SJ COIN بالنجوم (Stars)
+      </button>
+    </div>
+
+    <!-- Friends List -->
+    <section>
+      <h2 id="friendCount" class="text-xl font-semibold mb-3">أصدقاؤك</h2>
+      <div id="friendsList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    </section>
+  </main>
+
+  <!-- Firebase + App Logic -->
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore,
@@ -127,6 +165,8 @@
     const referralCodeDisplay = document.getElementById("referralCodeDisplay");
     const referralCodeText = document.getElementById("referralCodeText");
     const premiumBadgeContainer = document.getElementById("premiumBadgeContainer");
+    const upgradeBtn = document.getElementById("upgradeBtn");
+    const buySJBtn = document.getElementById("buySJBtn");
 
     // تأكد من وجود المستخدم في قاعدة البيانات أو أضفه
     async function ensureUserExists() {
@@ -241,6 +281,28 @@
       }
     };
 
+    // زر الترقية
+    upgradeBtn.onclick = () => {
+      // رابط بوت الترقية أو صفحة الدفع (عدل الرابط حسب حاجتك)
+      const upgradeUrl = "https://t.me/sjcoin25bot?start=premium";
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openLink(upgradeUrl);
+      } else {
+        window.open(upgradeUrl, "_blank");
+      }
+    };
+
+    // زر شراء SJ COIN بالنجوم (Stars)
+    buySJBtn.onclick = () => {
+      // رابط بوت شراء النجوم (عدل الرابط حسب حاجتك)
+      const buyUrl = "https://t.me/sjcoin25bot?start=buystars";
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openLink(buyUrl);
+      } else {
+        window.open(buyUrl, "_blank");
+      }
+    };
+
     applyReferralBtn.onclick = applyReferralCode;
 
     // تحميل بيانات الأصدقاء (إحالات المستخدم)
@@ -259,9 +321,25 @@
 
         // إحصائيات
         affiliateStatsDiv.innerHTML = `
-          <div class=\"flex items-center justify-between\">\n            <div>\n              <h3 class=\"text-lg font-bold mb-1\">إحصائيات الإحالة</h3>\n              <p class=\"text-sm text-white/80\">رصيدك الحالي: <b>${userData.balance ?? 0} SJ</b></p>\n              <p class=\"text-sm text-white/80\">عدد الأصدقاء المدعوين: <b>${friends.length}</b></p>\n            </div>\n            <div class=\"text-right\">\n              <p class=\"text-xs text-white/60\">آخر تفعيل: <span class=\"block text-sm font-mono\">${new Date(userData.last_active).toLocaleString()}</span></p>\n            </div>\n          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-bold mb-1">إحصائيات الإحالة</h3>
+              <p class="text-sm text-white/80">رصيدك الحالي: <b>${userData.balance ?? 0} SJ</b></p>
+              <p class="text-sm text-white/80">عدد الأصدقاء المدعوين: <b>${friends.length}</b></p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-white/60">آخر تفعيل: <span class="block text-sm font-mono">${new Date(userData.last_active).toLocaleString()}</span></p>
+            </div>
+          </div>
         `;
         affiliateStatsDiv.classList.remove("hidden");
+
+        // عرض شارة Premium في الأعلى
+        if(userData.premium) {
+          premiumBadgeContainer.classList.remove("hidden");
+        } else {
+          premiumBadgeContainer.classList.add("hidden");
+        }
 
         const friendsList = document.getElementById("friendsList");
         friendsList.innerHTML = "";
@@ -269,13 +347,29 @@
           friendsList.innerHTML = "<p class='text-white/70'>لا توجد لديك أصدقاء مدعوون حتى الآن.</p>";
         } else {
           friends.forEach(f => {
-            // دعم لصورة الصديق من حقول محتملة
             const photo = f.photo_url || f.photoURL || f.avatar || 'https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG';
             const name = `${f.first_name || 'مستخدم'} ${f.last_name || ''}`.trim();
             const balance = f.balance ?? 0;
 
             friendsList.innerHTML += `
-              <div class=\"p-4 bg-white/5 rounded-2xl border border-white/6 flex items-center gap-4 shadow-sm\">\n                <img src=\"${photo}\" alt=\"avatar\" class=\"w-16 h-16 rounded-full object-cover border-2 border-white/10\" onerror=\"this.src='https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG'\"/>\n                <div class=\"flex-1\">\n                  <div class=\"flex items-center justify-between gap-3\">\n                    <div>\n                      <p class=\"font-semibold\">${name}</p>\n                      <p class=\"text-xs text-white/70\">معرف: <span class=\"font-mono text-sm\">${f.id || '—'}</span></p>\n                    </div>\n                    <div class=\"text-right\">\n                      <p class=\"text-sm font-bold text-yellow-300\">${balance} SJ</p>\n                      ${f.premium ? '<span class=\\"text-xs bg-yellow-400 text-black px-2 py-1 rounded-lg font-medium inline-block mt-1\\">Premium</span>' : ''}\n                    </div>\n                  </div>\n                </div>\n              </div>
+              <div class="p-4 bg-white/5 rounded-2xl border border-white/6 flex items-center gap-4 shadow-sm">
+
+
+
+                <img src="${photo}" alt="avatar" class="w-16 h-16 rounded-full object-cover border-2 border-white/10" onerror="this.src='https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG'"/>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p class="font-semibold">${name}</p>
+                      <p class="text-xs text-white/70">معرف: <span class="font-mono text-sm">${f.id || '—'}</span></p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-bold text-yellow-300">${balance} SJ</p>
+                      ${f.premium ? '<span class="text-xs bg-yellow-400 text-black px-2 py-1 rounded-lg font-medium inline-block mt-1">Premium</span>' : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
             `;
           });
         }
@@ -284,28 +378,23 @@
       }
     }
 
-    // التهيئة
+    // إخفاء شاشة التحميل بعد التهيئة
     async function init() {
       try {
         await ensureUserExists();
         referralDisplay.textContent = referralLink;
         referralCodeText.textContent = referralCode;
-
-        // إظهار شارة البريميوم إذا كان المستخدم مميز
-        if (isPremium) {
-          premiumBadgeContainer.classList.remove('hidden');
-          document.getElementById('premiumText').textContent = 'عضو Premium';
-        }
-
         await loadAffiliateStats();
-      } catch (e) {
-        console.error(e);
+        document.getElementById("loading").style.display = "none";
+      } catch (error) {
+        console.error(error);
         document.getElementById("loading").style.display = "none";
         document.getElementById("errorMessage").style.display = "flex";
       }
-      document.getElementById("loading").style.display = "none";
     }
 
-    window.addEventListener("load", init);
-  </script></body>
+    init();
+  </script>
+
+</body>
 </html>
