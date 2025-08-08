@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>SJ COIN Tap2Earn</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -11,11 +11,15 @@
   <!-- TonConnect UI -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+
   <style>
     body {
       margin: 0;
       font-family: 'Arial', sans-serif;
-      background: url('https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG') no-repeat center center fixed;
+      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') no-repeat center center fixed;
       background-size: cover;
       color: #fff;
       text-align: center;
@@ -25,43 +29,82 @@
       padding: 20px;
       max-width: 500px;
       margin: auto;
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.6);
       border-radius: 20px;
       margin-top: 20px;
-      box-shadow: 0 0 15px #ffd700aa;
     }
 
     h1 {
       color: #ffd700;
       font-size: 26px;
-      margin-bottom: 5px;
+      margin: 0;
+    }
+
+    /* New header layout */
+    .header {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
       gap: 12px;
+      flex-grow: 1;
+      min-width: 0;
     }
 
     .profile-pic {
-      width: 45px;
-      height: 45px;
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
-      border: 3px solid #ffd700;
+      border: 4px solid #ffd700;
       object-fit: cover;
+      flex-shrink: 0;
     }
 
-    .wallet-button {
-      margin-top: 15px;
+    .username {
+      font-size: 22px;
+      color: #ffd700;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .coin-balance {
+      font-size: 18px;
+      color: #ffff66;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Wallet button container aligned right */
+    #ton-connect {
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      font-size: 15px;
     }
 
     .coin-display {
       font-size: 26px;
       margin: 10px 0;
       color: #ffff66;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      cursor: pointer;
     }
 
     .coin-logo {
@@ -109,27 +152,25 @@
       border-radius: 12px;
       color: white;
       cursor: pointer;
-      transition: background-color 0.3s;
     }
 
     .tap-button:hover {
       background-color: #43a047;
     }
 
-    .reset-button {
-      margin-top: 10px;
-      font-size: 14px;
-      background-color: #f44336;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
+    .button {
+      background-color: #007aff;
       color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      margin: 10px auto;
     }
 
-    .reset-button:hover {
-      background-color: #d32f2f;
+    .button:hover {
+      background-color: #005fc0;
     }
 
     .tabs {
@@ -150,37 +191,44 @@
       border-radius: 10px;
       cursor: pointer;
       margin: 5px;
-      transition: background-color 0.3s;
     }
 
     .tabs button:hover {
       background-color: #555;
     }
+
   </style>
 </head>
 <body>
   <div class="game-container">
-    <!-- User Profile -->
-    <h1>
-      <img id="userPic" class="profile-pic" src="" alt="Profile" />
-      <span id="username">👤 Guest</span>
-    </h1>
 
-    <!-- TonConnect Wallet Button -->
-    <div id="ton-connect" class="wallet-button"></div>
-
-    <!-- Coin Display (clickable to earn) -->
-    <div class="coin-display" id="coinCount" onclick="tapToEarn()">
-      <img src="https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG" class="coin-logo" />
-      <span id="coinAmount">0 SJ COIN</span>
+    <!-- Header with profile pic, username, balance, wallet -->
+    <div class="header">
+      <div class="user-info">
+        <img id="userPic" class="profile-pic" src="" alt="Profile" />
+        <div class="username" id="username">👤</div>
+        <div class="coin-balance" id="totalBalance">Loading...</div>
+      </div>
+      <div id="ton-connect"></div>
     </div>
 
-    <!-- Avatar (clickable to earn) -->
+    <div class="stats">
+      <div>💰 Tap: +1</div>
+      <div>🔁 To next level: 15K</div>
+      <div>⏰ Hourly: +0</div>
+    </div>
+
+    <!-- Coin Display -->
+    <div class="coin-display" id="coinCount" onclick="resetBalance()">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
+      <span id="coinAmount">Loading...</span>
+    </div>
+
+    <!-- Avatar (also tap to earn) -->
     <div class="avatar" onclick="tapToEarn()">
-      <img src="https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG" alt="SJ Frog Avatar">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar">
     </div>
 
-    <!-- Progress Bar and Level Info -->
     <div class="progress-bar">
       <div class="progress" id="progressBar"></div>
     </div>
@@ -189,82 +237,105 @@
     <!-- Tap Button -->
     <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
 
-    <!-- Reset Balance Button (for testing) -->
-    <button class="reset-button" onclick="resetBalance()">Reset Balance</button>
+    <!-- Buy Button -->
+    <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
 
-    <!-- Navigation Tabs (placeholders) -->
+    <!-- Tabs -->
     <div class="tabs">
-      <button onclick="alert('Coming soon')">🍄 Explore</button>
-      <button onclick="alert('Coming soon')">🎯 Missions</button>
-      <button onclick="alert('Coming soon')">👥 Friends</button>
-      <button onclick="alert('Coming soon')">💎 Bounty</button>
+      <button onclick="window.location.href='earning.html'">🍄 Explore</button>
+      <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
+      <button onclick="window.location.href='friends.html'">👥 Friends</button>
+      <button onclick="window.location.href='pys.html'">💎 Bounty</button>
     </div>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initialize Telegram WebApp
-      const tg = window.Telegram.WebApp;
-      tg.expand(); // Expand to full screen
-      const user = tg.initDataUnsafe?.user;
+    // Telegram WebApp Setup
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user;
+    const userId = user?.id?.toString();
+    document.getElementById("username").innerText = user?.first_name || "Guest";
 
-      // Display user profile
-      const usernameEl = document.getElementById("username");
-      const userPicEl = document.getElementById("userPic");
-      usernameEl.innerText = user?.first_name || "Guest";
-      userPicEl.src = user?.photo_url || "https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG";
+    // Set user profile pic or fallback
+    const userPicElem = document.getElementById("userPic");
+    if(user?.photo_url) {
+      userPicElem.src = user.photo_url;
+    } else {
+      userPicElem.src = "https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true"; // fallback image
+    }
 
-      // Initialize TonConnect UI
-      const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-        manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json',
-        buttonRootId: 'ton-connect'
-      });
+    // Firebase Config for your project
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    };
 
-      // Configure return URL for Telegram Mini App
-      tonConnectUI.uiOptions = {
-        twaReturnUrl: 'https://t.me/YOUR_BOT_NAME/YOUR_APP_NAME' // Replace with your bot and app names
-      };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-      // Handle wallet connection status
-      tonConnectUI.onStatusChange(
-        (walletInfo) => {
-          if (walletInfo) {
-            console.log('Wallet connected:', walletInfo);
-            alert('Wallet connected successfully!');
-          } else {
-            console.log('Wallet disconnected');
-            alert('Wallet disconnected');
-          }
-        },
-        (error) => {
-          console.error('Connection error:', error);
-          alert('Error connecting to wallet: ' + error.message);
-        }
-      );
-
-      // Manage coin balance
-      let coins = localStorage.getItem('coins') ? parseInt(localStorage.getItem('coins')) : 0;
-
-      // Update coin display
-      function updateCoinDisplay() {
-        document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
-      }
-      updateCoinDisplay();
-
-      // Tap to earn function
-      window.tapToEarn = function() {
-        coins += 1;
-        updateCoinDisplay();
-        localStorage.setItem('coins', coins);
-      };
-
-      // Reset balance function (for testing)
-      window.resetBalance = function() {
-        coins = 0;
-        updateCoinDisplay();
-        localStorage.setItem('coins', coins);
-      };
+    // TonConnect UI Setup
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
     });
+
+    let coins = 0;
+
+    async function loadCoins() {
+      if (!userId) return;
+      const doc = await db.collection("users").doc(userId).get();
+      coins = doc.exists ? doc.data().coins || 0 : 0;
+      updateCoinDisplay();
+      updateTotalBalance();
+    }
+
+    function updateCoinDisplay() {
+      document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
+    }
+
+    function updateTotalBalance() {
+      document.getElementById("totalBalance").innerText = `${coins.toLocaleString()} SJ COIN`;
+    }
+
+    async function tapToEarn() {
+      coins += 1;
+      updateCoinDisplay();
+      updateTotalBalance();
+      if (userId) {
+        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      }
+    }
+
+    async function resetBalance() {
+      coins = 0;
+      updateCoinDisplay();
+      updateTotalBalance();
+      if (userId) {
+        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      }
+    }
+
+    function buyCoin() {
+      const purchaseData = {
+        action: "buy",
+        amount: 100,
+        timestamp: Date.now(),
+        user: user?.id || null
+      };
+
+      tg.sendData(JSON.stringify(purchaseData));
+      alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
+    }
+
+    // Load initial coin value from Firebase
+    loadCoins();
   </script>
 </body>
 </html>
