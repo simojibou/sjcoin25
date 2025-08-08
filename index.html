@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,16 +17,16 @@
   <div id="loading" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
     <div class="text-center">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-20 h-20 rounded-full mx-auto mb-4 animate-pulse" />
-      <p class="text-lg font-medium">Loading...</p>
+      <p class="text-lg font-medium">جاري التحميل...</p>
     </div>
   </div>
 
   <!-- Error Message -->
   <div id="errorMessage" class="fixed inset-0 bg-red-900/90 flex items-center justify-center z-40" style="display:none;">
     <div class="text-center px-6">
-      <p class="text-lg font-medium mb-4">Something went wrong. Please try again.</p>
+      <p class="text-lg font-medium mb-4">حدث خطأ. يرجى المحاولة مرة أخرى.</p>
       <button onclick="location.reload()" class="bg-white text-black px-6 py-2 rounded-lg font-medium">
-        Reload
+        إعادة تحميل
       </button>
     </div>
   </div>
@@ -35,31 +35,33 @@
     <div class="text-center mb-8">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-white/20" />
       <h1 class="text-3xl font-bold uppercase bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-2">
-        SJ COIN Referral & Affiliate Program
+        برنامج الإحالة SJ COIN
       </h1>
-      <p class="text-white/80 font-medium">Invite friends and earn commissions!</p>
+      <p class="text-white/80 font-medium">ادعُ أصدقائك واحصل على مكافآت!</p>
     </div>
 
     <!-- Referral Link Display -->
     <div class="mb-6 p-4 bg-white/10 rounded-xl border border-white/10 break-words">
-      <p class="text-xs text-white/60 mb-1">Your referral link:</p>
-      <p id="referralDisplay" class="text-sm font-mono text-yellow-300"></p>
+      <p class="text-xs text-white/60 mb-1">رابط الإحالة الخاص بك:</p>
+      <p id="referralDisplay" class="text-sm font-mono text-yellow-300 select-all cursor-pointer" title="اضغط لنسخ الرابط"></p>
     </div>
 
     <!-- Referral Code Input -->
     <div class="mb-6 p-4 bg-white/10 rounded-xl border border-white/10">
       <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
-      <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="w-full px-4 py-2 rounded-lg text-black mb-3" />
-      <button id="applyReferralBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">تفعيل الكود</button>
+      <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="w-full px-4 py-2 rounded-lg text-black mb-3" autocomplete="off" />
+      <button id="applyReferralBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold transition-colors duration-200">
+        تفعيل الكود
+      </button>
     </div>
 
     <!-- Buttons -->
     <div class="flex gap-3 mb-8">
       <button id="copyLinkBtn" class="flex-1 bg-white/20 text-white px-6 py-3 rounded-xl font-bold border border-white/20 hover:bg-white/30 transition-all">
-        📋 Copy Link
+        📋 نسخ الرابط
       </button>
       <button id="inviteBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
-        👥 Invite Friends
+        👥 دعوة الأصدقاء
       </button>
     </div>
 
@@ -70,16 +72,16 @@
     <section id="bonuses" class="mb-6 space-y-4"></section>
 
     <button id="toggleBonusesBtn" class="mb-6 text-sm text-yellow-400 hover:underline">
-      Show more bonuses
+      عرض المزيد من المكافآت
     </button>
 
     <section id="levelBonuses" class="hidden overflow-x-auto rounded-xl border border-white/20 mb-8">
       <table class="w-full text-white text-left text-sm border-collapse">
         <thead class="bg-white/10">
           <tr>
-            <th class="px-3 py-3">Level</th>
-            <th class="px-3 py-3 text-right">Base Bonus</th>
-            <th class="px-3 py-3 text-right">Premium Bonus</th>
+            <th class="px-3 py-3">المستوى</th>
+            <th class="px-3 py-3 text-right">المكافأة الأساسية</th>
+            <th class="px-3 py-3 text-right">مكافأة البريميوم</th>
           </tr>
         </thead>
         <tbody id="levelBonusesTable"></tbody>
@@ -88,7 +90,7 @@
 
     <!-- Friends List -->
     <section>
-      <h2 id="friendCount" class="text-xl font-semibold mb-3">Your Friends</h2>
+      <h2 id="friendCount" class="text-xl font-semibold mb-3">أصدقاؤك</h2>
       <div id="friendsList" class="space-y-3"></div>
     </section>
   </main>
@@ -133,7 +135,11 @@
     const referralCodeInput = document.getElementById("referralCodeInput");
     const applyReferralBtn = document.getElementById("applyReferralBtn");
     const referralDisplay = document.getElementById("referralDisplay");
+    const copyLinkBtn = document.getElementById("copyLinkBtn");
+    const inviteBtn = document.getElementById("inviteBtn");
+    const affiliateStatsDiv = document.getElementById("affiliateStats");
 
+    // 1. تأكد من وجود المستخدم في قاعدة البيانات أو أضفه
     async function ensureUserExists() {
       const userRef = doc(db, "users", telegramId);
       const userSnap = await getDoc(userRef);
@@ -146,35 +152,140 @@
           balance: 0,
           premium: isPremium,
           referral_count: 0,
-          total_earned: 0
+          total_earned: 0,
+          created_at: new Date().toISOString(),
+          last_active: new Date().toISOString()
         });
+      } else {
+        await updateDoc(userRef, { last_active: new Date().toISOString() });
       }
     }
 
+    // 2. تفعيل كود الإحالة: منح 50 SJ للطرفين إذا الكود صالح
     async function applyReferralCode() {
       const code = referralCodeInput.value.trim();
-      if (!code || code === telegramId) return alert("كود غير صالح");
+      if (!code) return alert("الرجاء إدخال كود الإحالة");
+      if (code === telegramId) return alert("لا يمكنك استخدام كود الإحالة الخاص بك");
 
-      const refUserRef = doc(db, "users", code);
-      const refUserSnap = await getDoc(refUserRef);
+      try {
+        const refUserRef = doc(db, "users", code);
+        const refUserSnap = await getDoc(refUserRef);
 
-      if (!refUserSnap.exists()) return alert("الكود غير موجود");
+        if (!refUserSnap.exists()) {
+          return alert("كود الإحالة غير موجود");
+        }
 
-      // منح 50 SJ للطرفين
-      await updateDoc(refUserRef, { balance: increment(50) });
-      await updateDoc(doc(db, "users", telegramId), { balance: increment(50), referred_by: code });
+        const userRef = doc(db, "users", telegramId);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
 
-      alert("تم تفعيل الكود وحصلت على 50 SJ 🎉");
+        if (userData.referred_by) {
+          return alert("لقد استخدمت كود إحالة سابقًا");
+        }
+
+        // منح 50 SJ للطرفين
+        await updateDoc(refUserRef, { balance: increment(50), referral_count: increment(1) });
+        await updateDoc(userRef, { balance: increment(50), referred_by: code });
+
+        alert("تم تفعيل الكود بنجاح! حصلت على 50 SJ 🎉");
+
+        // تحديث العرض
+        referralCodeInput.value = "";
+        await loadAffiliateStats();
+
+      } catch (error) {
+        console.error(error);
+        alert("حدث خطأ أثناء تفعيل الكود");
+      }
     }
+
+    // 3. نسخ رابط الإحالة بسهولة
+    copyLinkBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(referralLink);
+        alert("تم نسخ رابط الإحالة!");
+      } catch {
+        alert("نسخ الرابط غير مدعوم في متصفحك.");
+      }
+    };
+
+    // 4. فتح رابط الإحالة (فتح بوت التليجرام)
+    inviteBtn.onclick = () => {
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openLink(referralLink);
+      } else {
+        window.open(referralLink, "_blank");
+      }
+    };
 
     applyReferralBtn.onclick = applyReferralCode;
 
-    function init() {
-      ensureUserExists();
-      referralDisplay.textContent = referralLink;
+    // تحميل بيانات الأصدقاء (إحالات المستخدم)
+    async function loadAffiliateStats() {
+      try {
+        const friendsQuery = query(collection(db, "users"), where("referred_by", "==", telegramId));
+        const friendsSnap = await getDocs(friendsQuery);
+        const friends = [];
+        friendsSnap.forEach(doc => {
+          friends.push(doc.data());
+        });
+
+        const userRef = doc(db, "users", telegramId);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+
+        affiliateStatsDiv.innerHTML = `
+          <h3 class="text-lg font-bold mb-2">إحصائيات الإحالة</h3>
+          <p>رصيدك الحالي: <b>${userData.balance ?? 0} SJ</b></p>
+          <p>عدد الأصدقاء المدعوين: <b>${friends.length}</b></p>
+        `;
+        affiliateStatsDiv.classList.remove("hidden");
+
+        // عرض قائمة الأصدقاء
+        const friendsList = document.getElementById("friendsList");
+        friendsList.innerHTML = "";
+        if (friends.length === 0) {
+          friendsList.innerHTML = "<p class='text-white/70'>لا توجد لديك أصدقاء مدعوون حتى الآن.</p>";
+        } else {
+          friends.forEach(f => {
+            friendsList.innerHTML += `
+              <div class="p-3 bg-white/10 rounded-xl border border-white/20">
+                <p>${f.first_name || "مستخدم"} ${f.last_name || ""}</p>
+                <p>الرصيد: ${f.balance ?? 0} SJ</p>
+              </div>
+            `;
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // التهيئة
+    async function init() {
+      try {
+        await ensureUserExists();
+        referralDisplay.textContent = referralLink;
+        await loadAffiliateStats();
+      } catch (e) {
+        console.error(e);
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("errorMessage").style.display = "flex";
+      }
+      document.getElementById("loading").style.display = "none";
     }
 
     window.addEventListener("load", init);
+
+    // نسخ الرابط عند الضغط على النص نفسه
+    referralDisplay.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(referralLink);
+        alert("تم نسخ رابط الإحالة!");
+      } catch {
+        alert("نسخ الرابط غير مدعوم في متصفحك.");
+      }
+    };
   </script>
 </body>
 </html>
