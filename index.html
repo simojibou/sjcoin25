@@ -475,33 +475,50 @@
 
     elements.createPaymentBtn.addEventListener('click', createPayment);
 
-    // Existing referral functions (unchanged)
+    // User functions with timeout protection
     async function ensureUserExists() {
-      const userRef = doc(db, "users", telegramId);
-      const userSnap = await getDoc(userRef);
-      const photoFromTG = telegramUser.photo_url || `https://t.me/i/userpic/320/${telegramId}.jpg`;
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Firebase timeout')), 8000);
+        });
 
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          id: telegramId,
-          first_name: firstName,
-          last_name: lastName,
-          photo_url: photoFromTG,
-          referred_by: null,
-          balance: 0,
-          premium: isPremium,
-          referral_count: 0,
-          total_earned: 0,
-          created_at: new Date().toISOString(),
-          last_active: new Date().toISOString()
-        });
-      } else {
-        const existing = userSnap.data();
-        const updatedPhoto = telegramUser.photo_url || existing.photo_url || photoFromTG;
-        await updateDoc(userRef, {
-          last_active: new Date().toISOString(),
-          photo_url: updatedPhoto
-        });
+        const userRef = doc(db, "users", telegramId);
+        const userSnap = await Promise.race([getDoc(userRef), timeoutPromise]);
+        const photoFromTG = telegramUser.photo_url || `https://t.me/i/userpic/320/${telegramId}.jpg`;
+
+        if (!userSnap.exists()) {
+          await Promise.race([
+            setDoc(userRef, {
+              id: telegramId,
+              first_name: firstName,
+              last_name: lastName,
+              photo_url: photoFromTG,
+              referred_by: null,
+              balance: 0,
+              premium: isPremium,
+              referral_count: 0,
+              total_earned: 0,
+              created_at: new Date().toISOString(),
+              last_active: new Date().toISOString()
+            }),
+            timeoutPromise
+          ]);
+        } else {
+          const existing = userSnap.data();
+          const updatedPhoto = telegramUser.photo_url || existing.photo_url || photoFromTG;
+          await Promise.race([
+            updateDoc(userRef, {
+              last_active: new Date().toISOString(),
+              photo_url: updatedPhoto
+            }),
+            timeoutPromise
+          ]);
+        }
+      } catch (error) {
+        console.error('ensureUserExists failed:', error);
+        // Continue with offline mode - don't block the UI
+        showToast('تم تشغيل النظام في وضع عدم الاتصال', 'error');
       }
     }
 
