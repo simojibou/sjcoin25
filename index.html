@@ -1,426 +1,181 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SJ COIN Tap2Earn</title>
-  <!-- منع أي zoom غريب على الموبايل -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-  <!-- Telegram Mini App SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TonConnect UI (unpkg) -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
-  <!-- Firebase (compat build for simpler usage with existing code) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SJ COIN Tap Game</title>
   <style>
-    /* عام */
-    :root { box-sizing: border-box; }
-    *, *:before, *:after { box-sizing: inherit; }
-
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
-      font-family: "Arial", sans-serif;
-      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') center/cover fixed no-repeat;
-      color: #fff;
-      -webkit-tap-highlight-color: transparent; /* إزالة اللمعان الأزرق */
-      touch-action: manipulation; /* منع double-tap zoom و تحسين التفاعل */
-    }
-
-    /* حاوية متجاوبة ومقروءة داخل WebApp (لا zoom) */
-    .game-container {
-      max-width: 460px;
-      width: 94%;
-      margin: 18px auto;
-      background: rgba(0,0,0,0.75);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 12px #ffd70033;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    h1 {
-      margin: 8px 0 12px;
-      font-size: 1.25rem;
-      color: #ffd700;
-      font-weight: 800;
+    body {
+      background-color: #1a1a1a;
+      color: white;
+      font-family: Arial, sans-serif;
       text-align: center;
+      padding: 10px;
     }
-
-    .wallet-profile-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 14px;
-      flex-wrap: nowrap;
-    }
-
-    .profile-pic-small {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      border: 3px solid #ffd700;
-      object-fit: cover;
-      background-color: #222;
-      box-shadow: 0 0 8px #ffd70066;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
-    #totalBalance {
-      font-size: 0.95rem;
-      color: #fff486;
-      font-weight: 700;
-      margin-bottom: 10px;
-      text-align: center;
-      min-height: 22px;
-    }
-
-    .stats {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin: 12px 0;
-      font-size: 0.95rem;
-      color: #ffd700;
-      font-weight: 700;
-    }
-
-    .coin-display {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin: 14px 0;
+    #coin {
+      width: 150px;
       cursor: pointer;
-      user-select: none;
-      font-weight: 800;
-      font-size: 1.15rem;
-      -webkit-tap-highlight-color: transparent;
-      outline: none;
-    }
-
-    .coin-display img { width: 40px; height: 40px; border-radius: 50%; }
-
-    .avatar { display:flex; justify-content:center; margin: 12px 0 8px; }
-    .avatar img { width: 150px; max-width: 60%; border-radius: 50%; border: 5px solid #ffd700; box-shadow: 0 0 18px #ffd70088; transition: transform .18s ease; }
-    .avatar img:active, .avatar img:focus { transform: scale(0.995); }
-
-    .progress-bar { background:#333; height:22px; border-radius:10px; overflow:hidden; margin:10px 0; }
-    .progress { height:100%; width:33%; transition: width .35s ease; box-shadow: 0 0 8px #00e67655 inset; }
-
-    .info-text { text-align:center; color:#ddd; font-weight:700; font-size:.95rem; margin-bottom:8px; }
-
-    .tap-button, .button {
-      width:100%;
-      padding: 12px;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 800;
-      border: none;
-      cursor: pointer;
+      margin: 20px auto;
       display: block;
-      -webkit-appearance: none;
-      appearance: none;
+      transition: transform 0.1s;
     }
-
-    .tap-button { background: linear-gradient(#4caf50,#388e3c); color:#fff; margin-top:8px; box-shadow: 0 6px 12px rgba(0,0,0,0.35); }
-    .button { background: linear-gradient(#007aff,#005bb5); color:#fff; margin-top:12px; box-shadow: 0 6px 12px rgba(0,0,0,0.35); }
-
-    .tabs { display:flex; gap:8px; margin-top:14px; justify-content:space-between; flex-wrap:wrap; }
-    .tabs button { flex:1; min-width:80px; padding:10px; border-radius:10px; background:#222; color:#fff; border:none; font-weight:700; }
-
-    /* إزالة أي outline أزرق عند النقر (fix blue focus) */
-    a, button, input, textarea { outline: none; -webkit-tap-highlight-color: transparent; }
-    button:active, a:active { opacity: .95; }
-
-    /* صغيرة لتحسين إمكانية القراءة على شاشات صغيرة */
-    @media (max-width:420px) {
-      .avatar img { width: 44vw; }
-      .profile-pic-small { width:46px; height:46px; }
-      .coin-display { font-size: 1rem; }
+    #coin:active {
+      transform: scale(0.9);
+    }
+    #totalBalance {
+      font-size: 16px;
+      color: #ffff66;
+      font-weight: 700;
+      user-select: none;
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      padding: 8px;
+      border: 1px solid #ffd700;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.4);
+      margin-bottom: 20px;
+    }
+    #userCoins {
+      font-size: 24px;
+      color: #00ff99;
+      margin-bottom: 20px;
+    }
+    #ton-connect {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="game-container">
-    <h1>مرحباً، <span id="username">ضيف</span> 👋</h1>
+  <h1>💰 SJ COIN Tap Game</h1>
 
-    <!-- Total Balance -->
-    <div id="totalBalance">جاري تحميل إجمالي الرصيد...</div>
+  <!-- Per-user & total balances -->
+  <div id="totalBalance">Loading balances...</div>
 
-    <!-- Wallet + Profile -->
-    <div class="wallet-profile-row">
-      <img id="userPic" class="profile-pic-small" src="https://telegram.org/img/t_logo.svg" alt="صورة المستخدم" />
-      <!-- TonConnect أو زر بديل -->
-      <div id="ton-connect" class="wallet-button"></div>
-    </div>
+  <!-- Your coins -->
+  <div id="userCoins">Your Coins: 0 SJ</div>
 
-    <div class="stats">
-      <div>💰 نقر: +1</div>
-      <div>🔁 للمرحلة التالية: 15K</div>
-      <div>⏰ كل ساعة: +0</div>
-    </div>
+  <!-- Tap button -->
+  <img id="coin" src="https://i.ibb.co/tHs3xZp/gold-coin.png" alt="SJ COIN" onclick="tapToEarn()" />
 
-    <!-- Coin Display -->
-    <div class="coin-display" id="coinCount" onclick="resetBalance()" title="انقر لإعادة الضبط">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
-      <span id="coinAmount">جاري التحميل...</span>
-    </div>
+  <!-- Telegram Wallet -->
+  <div id="ton-connect"></div>
 
-    <!-- Avatar (tap to earn) -->
-    <div class="avatar" onclick="tapToEarn()" title="اضغط لكسب">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar" />
-    </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    <div class="progress-bar" title="التقدم للمرحلة التالية">
-      <div class="progress" id="progressBar" style="width:33%"></div>
-    </div>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <div class="info-text">📈 المستوى: 1/5 (مبتدئ)</div>
-
-    <!-- Tap Button -->
-    <button class="tap-button" id="tapBtn" onclick="tapToEarn()">👆 اضغط لكسب</button>
-
-    <!-- Buy Button -->
-    <button class="button" id="buyBtn" onclick="buyCoin()">💸 شراء 100 SJ</button>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button onclick="navigate('explore')">🍄 استكشاف</button>
-      <button onclick="navigate('missions')">🎯 مهام</button>
-      <button onclick="navigate('friends')">👥 أصدقاء</button>
-      <button onclick="navigate('bounty')">💎 مهمات</button>
-    </div>
-  </div>
+  <!-- TonConnect UI SDK -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
   <script>
-    // Telegram WebApp
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      try {
-        tg.expand();
-        tg.ready();
-      } catch (e) {
-        console.warn("Telegram WebApp methods may not be available yet.", e);
-      }
-    }
-
-    const user = tg?.initDataUnsafe?.user || {};
-    const userId = user?.id ? String(user.id) : null;
-    document.getElementById("username").innerText = user?.first_name || "ضيف";
-
-    // تحميل صورة الملف الشخصي من Telegram إذا كانت موجودة
-    const userPic = document.getElementById("userPic");
-    if (user?.photo_url) {
-      userPic.src = user.photo_url;
-    }
-
-    // Firebase config - عدّل إذا احتجت
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
-
-    // تهيئة Firebase (compat)
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // TonConnect: نحاول استخدام واجهة TonConnect UI ثم نوفر زر بديل
-    const tonRoot = document.getElementById('ton-connect');
+    // Telegram init
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-    function createFallbackTonButton() {
-      const btn = document.createElement('button');
-      btn.className = 'button';
-      btn.style.background = 'linear-gradient(#ffb74d,#ff9800)';
-      btn.innerText = '🔗 Connect TON';
-      btn.onclick = async () => {
-        alert('فتح TonConnect أو معالج المحفظة...');
-        // إن أردت ربط TonConnect كامل هنا نستدعي API الخاص بالمشروع
-        // مثال بدائي: فتح نافذة جديدة للـ manifest أو تنفيذ TonConnect UI
-        if (window.TonConnectUI) {
-          try {
-            const tc = new TonConnectUI.TonConnectUI({ manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json', buttonRootId: 'ton-connect' });
-            // إذا كان المكتبة تعمل فستنشئ زرّاً تلقائياً
-            console.log('TonConnectUI initialized (attempt).');
-          } catch (err) {
-            console.warn('TonConnectUI initialization failed:', err);
-          }
-        } else {
-          // fallback behavior
-          window.open('https://ton.org', '_blank');
-        }
-      };
-      tonRoot.appendChild(btn);
-    }
-
-    // محاولة إنشاء واجهة TonConnect الرسمية إن وجدت
-    try {
-      if (window.TonConnectUI && typeof window.TonConnectUI.TonConnectUI === 'function') {
-        // إنشاء TonConnect UI وربطه بالمكان المخصص
-        new window.TonConnectUI.TonConnectUI({
-          manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
-          buttonRootId: 'ton-connect'
-        });
-      } else {
-        createFallbackTonButton();
-      }
-    } catch (e) {
-      console.warn('TonConnect setup error:', e);
-      createFallbackTonButton();
-    }
-
-    // عمل المتغيرات الأساسية
+    let user = tg.initDataUnsafe?.user;
+    let userId = user?.id?.toString() || null;
     let coins = 0;
 
-    async function loadCoins() {
-      if (!userId) {
-        document.getElementById("coinAmount").innerText = 'سجّل الدخول عبر التلجرام';
-        return;
-      }
-      try {
-        const doc = await db.collection("users").doc(userId).get();
-        coins = doc.exists ? (doc.data().coins || 0) : 0;
-        updateCoinDisplay();
-      } catch (err) {
-        console.error("خطأ في جلب العملات:", err);
-        document.getElementById("coinAmount").innerText = 'خطأ في التحميل';
-      }
-    }
-
-    function updateCoinDisplay() {
-      document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
-    }
-
-    async function tapToEarn() {
-      if (!userId) {
-        alert("يرجى فتح البوت داخل Telegram لتسجل الدخول.");
-        return;
-      }
-      try {
-        const userRef = db.collection("users").doc(userId);
-        await userRef.set({
-          coins: firebase.firestore.FieldValue.increment(1)
-        }, { merge: true });
-        const doc = await userRef.get();
-        coins = doc.exists ? (doc.data().coins || 0) : 0;
-        updateCoinDisplay();
-        await loadTotalBalance();
-      } catch (error) {
-        console.error("Error incrementing coins:", error);
-      }
-    }
-
-    async function resetBalance() {
-      if (!userId) {
-        coins = 0;
-        updateCoinDisplay();
-        return;
-      }
-      try {
-        coins = 0;
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-        updateCoinDisplay();
-        await loadTotalBalance();
-      } catch (err) {
-        console.error("Error resetting balance:", err);
-      }
-    }
-
-    function buyCoin() {
-      const purchaseData = {
-        action: "buy",
-        amount: 100,
-        timestamp: Date.now(),
-        user: user?.id || null
-      };
-      // إرسال بيانات للبوت (Telegram WebApp sendData)
-      try {
-        tg.sendData(JSON.stringify(purchaseData));
-        // تحديث واجهة المستخدم
-        if (tg.MainButton) {
-          tg.MainButton.setText("طلب شراء أُرسل ✅");
-          tg.MainButton.show();
-          setTimeout(() => tg.MainButton.hide(), 1800);
-        }
-        alert("تم إرسال طلب شراء 100 SJ. تحقق من البوت.");
-      } catch (e) {
-        console.warn("sendData unavailable:", e);
-        alert("تعذّر إرسال الطلب عبر WebApp. افتح البوت مباشرة.");
-      }
-    }
-
+    // Load per-user balances & total
     async function loadTotalBalance() {
       const totalEl = document.getElementById("totalBalance");
       try {
         const snapshot = await db.collection("users").get();
         let total = 0;
+        let listHTML = "<strong>🌟 Total SJ COIN in system:</strong><br>";
+
         snapshot.forEach(doc => {
-          const val = doc.data().coins || 0;
-          total += val;
+          const coinsVal = doc.data().coins || 0;
+          total += coinsVal;
+          const username = doc.data().username || `User ${doc.id}`;
+          listHTML += `${username}: ${coinsVal.toLocaleString()} SJ<br>`;
         });
-        totalEl.innerText = `🌟 إجمالي SJ COIN: ${total.toLocaleString()}`;
+
+        listHTML += `<hr><strong>System Total:</strong> ${total.toLocaleString()} SJ`;
+        totalEl.innerHTML = listHTML;
+
+        await db.collection("stats").doc("system").set({ totalCoins: total }, { merge: true });
+
       } catch (error) {
-        console.error("Error loading total balance:", error);
-        totalEl.innerText = "فشل تحميل إجمالي الرصيد";
+        totalEl.innerText = "Failed to load balances";
+        console.error("Error loading balances:", error);
       }
     }
 
-    // تنقل للتبويبات (يمكن تعديل المسارات كما تريد)
-    function navigate(page) {
-      // ضمن Telegram WebApp، الافضل فتح صفحات داخل الويب آب أو توجيه المستخدم
-      // حالياً نعرض alert للاختبار
-      switch(page) {
-        case 'explore': window.location.href = 'earning.html'; break;
-        case 'missions': window.location.href = 'sjap.html'; break;
-        case 'friends': window.location.href = 'friends.html'; break;
-        case 'bounty': window.location.href = 'pys.html'; break;
-        default: break;
-      }
+    // Update user coins UI
+    function updateCoinDisplay() {
+      document.getElementById("userCoins").innerText = `Your Coins: ${coins.toLocaleString()} SJ`;
     }
 
-    // تهيئة الواجهة عند التحميل
-    (async function init() {
-      await loadCoins();
-      await loadTotalBalance();
-
-      // استخدم MainButton لعرض زر مهم داخل Telegram (اختياري)
+    // Tap to earn coins
+    async function tapToEarn() {
+      if (!userId) return;
       try {
-        if (tg && tg.MainButton) {
-          tg.MainButton.setText("استخدام Main Button");
-          tg.MainButton.show();
-          tg.MainButton.onClick(() => {
-            // مثال: إرسال بيانات بسيطة عند الضغط على MainButton
-            if (userId) {
-              tg.sendData(JSON.stringify({ action: 'main_button_clicked', user: userId }));
-            } else {
-              alert("الزر الرئيسي تم الضغط عليه");
-            }
-          });
-        }
-      } catch (e) {
-        console.warn("MainButton not available:", e);
-      }
+        const userRef = db.collection("users").doc(userId);
+        const userData = {
+          username: user?.first_name || "Guest",
+          coins: firebase.firestore.FieldValue.increment(1)
+        };
 
-      // تحسين تجربة اللمس: منع تكبير الزر عند النقر
-      const tapBtn = document.getElementById('tapBtn');
-      tapBtn.addEventListener('touchstart', () => {}, {passive:true});
-    })();
+        await userRef.set(userData, { merge: true });
+
+        // Increment global total
+        const systemRef = db.collection("stats").doc("system");
+        await systemRef.set({
+          totalCoins: firebase.firestore.FieldValue.increment(1)
+        }, { merge: true });
+
+        const docSnap = await userRef.get();
+        coins = docSnap.exists ? docSnap.data().coins || 0 : 0;
+        updateCoinDisplay();
+        await loadTotalBalance();
+
+      } catch (error) {
+        console.error("Error incrementing coins:", error);
+      }
+    }
+
+    // Initial load
+    async function init() {
+      if (userId) {
+        const userRef = db.collection("users").doc(userId);
+        const docSnap = await userRef.get();
+        coins = docSnap.exists ? docSnap.data().coins || 0 : 0;
+        updateCoinDisplay();
+      }
+      await loadTotalBalance();
+    }
+    init();
+
+    // TonConnect wallet button
+    const tonConnectUI = new TONConnectUI({
+      manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
+    });
+
+    tonConnectUI.onStatusChange(wallet => {
+      if (wallet) {
+        console.log('Wallet connected:', wallet);
+      } else {
+        console.log('Wallet disconnected');
+      }
+    });
   </script>
 </body>
 </html>
