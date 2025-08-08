@@ -213,8 +213,8 @@
     const payAmountInput = document.getElementById("payAmount");
     const createInvoiceBtn = document.getElementById("createInvoiceBtn");
 
-    // RECEIVER: ضع هنا عنوان TON الذي يستقبل المدفوعات (مثال: العنوان الخاص بحسابك أو بالمشروع)
-    const RECEIVER_TON_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz"; // ← غيِّره إلى عنوانك الحقيقي
+    // RECEIVER: تم تحديث العنوان إلى عنوان المحفظة الذي أرسلته
+    const RECEIVER_TON_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW"; // ← عنوانك
 
     // TonConnect client (سيتم تهيئته عند الطلب)
     let tonConnector = null;
@@ -325,7 +325,7 @@
         const text = encodeURIComponent(`Buy SJ - invoice:${invoiceRef.id}`);
         const tonLink = `ton://transfer/${RECEIVER_TON_ADDRESS}?amount=${amount}&text=${text}`;
 
-        // إذا كان TonConnect متصلًا يمكننا أيضاً محاولة إرسال المعاملة عبر TonConnect
+        // إذا كان TonConnect متصلاً يمكننا أيضاً محاولة إرسال المعاملة عبر TonConnect
         if (tonConnector && connectedWallet) {
           try {
             // عملية الإرسال عبر TonConnect (بعض المحافظ تدعم sendTransaction عبر TonConnect)
