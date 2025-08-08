@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SJ COIN Referral System</title>
+  <title>SJ COIN Referral & Affiliate System</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
 </head>
 <body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white">
 
@@ -33,13 +32,12 @@
   </div>
 
   <main class="max-w-xl mx-auto px-6 py-8 pt-16">
-
     <div class="text-center mb-8">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-white/20" />
       <h1 class="text-3xl font-bold uppercase bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-2">
-        SJ COIN Referral Program
+        SJ COIN Referral & Affiliate Program
       </h1>
-      <p class="text-white/80 font-medium">Invite friends and earn together!</p>
+      <p class="text-white/80 font-medium">Invite friends and earn commissions!</p>
     </div>
 
     <!-- Referral Link Display -->
@@ -48,15 +46,25 @@
       <p id="referralDisplay" class="text-sm font-mono text-yellow-300"></p>
     </div>
 
+    <!-- Referral Code Input -->
+    <div class="mb-6 p-4 bg-white/10 rounded-xl border border-white/10">
+      <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
+      <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="w-full px-4 py-2 rounded-lg text-black mb-3" />
+      <button id="applyReferralBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">تفعيل الكود</button>
+    </div>
+
     <!-- Buttons -->
     <div class="flex gap-3 mb-8">
-      <button id="copyLinkBtn" class="flex-1 bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-bold border border-white/20 hover:bg-white/30 transition-all">
+      <button id="copyLinkBtn" class="flex-1 bg-white/20 text-white px-6 py-3 rounded-xl font-bold border border-white/20 hover:bg-white/30 transition-all">
         📋 Copy Link
       </button>
       <button id="inviteBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
         👥 Invite Friends
       </button>
     </div>
+
+    <!-- Affiliate Stats -->
+    <div id="affiliateStats" class="mb-6 p-4 bg-white/10 rounded-xl border border-white/10 hidden"></div>
 
     <!-- Bonuses Info -->
     <section id="bonuses" class="mb-6 space-y-4"></section>
@@ -83,7 +91,6 @@
       <h2 id="friendCount" class="text-xl font-semibold mb-3">Your Friends</h2>
       <div id="friendsList" class="space-y-3"></div>
     </section>
-
   </main>
 
   <!-- Firebase + App Logic -->
@@ -102,11 +109,9 @@
       increment
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
       projectId: "metawarefare-gaming",
       storageBucket: "metawarefare-gaming.appspot.com",
       messagingSenderId: "551352148152",
@@ -116,7 +121,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Telegram user info
     const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
     const telegramId = telegramUser.id?.toString() || "demo_user";
     const firstName = telegramUser.first_name || "Demo";
@@ -126,310 +130,51 @@
     const botUrl = "https://t.me/sjcoin25bot";
     const referralLink = `${botUrl}?startapp=ref${telegramId}`;
 
-    // DOM Elements
-    const loadingDiv = document.getElementById("loading");
-    const errorDiv = document.getElementById("errorMessage");
+    const referralCodeInput = document.getElementById("referralCodeInput");
+    const applyReferralBtn = document.getElementById("applyReferralBtn");
     const referralDisplay = document.getElementById("referralDisplay");
-    const copyLinkBtn = document.getElementById("copyLinkBtn");
-    const inviteBtn = document.getElementById("inviteBtn");
-    const bonusesContainer = document.getElementById("bonuses");
-    const toggleBonusesBtn = document.getElementById("toggleBonusesBtn");
-    const levelBonusesDiv = document.getElementById("levelBonuses");
-    const levelBonusesTable = document.getElementById("levelBonusesTable");
-    const friendsList = document.getElementById("friendsList");
-    const friendCount = document.getElementById("friendCount");
 
-    // Referral config default
-    let referralConfig = {
-      base: { welcome: 1000, levelUp: {} },
-      premium: { welcome: 2500, levelUp: {} }
-    };
-
-    // Levels default
-    let levels = [
-      { level: 1, name: "Bronze", min_balance: 0 },
-      { level: 2, name: "Silver", min_balance: 5000 },
-      { level: 3, name: "Gold", min_balance: 25000 },
-      { level: 4, name: "Platinum", min_balance: 100000 },
-      { level: 5, name: "Diamond", min_balance: 1000000 }
-    ];
-
-    // Show/hide loading
-    function showLoading(show = true) {
-      loadingDiv.style.display = show ? "flex" : "none";
-    }
-    // Show/hide error
-    function showError(show = false) {
-      errorDiv.style.display = show ? "flex" : "none";
-    }
-
-    // Get referral code from URL param
-    function getReferralCode() {
-      const params = new URLSearchParams(window.location.search);
-      const startapp = params.get("startapp") || params.get("start");
-      if (startapp && startapp.startsWith("ref")) return startapp.replace("ref", "");
-      return params.get("ref") || null;
-    }
-
-    // Save or update user in Firestore
     async function ensureUserExists() {
-      try {
-        const userRef = doc(db, "users", telegramId);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          const referredBy = getReferralCode();
-          const newUser = {
-            id: telegramId,
-            first_name: firstName,
-            last_name: lastName,
-            username: telegramUser.username || "",
-            referred_by: referredBy,
-            balance: 0,
-            premium: isPremium,
-            level: { name: "Bronze", level: 1 },
-            referral_count: 0,
-            total_earned: 0,
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString()
-          };
-          await setDoc(userRef, newUser);
-
-          if (referredBy && referredBy !== telegramId) {
-            await handleReferralBonus(referredBy);
-          }
-        } else {
-          await updateDoc(userRef, { last_active: new Date().toISOString() });
-        }
-      } catch (error) {
-        throw new Error("Error in ensureUserExists: " + error.message);
-      }
-    }
-
-    // Give referral bonus to referrer and new user
-    async function handleReferralBonus(referrerId) {
-      try {
-        const referrerRef = doc(db, "users", referrerId);
-        const referrerSnap = await getDoc(referrerRef);
-        if (!referrerSnap.exists()) return;
-
-        const welcomeBonus = isPremium ? referralConfig.premium.welcome : referralConfig.base.welcome;
-
-        await updateDoc(referrerRef, {
-          balance: increment(welcomeBonus),
-          referral_count: increment(1),
-          total_earned: increment(welcomeBonus)
+      const userRef = doc(db, "users", telegramId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          id: telegramId,
+          first_name: firstName,
+          last_name: lastName,
+          referred_by: null,
+          balance: 0,
+          premium: isPremium,
+          referral_count: 0,
+          total_earned: 0
         });
-
-        const userRef = doc(db, "users", telegramId);
-        await updateDoc(userRef, {
-          balance: increment(welcomeBonus),
-          total_earned: increment(welcomeBonus)
-        });
-
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.showAlert(`🎉 Welcome bonus! You and your friend each received ${welcomeBonus.toLocaleString()} coins!`);
-        }
-      } catch (error) {
-        console.error("Error giving referral bonus:", error);
       }
     }
 
-    // Load referral config from Firestore config/referral doc (optional)
-    async function loadReferralConfig() {
-      try {
-        const configDoc = doc(db, "config", "referral");
-        const configSnap = await getDoc(configDoc);
-        if (configSnap.exists()) {
-          referralConfig = { ...referralConfig, ...configSnap.data() };
-        }
-      } catch (error) {
-        console.warn("Failed loading referral config:", error);
-      }
+    async function applyReferralCode() {
+      const code = referralCodeInput.value.trim();
+      if (!code || code === telegramId) return alert("كود غير صالح");
+
+      const refUserRef = doc(db, "users", code);
+      const refUserSnap = await getDoc(refUserRef);
+
+      if (!refUserSnap.exists()) return alert("الكود غير موجود");
+
+      // منح 50 SJ للطرفين
+      await updateDoc(refUserRef, { balance: increment(50) });
+      await updateDoc(doc(db, "users", telegramId), { balance: increment(50), referred_by: code });
+
+      alert("تم تفعيل الكود وحصلت على 50 SJ 🎉");
     }
 
-    // Load levels from Firestore or use defaults
-    async function loadLevels() {
-      try {
-        const levelsSnap = await getDocs(collection(db, "levels"));
-        if (!levelsSnap.empty) {
-          levels = levelsSnap.docs.map(doc => doc.data());
-          levels.sort((a,b) => a.level - b.level);
-        }
-      } catch (error) {
-        console.warn("Failed loading levels:", error);
-      }
+    applyReferralBtn.onclick = applyReferralCode;
+
+    function init() {
+      ensureUserExists();
+      referralDisplay.textContent = referralLink;
     }
 
-    // Load referred friends list
-    async function loadFriends() {
-      try {
-        const q = query(collection(db, "users"), where("referred_by", "==", telegramId));
-        const snap = await getDocs(q);
-        const friends = snap.docs.map(d => d.data());
-
-        friendCount.textContent = `Your friends (${friends.length})`;
-
-        if (friends.length === 0) {
-          friendsList.innerHTML = `
-            <div class="text-center text-white/60 border-2 border-dashed border-white/20 px-6 py-8 rounded-xl">
-              <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-16 h-16 rounded-full mx-auto mb-4 opacity-50" />
-              <p class="text-lg font-medium mb-2">No friends yet</p>
-              <p class="text-sm text-white/40">Invite friends to earn bonuses!</p>
-            </div>
-          `;
-          return;
-        }
-
-        friends.sort((a,b) => (b.balance || 0) - (a.balance || 0));
-
-        friendsList.innerHTML = "";
-        friends.forEach(friend => {
-          const joinDate = friend.created_at ? new Date(friend.created_at).toLocaleDateString() : "Unknown";
-          friendsList.innerHTML += `
-            <div class="flex items-center justify-between px-4 py-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-all">
-              <div class="flex items-center gap-3">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-10 h-10 rounded-full border-2 border-white/20" />
-                <div>
-                  <p class="text-sm font-medium">${friend.first_name || ""} ${friend.last_name || ""}</p>
-                  <p class="text-xs text-white/60">${friend.level?.name || "Bronze"} • Joined ${joinDate}</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-5 h-5" />
-                <span class="text-sm font-bold text-yellow-400">${(friend.balance || 0).toLocaleString()}</span>
-              </div>
-            </div>
-          `;
-        });
-
-      } catch (error) {
-        friendsList.innerHTML = `
-          <div class="text-center text-red-400 px-4 py-4 rounded-xl">
-            Error loading friends. Please try again.
-          </div>
-        `;
-      }
-    }
-
-    // Display bonuses info
-    function displayBonuses() {
-      bonusesContainer.innerHTML = `
-        <div class="space-y-3">
-          <div class="flex items-center gap-4 px-4 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl border border-white/10">
-            <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-12 h-12 rounded-full" />
-            <div class="text-sm font-medium flex-1">
-              <p class="font-bold text-blue-300">Invite a friend</p>
-              <div class="flex items-center space-x-1 mt-1">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-5 h-5" />
-                <span class="font-bold text-yellow-400">+${referralConfig.base.welcome.toLocaleString()}</span>
-                <span class="text-xs text-white/70">for you and your friend</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-4 px-4 py-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-300/20">
-            <div class="relative">
-              <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-12 h-12 rounded-full" />
-              <div class="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-                <span class="text-xs">⭐</span>
-              </div>
-            </div>
-            <div class="text-sm font-medium flex-1">
-              <p class="font-bold text-yellow-300">Invite a Premium friend</p>
-              <div class="flex items-center space-x-1 mt-1">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-5 h-5" />
-                <span class="font-bold text-yellow-400">+${referralConfig.premium.welcome.toLocaleString()}</span>
-                <span class="text-xs text-white/70">for you and your friend</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Display level bonuses
-    function displayLevelBonuses() {
-      levelBonusesTable.innerHTML = "";
-      levels.forEach(lvl => {
-        const baseBonus = referralConfig.base.levelUp[lvl.level] || (lvl.level * 500);
-        const premiumBonus = referralConfig.premium.levelUp[lvl.level] || (lvl.level * 1000);
-        levelBonusesTable.innerHTML += `
-          <tr class="border-b border-white/10 hover:bg-white/5">
-            <td class="px-3 py-3 font-medium">${lvl.name}</td>
-            <td class="px-3 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-4 h-4" />
-                <span>${baseBonus.toLocaleString()}</span>
-              </div>
-            </td>
-            <td class="px-3 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-4 h-4" />
-                <span>${premiumBonus.toLocaleString()}</span>
-              </div>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    // Copy referral link handler
-    copyLinkBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(referralLink);
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.showAlert("Referral link copied to clipboard!");
-        } else {
-          alert("Referral link copied to clipboard!");
-        }
-      } catch {
-        alert("Failed to copy referral link.");
-      }
-    };
-
-    // Invite button handler (Telegram share)
-    inviteBtn.onclick = () => {
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.openChat(referralLink);
-      } else {
-        window.open(referralLink, "_blank");
-      }
-    };
-
-    // Toggle bonuses table
-    toggleBonusesBtn.onclick = () => {
-      const isHidden = levelBonusesDiv.classList.toggle("hidden");
-      toggleBonusesBtn.textContent = isHidden ? "Show more bonuses" : "Hide bonuses";
-    };
-
-    // Initialize app logic
-    async function init() {
-      showLoading(true);
-      try {
-        await loadReferralConfig();
-        await loadLevels();
-        await ensureUserExists();
-        await loadFriends();
-
-        referralDisplay.textContent = referralLink;
-
-        displayBonuses();
-        displayLevelBonuses();
-
-        showLoading(false);
-        showError(false);
-      } catch (error) {
-        console.error("Init error:", error);
-        showLoading(false);
-        showError(true);
-      }
-    }
-
-    // Start the app
     window.addEventListener("load", init);
-
   </script>
-
 </body>
 </html>
