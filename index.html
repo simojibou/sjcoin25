@@ -16,17 +16,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 
   <style>
-
-
-
-
-
-
-
-
-
-
-
     body {
       margin: 0;
       font-family: 'Arial', sans-serif;
@@ -35,7 +24,6 @@
       color: #fff;
       text-align: center;
     }
-
     .game-container {
       padding: 20px;
       max-width: 500px;
@@ -44,23 +32,19 @@
       border-radius: 20px;
       margin-top: 20px;
     }
-
     h1 {
       color: #ffd700;
       font-size: 26px;
     }
-
     .wallet-button {
       margin-top: 10px;
     }
-
     .stats {
       display: flex;
       justify-content: space-between;
       margin: 20px 0;
       font-size: 15px;
     }
-
     .coin-display {
       font-size: 26px;
       margin: 10px 0;
@@ -71,24 +55,20 @@
       justify-content: center;
       gap: 10px;
     }
-
     .coin-logo {
       width: 30px;
       height: 30px;
       border-radius: 50%;
     }
-
     .avatar {
       margin: 20px 0;
       cursor: pointer;
     }
-
     .avatar img {
       width: 160px;
       border-radius: 50%;
       border: 5px solid #ffd700;
     }
-
     .progress-bar {
       background-color: #444;
       border-radius: 10px;
@@ -96,18 +76,15 @@
       height: 20px;
       margin: 15px 0;
     }
-
     .progress {
       width: 33%;
       height: 100%;
       background-color: #00e676;
     }
-
     .info-text {
       font-size: 14px;
       color: #ccc;
     }
-
     .tap-button {
       margin-top: 20px;
       font-size: 20px;
@@ -118,11 +95,9 @@
       color: white;
       cursor: pointer;
     }
-
     .tap-button:hover {
       background-color: #43a047;
     }
-
     .button {
       background-color: #007aff;
       color: white;
@@ -133,11 +108,9 @@
       cursor: pointer;
       margin: 10px auto;
     }
-
     .button:hover {
       background-color: #005fc0;
     }
-
     .tabs {
       display: flex;
       justify-content: space-around;
@@ -146,7 +119,6 @@
       gap: 5px;
       flex-wrap: wrap;
     }
-
     .tabs button {
       flex: 1;
       background-color: #333;
@@ -157,37 +129,36 @@
       cursor: pointer;
       margin: 5px;
     }
-
     .tabs button:hover {
       background-color: #555;
     }
-
     #ton-connect {
       margin: 15px auto;
     }
-
-
-    
-   
-
-
-
-
-
+    /* قائمة أرصدة المستخدمين */
+    #userBalances {
+      margin-top: 25px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 15px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 14px;
+      text-align: left;
+    }
+    #userBalances h2 {
+      margin-top: 0;
+      color: #ffd700;
+    }
   </style>
 </head>
 <body>
   <div class="game-container">
     <h1>Welcome, <span id="username">👤</span>!</h1>
 
-
-
     <div class="header">
       <img id="userPic" class="profile-pic" src="" alt="Profile" />
     </div>
-
-
-
 
     <!-- TonConnect Wallet Button -->
     <div id="ton-connect" class="wallet-button"></div>
@@ -227,6 +198,15 @@
       <button onclick="window.location.href='friends.html'">👥 Friends</button>
       <button onclick="window.location.href='pys.html'">💎 Bounty</button>
     </div>
+
+    <!-- قائمة أرصدة المستخدمين -->
+    <div id="userBalances">
+      <h2>Users Balances</h2>
+      <ul id="balancesList">
+        <li>Loading...</li>
+      </ul>
+      <p><strong>Total Coins in System:</strong> <span id="systemTotal">0</span> SJ COIN</p>
+    </div>
   </div>
 
   <script>
@@ -260,6 +240,7 @@
 
     let coins = 0;
 
+    // تحميل رصيد المستخدم الحالي
     async function loadCoins() {
       if (!userId) return;
       const doc = await db.collection("users").doc(userId).get();
@@ -267,26 +248,71 @@
       updateCoinDisplay();
     }
 
+    // تحديث عرض الرصيد
     function updateCoinDisplay() {
       document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
     }
 
+    // تحميل أرصدة كل المستخدمين + الإجمالي الكلي
+    async function loadAllUsersBalances() {
+      const usersSnapshot = await db.collection("users").get();
+      const balancesList = document.getElementById("balancesList");
+      balancesList.innerHTML = ''; // تفريغ القائمة
+      let totalCoins = 0;
+
+      usersSnapshot.forEach(doc => {
+        const data = doc.data();
+        const username = data.name || `User ${doc.id}`;
+        const userCoins = data.coins || 0;
+        totalCoins += userCoins;
+
+        // إضافة عنصر لقائمة الأرصدة
+        const li = document.createElement('li');
+        li.textContent = `${username}: ${userCoins.toLocaleString()} SJ COIN`;
+        balancesList.appendChild(li);
+      });
+
+      // تحديث الإجمالي في العرض
+      document.getElementById("systemTotal").innerText = totalCoins.toLocaleString();
+    }
+
+    // عند النقر على زر Tap
     async function tapToEarn() {
       coins += 1;
       updateCoinDisplay();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-      }
+      if (!userId) return;
+
+      const userRef = db.collection("users").doc(userId);
+      const systemRef = db.collection("system").doc("totals");
+
+      // تحديث رصيد المستخدم مع دمج البيانات
+      await userRef.set({ coins }, { merge: true });
+
+      // تحديث الرصيد الكلي في مستند system/totals باستخدام transaction لضمان التزامن
+      await db.runTransaction(async (transaction) => {
+        const sysDoc = await transaction.get(systemRef);
+        let currentTotal = sysDoc.exists ? sysDoc.data().totalCoins || 0 : 0;
+        currentTotal += 1;
+        transaction.set(systemRef, { totalCoins: currentTotal });
+      });
+
+      // إعادة تحميل قائمة الأرصدة والإجمالي
+      loadAllUsersBalances();
     }
 
+    // إعادة تعيين الرصيد
     async function resetBalance() {
       coins = 0;
       updateCoinDisplay();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-      }
+      if (!userId) return;
+      await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      // لا نخصم من الإجمالي لأننا نعتبر فقط الزيادة هنا
+
+      // إعادة تحميل الأرصدة
+      loadAllUsersBalances();
     }
 
+    // زر شراء عملة (يرسل بيانات للبوت)
     function buyCoin() {
       const purchaseData = {
         action: "buy",
@@ -294,13 +320,14 @@
         timestamp: Date.now(),
         user: user?.id || null
       };
-
       tg.sendData(JSON.stringify(purchaseData));
       alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
 
-    // Load initial coin value from Firebase
+    // تحميل البيانات الأولية عند بدء الصفحة
     loadCoins();
+    loadAllUsersBalances();
+
   </script>
 </body>
 </html>
