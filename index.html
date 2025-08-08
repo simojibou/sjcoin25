@@ -11,8 +11,8 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- TonConnect (UMD) - manifestUrl must be valid (ضع رابط الـ manifest الخاص بك) -->
-  <script src="https://unpkg.com/@tonconnect/sdk/dist/tonconnect.umd.min.js"></script>
+  <!-- TonConnect UI SDK - More reliable than UMD -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white font-sans">
 
@@ -23,7 +23,7 @@
       <span class="text-sm">العودة إلى الصفحة الرئيسية</span>
     </a>
 
-    <!-- Premium badge placeholder - toggled by JS -->
+    <!-- Premium badge placeholder -->
     <div id="premiumBadgeContainer" class="hidden items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-2 rounded-2xl font-semibold shadow-lg">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.79 1.402 8.177L12 18.896l-7.336 3.88 1.402-8.178L.132 9.21l8.2-1.192z"/></svg>
       <span id="premiumText">Premium</span>
@@ -46,6 +46,11 @@
         إعادة تحميل
       </button>
     </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-60 hidden">
+    <span id="toastMessage"></span>
   </div>
 
   <main class="max-w-2xl mx-auto px-6 py-10 pt-24">
@@ -79,27 +84,46 @@
 
     <!-- Wallet & Payment Section -->
     <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
-      <h3 class="text-sm font-semibold mb-2">المحفظة والدفع بالـ Crypto (TON)</h3>
+      <h3 class="text-sm font-semibold mb-4">المحفظة والدفع بـ TON</h3>
 
+      <!-- Wallet Connection -->
+      <div class="mb-4">
+        <div id="ton-connect"></div>
+      </div>
+
+      <!-- Payment Form -->
       <div class="grid gap-3 sm:grid-cols-2">
         <div>
-          <button id="connectWalletBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-xl font-bold">🔌 اتصال بالمحفظة</button>
+          <label class="block text-xs text-white/70 mb-1">المبلغ بـ TON</label>
+          <input id="payAmount" type="number" step="0.001" min="0.1" value="0.1" 
+                 class="w-full px-3 py-2 rounded-xl text-black bg-white" 
+                 placeholder="0.1" />
         </div>
         <div>
-          <div class="flex gap-2">
-            <input id="payAmount" type="number" step="0.001" min="0" value="0.1" class="flex-1 px-3 py-2 rounded-xl text-black" />
-            <button id="createInvoiceBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-bold">✨ اشتري SJ</button>
-          </div>
+          <label class="block text-xs text-white/70 mb-1">مقدار SJ</label>
+          <input id="sjAmount" type="number" readonly 
+                 class="w-full px-3 py-2 rounded-xl text-black bg-gray-100" 
+                 placeholder="يتم حساب تلقائي" />
         </div>
+      </div>
 
-        <div class="sm:col-span-2">
-          <p class="text-xs text-white/70 mb-2">العنوان المتصل:</p>
-          <div class="flex items-center gap-3">
-            <div id="connectedAddress" class="flex-1 px-3 py-2 rounded-xl bg-white/5 font-mono text-sm">غير متصل</div>
-            <button id="copyWalletBtn" class="bg-white/6 px-3 py-2 rounded-xl border border-white/8 hover:bg-white/10">📋 نسخ</button>
-          </div>
-          <p class="text-xs text-white/60 mt-2">ملاحظة: الدفع يفتح محفظة المستخدم عبر رابط <code>ton://transfer</code> أو عبر TonConnect إذا كانت متاحة.</p>
-        </div>
+      <div class="mt-4">
+        <button id="createPaymentBtn" 
+                class="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-500 text-white px-4 py-3 rounded-xl font-bold transition-colors"
+                disabled>
+          💰 اشتري SJ COIN
+        </button>
+      </div>
+
+      <!-- Payment Status -->
+      <div id="paymentStatus" class="mt-3 p-3 rounded-lg hidden">
+        <p id="statusText" class="text-sm"></p>
+      </div>
+
+      <div class="mt-3 text-xs text-white/60">
+        <p>• 1 TON = 1000 SJ COIN</p>
+        <p>• الحد الأدنى للدفع: 0.1 TON</p>
+        <p>• المعاملات آمنة ومضمونة</p>
       </div>
     </div>
 
@@ -107,17 +131,23 @@
     <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
       <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
       <div class="flex gap-3">
-        <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" class="flex-1 px-4 py-3 rounded-xl text-black" autocomplete="off" />
-        <button id="applyReferralBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-colors duration-200">تفعيل</button>
+        <input id="referralCodeInput" type="text" placeholder="أدخل الكود هنا" 
+               class="flex-1 px-4 py-3 rounded-xl text-black" autocomplete="off" />
+        <button id="applyReferralBtn" 
+                class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-colors duration-200">
+          تفعيل
+        </button>
       </div>
     </div>
 
-    <!-- Buttons -->
+    <!-- Action Buttons -->
     <div class="flex gap-3 mb-8">
-      <button id="inviteBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+      <button id="inviteBtn" 
+              class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
         👥 دعوة الأصدقاء
       </button>
-      <button id="shareBtn" class="flex-1 bg-white/6 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-white/10 transition-all">
+      <button id="shareBtn" 
+              class="flex-1 bg-white/6 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-white/10 transition-all">
         🔗 مشاركة
       </button>
     </div>
@@ -125,17 +155,15 @@
     <!-- Affiliate Stats -->
     <div id="affiliateStats" class="mb-6 p-5 bg-white/6 rounded-2xl border border-white/8 hidden shadow-md"></div>
 
-    <!-- Upgrade to Premium Button -->
-    <div class="mb-6 text-center">
-      <button id="upgradeBtn" class="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold px-8 py-3 rounded-full shadow-lg hover:from-yellow-500 hover:to-orange-600 transition">
+    <!-- Premium Actions -->
+    <div class="grid gap-3 mb-10 sm:grid-cols-2">
+      <button id="upgradeBtn" 
+              class="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold px-6 py-3 rounded-full shadow-lg hover:from-yellow-500 hover:to-orange-600 transition">
         ⭐ ترقية إلى Premium
       </button>
-    </div>
-
-    <!-- Buy SJ COIN with Stars Button -->
-    <div class="mb-10 text-center">
-      <button id="buySJBtn" class="inline-block bg-gradient-to-r from-blue-700 to-blue-900 text-white font-semibold px-8 py-3 rounded-full shadow-lg hover:from-blue-800 hover:to-blue-950 transition">
-        ✨ شراء SJ COIN بالنجوم (Stars)
+      <button id="buySJBtn" 
+              class="bg-gradient-to-r from-blue-700 to-blue-900 text-white font-semibold px-6 py-3 rounded-full shadow-lg hover:from-blue-800 hover:to-blue-950 transition">
+        ✨ شراء بالنجوم (Stars)
       </button>
     </div>
 
@@ -146,9 +174,8 @@
     </section>
   </main>
 
-  <!-- Firebase + App Logic -->
   <script type="module">
-    // استورد Firebase (lite) لسرعة التحميل داخل WebApp
+    // Firebase imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore,
@@ -165,7 +192,7 @@
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
 
-    // ← عدّل إعدادات Firebase إلى إعدادات مشروعك الحقيقية
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -178,203 +205,206 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // بيانات مستخدم التليجرام من WebApp (آمنة لو التطبيق منصة WebApp)
+    // Telegram user data
     const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
-    const telegramId = (telegramUser.id?.toString()) || "demo_user";
+    const telegramId = telegramUser.id?.toString() || "demo_user";
     const firstName = telegramUser.first_name || "Demo";
     const lastName = telegramUser.last_name || "User";
     const isPremium = telegramUser.is_premium || false;
 
     const botUrl = "https://t.me/sjcoin25bot";
     const referralLink = `${botUrl}?startapp=ref${telegramId}`;
-    const referralCode = telegramId; // نستخدم معرف التليجرام ككود إحالة
+    const referralCode = telegramId;
 
-    // عناصر DOM
-    const referralCodeInput = document.getElementById("referralCodeInput");
-    const applyReferralBtn = document.getElementById("applyReferralBtn");
-    const referralDisplay = document.getElementById("referralDisplay");
-    const copyLinkBtn = document.getElementById("copyLinkBtn");
-    const inviteBtn = document.getElementById("inviteBtn");
-    const shareBtn = document.getElementById("shareBtn");
-    const affiliateStatsDiv = document.getElementById("affiliateStats");
-    const referralCodeDisplay = document.getElementById("referralCodeDisplay");
-    const referralCodeText = document.getElementById("referralCodeText");
-    const premiumBadgeContainer = document.getElementById("premiumBadgeContainer");
-    const upgradeBtn = document.getElementById("upgradeBtn");
-    const buySJBtn = document.getElementById("buySJBtn");
-    const friendsList = document.getElementById("friendsList");
-    const loadingEl = document.getElementById("loading");
-    const errorEl = document.getElementById("errorMessage");
+    // Constants
+    const RECEIVER_TON_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW";
+    const TON_TO_SJ_RATE = 1000; // 1 TON = 1000 SJ
 
-    // عناصر المحفظة والدفع
-    const connectWalletBtn = document.getElementById("connectWalletBtn");
-    const connectedAddressEl = document.getElementById("connectedAddress");
-    const copyWalletBtn = document.getElementById("copyWalletBtn");
-    const payAmountInput = document.getElementById("payAmount");
-    const createInvoiceBtn = document.getElementById("createInvoiceBtn");
+    // DOM Elements
+    const elements = {
+      referralCodeInput: document.getElementById("referralCodeInput"),
+      applyReferralBtn: document.getElementById("applyReferralBtn"),
+      referralDisplay: document.getElementById("referralDisplay"),
+      copyLinkBtn: document.getElementById("copyLinkBtn"),
+      inviteBtn: document.getElementById("inviteBtn"),
+      shareBtn: document.getElementById("shareBtn"),
+      affiliateStatsDiv: document.getElementById("affiliateStats"),
+      referralCodeDisplay: document.getElementById("referralCodeDisplay"),
+      referralCodeText: document.getElementById("referralCodeText"),
+      premiumBadgeContainer: document.getElementById("premiumBadgeContainer"),
+      upgradeBtn: document.getElementById("upgradeBtn"),
+      buySJBtn: document.getElementById("buySJBtn"),
+      friendsList: document.getElementById("friendsList"),
+      loadingEl: document.getElementById("loading"),
+      errorEl: document.getElementById("errorMessage"),
+      payAmountInput: document.getElementById("payAmount"),
+      sjAmountInput: document.getElementById("sjAmount"),
+      createPaymentBtn: document.getElementById("createPaymentBtn"),
+      paymentStatus: document.getElementById("paymentStatus"),
+      statusText: document.getElementById("statusText"),
+      toast: document.getElementById("toast"),
+      toastMessage: document.getElementById("toastMessage")
+    };
 
-    // RECEIVER: تم تحديث العنوان إلى عنوان المحفظة الذي أرسلته
-    const RECEIVER_TON_ADDRESS = "UQACzRKZn07xqQK0zM5nLhEqSTRN5ThZaFZ_sQLEbavU9ZaW"; // ← عنوانك
-
-    // TonConnect client (سيتم تهيئته عند الطلب)
-    let tonConnector = null;
+    // TON Connect
+    let tonConnectUI = null;
     let connectedWallet = null;
 
-    // --- وظائف المحفظة والدفع ---
-    async function initTonConnectIfPossible() {
-      try {
-        if (!window.TonConnect) {
-          console.warn("TonConnect UMD غير محمّل أو غير متوفر.");
-          return;
-        }
-        // ملاحظة: ضع manifestUrl صالح يشير إلى tonconnect-manifest.json مستضاف على موقعك/ GitHub
-        const manifestUrl = "https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json"; // ← عدّل هذا إلى رابط manifest صالح لديك
-        tonConnector = new window.TonConnect.TonConnect({ manifestUrl });
-
-        // استمع لتغير الحالة (اختياري)
-        tonConnector.onStatusChange((walletInfo) => {
-          if (walletInfo) {
-            // walletInfo.accounts => مصفوفة عناوين
-            const firstAccount = (walletInfo?.account ? walletInfo.account : (walletInfo.accounts && walletInfo.accounts[0])) || null;
-            setConnectedWallet(firstAccount);
-          } else {
-            setConnectedWallet(null);
-          }
-        });
-
-      } catch (e) {
-        console.error("خطأ تهيئة TonConnect:", e);
-      }
+    // Utility Functions
+    function showToast(message, type = 'success') {
+      elements.toastMessage.textContent = message;
+      elements.toast.className = `fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-60 ${
+        type === 'success' ? 'bg-green-600' : 'bg-red-600'
+      } text-white`;
+      elements.toast.classList.remove('hidden');
+      setTimeout(() => elements.toast.classList.add('hidden'), 3000);
     }
 
-    function setConnectedWallet(account) {
-      if (account) {
-        connectedWallet = account;
-        connectedAddressEl.textContent = account;
-        // خزّن العنوان في ملف المستخدم بقاعدة البيانات (يساعد التتبع والتحقق لاحقًا)
-        const userRef = doc(db, "users", telegramId);
-        updateDoc(userRef, { wallet_address: account }).catch(() => {
-          // إذا رفض التحديث لأن المستخدم لم يُنشَأ بعد — لا نكسر الواجهة
-        });
-      } else {
-        connectedWallet = null;
-        connectedAddressEl.textContent = "غير متصل";
-      }
+    function updatePaymentStatus(message, type = 'info') {
+      elements.statusText.textContent = message;
+      elements.paymentStatus.className = `mt-3 p-3 rounded-lg ${
+        type === 'success' ? 'bg-green-600/20 border border-green-500' :
+        type === 'error' ? 'bg-red-600/20 border border-red-500' :
+        'bg-blue-600/20 border border-blue-500'
+      }`;
+      elements.paymentStatus.classList.remove('hidden');
     }
 
-    connectWalletBtn.onclick = async () => {
+    function calculateSJAmount(tonAmount) {
+      return tonAmount * TON_TO_SJ_RATE;
+    }
+
+    // TON Connect Setup
+    async function initTonConnect() {
       try {
-        // حاول استخدام TonConnect أولًا
-        if (!tonConnector) {
-          await initTonConnectIfPossible();
+        if (typeof TonConnectUi === 'undefined') {
+          console.warn('TonConnect UI not loaded');
+          return false;
         }
 
-        if (tonConnector) {
-          // اطلب الاتصال (سيعرض مودال TonConnect للمستخدم إذا كانت المحفظة تدعمه)
-          const connected = await tonConnector.connect();
-          // connected قد ترجع account
-          const account = connected?.account || (connected?.accounts && connected.accounts[0]) || null;
-          if (account) {
-            setConnectedWallet(account);
-            alert("تم الاتصال بالمحفظة بنجاح!");
-            return;
-          }
-        }
+        tonConnectUI = new TonConnectUi.TonConnectUI({
+          manifestUrl: 'https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json'
+        });
 
-        // إذا تعذر TonConnect، نعرض للمستخدم طريقة يدوية: فتح رابط المحفظة (ton://)
-        alert("تعذر الاتصال عبر TonConnect — سيتم فتح رابط دفع عام يمكنك استخدامه مع محفظتك.");
-      } catch (e) {
-        console.error(e);
-        alert("فشل اتصال المحفظة: تحقق من الإعداد أو الـ manifest.");
-      }
-    };
-
-    copyWalletBtn.onclick = async () => {
-      if (!connectedWallet) return alert("لا يوجد محفظة متصلة للنسخ.");
-      try {
-        await navigator.clipboard.writeText(connectedWallet);
-        alert("تم نسخ عنوان المحفظة!");
-      } catch {
-        alert("نسخ غير مدعوم في متصفحك.");
-      }
-    };
-
-    // أنشئ فاتورة وأفتح رابط الدفع ton://transfer
-    createInvoiceBtn.onclick = async () => {
-      try {
-        const amount = parseFloat(payAmountInput.value);
-        if (!amount || amount <= 0) return alert("أدخل مبلغ صحيح للدفع.");
-
-        // أنشئ مستند فاتورة في Firestore (يمكن لخادومك مراقبته والتحقق لاحقًا)
-        const invoice = {
-          buyer_telegram_id: telegramId,
-          buyer_wallet: connectedWallet || null,
-          amount: amount, // بـTON (يمكنك تحويل إلى SJ حسب سعرك)
-          currency: "TON",
-          status: "pending",
-          created_at: new Date().toISOString(),
-          referral_code_used: null
+        tonConnectUI.uiOptions = {
+          twaReturnUrl: 'https://t.me/sjcoin25bot'
         };
 
-        // استخدم addDoc لإضافة فاتورة جديدة مع معرف تلقائي
-        const invoicesCol = collection(db, "invoices");
+        // Mount to the ton-connect div
+        const tonConnectDiv = document.getElementById('ton-connect');
+        if (tonConnectDiv) {
+          tonConnectUI.renderToElement(tonConnectDiv);
+        }
+
+        // Listen for connection status changes
+        tonConnectUI.onStatusChange((wallet) => {
+          if (wallet) {
+            connectedWallet = wallet.account.address;
+            elements.createPaymentBtn.disabled = false;
+            updateConnectedWalletUI(connectedWallet);
+            showToast('تم الاتصال بالمحفظة بنجاح!');
+          } else {
+            connectedWallet = null;
+            elements.createPaymentBtn.disabled = true;
+            updateConnectedWalletUI(null);
+          }
+        });
+
+        return true;
+      } catch (error) {
+        console.error('TonConnect initialization failed:', error);
+        return false;
+      }
+    }
+
+    function updateConnectedWalletUI(address) {
+      const isConnected = !!address;
+      elements.createPaymentBtn.textContent = isConnected 
+        ? '💰 اشتري SJ COIN' 
+        : '🔌 اتصل بالمحفظة أولاً';
+    }
+
+    // Payment Functions
+    async function createPayment() {
+      if (!connectedWallet) {
+        showToast('يرجى الاتصال بالمحفظة أولاً', 'error');
+        return;
+      }
+
+      const tonAmount = parseFloat(elements.payAmountInput.value);
+      if (!tonAmount || tonAmount < 0.1) {
+        showToast('الحد الأدنى للدفع 0.1 TON', 'error');
+        return;
+      }
+
+      try {
+        updatePaymentStatus('جاري إنشاء المعاملة...', 'info');
+
+        // Create invoice in Firestore
+        const invoice = {
+          buyer_telegram_id: telegramId,
+          buyer_wallet: connectedWallet,
+          amount_ton: tonAmount,
+          amount_sj: calculateSJAmount(tonAmount),
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          tx_hash: null
+        };
+
+        const invoicesCol = collection(db, 'invoices');
         const invoiceRef = await addDoc(invoicesCol, invoice);
 
-        // أنشئ رابط الدفع القياسي: ton://transfer/<address>?amount=<TON>&text=<desc>
-        // ملاحظة: الرابط قد يفتح محفظة TON (Tonkeeper, Tonhub, Telegram Wallet...) ويدعم تحويل العملات
-        const text = encodeURIComponent(`Buy SJ - invoice:${invoiceRef.id}`);
-        const tonLink = `ton://transfer/${RECEIVER_TON_ADDRESS}?amount=${amount}&text=${text}`;
+        // Create TON transaction
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 300, // 5 minutes
+          messages: [{
+            address: RECEIVER_TON_ADDRESS,
+            amount: (tonAmount * 1_000_000_000).toString(), // Convert to nanotons
+            payload: btoa(`SJ-${invoiceRef.id}`) // Base64 encode the payload
+          }]
+        };
 
-        // إذا كان TonConnect متصلاً يمكننا أيضاً محاولة إرسال المعاملة عبر TonConnect
-        if (tonConnector && connectedWallet) {
-          try {
-            // عملية الإرسال عبر TonConnect (بعض المحافظ تدعم sendTransaction عبر TonConnect)
-            // ملاحظة: واجهة sendTransaction قد تختلف حسب نسخة SDK - هنا محاولة آمنة مع التحقق
-            if (typeof tonConnector.sendTransaction === "function") {
-              // amount needs to be in nanotons (1 TON = 1e9 nanotons) — بعض واجهات TonConnect تطلب nanotons
-              const nano = BigInt(Math.floor(amount * 1_000_000_000));
-              await tonConnector.sendTransaction({
-                validUntil: Math.floor(Date.now() / 1000) + 300,
-                messages: [
-                  {
-                    address: RECEIVER_TON_ADDRESS,
-                    amount: nano.toString(), // إرسال بمقياس nanotons في بعض النسخ
-                    payload: text
-                  }
-                ]
-              });
-              // بعد الإرسال يمكن للخادم التحقق وتحديث حالة الفاتورة
-              alert("طلب الدفع أُرسل عبر TonConnect — تحقق من محفظتك لإتمام المعاملة.");
-              return;
-            }
-          } catch (e) {
-            console.warn("فشل الإرسال عبر TonConnect، سنفتح رابط الدفع كبديل.", e);
-          }
+        updatePaymentStatus('في انتظار تأكيد المعاملة...', 'info');
+
+        // Send transaction
+        const result = await tonConnectUI.sendTransaction(transaction);
+        
+        if (result) {
+          // Update invoice with transaction hash
+          await updateDoc(doc(db, 'invoices', invoiceRef.id), {
+            tx_hash: result.boc,
+            status: 'completed'
+          });
+
+          // Update user balance
+          const userRef = doc(db, 'users', telegramId);
+          await updateDoc(userRef, {
+            balance: increment(calculateSJAmount(tonAmount))
+          });
+
+          updatePaymentStatus('تم الدفع بنجاح! تمت إضافة العملات إلى رصيدك', 'success');
+          showToast(`تم إضافة ${calculateSJAmount(tonAmount)} SJ إلى رصيدك!`);
+          
+          // Reload stats after successful payment
+          setTimeout(loadAffiliateStats, 1000);
         }
 
-        // كبديل: افتح رابط ton://transfer أو افتح نافذة جديدة
-        if (window.Telegram?.WebApp) {
-          // في بيئة Telegram WebApp حاول فتح الرابط داخل التطبيق
-          try {
-            window.Telegram.WebApp.openLink(tonLink);
-            alert("تم فتح رابط الدفع في المحفظة. أكمل الدفع ثم تحقق من النظام لاحقًا.");
-          } catch {
-            window.open(tonLink, "_blank");
-            alert("تم فتح نافذة الدفع. أكمل الدفع ثم تحقق من النظام لاحقًا.");
-          }
-        } else {
-          // خارج Telegram: افتح الرابط في نافذة جديدة
-          window.open(tonLink, "_blank");
-          alert("تم فتح نافذة الدفع. أكمل الدفع ثم تحقق من النظام لاحقًا.");
-        }
-
-      } catch (e) {
-        console.error(e);
-        alert("حدث خطأ أثناء إنشاء الفاتورة.");
+      } catch (error) {
+        console.error('Payment error:', error);
+        updatePaymentStatus('فشل في الدفع. يرجى المحاولة مرة أخرى', 'error');
+        showToast('حدث خطأ أثناء الدفع', 'error');
       }
-    };
+    }
 
-    // --- باقي وظائف الإحالة (كما في الكود السابق) ---
+    // Event Listeners for Payment
+    elements.payAmountInput.addEventListener('input', (e) => {
+      const tonAmount = parseFloat(e.target.value) || 0;
+      elements.sjAmountInput.value = calculateSJAmount(tonAmount);
+    });
+
+    elements.createPaymentBtn.addEventListener('click', createPayment);
+
+    // Existing referral functions (unchanged)
     async function ensureUserExists() {
       const userRef = doc(db, "users", telegramId);
       const userSnap = await getDoc(userRef);
@@ -405,16 +435,23 @@
     }
 
     async function applyReferralCode() {
-      const code = referralCodeInput.value.trim();
-      if (!code) return alert("الرجاء إدخال كود الإحالة");
-      if (code === telegramId) return alert("لا يمكنك استخدام كود الإحالة الخاص بك");
+      const code = elements.referralCodeInput.value.trim();
+      if (!code) {
+        showToast('الرجاء إدخال كود الإحالة', 'error');
+        return;
+      }
+      if (code === telegramId) {
+        showToast('لا يمكنك استخدام كود الإحالة الخاص بك', 'error');
+        return;
+      }
 
       try {
         const refUserRef = doc(db, "users", code);
         const refUserSnap = await getDoc(refUserRef);
 
         if (!refUserSnap.exists()) {
-          return alert("كود الإحالة غير موجود");
+          showToast('كود الإحالة غير موجود', 'error');
+          return;
         }
 
         const userRef = doc(db, "users", telegramId);
@@ -422,64 +459,61 @@
         const userData = userSnap.data();
 
         if (userData.referred_by) {
-          return alert("لقد استخدمت كود إحالة سابقًا");
+          showToast('لقد استخدمت كود إحالة سابقًا', 'error');
+          return;
         }
 
-        await updateDoc(refUserRef, { balance: increment(50), referral_count: increment(1) });
-        await updateDoc(userRef, { balance: increment(50), referred_by: code });
+        await updateDoc(refUserRef, { 
+          balance: increment(50), 
+          referral_count: increment(1) 
+        });
+        await updateDoc(userRef, { 
+          balance: increment(50), 
+          referred_by: code 
+        });
 
-        alert("تم تفعيل الكود بنجاح! حصلت على 50 SJ 🎉");
-
-        referralCodeInput.value = "";
+        showToast('تم تفعيل الكود بنجاح! حصلت على 50 SJ 🎉');
+        elements.referralCodeInput.value = "";
         await loadAffiliateStats();
       } catch (error) {
         console.error(error);
-        alert("حدث خطأ أثناء تفعيل الكود");
+        showToast('حدث خطأ أثناء تفعيل الكود', 'error');
       }
     }
 
-    copyLinkBtn.onclick = async () => {
+    // Copy and share functions
+    async function copyToClipboard(text, successMessage) {
       try {
-        await navigator.clipboard.writeText(referralLink);
-        alert("تم نسخ رابط الإحالة!");
+        await navigator.clipboard.writeText(text);
+        showToast(successMessage);
       } catch {
-        alert("نسخ الرابط غير مدعوم في متصفحك.");
+        showToast('النسخ غير مدعوم في متصفحك', 'error');
       }
-    };
+    }
 
-    referralCodeDisplay.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(referralCode);
-        alert("تم نسخ كود الإحالة!");
-      } catch {
-        alert("نسخ كود الإحالة غير مدعوم في متصفحك.");
-      }
-    };
+    // Event listeners
+    elements.copyLinkBtn.onclick = () => copyToClipboard(referralLink, 'تم نسخ رابط الإحالة!');
+    elements.referralCodeDisplay.onclick = () => copyToClipboard(referralCode, 'تم نسخ كود الإحالة!');
+    elements.referralDisplay.onclick = () => copyToClipboard(referralLink, 'تم نسخ رابط الإحالة!');
 
-    referralDisplay.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(referralLink);
-        alert("تم نسخ رابط الإحالة!");
-      } catch {
-        alert("نسخ الرابط غير مدعوم في متصفحك.");
-      }
-    };
-
-    shareBtn.onclick = async () => {
+    elements.shareBtn.onclick = async () => {
       try {
         if (navigator.share) {
-          await navigator.share({ title: 'انضم إلى SJ COIN', text: 'احصل على 50 SJ عند التسجيل عبر هذا الرابط!', url: referralLink });
+          await navigator.share({
+            title: 'انضم إلى SJ COIN',
+            text: 'احصل على 50 SJ عند التسجيل عبر هذا الرابط!',
+            url: referralLink
+          });
         } else {
-          await navigator.clipboard.writeText(referralLink);
-          alert('تم نسخ الرابط — شاركه مع أصدقائك!');
+          await copyToClipboard(referralLink, 'تم نسخ الرابط — شاركه مع أصدقائك!');
         }
       } catch (e) {
         console.error(e);
-        alert('تعذر المشاركة');
+        showToast('تعذر المشاركة', 'error');
       }
     };
 
-    inviteBtn.onclick = () => {
+    elements.inviteBtn.onclick = () => {
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(referralLink);
       } else {
@@ -487,7 +521,7 @@
       }
     };
 
-    upgradeBtn.onclick = () => {
+    elements.upgradeBtn.onclick = () => {
       const upgradeUrl = "https://t.me/sjcoin25bot?start=premium";
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(upgradeUrl);
@@ -496,7 +530,7 @@
       }
     };
 
-    buySJBtn.onclick = () => {
+    elements.buySJBtn.onclick = () => {
       const buyUrl = "https://t.me/sjcoin25bot?start=buystars";
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(buyUrl);
@@ -505,7 +539,7 @@
       }
     };
 
-    applyReferralBtn.onclick = applyReferralCode;
+    elements.applyReferralBtn.onclick = applyReferralCode;
 
     async function loadAffiliateStats() {
       try {
@@ -518,7 +552,7 @@
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
 
-        affiliateStatsDiv.innerHTML = `
+        elements.affiliateStatsDiv.innerHTML = `
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-bold mb-1">إحصائيات الإحالة</h3>
@@ -530,15 +564,15 @@
             </div>
           </div>
         `;
-        affiliateStatsDiv.classList.remove("hidden");
+        elements.affiliateStatsDiv.classList.remove("hidden");
 
-        if (userData.premium) premiumBadgeContainer.classList.remove("hidden");
-        else premiumBadgeContainer.classList.add("hidden");
+        if (userData.premium) elements.premiumBadgeContainer.classList.remove("hidden");
+        else elements.premiumBadgeContainer.classList.add("hidden");
 
-        // عرض قائمة الأصدقاء
-        friendsList.innerHTML = "";
+        // Display friends list
+        elements.friendsList.innerHTML = "";
         if (friends.length === 0) {
-          friendsList.innerHTML = "<p class='text-white/70'>لا توجد لديك أصدقاء مدعوون حتى الآن.</p>";
+          elements.friendsList.innerHTML = "<p class='text-white/70'>لا توجد لديك أصدقاء مدعوون حتى الآن.</p>";
         } else {
           friends.forEach(f => {
             const photo = f.photo_url || `https://t.me/i/userpic/320/${f.id}.jpg` || 'https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG';
@@ -556,62 +590,4 @@
                     </div>
                     <div class="text-right">
                       <p class="text-sm font-bold text-yellow-300">${balance} SJ</p>
-                      ${f.premium ? '<span class="text-xs bg-yellow-400 text-black px-2 py-1 rounded-lg font-medium inline-block mt-1">Premium</span>' : ''}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-            friendsList.insertAdjacentHTML('beforeend', friendHTML);
-          });
-        }
-      } catch (e) {
-        console.error(e);
-        friendsList.innerHTML = "<p class='text-white/70'>تعذر تحميل قائمة الأصدقاء الآن.</p>";
-      }
-    }
-
-    // تهيئة: إنشاء المستخدم إن لم يكن موجودًا ثم تحميل الإحصائيات
-    async function init() {
-      try {
-        referralCodeText.textContent = referralCode;
-        referralDisplay.textContent = referralLink;
-
-        await ensureUserExists();
-        await initTonConnectIfPossible(); // جهّز TonConnect لكن لا تفرضه
-        await loadAffiliateStats();
-
-        // أزل شاشة التحميل
-        loadingEl.style.display = "none";
-
-        // إذا كان المستخدم مخزنًا مسبقًا عنوان المحفظة في DB، اعرضه
-        const userRef = doc(db, "users", telegramId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const ud = userSnap.data();
-          if (ud?.wallet_address) setConnectedWallet(ud.wallet_address);
-        }
-      } catch (err) {
-        console.error(err);
-        loadingEl.style.display = "none";
-        errorEl.style.display = "flex";
-      }
-    }
-
-    window.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible') {
-        try {
-          await ensureUserExists();
-          await loadAffiliateStats();
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    });
-
-    // تشغيل التهيئة مباشرة
-    init();
-  </script>
-
-</body>
-</html>
+                      ${f.premium ? '<span class="text-xs
