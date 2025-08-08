@@ -44,7 +44,6 @@
       font-weight: bold;
     }
 
-    /* Wallet + Profile Row */
     .wallet-profile-row {
       display: flex;
       align-items: center;
@@ -311,10 +310,25 @@
     }
 
     async function tapToEarn() {
-      coins += 1;
-      updateCoinDisplay();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+      if (!userId) return;
+      try {
+        const userRef = db.collection("users").doc(userId);
+
+        // زيادة عدد العملات في Firebase
+        await userRef.set({
+          coins: firebase.firestore.FieldValue.increment(1)
+        }, { merge: true });
+
+        // جلب الرصيد الجديد للمستخدم
+        const doc = await userRef.get();
+        coins = doc.exists ? doc.data().coins || 0 : 0;
+        updateCoinDisplay();
+
+        // تحديث الرصيد الكلي
+        await loadTotalBalance();
+
+      } catch (error) {
+        console.error("Error incrementing coins:", error);
       }
     }
 
@@ -323,6 +337,7 @@
       updateCoinDisplay();
       if (userId) {
         await db.collection("users").doc(userId).set({ coins }, { merge: true });
+        await loadTotalBalance();
       }
     }
 
