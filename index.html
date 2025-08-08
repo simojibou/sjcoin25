@@ -10,6 +10,9 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- TonConnect (UMD) - manifestUrl must be valid (ضع رابط الـ manifest الخاص بك) -->
+  <script src="https://unpkg.com/@tonconnect/sdk/dist/tonconnect.umd.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white font-sans">
 
@@ -74,6 +77,32 @@
       </div>
     </div>
 
+    <!-- Wallet & Payment Section -->
+    <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
+      <h3 class="text-sm font-semibold mb-2">المحفظة والدفع بالـ Crypto (TON)</h3>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <button id="connectWalletBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-xl font-bold">🔌 اتصال بالمحفظة</button>
+        </div>
+        <div>
+          <div class="flex gap-2">
+            <input id="payAmount" type="number" step="0.001" min="0" value="0.1" class="flex-1 px-3 py-2 rounded-xl text-black" />
+            <button id="createInvoiceBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-bold">✨ اشتري SJ</button>
+          </div>
+        </div>
+
+        <div class="sm:col-span-2">
+          <p class="text-xs text-white/70 mb-2">العنوان المتصل:</p>
+          <div class="flex items-center gap-3">
+            <div id="connectedAddress" class="flex-1 px-3 py-2 rounded-xl bg-white/5 font-mono text-sm">غير متصل</div>
+            <button id="copyWalletBtn" class="bg-white/6 px-3 py-2 rounded-xl border border-white/8 hover:bg-white/10">📋 نسخ</button>
+          </div>
+          <p class="text-xs text-white/60 mt-2">ملاحظة: الدفع يفتح محفظة المستخدم عبر رابط <code>ton://transfer</code> أو عبر TonConnect إذا كانت متاحة.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Referral Code Input -->
     <div class="mb-6 p-4 bg-white/6 rounded-2xl border border-white/8">
       <p class="text-xs text-white/60 mb-2">أدخل كود الإحالة للحصول على 50 SJ:</p>
@@ -119,7 +148,7 @@
 
   <!-- Firebase + App Logic -->
   <script type="module">
-    // استوردنا مكتبات Firebase (lite) لسرعة التحميل داخل WebApp
+    // استورد Firebase (lite) لسرعة التحميل داخل WebApp
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore,
@@ -131,7 +160,9 @@
       where,
       setDoc,
       updateDoc,
-      increment
+      increment,
+      addDoc,
+      serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
 
     // ← عدّل إعدادات Firebase إلى إعدادات مشروعك الحقيقية
@@ -175,7 +206,175 @@
     const loadingEl = document.getElementById("loading");
     const errorEl = document.getElementById("errorMessage");
 
-    // تأكد من وجود المستخدم أو إنشاؤه أول دخول، مع حفظ صورة البروفايل من التليجرام (fallback إلى رابط t.me)
+    // عناصر المحفظة والدفع
+    const connectWalletBtn = document.getElementById("connectWalletBtn");
+    const connectedAddressEl = document.getElementById("connectedAddress");
+    const copyWalletBtn = document.getElementById("copyWalletBtn");
+    const payAmountInput = document.getElementById("payAmount");
+    const createInvoiceBtn = document.getElementById("createInvoiceBtn");
+
+    // RECEIVER: ضع هنا عنوان TON الذي يستقبل المدفوعات (مثال: العنوان الخاص بحسابك أو بالمشروع)
+    const RECEIVER_TON_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz"; // ← غيِّره إلى عنوانك الحقيقي
+
+    // TonConnect client (سيتم تهيئته عند الطلب)
+    let tonConnector = null;
+    let connectedWallet = null;
+
+    // --- وظائف المحفظة والدفع ---
+    async function initTonConnectIfPossible() {
+      try {
+        if (!window.TonConnect) {
+          console.warn("TonConnect UMD غير محمّل أو غير متوفر.");
+          return;
+        }
+        // ملاحظة: ضع manifestUrl صالح يشير إلى tonconnect-manifest.json مستضاف على موقعك/ GitHub
+        const manifestUrl = "https://raw.githubusercontent.com/simojibou/tonconnect/main/tonconnect-manifest.json"; // ← عدّل هذا إلى رابط manifest صالح لديك
+        tonConnector = new window.TonConnect.TonConnect({ manifestUrl });
+
+        // استمع لتغير الحالة (اختياري)
+        tonConnector.onStatusChange((walletInfo) => {
+          if (walletInfo) {
+            // walletInfo.accounts => مصفوفة عناوين
+            const firstAccount = (walletInfo?.account ? walletInfo.account : (walletInfo.accounts && walletInfo.accounts[0])) || null;
+            setConnectedWallet(firstAccount);
+          } else {
+            setConnectedWallet(null);
+          }
+        });
+
+      } catch (e) {
+        console.error("خطأ تهيئة TonConnect:", e);
+      }
+    }
+
+    function setConnectedWallet(account) {
+      if (account) {
+        connectedWallet = account;
+        connectedAddressEl.textContent = account;
+        // خزّن العنوان في ملف المستخدم بقاعدة البيانات (يساعد التتبع والتحقق لاحقًا)
+        const userRef = doc(db, "users", telegramId);
+        updateDoc(userRef, { wallet_address: account }).catch(() => {
+          // إذا رفض التحديث لأن المستخدم لم يُنشَأ بعد — لا نكسر الواجهة
+        });
+      } else {
+        connectedWallet = null;
+        connectedAddressEl.textContent = "غير متصل";
+      }
+    }
+
+    connectWalletBtn.onclick = async () => {
+      try {
+        // حاول استخدام TonConnect أولًا
+        if (!tonConnector) {
+          await initTonConnectIfPossible();
+        }
+
+        if (tonConnector) {
+          // اطلب الاتصال (سيعرض مودال TonConnect للمستخدم إذا كانت المحفظة تدعمه)
+          const connected = await tonConnector.connect();
+          // connected قد ترجع account
+          const account = connected?.account || (connected?.accounts && connected.accounts[0]) || null;
+          if (account) {
+            setConnectedWallet(account);
+            alert("تم الاتصال بالمحفظة بنجاح!");
+            return;
+          }
+        }
+
+        // إذا تعذر TonConnect، نعرض للمستخدم طريقة يدوية: فتح رابط المحفظة (ton://)
+        alert("تعذر الاتصال عبر TonConnect — سيتم فتح رابط دفع عام يمكنك استخدامه مع محفظتك.");
+      } catch (e) {
+        console.error(e);
+        alert("فشل اتصال المحفظة: تحقق من الإعداد أو الـ manifest.");
+      }
+    };
+
+    copyWalletBtn.onclick = async () => {
+      if (!connectedWallet) return alert("لا يوجد محفظة متصلة للنسخ.");
+      try {
+        await navigator.clipboard.writeText(connectedWallet);
+        alert("تم نسخ عنوان المحفظة!");
+      } catch {
+        alert("نسخ غير مدعوم في متصفحك.");
+      }
+    };
+
+    // أنشئ فاتورة وأفتح رابط الدفع ton://transfer
+    createInvoiceBtn.onclick = async () => {
+      try {
+        const amount = parseFloat(payAmountInput.value);
+        if (!amount || amount <= 0) return alert("أدخل مبلغ صحيح للدفع.");
+
+        // أنشئ مستند فاتورة في Firestore (يمكن لخادومك مراقبته والتحقق لاحقًا)
+        const invoice = {
+          buyer_telegram_id: telegramId,
+          buyer_wallet: connectedWallet || null,
+          amount: amount, // بـTON (يمكنك تحويل إلى SJ حسب سعرك)
+          currency: "TON",
+          status: "pending",
+          created_at: new Date().toISOString(),
+          referral_code_used: null
+        };
+
+        // استخدم addDoc لإضافة فاتورة جديدة مع معرف تلقائي
+        const invoicesCol = collection(db, "invoices");
+        const invoiceRef = await addDoc(invoicesCol, invoice);
+
+        // أنشئ رابط الدفع القياسي: ton://transfer/<address>?amount=<TON>&text=<desc>
+        // ملاحظة: الرابط قد يفتح محفظة TON (Tonkeeper, Tonhub, Telegram Wallet...) ويدعم تحويل العملات
+        const text = encodeURIComponent(`Buy SJ - invoice:${invoiceRef.id}`);
+        const tonLink = `ton://transfer/${RECEIVER_TON_ADDRESS}?amount=${amount}&text=${text}`;
+
+        // إذا كان TonConnect متصلًا يمكننا أيضاً محاولة إرسال المعاملة عبر TonConnect
+        if (tonConnector && connectedWallet) {
+          try {
+            // عملية الإرسال عبر TonConnect (بعض المحافظ تدعم sendTransaction عبر TonConnect)
+            // ملاحظة: واجهة sendTransaction قد تختلف حسب نسخة SDK - هنا محاولة آمنة مع التحقق
+            if (typeof tonConnector.sendTransaction === "function") {
+              // amount needs to be in nanotons (1 TON = 1e9 nanotons) — بعض واجهات TonConnect تطلب nanotons
+              const nano = BigInt(Math.floor(amount * 1_000_000_000));
+              await tonConnector.sendTransaction({
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [
+                  {
+                    address: RECEIVER_TON_ADDRESS,
+                    amount: nano.toString(), // إرسال بمقياس nanotons في بعض النسخ
+                    payload: text
+                  }
+                ]
+              });
+              // بعد الإرسال يمكن للخادم التحقق وتحديث حالة الفاتورة
+              alert("طلب الدفع أُرسل عبر TonConnect — تحقق من محفظتك لإتمام المعاملة.");
+              return;
+            }
+          } catch (e) {
+            console.warn("فشل الإرسال عبر TonConnect، سنفتح رابط الدفع كبديل.", e);
+          }
+        }
+
+        // كبديل: افتح رابط ton://transfer أو افتح نافذة جديدة
+        if (window.Telegram?.WebApp) {
+          // في بيئة Telegram WebApp حاول فتح الرابط داخل التطبيق
+          try {
+            window.Telegram.WebApp.openLink(tonLink);
+            alert("تم فتح رابط الدفع في المحفظة. أكمل الدفع ثم تحقق من النظام لاحقًا.");
+          } catch {
+            window.open(tonLink, "_blank");
+            alert("تم فتح نافذة الدفع. أكمل الدفع ثم تحقق من النظام لاحقًا.");
+          }
+        } else {
+          // خارج Telegram: افتح الرابط في نافذة جديدة
+          window.open(tonLink, "_blank");
+          alert("تم فتح نافذة الدفع. أكمل الدفع ثم تحقق من النظام لاحقًا.");
+        }
+
+      } catch (e) {
+        console.error(e);
+        alert("حدث خطأ أثناء إنشاء الفاتورة.");
+      }
+    };
+
+    // --- باقي وظائف الإحالة (كما في الكود السابق) ---
     async function ensureUserExists() {
       const userRef = doc(db, "users", telegramId);
       const userSnap = await getDoc(userRef);
@@ -196,7 +395,6 @@
           last_active: new Date().toISOString()
         });
       } else {
-        // حدث آخر نشاط وصورة إذا تغيرت على تليجرام
         const existing = userSnap.data();
         const updatedPhoto = telegramUser.photo_url || existing.photo_url || photoFromTG;
         await updateDoc(userRef, {
@@ -206,7 +404,6 @@
       }
     }
 
-    // تفعيل كود الإحالة: منح 50 SJ للطرفين (مرنة: يمكنك تعديل المنطق لاحقًا)
     async function applyReferralCode() {
       const code = referralCodeInput.value.trim();
       if (!code) return alert("الرجاء إدخال كود الإحالة");
@@ -228,7 +425,6 @@
           return alert("لقد استخدمت كود إحالة سابقًا");
         }
 
-        // منح النقاط للطرفين وتسجيل الإحالة
         await updateDoc(refUserRef, { balance: increment(50), referral_count: increment(1) });
         await updateDoc(userRef, { balance: increment(50), referred_by: code });
 
@@ -242,7 +438,6 @@
       }
     }
 
-    // نسخ الرابط/الكود إلى الحافظة
     copyLinkBtn.onclick = async () => {
       try {
         await navigator.clipboard.writeText(referralLink);
@@ -270,7 +465,6 @@
       }
     };
 
-    // مشاركة من المتصفح أو نسخ إذا غير متوفر
     shareBtn.onclick = async () => {
       try {
         if (navigator.share) {
@@ -285,7 +479,6 @@
       }
     };
 
-    // فتح البوت/روابط الترقية والشراء عبر Telegram WebApp أو نافذة جديدة
     inviteBtn.onclick = () => {
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(referralLink);
@@ -314,21 +507,17 @@
 
     applyReferralBtn.onclick = applyReferralCode;
 
-    // جلب الإحالات (الأصدقاء الذين أحالهم هذا المستخدم) وعرضها
     async function loadAffiliateStats() {
       try {
-        // استعلام عن المستخدمين الذين لديهم referred_by = telegramId
         const friendsQuery = query(collection(db, "users"), where("referred_by", "==", telegramId));
         const friendsSnap = await getDocs(friendsQuery);
         const friends = [];
         friendsSnap.forEach(d => friends.push(d.data()));
 
-        // جلب بيانات المستخدم نفسه
         const userRef = doc(db, "users", telegramId);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
 
-        // إحصائيات صغيرة
         affiliateStatsDiv.innerHTML = `
           <div class="flex items-center justify-between">
             <div>
@@ -343,7 +532,6 @@
         `;
         affiliateStatsDiv.classList.remove("hidden");
 
-        // شارة Premium
         if (userData.premium) premiumBadgeContainer.classList.remove("hidden");
         else premiumBadgeContainer.classList.add("hidden");
 
@@ -353,7 +541,6 @@
           friendsList.innerHTML = "<p class='text-white/70'>لا توجد لديك أصدقاء مدعوون حتى الآن.</p>";
         } else {
           friends.forEach(f => {
-            // صلاحية الصورة: من قاعدة البيانات أو fallback إلى رابط t.me ثم إلى لوجو الافتراضي
             const photo = f.photo_url || `https://t.me/i/userpic/320/${f.id}.jpg` || 'https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG';
             const name = `${f.first_name || 'مستخدم'} ${f.last_name || ''}`.trim();
             const balance = f.balance ?? 0;
@@ -380,7 +567,6 @@
         }
       } catch (e) {
         console.error(e);
-        // لا نريد كسر الواجهة الكاملة، نترك رسالة خفيفة
         friendsList.innerHTML = "<p class='text-white/70'>تعذر تحميل قائمة الأصدقاء الآن.</p>";
       }
     }
@@ -392,10 +578,19 @@
         referralDisplay.textContent = referralLink;
 
         await ensureUserExists();
+        await initTonConnectIfPossible(); // جهّز TonConnect لكن لا تفرضه
         await loadAffiliateStats();
 
         // أزل شاشة التحميل
         loadingEl.style.display = "none";
+
+        // إذا كان المستخدم مخزنًا مسبقًا عنوان المحفظة في DB، اعرضه
+        const userRef = doc(db, "users", telegramId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const ud = userSnap.data();
+          if (ud?.wallet_address) setConnectedWallet(ud.wallet_address);
+        }
       } catch (err) {
         console.error(err);
         loadingEl.style.display = "none";
@@ -403,14 +598,9 @@
       }
     }
 
-    // تشغيل التهيئة مباشرة
-    init();
-
-    // (اختياري) — تحديث تلقائي للصور عند إعادة التركيز على النافذة (مفيد لو تغيّرت صور الأصدقاء على تليجرام)
     window.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible') {
         try {
-          // نعيد التأكد من وجود المستخدم ونحدث الإحصائيات (بما في ذلك تحديث روابط الصور من t.me)
           await ensureUserExists();
           await loadAffiliateStats();
         } catch (e) {
@@ -419,6 +609,8 @@
       }
     });
 
+    // تشغيل التهيئة مباشرة
+    init();
   </script>
 
 </body>
