@@ -87,7 +87,9 @@
       <!-- Wallet Connection -->
       <div class="mb-4">
         <div id="ton-connect" class="p-3 bg-blue-500/20 border border-blue-500 rounded-lg text-sm">
-          <p class="text-blue-300">جاري التحقق من محفظة تيليجرام...</p>
+          <button id="connectWalletBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            🔗 ربط محفظة تيليجرام
+          </button>
         </div>
       </div>
 
@@ -243,7 +245,8 @@
       statusText: document.getElementById("statusText"),
       toast: document.getElementById("toast"),
       toastMessage: document.getElementById("toastMessage"),
-      tonConnectDiv: document.getElementById("ton-connect")
+      tonConnectDiv: document.getElementById("ton-connect"),
+      connectWalletBtn: document.getElementById("connectWalletBtn")
     };
 
     // Telegram Wallet
@@ -277,15 +280,15 @@
     async function initTonConnect() {
       try {
         if (window.Telegram?.WebApp) {
-          isTelegramWalletAvailable = true;
           elements.tonConnectDiv.innerHTML = `
-            <div class="p-3 bg-green-500/20 border border-green-500 rounded-lg text-sm">
-              <p class="text-green-300">✅ تم الاتصال بمحفظة تيليجرام</p>
+            <div class="p-3 bg-blue-500/20 border border-blue-500 rounded-lg text-sm">
+              <button id="connectWalletBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                🔗 ربط محفظة تيليجرام
+              </button>
             </div>
           `;
-          elements.createPaymentBtn.disabled = false;
-          elements.createPaymentBtn.textContent = '💰 اشتري SJ COIN';
-          showToast('تم الاتصال بمحفظة تيليجرام بنجاح!');
+          elements.connectWalletBtn = document.getElementById("connectWalletBtn");
+          elements.connectWalletBtn.addEventListener('click', connectTelegramWallet);
           return true;
         } else {
           console.warn('Telegram WebApp not available - using fallback payment method');
@@ -296,6 +299,27 @@
         console.error('Telegram Wallet initialization failed:', error);
         setupPaymentFallback();
         return false;
+      }
+    }
+
+    async function connectTelegramWallet() {
+      try {
+        if (window.Telegram?.WebApp) {
+          isTelegramWalletAvailable = true;
+          elements.tonConnectDiv.innerHTML = `
+            <div class="p-3 bg-green-500/20 border border-green-500 rounded-lg text-sm">
+              <p class="text-green-300">✅ تم الاتصال بمحفظة تيليجرام</p>
+            </div>
+          `;
+          elements.createPaymentBtn.disabled = false;
+          elements.createPaymentBtn.textContent = '💰 اشتري SJ COIN';
+          showToast('تم الاتصال بمحفظة تيليجرام بنجاح!');
+        } else {
+          throw new Error('Telegram WebApp not available');
+        }
+      } catch (error) {
+        console.error('Telegram Wallet connection failed:', error);
+        setupPaymentFallback();
       }
     }
 
