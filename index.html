@@ -40,7 +40,7 @@
     h1 {
       color: #ffd700;
       font-size: 26px;
-      margin-bottom: 15px;
+      margin-bottom: 8px;
       font-weight: bold;
     }
 
@@ -65,6 +65,14 @@
 
     .wallet-button {
       display: inline-block;
+    }
+
+    #totalBalance {
+      font-size: 18px;
+      color: #ffff66;
+      margin-bottom: 20px;
+      font-weight: 700;
+      user-select: none;
     }
 
     .stats {
@@ -207,6 +215,9 @@
   <div class="game-container">
     <h1>Welcome, <span id="username">👤</span>!</h1>
 
+    <!-- Total Balance Display -->
+    <div id="totalBalance">Loading total balance...</div>
+
     <!-- Wallet + Profile -->
     <div class="wallet-profile-row">
       <img id="userPic" class="profile-pic-small" src="https://telegram.org/img/t_logo.svg" alt="Profile Picture" />
@@ -326,7 +337,24 @@
       alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
 
+    async function loadTotalBalance() {
+      const totalEl = document.getElementById("totalBalance");
+      try {
+        const snapshot = await db.collection("users").get();
+        let total = 0;
+        snapshot.forEach(doc => {
+          const coinsVal = doc.data().coins || 0;
+          total += coinsVal;
+        });
+        totalEl.innerText = `🌟 Total SJ COIN in system: ${total.toLocaleString()}`;
+      } catch (error) {
+        totalEl.innerText = "Failed to load total balance";
+        console.error("Error loading total balance:", error);
+      }
+    }
+
     loadCoins();
+    loadTotalBalance();
   </script>
 </body>
 </html>
