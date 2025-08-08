@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <title>SJ COIN Tap2Earn</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> <!-- منع الزووم -->
 
   <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -23,6 +23,12 @@
       background-size: cover;
       color: #fff;
       text-align: center;
+      -webkit-tap-highlight-color: transparent; /* إزالة تظليل الضغط الأزرق */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     .game-container {
@@ -81,6 +87,7 @@
       color: #ffff66;
       white-space: nowrap;
       flex-shrink: 0;
+      user-select: text; /* السماح بنسخ النص */
     }
 
     /* Wallet button container aligned right */
@@ -100,11 +107,13 @@
       font-size: 26px;
       margin: 10px 0;
       color: #ffff66;
-      cursor: pointer;
+      cursor: default; /* إزالة تأثير النقر */
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      -webkit-tap-highlight-color: transparent; /* إزالة تظليل الضغط الأزرق */
+      user-select: none;
     }
 
     .coin-logo {
@@ -219,14 +228,14 @@
     </div>
 
     <!-- Coin Display -->
-    <div class="coin-display" id="coinCount" onclick="resetBalance()">
+    <div class="coin-display" id="coinCount" tabindex="-1" aria-label="SJ COIN Balance">
       <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
       <span id="coinAmount">Loading...</span>
     </div>
 
     <!-- Avatar (also tap to earn) -->
-    <div class="avatar" onclick="tapToEarn()">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar">
+    <div class="avatar" onclick="tapToEarn()" role="button" tabindex="0" aria-label="Tap to earn SJ COIN">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar" />
     </div>
 
     <div class="progress-bar">
@@ -290,10 +299,14 @@
 
     async function loadCoins() {
       if (!userId) return;
-      const doc = await db.collection("users").doc(userId).get();
-      coins = doc.exists ? doc.data().coins || 0 : 0;
-      updateCoinDisplay();
-      updateTotalBalance();
+      try {
+        const doc = await db.collection("users").doc(userId).get();
+        coins = doc.exists ? doc.data().coins || 0 : 0;
+        updateCoinDisplay();
+        updateTotalBalance();
+      } catch (error) {
+        console.error("Error loading coins:", error);
+      }
     }
 
     function updateCoinDisplay() {
@@ -309,17 +322,19 @@
       updateCoinDisplay();
       updateTotalBalance();
       if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
+        try {
+          await db.collection("users").doc(userId).set({ coins }, { merge: true });
+        } catch (error) {
+          console.error("Error updating coins:", error);
+        }
       }
     }
 
-    async function resetBalance() {
-      coins = 0;
-      updateCoinDisplay();
-      updateTotalBalance();
-      if (userId) {
-        await db.collection("users").doc(userId).set({ coins }, { merge: true });
-      }
+    function resetBalance() {
+      // لم نعد نمسح الرصيد أو نعيده إلى 0، لذا تم تعطيل هذه الوظيفة
+      // يمكن تركها فارغة أو إزالة الحدث الذي يستدعيها
+      // هنا لن تفعل شيء
+      alert("لا يمكن إعادة الرصيد إلى الصفر.");
     }
 
     function buyCoin() {
@@ -333,6 +348,14 @@
       tg.sendData(JSON.stringify(purchaseData));
       alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
+
+    // تعطيل تظليل التركيز الأزرق على coin-display
+    const coinCountElem = document.getElementById("coinCount");
+    coinCountElem.addEventListener("mousedown", e => e.preventDefault());
+    coinCountElem.addEventListener("click", e => e.preventDefault());
+
+    // إزالة الحدث click من coinCount لمنع أي تأثير
+    coinCountElem.onclick = null;
 
     // Load initial coin value from Firebase
     loadCoins();
