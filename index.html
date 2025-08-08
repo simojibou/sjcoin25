@@ -276,9 +276,19 @@
       return tonAmount * TON_TO_SJ_RATE;
     }
 
+    // Validate TON Address
+    function isValidTonAddress(address) {
+      // Basic TON address validation: 48 characters, base64url, starts with 'UQ' or 'EQ'
+      const tonAddressRegex = /^[UE]Q[0-9a-zA-Z_-]{46}$/;
+      return tonAddressRegex.test(address);
+    }
+
     // Telegram Wallet Setup
     async function initTonConnect() {
       try {
+        if (!isValidTonAddress(RECEIVER_TON_ADDRESS)) {
+          throw new Error('عنوان TON غير صالح');
+        }
         if (window.Telegram?.WebApp) {
           elements.tonConnectDiv.innerHTML = `
             <div class="p-3 bg-blue-500/20 border border-blue-500 rounded-lg text-sm">
@@ -298,6 +308,7 @@
       } catch (error) {
         console.error('Telegram Wallet initialization failed:', error);
         setupPaymentFallback();
+        showToast(error.message || 'فشل في تهيئة المحفظة', 'error');
         return false;
       }
     }
@@ -315,11 +326,12 @@
           elements.createPaymentBtn.textContent = '💰 اشتري SJ COIN';
           showToast('تم الاتصال بمحفظة تيليجرام بنجاح!');
         } else {
-          throw new Error('Telegram WebApp not available');
+          throw new Error('محفظة تيليجرام غير متاحة');
         }
       } catch (error) {
         console.error('Telegram Wallet connection failed:', error);
         setupPaymentFallback();
+        showToast(error.message || 'فشل في ربط محفظة تيليجرام', 'error');
       }
     }
 
@@ -338,6 +350,10 @@
       const tonAmount = parseFloat(elements.payAmountInput.value);
       if (!tonAmount || tonAmount < 0.1) {
         showToast('الحد الأدنى للدفع 0.1 TON', 'error');
+        return;
+      }
+      if (!isTelegramWalletAvailable && !elements.createPaymentBtn.textContent.includes('دفع مباشر')) {
+        showToast('يرجى ربط محفظة تيليجرام أولاً', 'error');
         return;
       }
 
@@ -378,17 +394,15 @@
         
         window.Telegram.WebApp.openLink(tonLink);
         
-        updatePaymentStatus(`تم إنشاء طلب الدفع. أكمل المعاملة في محفظة تيليجرام وستتم إضافة ${calculateSJAmount(tonAmount)} SJ إلى رصيدك تلقائياً.`, 'success');
+        updatePaymentStatus(`تم إنشاء طلب الدفع. أكمل المعاملة في محفظة تيليجرام وستتم إضافة ${calculateSJAmount(tonAmount)} SJ إلى رصيدك تلقائياً.`, 'info');
         
-        // For demo purposes, simulate success after 5 seconds
-        setTimeout(async () => {
-          try {
-            await completePayment(invoiceId, 'telegram_wallet_payment_hash', tonAmount);
-          } catch (e) {
-            console.error('Failed to complete demo payment:', e);
-            updatePaymentStatus('فشل في تحديث الرصيد. يرجى المراجعة لاحقاً', 'error');
-          }
-        }, 5000);
+        // Simulate transaction verification (replace with real API in production)
+        const isTransactionConfirmed = await simulateTransactionVerification(invoiceId, tonAmount);
+        if (isTransactionConfirmed) {
+          await completePayment(invoiceId, 'telegram_wallet_payment_hash', tonAmount);
+        } else {
+          throw new Error('فشل التحقق من المعاملة');
+        }
       } catch (error) {
         console.error('Telegram Wallet payment error:', error);
         updatePaymentStatus('فشل في الدفع عبر محفظة تيليجرام. جرب الدفع المباشر.', 'error');
@@ -409,21 +423,30 @@
           window.open(tonLink, '_blank');
         }
         
-        updatePaymentStatus(`تم إنشاء رابط الدفع. أكمل المعاملة وستتم إضافة ${calculateSJAmount(tonAmount)} SJ إلى رصيدك تلقائياً.`, 'success');
+        updatePaymentStatus(`تم إنشاء رابط الدفع. أكمل المعاملة وستتم إضافة ${calculateSJAmount(tonAmount)} SJ إلى رصيدك تلقائياً.`, 'info');
         
-        setTimeout(async () => {
-          try {
-            await completePayment(invoiceId, 'direct_payment_hash', tonAmount);
-          } catch (e) {
-            console.error('Failed to complete demo payment:', e);
-            updatePaymentStatus('فشل في تحديث الرصيد. يرجى المراجعة لاحقاً', 'error');
-          }
-        }, 5000);
+        // Simulate transaction verification (replace with real API in production)
+        const isTransactionConfirmed = await simulateTransactionVerification(invoiceId, tonAmount);
+        if (isTransactionConfirmed) {
+          await completePayment(invoiceId, 'direct_payment_hash', tonAmount);
+        } else {
+          throw new Error('فشل التحقق من المعاملة');
+        }
       } catch (error) {
         console.error('Direct payment error:', error);
         updatePaymentStatus('فشل في الدفع المباشر. يرجى المحاولة مرة أخرى.', 'error');
-        throw error;
+        showToast('فشل في الدفع المباشر', 'error');
       }
+    }
+
+    async function simulateTransactionVerification(invoiceId, tonAmount) {
+      // TODO: Replace with real TON blockchain API (e.g., Toncenter API)
+      // Example API call: fetch(`https://toncenter.com/api/v2/getTransactions?address=${RECEIVER_TON_ADDRESS}`)
+      // Check for transaction with matching invoiceId in comment and amount
+      console.log(`Simulating transaction verification for invoice ${invoiceId}, amount ${tonAmount} TON`);
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(true), 5000); // Simulate 5-second verification delay
+      });
     }
 
     async function completePayment(invoiceId, txHash, tonAmount) {
