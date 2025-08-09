@@ -1,434 +1,255 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Idle Drift & Merge</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #0a0a2a;
-            color: white;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        #top-bar {
-            background: linear-gradient(to bottom, #ff69b4, #8a2be2);
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #user-info {
-            display: flex;
-            align-items: center;
-        }
-        #user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: grey;
-        }
-        #balances {
-            margin-left: 10px;
-        }
-        #balances span {
-            display: block;
-            font-size: 14px;
-        }
-        #menu-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .menu-btn {
-            background: #4b0082;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #game-area {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(to bottom, #ff8c00, #ffd700 20%, #000 80%);
-        }
-        #road {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 200px;
-            background: #333;
-            border-top: 5px solid orange;
-        }
-        #car {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 40px;
-            background: red;
-            border-radius: 10px;
-            animation: drift 2s infinite alternate;
-        }
-        @keyframes drift {
-            0% { transform: translateX(-50%) rotate(0deg); }
-            100% { transform: translateX(-50%) rotate(5deg); }
-        }
-        #trail {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100px;
-            height: 20px;
-            background: blue;
-            opacity: 0.5;
-            filter: blur(5px);
-            animation: trail-animate 1s infinite;
-        }
-        @keyframes trail-animate {
-            0% { width: 100px; }
-            100% { width: 150px; }
-        }
-        #earn-sec {
-            text-align: center;
-            margin: 10px 0;
-            font-size: 18px;
-        }
-        #boost-btn, #auto-btn {
-            background: pink;
-            border: none;
-            color: white;
-            padding: 10px;
-            border-radius: 50px;
-            margin: 0 10px;
-            cursor: pointer;
-        }
-        #item-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 10px;
-            background: #00008b;
-        }
-        .item {
-            background: #ffd700;
-            border-radius: 10px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: black;
-            cursor: grab;
-        }
-        #bottom-nav {
-            background: #00008b;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-        }
-        .nav-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-        #buy-car {
-            background: pink;
-            border-radius: 50px;
-            padding: 5px 15px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        #instructions {
-            padding: 10px;
-            background: #4b0082;
-            margin: 10px;
-            border-radius: 10px;
-        }
-    </style>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <meta charset="UTF-8" />
+  <title>Drift & Merge Game - Telegram Mini App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { background: #121212; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+    #inventory { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+    .car-slot { background: #222; padding: 10px; border-radius: 8px; text-align: center; cursor: grab; user-select: none; }
+    .car-level { font-weight: bold; margin-top: 5px; }
+    #stats { margin-top: 15px; font-size: 18px; }
+    button { margin: 5px; padding: 10px 15px; font-size: 16px; border-radius: 6px; border: none; cursor: pointer; }
+    #boostBtn { background: #ff5500; color: white; }
+    #autoBtn { background: #007bff; color: white; }
+  </style>
 </head>
 <body>
-    <div id="top-bar">
-        <div id="user-info">
-            <div id="user-avatar"></div>
-            <div id="balances">
-                <span id="premium">Premium: 0</span>
-                <span id="idle">Idle: 10k</span>
-            </div>
-        </div>
-        <div id="menu-buttons">
-            <button class="menu-btn">Support Badge</button>
-            <button class="menu-btn">VIP PVP</button>
-            <button class="menu-btn">NFT Claim</button>
-            <button class="menu-btn">Rating</button>
-            <button class="menu-btn">Spin</button>
-            <button class="menu-btn">Road Trip</button>
-        </div>
-    </div>
-    <div id="game-area">
-        <div id="road"></div>
-        <div id="car"></div>
-        <div id="trail"></div>
-    </div>
-    <div id="earn-sec">Earn/Sec: 0/sec</div>
-    <div style="text-align: center;">
-        <button id="boost-btn">Boost</button>
-        <button id="auto-btn">Auto Mode</button>
-    </div>
-    <div id="item-grid">
-        <!-- Items will be dynamically added here -->
-    </div>
-    <div id="bottom-nav">
-        <button class="nav-btn">Mining</button>
-        <button class="nav-btn">Garage</button>
-        <button id="buy-car">Buy Car Lvl 1 - $ <span id="buy-cost">100</span></button>
-        <button class="nav-btn">Earn</button>
-        <button class="nav-btn">Friends</button>
-    </div>
-    <div id="instructions">
-        <h3>How to Play Idle Drift & Merge</h3>
-        <p>1. Buy basic cars using your idle currency (pineapple icon).</p>
-        <p>2. Place them in the grid to start earning passively (earn/sec).</p>
-        <p>3. Drag one car onto another identical level car to merge them into a higher level car, which earns more.</p>
-        <p>4. Use Boost for temporary earnings multiplier.</p>
-        <p>5. Toggle Auto Mode to automatically earn without manual collection (premium feature simulation).</p>
-        <p>6. Explore other modes like PVP, Road Trip for more rewards.</p>
-        <p>Connect your wallet for NFT claiming (not implemented yet).</p>
-    </div>
 
-    <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-            authDomain: "metawarefare-gaming.firebaseapp.com",
-            databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-            projectId: "metawarefare-gaming",
-            storageBucket: "metawarefare-gaming.appspot.com",
-            messagingSenderId: "551352148152",
-            appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+  <h1>Drift & Merge</h1>
+
+  <div id="inventory"></div>
+
+  <div id="stats">
+    Coins: <span id="coins">0</span> |
+    Income/sec: <span id="incomePerSec">0</span> |
+    Energy: <span id="energy">0</span>
+  </div>
+
+  <button id="boostBtn">BOOST</button>
+  <button id="autoBtn">AUTO MODE</button>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <script>
+    // --- Firebase Setup ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- Telegram Mini App Setup ---
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // --- Game Data ---
+    let playerId = tg.initDataUnsafe?.user?.id || 'guest';
+    let inventory = [];  // array of cars { id, model, level }
+    let coins = 0;
+    let energy = 0;
+    let incomePerSec = 0;
+    let boostActive = false;
+    let autoMode = false;
+
+    // Inventory UI container
+    const inventoryEl = document.getElementById('inventory');
+    const coinsEl = document.getElementById('coins');
+    const energyEl = document.getElementById('energy');
+    const incomeEl = document.getElementById('incomePerSec');
+    const boostBtn = document.getElementById('boostBtn');
+    const autoBtn = document.getElementById('autoBtn');
+
+    // --- Load Player Data ---
+    function loadPlayerData() {
+      db.ref('players/' + playerId).once('value').then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          inventory = data.inventory || [];
+          coins = data.coins || 0;
+          energy = data.energy || 0;
+        } else {
+          // New player starter data
+          inventory = [
+            { id: generateId(), model: 'CarA', level: 1 },
+            { id: generateId(), model: 'CarA', level: 1 },
+            { id: generateId(), model: 'CarB', level: 1 }
+          ];
+          coins = 100;
+          energy = 10;
+          savePlayerData();
+        }
+        calculateIncome();
+        renderInventory();
+        updateStats();
+      });
+    }
+
+    // --- Save Player Data ---
+    function savePlayerData() {
+      db.ref('players/' + playerId).set({
+        inventory,
+        coins,
+        energy
+      });
+    }
+
+    // --- Generate Unique ID ---
+    function generateId() {
+      return '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // --- Render Inventory ---
+    function renderInventory() {
+      inventoryEl.innerHTML = '';
+      inventory.forEach(car => {
+        const slot = document.createElement('div');
+        slot.className = 'car-slot';
+        slot.draggable = true;
+        slot.dataset.id = car.id;
+        slot.innerHTML = `
+          <div>${car.model}</div>
+          <div class="car-level">Lvl ${car.level}</div>
+        `;
+
+        // Drag and drop handlers
+        slot.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', car.id);
+        });
+        slot.addEventListener('dragover', e => {
+          e.preventDefault();
+        });
+        slot.addEventListener('drop', e => {
+          e.preventDefault();
+          const sourceId = e.dataTransfer.getData('text/plain');
+          const targetId = car.id;
+          mergeCars(sourceId, targetId);
+        });
+
+        inventoryEl.appendChild(slot);
+      });
+    }
+
+    // --- Merge Cars ---
+    function mergeCars(sourceId, targetId) {
+      if (sourceId === targetId) return;
+
+      const sourceCar = inventory.find(c => c.id === sourceId);
+      const targetCar = inventory.find(c => c.id === targetId);
+
+      if (!sourceCar || !targetCar) return;
+
+      if (sourceCar.model === targetCar.model && sourceCar.level === targetCar.level) {
+        // Merge logic: remove both and add higher level car
+        inventory = inventory.filter(c => c.id !== sourceId && c.id !== targetId);
+        const newCar = {
+          id: generateId(),
+          model: sourceCar.model,
+          level: sourceCar.level + 1
         };
+        inventory.push(newCar);
+        calculateIncome();
+        savePlayerData();
+        renderInventory();
+        updateStats();
+        alert(`Merged two level ${sourceCar.level} ${sourceCar.model} cars into level ${newCar.level}!`);
+      } else {
+        alert('Only cars of same model and level can be merged!');
+      }
+    }
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    // --- Calculate Passive Income per Second ---
+    function calculateIncome() {
+      // Example: base income 10 coins per level
+      incomePerSec = inventory.reduce((sum, car) => sum + (car.level * 10), 0);
+      incomeEl.textContent = incomePerSec;
+    }
 
-        // Telegram Mini App Integration
-        let userId = 'test_user'; // Fallback
-        let userName = 'Test User';
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
-            const initData = window.Telegram.WebApp.initDataUnsafe || {};
-            if (initData.user) {
-                userId = initData.user.id.toString();
-                userName = initData.user.username || initData.user.first_name;
-                document.getElementById('user-avatar').style.backgroundImage = `url(${initData.user.photo_url || ''})`;
-            }
+    // --- Update UI Stats ---
+    function updateStats() {
+      coinsEl.textContent = coins.toFixed(0);
+      energyEl.textContent = energy.toFixed(0);
+      incomeEl.textContent = incomePerSec.toFixed(0);
+    }
+
+    // --- Drift & Earn Simulation ---
+    function driftEarn(tick = 1000) {
+      let earnAmount = incomePerSec;
+      if (boostActive) {
+        earnAmount *= 2;  // Double income on boost
+      }
+      coins += earnAmount * (tick / 1000);
+      energy += 1 * (tick / 1000);  // Gain energy slowly while drifting
+
+      updateStats();
+      savePlayerData();
+    }
+
+    // --- Boost Handling ---
+    boostBtn.addEventListener('click', () => {
+      if (energy < 5) {
+        alert('Not enough energy to boost!');
+        return;
+      }
+      energy -= 5;
+      boostActive = true;
+      updateStats();
+
+      setTimeout(() => {
+        boostActive = false;
+        updateStats();
+      }, 10000);  // Boost lasts 10 seconds
+    });
+
+    // --- Auto Mode ---
+    autoBtn.addEventListener('click', () => {
+      autoMode = !autoMode;
+      autoBtn.textContent = autoMode ? 'AUTO MODE ON' : 'AUTO MODE OFF';
+      if (autoMode) {
+        autoPlay();
+      }
+    });
+
+    function autoPlay() {
+      if (!autoMode) return;
+
+      // Auto-merge cars if possible
+      for (let i = 0; i < inventory.length; i++) {
+        for (let j = i + 1; j < inventory.length; j++) {
+          if (inventory[i].model === inventory[j].model && inventory[i].level === inventory[j].level) {
+            mergeCars(inventory[i].id, inventory[j].id);
+            break;
+          }
         }
+      }
+      // Auto boost if energy available
+      if (energy >= 5 && !boostActive) {
+        boostBtn.click();
+      }
 
-        // Game State
-        let premiumCurrency = 0;
-        let idleCurrency = 10000;
-        let earnPerSec = 0;
-        let items = [
-            { type: 'crate', level: 1 },
-            { type: 'crate', level: 1 },
-            { type: 'crate', level: 1 },
-            { type: 'crate', level: 1 },
-            { type: 'crate', level: 1 },
-            { type: 'crate', level: 1 },
-            { type: 'car', level: 1 }
-        ];
-        let autoMode = false;
-        let buyCost = 100;
+      // Continue drifting (earn coins)
+      driftEarn();
 
-        // User Data Path
-        const userRef = db.ref('users/' + userId);
+      // Repeat every second
+      setTimeout(autoPlay, 1000);
+    }
 
-        // Load User Data
-        userRef.once('value').then(snapshot => {
-            const data = snapshot.val();
-            if (data) {
-                premiumCurrency = data.premiumCurrency || 0;
-                idleCurrency = data.idleCurrency || 10000;
-                items = data.items || items;
-                buyCost = data.buyCost || 100;
-            }
-            calculateEarnPerSec();
-            updateUI();
-            renderItems();
-        });
+    // --- Initialize ---
+    loadPlayerData();
 
-        // Save Data
-        function saveData() {
-            userRef.set({
-                premiumCurrency,
-                idleCurrency,
-                items,
-                buyCost,
-                name: userName
-            });
-        }
-
-        // Update UI
-        function updateUI() {
-            document.getElementById('premium').textContent = `Premium: ${premiumCurrency}`;
-            document.getElementById('idle').textContent = `Idle: ${formatNumber(idleCurrency)}`;
-            document.getElementById('earn-sec').textContent = `Earn/Sec: ${earnPerSec}/sec`;
-            document.getElementById('buy-cost').textContent = buyCost;
-            saveData();
-        }
-
-        // Format Number
-        function formatNumber(num) {
-            if (num >= 1000000) return (num / 1000000).toFixed(3) + 'm';
-            if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
-            return num;
-        }
-
-        // Calculate Earn Per Sec
-        function calculateEarnPerSec() {
-            earnPerSec = items.reduce((sum, item) => sum + Math.pow(2, item.level - 1) * 10, 0);
-        }
-
-        // Render Items
-        function renderItems() {
-            const grid = document.getElementById('item-grid');
-            grid.innerHTML = '';
-            items.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.textContent = `${item.type.toUpperCase()} Lvl ${item.level}`;
-                div.dataset.index = index;
-                div.addEventListener('mousedown', pickup);
-                div.addEventListener('touchstart', pickup, { passive: false });
-                grid.appendChild(div);
-            });
-        }
-
-        // Drag and Drop Logic
-        let moving = null;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        function pickup(event) {
-            event.preventDefault();
-            moving = event.target;
-            const rect = moving.getBoundingClientRect();
-            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
-            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
-            offsetX = clientX - rect.left;
-            offsetY = clientY - rect.top;
-            moving.style.position = 'fixed';
-            moving.style.left = `${rect.left}px`;
-            moving.style.top = `${rect.top}px`;
-            moving.style.width = `${rect.width}px`;
-            moving.style.height = `${rect.height}px`;
-            moving.style.zIndex = '1000';
-        }
-
-        function move(event) {
-            if (!moving) return;
-            event.preventDefault();
-            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
-            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
-            moving.style.left = `${clientX - offsetX}px`;
-            moving.style.top = `${clientY - offsetY}px`;
-        }
-
-        function drop(event) {
-            if (!moving) return;
-            event.preventDefault();
-            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
-            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
-            moving.style.display = 'none';
-            let target = document.elementFromPoint(clientX, clientY);
-            moving.style.display = '';
-            if (target && target.className === 'item' && target !== moving) {
-                const fromIndex = parseInt(moving.dataset.index);
-                const toIndex = parseInt(target.dataset.index);
-                const fromItem = items[fromIndex];
-                const toItem = items[toIndex];
-                if (fromItem.type === toItem.type && fromItem.level === toItem.level) {
-                    toItem.level += 1;
-                    items.splice(fromIndex, 1);
-                    calculateEarnPerSec();
-                    renderItems();
-                    updateUI();
-                    moving = null;
-                    return;
-                }
-            }
-            // Reset if not merged
-            moving.style.position = '';
-            moving.style.left = '';
-            moving.style.top = '';
-            moving.style.width = '';
-            moving.style.height = '';
-            moving.style.zIndex = '';
-            moving = null;
-        }
-
-        // Add global listeners
-        document.addEventListener('mousemove', move);
-        document.addEventListener('touchmove', move, { passive: false });
-        document.addEventListener('mouseup', drop);
-        document.addEventListener('touchend', drop);
-        document.addEventListener('touchcancel', drop);
-
-        // Earning Loop
-        setInterval(() => {
-            idleCurrency += earnPerSec;
-            updateUI();
-        }, 1000);
-
-        // Boost Button
-        document.getElementById('boost-btn').addEventListener('click', () => {
-            const original = earnPerSec;
-            earnPerSec *= 2;
-            updateUI();
-            setTimeout(() => {
-                earnPerSec = original;
-                updateUI();
-            }, 5000);
-        });
-
-        // Auto Mode Toggle
-        document.getElementById('auto-btn').addEventListener('click', () => {
-            autoMode = !autoMode;
-            document.getElementById('auto-btn').textContent = autoMode ? 'Auto On' : 'Auto Mode';
-        });
-
-        // Buy Car
-        document.getElementById('buy-car').addEventListener('click', () => {
-            if (idleCurrency >= buyCost) {
-                idleCurrency -= buyCost;
-                items.push({ type: 'car', level: 1 });
-                buyCost += 25; // Increase cost
-                calculateEarnPerSec();
-                renderItems();
-                updateUI();
-            } else {
-                alert('Not enough idle currency!');
-            }
-        });
-
-        // Initial
-        calculateEarnPerSec();
-        updateUI();
-        renderItems();
-    </script>
+    // Start passive earning every second
+    setInterval(() => {
+      if (!autoMode) driftEarn();
+    }, 1000);
+  </script>
 </body>
 </html>
