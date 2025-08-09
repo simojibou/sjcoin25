@@ -1,34 +1,174 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>Stars ⇄ TON تحويل ميني آب</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@tonconnect/ui"></script>
+  <title>SJ COIN MINI APP - Drift Party</title>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; background:#f3f4f6; padding:20px; }
-    button { margin: 10px 0; padding: 10px 15px; font-size: 16px; }
+    body {
+      margin: 0; 
+      background: linear-gradient(to top, #f2875a, #3f2c71);
+      font-family: Arial, sans-serif;
+      color: white;
+      user-select: none;
+    }
+    #header {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+    }
+    #back-btn {
+      cursor: pointer;
+      background: #bb2a2a;
+      border-radius: 20px;
+      padding: 5px 15px;
+      margin-right: 15px;
+      font-weight: bold;
+    }
+    #logo {
+      flex-grow: 1;
+      font-weight: bold;
+      font-size: 22px;
+      color: #00d0ff;
+      font-family: 'Orbitron', sans-serif;
+      text-shadow: 0 0 5px #f0f;
+    }
+    #balance-section {
+      display: flex;
+      gap: 10px;
+      margin: 10px;
+    }
+    .balance-box {
+      background: rgba(0,0,0,0.5);
+      padding: 8px 15px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .balance-box img {
+      width: 20px;
+      height: 20px;
+    }
+    #game-area {
+      position: relative;
+      margin: 10px;
+      border-radius: 15px;
+      background: #222;
+      height: 250px;
+      overflow: hidden;
+    }
+    #car {
+      width: 100px;
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: driftSmoke 2s infinite;
+    }
+    @keyframes driftSmoke {
+      0%, 100% { filter: blur(0); }
+      50% { filter: blur(2px); }
+    }
+    #inventory {
+      margin: 15px 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .crate {
+      background: #f5c542;
+      border-radius: 8px;
+      height: 70px;
+      background-image: url('https://i.imgur.com/7v1cL8Z.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .crate:hover {
+      transform: scale(1.1);
+    }
+    #controls {
+      margin: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    button {
+      background: #8f2eff;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 0 10px #8f2eff;
+    }
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
   </style>
 </head>
 <body>
+  <div id="header">
+    <div id="back-btn">⬅ Back</div>
+    <div id="logo">DRFT PARTY</div>
+  </div>
 
-  <h2>تحويل Telegram Stars إلى TON والعكس</h2>
-  <p>رصيد Stars (وهمي): <span id="starsBalance">...تحميل</span></p>
-  <p>محفظة TON: <span id="walletAddress">غير متصل</span></p>
-  <p>رصيد TON: <span id="tonBalance">-</span></p>
+  <div id="balance-section">
+    <div class="balance-box">
+      <img src="https://i.imgur.com/3KVr6qG.png" alt="Coins" />
+      <span id="coin-balance">0</span>
+    </div>
+    <div class="balance-box">
+      <img src="https://i.imgur.com/WoeQfRH.png" alt="SJ Coins" />
+      <span id="sjcoin-balance">0</span>
+    </div>
+    <div class="balance-box">
+      <img src="https://i.imgur.com/4TIlw9Z.png" alt="Total Balance" />
+      <span id="total-balance">0</span>
+    </div>
+  </div>
 
-  <button id="connectTonBtn">ربط محفظة TON</button><br/>
-  <button id="convertStarsToTonBtn" disabled>تحويل Stars إلى TON</button><br/>
-  <button id="convertTonToStarsBtn" disabled>تحويل TON إلى Stars</button>
+  <div id="game-area">
+    <img id="car" src="https://i.imgur.com/E4X8UOe.png" alt="Car" />
+  </div>
+
+  <div id="inventory">
+    <!-- صناديق -->
+  </div>
+
+  <div id="controls">
+    <button id="boost-btn">BOOST</button>
+    <button id="auto-btn">AUTO MODE</button>
+  </div>
 
   <script>
-    // Firebase config
+    // تهيئة Telegram WebApp SDK
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    document.getElementById('back-btn').onclick = () => {
+      tg.close(); // إغلاق الميني آب
+    };
+
+    // تهيئة Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -38,102 +178,94 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
-
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const db = firebase.firestore();
 
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    const starsBalanceEl = document.getElementById('starsBalance');
-    const walletAddressEl = document.getElementById('walletAddress');
-    const tonBalanceEl = document.getElementById('tonBalance');
-    const connectTonBtn = document.getElementById('connectTonBtn');
-    const convertStarsToTonBtn = document.getElementById('convertStarsToTonBtn');
-    const convertTonToStarsBtn = document.getElementById('convertTonToStarsBtn');
-
-    // stars رصيد Stars (وهمي)
-    let starsBalance = 1500; // هذه قيمة تجريبية — يمكن جلبها من backend لاحقًا
-    starsBalanceEl.textContent = starsBalance;
-
-    // TonConnect setup
-    let tonConnector;
-    let walletAddress = null;
-    let tonBalance = 0;
-
-    connectTonBtn.onclick = async () => {
-      if (!tonConnector) {
-        tonConnector = new TonConnect.UI();
+    // مصادقة مستخدم Telegram Mini App تلقائيًا باستخدام Telegram User ID كمفتاح
+    async function loginWithTelegram() {
+      const user = tg.initDataUnsafe?.user || null;
+      if (!user) {
+        alert("يرجى فتح هذا التطبيق داخل Telegram");
+        return null;
       }
-      const session = await tonConnector.connect();
-      walletAddress = session.account.address;
-      walletAddressEl.textContent = walletAddress;
+      // حفظ بيانات المستخدم في Firestore
+      const userDocRef = db.collection('users').doc(user.id.toString());
+      await userDocRef.set({
+        username: user.username || '',
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        photo_url: tg.initDataUnsafe?.user?.photo_url || ''
+      }, { merge: true });
+      return userDocRef;
+    }
 
-      // مثال: تحديث رصيد TON وهمي
-      tonBalance = 100; 
-      tonBalanceEl.textContent = tonBalance + " TON";
-
-      convertStarsToTonBtn.disabled = false;
-      convertTonToStarsBtn.disabled = false;
-    };
-
-    // تحويل Stars إلى TON (تخزين طلب في Firebase)
-    convertStarsToTonBtn.onclick = () => {
-      if (starsBalance < 100) {
-        alert("رصيد Stars غير كافٍ للتحويل");
-        return;
+    // تحميل رصيد المستخدم وصناديقه
+    async function loadUserData(userDocRef) {
+      const doc = await userDocRef.get();
+      if (!doc.exists) {
+        await userDocRef.set({
+          coins: 0,
+          sjcoins: 10000,
+          crates: 7,
+          carCount: 1
+        });
+        return {
+          coins: 0,
+          sjcoins: 10000,
+          crates: 7,
+          carCount: 1
+        };
       }
-      const amountStars = 100; // كم Stars تريد تحويل
-      const requestId = Date.now();
+      return doc.data();
+    }
 
-      const requestData = {
-        userId: tg.initDataUnsafe?.user?.id || 'guest',
-        walletAddress,
-        from: "stars",
-        to: "ton",
-        amountStars,
-        status: "pending",
-        timestamp: requestId
-      };
+    // تحديث الواجهة وعرض الرصيد الكلي
+    function updateUI(data) {
+      const coins = data.coins ?? 0;
+      const sjcoins = data.sjcoins ?? 0;
 
-      db.ref("conversionRequests/" + requestId).set(requestData)
-        .then(() => {
-          alert("تم إرسال طلب تحويل Stars إلى TON بنجاح");
-          starsBalance -= amountStars;
-          starsBalanceEl.textContent = starsBalance;
-        })
-        .catch(() => alert("حدث خطأ أثناء إرسال الطلب"));
-    };
+      document.getElementById('coin-balance').textContent = coins;
+      document.getElementById('sjcoin-balance').textContent = (sjcoins / 1000) + 'k';
 
-    // تحويل TON إلى Stars (تخزين طلب في Firebase)
-    convertTonToStarsBtn.onclick = () => {
-      if (tonBalance < 1) {
-        alert("رصيد TON غير كافٍ للتحويل");
-        return;
+      // حساب الرصيد الكلي: نجمع coins + (sjcoins مقسومة على 1000 لعرضها بوحدة k)
+      const total = coins + sjcoins / 1000;
+      document.getElementById('total-balance').textContent = total.toFixed(1) + 'k';
+
+      const inventory = document.getElementById('inventory');
+      inventory.innerHTML = '';
+      for(let i = 0; i < (data.crates ?? 0); i++) {
+        const crateDiv = document.createElement('div');
+        crateDiv.className = 'crate';
+        crateDiv.title = 'DRFT Crate';
+        inventory.appendChild(crateDiv);
       }
-      const amountTon = 1; // كم TON تريد تحويل
-      const requestId = Date.now();
+    }
 
-      const requestData = {
-        userId: tg.initDataUnsafe?.user?.id || 'guest',
-        walletAddress,
-        from: "ton",
-        to: "stars",
-        amountTon,
-        status: "pending",
-        timestamp: requestId
-      };
+    // تفعيل زر البوست (مثلاً زيادة مؤقتة)
+    document.getElementById('boost-btn').addEventListener('click', () => {
+      alert('Boost activated!');
+      // هنا يمكن إضافة منطق زيادة الأرباح مؤقتاً
+    });
 
-      db.ref("conversionRequests/" + requestId).set(requestData)
-        .then(() => {
-          alert("تم إرسال طلب تحويل TON إلى Stars بنجاح");
-          tonBalance -= amountTon;
-          tonBalanceEl.textContent = tonBalance + " TON";
-        })
-        .catch(() => alert("حدث خطأ أثناء إرسال الطلب"));
-    };
+    // تفعيل زر الوضع التلقائي
+    document.getElementById('auto-btn').addEventListener('click', () => {
+      alert('Auto Mode activated!');
+      // منطق الوضع التلقائي
+    });
+
+    async function main() {
+      const userDocRef = await loginWithTelegram();
+      if (!userDocRef) return;
+      let userData = await loadUserData(userDocRef);
+      updateUI(userData);
+
+      // استمع لتحديثات الرصيد من Firestore مباشرة
+      db.collection('users').doc(tg.initDataUnsafe.user.id.toString())
+        .onSnapshot(doc => {
+          updateUI(doc.data());
+        });
+    }
+    main();
   </script>
-
 </body>
 </html>
