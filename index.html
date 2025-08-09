@@ -1,280 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>SJ COIN Tap2Earn</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> <!-- منع الزووم -->
-
-  <!-- Telegram Mini App SDK -->
+  <title>Stars ⇄ TON تحويل ميني آب</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui"></script>
 
-  <!-- TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: 'Arial', sans-serif;
-      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') no-repeat center center fixed;
-      background-size: cover;
-      color: #fff;
-      text-align: center;
-      -webkit-tap-highlight-color: transparent; /* إزالة تظليل الضغط الأزرق */
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
-
-    .game-container {
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
-      background: rgba(0, 0, 0, 0.6);
-      border-radius: 20px;
-      margin-top: 20px;
-    }
-
-    h1 {
-      color: #ffd700;
-      font-size: 26px;
-      margin: 0;
-    }
-
-    /* New header layout */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      gap: 10px;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-grow: 1;
-      min-width: 0;
-    }
-
-    .profile-pic {
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      border: 4px solid #ffd700;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .username {
-      font-size: 22px;
-      color: #ffd700;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-width: 0;
-    }
-
-    .coin-balance {
-      font-size: 18px;
-      color: #ffff66;
-      white-space: nowrap;
-      flex-shrink: 0;
-      user-select: text; /* السماح بنسخ النص */
-    }
-
-    /* Wallet button container aligned right */
-    #ton-connect {
-      flex-shrink: 0;
-      margin-left: 10px;
-    }
-
-    .stats {
-      display: flex;
-      justify-content: space-between;
-      margin: 20px 0;
-      font-size: 15px;
-    }
-
-    .coin-display {
-      font-size: 26px;
-      margin: 10px 0;
-      color: #ffff66;
-      cursor: default; /* إزالة تأثير النقر */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      -webkit-tap-highlight-color: transparent; /* إزالة تظليل الضغط الأزرق */
-      user-select: none;
-    }
-
-    .coin-logo {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-    }
-
-    .avatar {
-      margin: 20px 0;
-      cursor: pointer;
-    }
-
-    .avatar img {
-      width: 160px;
-      border-radius: 50%;
-      border: 5px solid #ffd700;
-    }
-
-    .progress-bar {
-      background-color: #444;
-      border-radius: 10px;
-      overflow: hidden;
-      height: 20px;
-      margin: 15px 0;
-    }
-
-    .progress {
-      width: 33%;
-      height: 100%;
-      background-color: #00e676;
-    }
-
-    .info-text {
-      font-size: 14px;
-      color: #ccc;
-    }
-
-    .tap-button {
-      margin-top: 20px;
-      font-size: 20px;
-      background-color: #4caf50;
-      border: none;
-      padding: 15px 30px;
-      border-radius: 12px;
-      color: white;
-      cursor: pointer;
-    }
-
-    .tap-button:hover {
-      background-color: #43a047;
-    }
-
-    .button {
-      background-color: #007aff;
-      color: white;
-      padding: 12px 25px;
-      font-size: 16px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      margin: 10px auto;
-    }
-
-    .button:hover {
-      background-color: #005fc0;
-    }
-
-    .tabs {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 30px;
-      font-size: 15px;
-      gap: 5px;
-      flex-wrap: wrap;
-    }
-
-    .tabs button {
-      flex: 1;
-      background-color: #333;
-      border: none;
-      color: #fff;
-      padding: 10px 5px;
-      border-radius: 10px;
-      cursor: pointer;
-      margin: 5px;
-    }
-
-    .tabs button:hover {
-      background-color: #555;
-    }
-
+    body { font-family: Arial, sans-serif; background:#f3f4f6; padding:20px; }
+    button { margin: 10px 0; padding: 10px 15px; font-size: 16px; }
   </style>
 </head>
 <body>
-  <div class="game-container">
 
-    <!-- Header with profile pic, username, balance, wallet -->
-    <div class="header">
-      <div class="user-info">
-        <img id="userPic" class="profile-pic" src="" alt="Profile" />
-        <div class="username" id="username">👤</div>
-        <div class="coin-balance" id="totalBalance">Loading...</div>
-      </div>
-      <div id="ton-connect"></div>
-    </div>
+  <h2>تحويل Telegram Stars إلى TON والعكس</h2>
+  <p>رصيد Stars (وهمي): <span id="starsBalance">...تحميل</span></p>
+  <p>محفظة TON: <span id="walletAddress">غير متصل</span></p>
+  <p>رصيد TON: <span id="tonBalance">-</span></p>
 
-    <div class="stats">
-      <div>💰 Tap: +1</div>
-      <div>🔁 To next level: 15K</div>
-      <div>⏰ Hourly: +0</div>
-    </div>
-
-    <!-- Coin Display -->
-    <div class="coin-display" id="coinCount" tabindex="-1" aria-label="SJ COIN Balance">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
-      <span id="coinAmount">Loading...</span>
-    </div>
-
-    <!-- Avatar (also tap to earn) -->
-    <div class="avatar" onclick="tapToEarn()" role="button" tabindex="0" aria-label="Tap to earn SJ COIN">
-      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar" />
-    </div>
-
-    <div class="progress-bar">
-      <div class="progress" id="progressBar"></div>
-    </div>
-    <div class="info-text">📈 Level: 1/5 (Starter)</div>
-
-    <!-- Tap Button -->
-    <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
-
-    <!-- Buy Button -->
-    <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button onclick="window.location.href='earning.html'">🍄 Explore</button>
-      <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
-      <button onclick="window.location.href='friends.html'">👥 Friends</button>
-      <button onclick="window.location.href='pys.html'">💎 Bounty</button>
-    </div>
-  </div>
+  <button id="connectTonBtn">ربط محفظة TON</button><br/>
+  <button id="convertStarsToTonBtn" disabled>تحويل Stars إلى TON</button><br/>
+  <button id="convertTonToStarsBtn" disabled>تحويل TON إلى Stars</button>
 
   <script>
-    // Telegram WebApp Setup
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    const user = tg.initDataUnsafe?.user;
-    const userId = user?.id?.toString();
-    document.getElementById("username").innerText = user?.first_name || "Guest";
-
-    // Set user profile pic or fallback
-    const userPicElem = document.getElementById("userPic");
-    if(user?.photo_url) {
-      userPicElem.src = user.photo_url;
-    } else {
-      userPicElem.src = "https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true"; // fallback image
-    }
-
-    // Firebase Config for your project
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -287,78 +41,99 @@
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const db = firebase.database();
 
-    // TonConnect UI Setup
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json',
-      buttonRootId: 'ton-connect'
-    });
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-    let coins = 0;
+    const starsBalanceEl = document.getElementById('starsBalance');
+    const walletAddressEl = document.getElementById('walletAddress');
+    const tonBalanceEl = document.getElementById('tonBalance');
+    const connectTonBtn = document.getElementById('connectTonBtn');
+    const convertStarsToTonBtn = document.getElementById('convertStarsToTonBtn');
+    const convertTonToStarsBtn = document.getElementById('convertTonToStarsBtn');
 
-    async function loadCoins() {
-      if (!userId) return;
-      try {
-        const doc = await db.collection("users").doc(userId).get();
-        coins = doc.exists ? doc.data().coins || 0 : 0;
-        updateCoinDisplay();
-        updateTotalBalance();
-      } catch (error) {
-        console.error("Error loading coins:", error);
+    // stars رصيد Stars (وهمي)
+    let starsBalance = 1500; // هذه قيمة تجريبية — يمكن جلبها من backend لاحقًا
+    starsBalanceEl.textContent = starsBalance;
+
+    // TonConnect setup
+    let tonConnector;
+    let walletAddress = null;
+    let tonBalance = 0;
+
+    connectTonBtn.onclick = async () => {
+      if (!tonConnector) {
+        tonConnector = new TonConnect.UI();
       }
-    }
+      const session = await tonConnector.connect();
+      walletAddress = session.account.address;
+      walletAddressEl.textContent = walletAddress;
 
-    function updateCoinDisplay() {
-      document.getElementById("coinAmount").innerText = `${coins.toLocaleString()} SJ COIN`;
-    }
+      // مثال: تحديث رصيد TON وهمي
+      tonBalance = 100; 
+      tonBalanceEl.textContent = tonBalance + " TON";
 
-    function updateTotalBalance() {
-      document.getElementById("totalBalance").innerText = `${coins.toLocaleString()} SJ COIN`;
-    }
+      convertStarsToTonBtn.disabled = false;
+      convertTonToStarsBtn.disabled = false;
+    };
 
-    async function tapToEarn() {
-      coins += 1;
-      updateCoinDisplay();
-      updateTotalBalance();
-      if (userId) {
-        try {
-          await db.collection("users").doc(userId).set({ coins }, { merge: true });
-        } catch (error) {
-          console.error("Error updating coins:", error);
-        }
+    // تحويل Stars إلى TON (تخزين طلب في Firebase)
+    convertStarsToTonBtn.onclick = () => {
+      if (starsBalance < 100) {
+        alert("رصيد Stars غير كافٍ للتحويل");
+        return;
       }
-    }
+      const amountStars = 100; // كم Stars تريد تحويل
+      const requestId = Date.now();
 
-    function resetBalance() {
-      // لم نعد نمسح الرصيد أو نعيده إلى 0، لذا تم تعطيل هذه الوظيفة
-      // يمكن تركها فارغة أو إزالة الحدث الذي يستدعيها
-      // هنا لن تفعل شيء
-      alert("لا يمكن إعادة الرصيد إلى الصفر.");
-    }
-
-    function buyCoin() {
-      const purchaseData = {
-        action: "buy",
-        amount: 100,
-        timestamp: Date.now(),
-        user: user?.id || null
+      const requestData = {
+        userId: tg.initDataUnsafe?.user?.id || 'guest',
+        walletAddress,
+        from: "stars",
+        to: "ton",
+        amountStars,
+        status: "pending",
+        timestamp: requestId
       };
 
-      tg.sendData(JSON.stringify(purchaseData));
-      alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
-    }
+      db.ref("conversionRequests/" + requestId).set(requestData)
+        .then(() => {
+          alert("تم إرسال طلب تحويل Stars إلى TON بنجاح");
+          starsBalance -= amountStars;
+          starsBalanceEl.textContent = starsBalance;
+        })
+        .catch(() => alert("حدث خطأ أثناء إرسال الطلب"));
+    };
 
-    // تعطيل تظليل التركيز الأزرق على coin-display
-    const coinCountElem = document.getElementById("coinCount");
-    coinCountElem.addEventListener("mousedown", e => e.preventDefault());
-    coinCountElem.addEventListener("click", e => e.preventDefault());
+    // تحويل TON إلى Stars (تخزين طلب في Firebase)
+    convertTonToStarsBtn.onclick = () => {
+      if (tonBalance < 1) {
+        alert("رصيد TON غير كافٍ للتحويل");
+        return;
+      }
+      const amountTon = 1; // كم TON تريد تحويل
+      const requestId = Date.now();
 
-    // إزالة الحدث click من coinCount لمنع أي تأثير
-    coinCountElem.onclick = null;
+      const requestData = {
+        userId: tg.initDataUnsafe?.user?.id || 'guest',
+        walletAddress,
+        from: "ton",
+        to: "stars",
+        amountTon,
+        status: "pending",
+        timestamp: requestId
+      };
 
-    // Load initial coin value from Firebase
-    loadCoins();
+      db.ref("conversionRequests/" + requestId).set(requestData)
+        .then(() => {
+          alert("تم إرسال طلب تحويل TON إلى Stars بنجاح");
+          tonBalance -= amountTon;
+          tonBalanceEl.textContent = tonBalance + " TON";
+        })
+        .catch(() => alert("حدث خطأ أثناء إرسال الطلب"));
+    };
   </script>
+
 </body>
 </html>
