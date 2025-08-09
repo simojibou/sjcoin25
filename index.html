@@ -1,211 +1,121 @@
 <!DOCTYPE html>
-<html lang="en" dir="rtl">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <title>SJ COIN Idle Drift & Merge - Telegram Mini App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SJ COIN MINI APP - Drift Party</title>
-
-  <!-- Telegram Web App SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-
-  <!-- Web3.js for NFT Integration -->
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
-
   <style>
     body {
-      margin: 0;
-      background: linear-gradient(to top, #f2875a, #3f2c71);
       font-family: Arial, sans-serif;
-      color: white;
-      user-select: none;
+      background: #111;
+      color: #eee;
+      margin: 0; padding: 10px;
+      text-align: center;
     }
-    #header {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      background: rgba(0,0,0,0.3);
+    #currency-bar {
+      margin-bottom: 15px;
+      font-size: 1.2em;
     }
-    #back-btn {
-      cursor: pointer;
-      background: #bb2a2a;
-      border-radius: 20px;
-      padding: 5px 15px;
-      margin-right: 15px;
+    #earnPerSec {
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    #totalBalance {
+      font-size: 1.4em;
+      margin-bottom: 15px;
+      color: #0f0;
       font-weight: bold;
     }
-    #logo {
-      flex-grow: 1;
-      font-weight: bold;
-      font-size: 22px;
-      color: #00d0ff;
-      font-family: 'Orbitron', sans-serif;
-      text-shadow: 0 0 5px #f0f;
-    }
-    #balance-section {
-      display: flex;
-      gap: 10px;
-      margin: 10px;
-    }
-    .balance-box {
-      background: rgba(0,0,0,0.5);
-      padding: 8px 15px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .balance-box img {
-      width: 20px;
-      height: 20px;
-    }
-    #game-area {
-      position: relative;
-      margin: 10px;
-      border-radius: 15px;
-      background: #222;
-      height: 250px;
-      overflow: hidden;
-    }
-    #car {
-      width: 100px;
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      animation: driftSmoke 2s infinite;
-    }
-    @keyframes driftSmoke {
-      0%, 100% { filter: blur(0); }
-      50% { filter: blur(2px); }
-    }
-    .earning-grid {
-      margin: 15px 10px;
+    #grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(4, 80px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
     }
     .slot {
-      background: rgba(255, 255, 255, 0.1);
+      width: 80px;
+      height: 80px;
+      background: #222;
+      border: 2px solid #444;
       border-radius: 8px;
-      height: 70px;
       display: flex;
-      justify-content: center;
       align-items: center;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .slot.occupied {
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-    .slot:hover {
-      transform: scale(1.1);
-    }
-    #controls, #game-modes {
-      margin: 10px;
-      display: flex;
       justify-content: center;
-      gap: 10px;
-    }
-    button {
-      background: #8f2eff;
-      border: none;
-      padding: 10px 20px;
-      color: white;
-      border-radius: 12px;
+      font-size: 1.1em;
       cursor: pointer;
+      position: relative;
+    }
+    .car-level {
+      width: 60px;
+      height: 60px;
+      background: gold;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      cursor: grab;
       font-weight: bold;
-      box-shadow: 0 0 10px #8f2eff;
+      font-size: 1.1em;
     }
-    button:disabled {
-      background: gray;
+    #shop {
+      margin-top: 10px;
+    }
+    #shop button {
+      background: #00aaff;
+      border: none;
+      color: white;
+      font-size: 1em;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #shop button:disabled {
+      background: #444;
       cursor: not-allowed;
-      box-shadow: none;
     }
-    #car-shop {
-      margin: 10px;
-      text-align: center;
-    }
-    #earn-sec {
-      margin: 10px;
-      text-align: center;
+    #message {
+      margin-top: 10px;
+      min-height: 20px;
+      font-size: 0.9em;
+      color: #ffa;
     }
   </style>
 </head>
 <body>
-  <div id="header">
-    <div id="back-btn">⬅ Back</div>
-    <div id="logo">DRFT PARTY</div>
+
+  <h1>SJ COIN - Idle Drift & Merge</h1>
+
+  <div id="currency-bar">
+    ذهب: <span id="gold">10000</span> &nbsp;|&nbsp; رموز زرقاء: <span id="blueTokens">0</span> &nbsp;|&nbsp; طاقة: <span id="energy">5</span>
   </div>
 
-  <div id="balance-section">
-    <div class="balance-box">
-      <img src="https://i.imgur.com/3KVr6qG.png" alt="Coins" />
-      <span id="coin-balance">0</span>
-    </div>
-    <div class="balance-box">
-      <img src="https://i.imgur.com/WoeQfRH.png" alt="SJ Coins" />
-      <span id="sjcoin-balance">0</span>
-    </div>
-    <div class="balance-box">
-      <img src="https://i.imgur.com/4TIlw9Z.png" alt="Energy" />
-      <span id="energy-balance">0</span>
-    </div>
-    <div class="balance-box">
-      <img src="https://i.imgur.com/4TIlw9Z.png" alt="Total Balance" />
-      <span id="total-balance">0</span>
-    </div>
+  <div id="earnPerSec">الإيراد في الثانية: <span id="earnRate">0</span></div>
+
+  <div id="totalBalance">الرصيد الكلي: <span id="totalBalanceValue">0</span></div>
+
+  <div id="grid"></div>
+
+  <div id="shop">
+    <button id="buyCarBtn">شراء سيارة مستوى 1 - السعر: <span id="carPrice">100</span> ذهب</button>
   </div>
 
-  <div id="game-area">
-    <img id="car" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s" alt="Car" />
-  </div>
+  <div id="message"></div>
 
-  <div id="earn-sec" class="balance-box">
-    <span>EARN/SEC: </span><span id="earn-rate">0</span>
-  </div>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <div id="inventory" class="earning-grid">
-    <!-- 12 slots for cars -->
-  </div>
-
-  <div id="car-shop" class="balance-box">
-    <button id="buy-car-btn">Buy Car (100 Blue Tokens)</button>
-  </div>
-
-  <div id="controls">
-    <button id="boost-btn">BOOST</button>
-    <button id="auto-btn">AUTO MODE</button>
-    <button id="nft-claim-btn">DRFT NFT CLAIM</button>
-    <button id="connect-wallet-btn">Connect Wallet</button>
-  </div>
-
-  <div id="game-modes" class="controls">
-    <button id="garage-btn">Garage</button>
-    <button id="pvp-btn">DRFT PARTY PVP</button>
-    <button id="roadtrip-btn">Road Trip</button>
-    <button id="spin-btn">Spin</button>
-  </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
   <script>
-    // Initialize Telegram WebApp SDK
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    // === إعداد Telegram Mini App ===
+    Telegram.WebApp.ready();
 
-    // Back button
-    document.getElementById('back-btn').onclick = () => {
-      tg.close();
-    };
-
-    // Initialize Firebase
+    // === إعداد Firebase ===
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -217,301 +127,196 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    // Car images by level
-    const carImages = {
-      1: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s',
-      2: 'https://static.vecteezy.com/system/resources/previews/035/576/135/non_2x/ai-generated-3d-rendering-of-a-beautiful-car-on-transparent-background-ai-generated-free-png.png',
-      3: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s',
-      4: 'https://png.pngtree.com/png-clipart/20240701/original/pngtree-3d-style-taxi-car-app-icon-for-game-design-logo-png-image_15459452.png'
+    // === بيانات اللعبة ===
+    const GRID_SIZE = 12;
+    let userId = null;
+    let userData = {
+      gold: 10000,
+      blueTokens: 0,
+      energy: 5,
+      carPrice: 100,
+      carsOnGrid: Array(GRID_SIZE).fill(null),
+      carInventory: []
     };
 
-    // Authenticate with Telegram
-    async function loginWithTelegram() {
-      const user = tg.initDataUnsafe?.user || null;
-      if (!user) {
-        alert("Please open this app within Telegram");
-        return null;
-      }
-      const userDocRef = db.collection('users').doc(user.id.toString());
-      await userDocRef.set({
-        username: user.username || '',
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        photo_url: tg.initDataUnsafe?.user?.photo_url || ''
-      }, { merge: true });
-      return userDocRef;
+    // === عناصر الواجهة ===
+    const goldEl = document.getElementById('gold');
+    const blueTokensEl = document.getElementById('blueTokens');
+    const energyEl = document.getElementById('energy');
+    const earnRateEl = document.getElementById('earnRate');
+    const totalBalanceEl = document.getElementById('totalBalanceValue');
+    const gridEl = document.getElementById('grid');
+    const buyCarBtn = document.getElementById('buyCarBtn');
+    const carPriceEl = document.getElementById('carPrice');
+    const messageEl = document.getElementById('message');
+
+    // === تحديث الواجهة ===
+    function updateDisplay() {
+      goldEl.textContent = Math.floor(userData.gold);
+      blueTokensEl.textContent = userData.blueTokens;
+      energyEl.textContent = userData.energy;
+      carPriceEl.textContent = Math.floor(userData.carPrice);
+      earnRateEl.textContent = calculateEarnRate().toFixed(1);
+      totalBalanceEl.textContent = calculateTotalBalance().toLocaleString();
     }
 
-    // Load user data
-    async function loadUserData(userDocRef) {
-      const doc = await userDocRef.get();
-      if (!doc.exists) {
-        const initialData = {
-          coins: 0,
-          sjcoins: 10000,
-          energy: 5,
-          cars: Array(12).fill(0),
-          carCount: 1
-        };
-        await userDocRef.set(initialData);
-        return initialData;
-      }
-      return doc.data();
-    }
-
-    // Update UI
-    function updateUI(data) {
-      document.getElementById('coin-balance').textContent = data.coins ?? 0;
-      document.getElementById('sjcoin-balance').textContent = (data.sjcoins / 1000) + 'k';
-      document.getElementById('energy-balance').textContent = data.energy ?? 0;
-      document.getElementById('total-balance').textContent = (data.coins + data.sjcoins / 1000).toFixed(1) + 'k';
-
-      const inventory = document.getElementById('inventory');
-      inventory.innerHTML = '';
-      (data.cars || Array(12).fill(0)).forEach((level, i) => {
-        const slot = document.createElement('div');
-        slot.className = 'slot';
-        slot.dataset.index = i;
-        slot.dataset.level = level;
-        slot.draggable = level > 0;
-        if (level > 0) {
-          slot.classList.add('occupied');
-          slot.style.backgroundImage = `url('${carImages[level] || carImages[1]}')`;
-        }
-        inventory.appendChild(slot);
-      });
-      setupDragAndDrop();
-    }
-
-    // Initialize grid
-    function initializeGrid() {
-      const inventory = document.getElementById('inventory');
-      inventory.innerHTML = '';
-      for (let i = 0; i < 12; i++) {
-        const slot = document.createElement('div');
-        slot.className = 'slot';
-        slot.dataset.index = i;
-        slot.dataset.level = '0';
-        inventory.appendChild(slot);
-      }
-    }
-
-    // Drag-and-drop for merging
-    let draggedSlot = null;
-    function setupDragAndDrop() {
-      const slots = document.querySelectorAll('.slot');
-      slots.forEach(slot => {
-        slot.addEventListener('dragstart', (e) => {
-          if (slot.dataset.level !== '0') {
-            draggedSlot = slot;
-            e.dataTransfer.setData('text/plain', slot.dataset.index);
-          }
-        });
-        slot.addEventListener('dragover', (e) => e.preventDefault());
-        slot.addEventListener('drop', async (e) => {
-          e.preventDefault();
-          const targetSlot = e.currentTarget;
-          if (draggedSlot && targetSlot.dataset.level === draggedSlot.dataset.level && targetSlot.dataset.level !== '0') {
-            const newLevel = parseInt(targetSlot.dataset.level) + 1;
-            targetSlot.dataset.level = newLevel;
-            targetSlot.classList.add('occupied');
-            targetSlot.style.backgroundImage = `url('${carImages[newLevel] || carImages[1]}')`;
-            draggedSlot.dataset.level = '0';
-            draggedSlot.classList.remove('occupied');
-            draggedSlot.style.backgroundImage = '';
-            await updateUserCarData();
-          }
-          draggedSlot = null;
-        });
-      });
-    }
-
-    // Buy car
-    document.getElementById('buy-car-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.sjcoins >= 100) {
-        await userDocRef.update({
-          sjcoins: userData.sjcoins - 100,
-          carCount: (userData.carCount || 0) + 1
-        });
-        addCarToGrid(1);
-      } else {
-        alert('Not enough Blue Tokens!');
-      }
-    });
-
-    // Add car to grid
-    function addCarToGrid(level) {
-      const slots = document.querySelectorAll('.slot');
-      for (let slot of slots) {
-        if (slot.dataset.level === '0') {
-          slot.dataset.level = level;
-          slot.classList.add('occupied');
-          slot.style.backgroundImage = `url('${carImages[level]}')`;
-          slot.draggable = true;
-          break;
-        }
-      }
-      updateUserCarData();
-    }
-
-    // Update Firestore with car data
-    async function updateUserCarData() {
-      const slots = document.querySelectorAll('.slot');
-      const carData = Array.from(slots).map(slot => parseInt(slot.dataset.level));
-      await db.collection('users').doc(tg.initDataUnsafe.user.id.toString()).update({
-        cars: carData
-      });
-    }
-
-    // Calculate EARN/SEC
+    // حساب الإيراد في الثانية
     function calculateEarnRate() {
-      const slots = document.querySelectorAll('.slot');
-      let earnRate = 0;
-      slots.forEach(slot => {
-        const level = parseInt(slot.dataset.level);
-        if (level > 0) earnRate += level * 10;
+      let rate = 0;
+      userData.carsOnGrid.forEach(level => {
+        if(level) {
+          rate += 10 * Math.pow(2, level -1);
+        }
       });
-      document.getElementById('earn-rate').textContent = earnRate;
-      return earnRate;
+      return rate;
     }
 
-    // Periodically update coins
-    setInterval(async () => {
-      const earnRate = calculateEarnRate();
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      await userDocRef.update({
-        coins: (userData.coins || 0) + earnRate
+    // حساب الرصيد الكلي = ذهب + (رموز زرقاء * 1000) مثلاً
+    function calculateTotalBalance() {
+      return userData.gold + userData.blueTokens * 1000;
+    }
+
+    // توليد الذهب كل ثانية
+    function startEarning() {
+      setInterval(() => {
+        let earn = calculateEarnRate();
+        userData.gold += earn;
+        updateDisplay();
+        saveUserData();
+      }, 1000);
+    }
+
+    // إنشاء شبكة السيارات
+    function createGrid() {
+      gridEl.innerHTML = '';
+      for(let i=0; i < GRID_SIZE; i++) {
+        const slot = document.createElement('div');
+        slot.classList.add('slot');
+        slot.dataset.index = i;
+
+        if(userData.carsOnGrid[i]) {
+          const carDiv = createCarDiv(userData.carsOnGrid[i]);
+          slot.appendChild(carDiv);
+        }
+
+        slot.addEventListener('click', () => onSlotClick(i));
+        gridEl.appendChild(slot);
+      }
+    }
+
+    // إنشاء سيارة بمستوى معين
+    function createCarDiv(level) {
+      const div = document.createElement('div');
+      div.classList.add('car-level');
+      div.textContent = 'Lv ' + level;
+      div.draggable = true;
+      div.dataset.level = level;
+      div.addEventListener('dragstart', onDragStart);
+      div.addEventListener('click', e => e.stopPropagation());
+      return div;
+    }
+
+    // شراء سيارة مستوى 1
+    function buyCar() {
+      if(userData.gold >= userData.carPrice) {
+        const emptyIndex = userData.carsOnGrid.indexOf(null);
+        if(emptyIndex === -1) {
+          showMessage('الشبكة ممتلئة، ادمج سيارات لفتح مكان.');
+          return;
+        }
+        userData.gold -= userData.carPrice;
+        userData.carsOnGrid[emptyIndex] = 1;
+        userData.carPrice = Math.floor(userData.carPrice * 1.15);
+        updateDisplay();
+        createGrid();
+        saveUserData();
+      } else {
+        showMessage('لا يوجد لديك ذهب كافي للشراء.');
+      }
+    }
+
+    // عرض رسالة
+    function showMessage(msg) {
+      messageEl.textContent = msg;
+      setTimeout(() => { messageEl.textContent = ''; }, 3000);
+    }
+
+    // دمج السيارات
+    function mergeCars(fromIndex, toIndex) {
+      const fromLevel = userData.carsOnGrid[fromIndex];
+      const toLevel = userData.carsOnGrid[toIndex];
+      if(fromIndex === toIndex) return false;
+      if(fromLevel && toLevel && fromLevel === toLevel) {
+        userData.carsOnGrid[toIndex] = toLevel + 1;
+        userData.carsOnGrid[fromIndex] = null;
+        createGrid();
+        updateDisplay();
+        saveUserData();
+        showMessage('تم الدمج إلى مستوى ' + (toLevel + 1));
+        return true;
+      }
+      return false;
+    }
+
+    // حفظ البيانات في Firebase
+    function saveUserData() {
+      if(!userId) return;
+      db.collection('users').doc(userId).set(userData).catch(console.error);
+    }
+
+    // تحميل بيانات المستخدم
+    function loadUserData() {
+      if(!userId) return;
+      db.collection('users').doc(userId).get()
+        .then(doc => {
+          if(doc.exists) {
+            userData = doc.data();
+            if(!userData.carsOnGrid || userData.carsOnGrid.length !== GRID_SIZE) {
+              userData.carsOnGrid = Array(GRID_SIZE).fill(null);
+            }
+          }
+          updateDisplay();
+          createGrid();
+        }).catch(console.error);
+    }
+
+    // Drag & Drop logic
+    let draggedCarIndex = null;
+
+    function onDragStart(e) {
+      const parentSlot = e.target.parentElement;
+      draggedCarIndex = parseInt(parentSlot.dataset.index);
+      e.dataTransfer.effectAllowed = "move";
+    }
+
+    function onSlotClick(index) {
+      if(draggedCarIndex === null) return;
+      if(mergeCars(draggedCarIndex, index)) {
+        draggedCarIndex = null;
+      }
+    }
+
+    // Firebase anonymous login
+    function login() {
+      auth.signInAnonymously()
+      .then(userCredential => {
+        userId = userCredential.user.uid;
+        loadUserData();
+        startEarning();
+      })
+      .catch(error => {
+        console.error(error);
+        showMessage('خطأ في تسجيل الدخول إلى Firebase.');
       });
-    }, 1000);
-
-    // Initialize energy
-    async function initializeEnergy() {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (!userData.energy) {
-        await userDocRef.update({ energy: 5 });
-      }
-      setInterval(async () => {
-        const userData = (await userDocRef.get()).data();
-        if (userData.energy < 10) {
-          await userDocRef.update({ energy: userData.energy + 1 });
-        }
-      }, 10 * 60 * 1000);
     }
 
-    // Game modes
-    document.getElementById('garage-btn').addEventListener('click', () => {
-      alert('Garage: View and manage your car collection.');
-    });
+    buyCarBtn.addEventListener('click', buyCar);
 
-    document.getElementById('pvp-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.energy >= 1) {
-        await userDocRef.update({ energy: userData.energy - 1 });
-        alert('Entering DRFT PARTY PVP!');
-      } else {
-        alert('Not enough energy!');
-      }
-    });
-
-    document.getElementById('roadtrip-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.energy >= 1) {
-        await userDocRef.update({ energy: userData.energy - 1 });
-        alert('Starting Road Trip mission!');
-      } else {
-        alert('Not enough energy!');
-      }
-    });
-
-    document.getElementById('spin-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.sjcoins >= 50) {
-        await userDocRef.update({ sjcoins: userData.sjcoins - 50 });
-        const prize = Math.random() < 0.5 ? '100 Coins' : 'Level 1 Car';
-        alert(`You won: ${prize}!`);
-        if (prize === '100 Coins') {
-          await userDocRef.update({ coins: (userData.coins || 0) + 100 });
-        } else {
-          addCarToGrid(1);
-        }
-      } else {
-        alert('Not enough Blue Tokens!');
-      }
-    });
-
-    // Boost and Auto Mode
-    document.getElementById('boost-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.sjcoins >= 200) {
-        await userDocRef.update({ sjcoins: userData.sjcoins - 200 });
-        alert('Boost activated: 2x earnings for 5 minutes!');
-      } else {
-        alert('Not enough Blue Tokens!');
-      }
-    });
-
-    document.getElementById('auto-btn').addEventListener('click', async () => {
-      alert('Auto Mode: Automatically merges cars for 10 minutes.');
-    });
-
-    // Web3/NFT Integration
-    document.getElementById('connect-wallet-btn').addEventListener('click', async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          alert(`Wallet connected: ${accounts[0]}`);
-          await db.collection('users').doc(tg.initDataUnsafe.user.id.toString()).update({
-            walletAddress: accounts[0]
-          });
-        } catch (error) {
-          alert('Failed to connect wallet: ' + error.message);
-        }
-      } else {
-        alert('Please install MetaMask!');
-      }
-    });
-
-    document.getElementById('nft-claim-btn').addEventListener('click', async () => {
-      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
-      const userData = (await userDocRef.get()).data();
-      if (userData.cars && userData.cars.some(level => level >= 5)) {
-        alert('Minting NFT for high-level car!');
-      } else {
-        alert('You need a Level 5 car to mint an NFT!');
-      }
-    });
-
-    // Main function
-    async function main() {
-      try {
-        const userDocRef = await loginWithTelegram();
-        if (!userDocRef) return;
-        let userData = await loadUserData(userDocRef);
-        updateUI(userData);
-        initializeGrid();
-        setupDragAndDrop();
-        initializeEnergy();
-
-        db.collection('users').doc(tg.initDataUnsafe.user.id.toString())
-          .onSnapshot(doc => {
-            updateUI(doc.data());
-            calculateEarnRate();
-          });
-      } catch (error) {
-        console.error('Error in main:', error);
-        alert('An error occurred. Please try again.');
-      }
-    }
-    main();
+    // بدء التطبيق
+    login();
   </script>
+
 </body>
 </html>
