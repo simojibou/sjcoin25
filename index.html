@@ -1,37 +1,47 @@
 <!doctype html>
-
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SJ COIN — دفع بـ TON (Mini App)</title>  <!-- Telegram Web App SDK -->  <script src="https://telegram.org/js/telegram-web-app.js"></script>  <!-- TonConnect UI -->  <script src="https://unpkg.com/@tonconnect/ui"></script>  <!-- Firebase (compat — سهل للبدء) -->  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>  <style>
-    body{font-family: system-ui, Arial; padding:16px; background:#f7f7fb}
-    .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(10,10,30,0.06);max-width:720px;margin:12px auto}
-    button{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
-    .primary{background:#2b6ef6;color:white}
-    .muted{background:#efefef}
-    .center{text-align:center}
-  </style></head>
+  <title>SJ COIN — دفع بـ TON (Mini App)</title>
+
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- TonConnect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    body { font-family: system-ui, Arial; padding: 16px; background: #f7f7fb }
+    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(10,10,30,0.06); max-width: 720px; margin: 12px auto }
+    button { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer }
+    .primary { background: #2b6ef6; color: white }
+    .muted { background: #efefef }
+    .center { text-align: center }
+  </style>
+</head>
 <body>
   <div class="card">
-    <h2 class="center">SJ COIN — دفع بـ TON</h2><p>تأكد أن ملف <code>tonconnect-manifest.json</code> موجود على نفس الدومين مع البيانات الصحيحة (url, name, iconUrl).</p>
+    <h2 class="center">SJ COIN — دفع بـ TON</h2>
 
-<div id="wallet-info" style="margin-bottom:12px">لم يتصل أي محفظة بعد.</div>
+    <div id="wallet-info" style="margin-bottom:12px">لم يتصل أي محفظة بعد.</div>
 
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-  <div id="ton-connect"></div>
-  <button id="payBtn" class="primary">ادفع 1 TON واحصل على 1000 SJ</button>
-  <button id="logoutBtn" class="muted">فصل المحفظة</button>
-</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div id="ton-connect"></div>
+      <button id="payBtn" class="primary">ادفع 1 TON واحصل على 1000 SJ</button>
+      <button id="logoutBtn" class="muted">فصل المحفظة</button>
+    </div>
 
-<hr />
-<p><strong>الحالة:</strong> <span id="status">جاهز</span></p>
+    <hr />
+    <p><strong>الحالة:</strong> <span id="status">جاهز</span></p>
+  </div>
 
-  </div><script>
-// ==========================
-// 1) إعداد Firebase — غيّر القيم هنا لتطابق مشروعك
-// (يمكنك استخدام القيم الموجودة في محادثتنا، أو استبدالها بقيمك الخاصة)
-// ==========================
+<script>
+// إعداد Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
   authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -41,178 +51,106 @@ const firebaseConfig = {
   messagingSenderId: "551352148152",
   appId: "1:551352148152:web:xxxxxxxxxxxxxxxx"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ==========================
-// 2) إعداد TonConnectUI
-// تأكد أن manifestUrl يشير إلى ملف tonconnect-manifest.json على دومينك
-// ==========================
+// إعداد TonConnect
 const tonConnectUI = new TonConnectUI.TonConnectUI({
   manifestUrl: window.location.origin + '/tonconnect-manifest.json'
 });
-
-let activeAccount = null; // يحتفظ بمعلومة المحفظة المتصلة
-
-// Render زر TonConnect
+let activeAccount = null;
 tonConnectUI.renderWidget('#ton-connect');
 
-// الاستماع لحدث الاتصال
 tonConnectUI.on('connect', ({account}) => {
   activeAccount = account;
-  document.getElementById('wallet-info').innerText = `متصل: ${account.name || account.address}`;
+  document.getElementById('wallet-info').innerText = `متصل: ${account.address}`;
   setStatus('محفظة متصلة');
 });
-
 tonConnectUI.on('disconnect', () => {
   activeAccount = null;
   document.getElementById('wallet-info').innerText = 'لم يتصل أي محفظة بعد.';
   setStatus('محفظة مفصولة');
 });
 
-// ==========================
-// 3) زر الدفع — إنشاء طلب دفع وطلب إرسال الترانزاكشن
-// استبدل `TO_WALLET_ADDRESS` بعنوان محفظتك على TON
-// ==========================
-const TO_WALLET_ADDRESS = 'UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz'; // عنوان SJ
-const SJ_REWARD = 1000; // عدد الكوينات التي تُضاف بعد الدفع
+// إعدادات الدفع
+const TO_WALLET_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+const SJ_REWARD = 1000;
+const TON_API = "https://toncenter.com/api/v2"; // Ton API
+const TON_API_KEY = ""; // مفتاح API إذا عندك
 
-async function payOneTON() {
-  if (!tonConnectUI || !activeAccount) {
-    setStatus('يرجى توصيل المحفظة أولاً');
-    return;
-  }
-
-  setStatus('إنشاء طلب الدفع...');
-
-  // مقدار الدفع بوحدة nanotons (1 TON = 1e9 nanotons)
-  const amountNanotons = (1 * 1e9).toString();
-
-  const transaction = {
-    validUntil: Math.floor(Date.now() / 1000) + 300, // صالح لمدة 5 دقائق
-    messages: [
-      {
-        address: TO_WALLET_ADDRESS,
-        amount: amountNanotons
-      }
-    ]
-  };
-
-  try {
-    const result = await tonConnectUI.sendTransaction(transaction);
-    // `result` يحتوي على info من المحفظة (مثل id أو hash اعتمادًا على المحفظة)
-    console.log('نتيجة إرسال الترانزاكشن:', result);
-    setStatus('تم إرسال طلب الدفع — التحقق من الدفع...');
-
-    // نرسل إلى Firebase لإعلام السيرفر بالتحقق (أو التحقق من العقدة مباشرة من هنا)
-    await notifyServerOfPendingPayment(result);
-    setStatus('أُرسلت طلبية التحقق للسيرفر');
-  } catch (err) {
-    console.error('فشل إرسال الترانزاكشن', err);
-    setStatus('فشل إرسال الترانزاكشن');
-  }
-}
-
-// رابط زر
 document.getElementById('payBtn').addEventListener('click', async () => {
-  // إذا لم تتصل المحفظة، افتح واجهة TonConnect
   if (!activeAccount) {
     await tonConnectUI.connect();
-    return; // عند الاتصال سيستدعي المستخدم مرة أخرى
+    return;
   }
   await payOneTON();
 });
-
-// زر فصل المحفظة
 document.getElementById('logoutBtn').addEventListener('click', () => {
   tonConnectUI.disconnect();
 });
 
-// ==========================
-// 4) إرسال بيانات الدفع إلى Firebase — يُفترض أن هناك Cloud Function تتحقق فعليًا
-// سنسجل الدفع كـ pending تحت payments/ ثم السيرفر (Cloud Function) سيؤكدها بعد التحقق
-// ==========================
-async function notifyServerOfPendingPayment(txResult) {
-  const userId = getTelegramUserId();
-  const paymentKey = db.ref('payments').push().key;
-  const payload = {
-    userId,
-    txResult,
-    to: TO_WALLET_ADDRESS,
-    amountNanotons: (1 * 1e9).toString(),
-    status: 'pending',
-    createdAt: Date.now()
+async function payOneTON() {
+  setStatus('إنشاء طلب الدفع...');
+  const amountNanotons = (1 * 1e9).toString();
+  const transaction = {
+    validUntil: Math.floor(Date.now() / 1000) + 300,
+    messages: [{ address: TO_WALLET_ADDRESS, amount: amountNanotons }]
   };
-  await db.ref(`payments/${paymentKey}`).set(payload);
+  try {
+    const result = await tonConnectUI.sendTransaction(transaction);
+    console.log('Transaction result:', result);
+    setStatus('تم الدفع، جاري التحقق...');
+    await verifyPayment(result);
+  } catch (err) {
+    console.error(err);
+    setStatus('فشل الدفع');
+  }
 }
 
-// ======== مساعدة: الحصول على Telegram user id من WebApp
+async function verifyPayment(txResult) {
+  try {
+    const resp = await fetch(`${TON_API}/getTransactions?account=${TO_WALLET_ADDRESS}&limit=50`, {
+      headers: TON_API_KEY ? { "X-API-Key": TON_API_KEY } : {}
+    });
+    const data = await resp.json();
+    if (!data.ok || !data.result) {
+      setStatus('خطأ في Ton API');
+      return;
+    }
+    const found = data.result.find(
+      tx => tx.in_msg && tx.in_msg.source &&
+            tx.in_msg.value >= 1e9
+    );
+    if (found) {
+      await updateUserBalance();
+      setStatus('تم التحقق وإضافة الرصيد ✅');
+    } else {
+      setStatus('لم يتم العثور على المعاملة ❌');
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('خطأ أثناء التحقق');
+  }
+}
+
+async function updateUserBalance() {
+  const userId = getTelegramUserId();
+  const ref = db.ref(`/users/${userId}/balance`);
+  await ref.transaction(bal => (bal || 0) + SJ_REWARD);
+}
+
 function getTelegramUserId() {
   try {
     const tg = window.Telegram.WebApp;
     return tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'anonymous';
-  } catch (e) {
+  } catch {
     return 'anonymous';
   }
 }
 
-function setStatus(s) {
-  document.getElementById('status').innerText = s;
+function setStatus(msg) {
+  document.getElementById('status').innerText = msg;
 }
-
-// ==========================
-// 5) (مهم) مثال على Cloud Function (Node.js) تتحقق من الدفع عبر TonCenter/tonapi
-// انسخ الكود إلى مشروع Functions في Firebase ثم اضبط KEY و URL كما تريد
-// ==========================
-/*
-// functions/index.js
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const fetch = require('node-fetch');
-admin.initializeApp();
-
-// استبدل TOKEN_API_KEY بمفتاحك إن استخدمت خدمة تحتاج لمفتاح
-const TONCENTER_API = 'https://toncenter.com/api/v2';
-const TONCENTER_API_KEY = ''; // اختياري
-
-exports.verifyTonPayments = functions.database.ref('/payments/{paymentId}')
-  .onCreate(async (snap, ctx) => {
-    const payment = snap.val();
-    const paymentId = ctx.params.paymentId;
-
-    // هنا يجب أن تبحث عن عملية تحويل من address -> TO_WALLET_ADDRESS بنفس المبلغ
-    // أبسط طريقة: لو محفظتك (TO_WALLET_ADDRESS) تتلقى txn id من المحفظة، ابحث بالـ hash
-    // إذا كانت المحفظة لا تعطي hash reliably، يمكنك استخدام searchTransactions API
-
-    // مثال: استعلام by hash (لو متوفر في payment.txResult)
-    const hash = payment.txResult && payment.txResult.hash;
-    if (!hash) {
-      // لو لا يوجد hash — ستحتاج إلى طريقة أخرى (مثل مراقبة جميع التحويلات لوصول مبلغ محدد)
-      return null;
-    }
-
-    const resp = await fetch(`${TONCENTER_API}/getTransactions?account=${TO_WALLET_ADDRESS}&limit=50`, {
-      headers: {
-        'X-API-Key': TONCENTER_API_KEY
-      }
-    });
-    const data = await resp.json();
-    // تحقق من وجود hash أو من تطابق المبلغ
-
-    // لو تحققنا بنجاح:
-    await admin.database().ref(`/payments/${paymentId}`).update({status: 'confirmed', confirmedAt: Date.now()});
-
-    // اضف السِجِل للرصيد
-    const userBalanceRef = admin.database().ref(`/users/${payment.userId}/balance`);
-    await userBalanceRef.transaction(current => (current || 0) + ${SJ_REWARD});
-
-    return null;
-  });
-*/
-
-// ==========================
-// انتهى الملف — تذكّر الخطوات التالية في التوثيق أدناه
-// ==========================
-</script></body>
+</script>
+</body>
 </html>
