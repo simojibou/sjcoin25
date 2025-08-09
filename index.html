@@ -127,7 +127,7 @@
             justify-content: center;
             font-size: 12px;
             color: black;
-            cursor: move;
+            cursor: grab;
         }
         #bottom-nav {
             background: #00008b;
@@ -246,7 +246,9 @@
             { type: 'crate', level: 1 },
             { type: 'crate', level: 1 },
             { type: 'crate', level: 1 },
-            { type: 'car', level: 1 },
+            { type: 'crate', level: 1 },
+            { type: 'crate', level: 1 },
+            { type: 'crate', level: 1 },
             { type: 'car', level: 1 }
         ];
         let autoMode = false;
@@ -309,31 +311,82 @@
                 const div = document.createElement('div');
                 div.className = 'item';
                 div.textContent = `${item.type.toUpperCase()} Lvl ${item.level}`;
-                div.draggable = true;
                 div.dataset.index = index;
-                div.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('text/plain', index);
-                });
-                div.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                });
-                div.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    if (fromIndex === index) return;
-                    const fromItem = items[fromIndex];
-                    const toItem = items[index];
-                    if (fromItem.type === toItem.type && fromItem.level === toItem.level) {
-                        toItem.level += 1;
-                        items.splice(fromIndex, 1);
-                        calculateEarnPerSec();
-                        renderItems();
-                        updateUI();
-                    }
-                });
+                div.addEventListener('mousedown', pickup);
+                div.addEventListener('touchstart', pickup, { passive: false });
                 grid.appendChild(div);
             });
         }
+
+        // Drag and Drop Logic
+        let moving = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function pickup(event) {
+            event.preventDefault();
+            moving = event.target;
+            const rect = moving.getBoundingClientRect();
+            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
+            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
+            offsetX = clientX - rect.left;
+            offsetY = clientY - rect.top;
+            moving.style.position = 'fixed';
+            moving.style.left = `${rect.left}px`;
+            moving.style.top = `${rect.top}px`;
+            moving.style.width = `${rect.width}px`;
+            moving.style.height = `${rect.height}px`;
+            moving.style.zIndex = '1000';
+        }
+
+        function move(event) {
+            if (!moving) return;
+            event.preventDefault();
+            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
+            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
+            moving.style.left = `${clientX - offsetX}px`;
+            moving.style.top = `${clientY - offsetY}px`;
+        }
+
+        function drop(event) {
+            if (!moving) return;
+            event.preventDefault();
+            const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
+            const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
+            moving.style.display = 'none';
+            let target = document.elementFromPoint(clientX, clientY);
+            moving.style.display = '';
+            if (target && target.className === 'item' && target !== moving) {
+                const fromIndex = parseInt(moving.dataset.index);
+                const toIndex = parseInt(target.dataset.index);
+                const fromItem = items[fromIndex];
+                const toItem = items[toIndex];
+                if (fromItem.type === toItem.type && fromItem.level === toItem.level) {
+                    toItem.level += 1;
+                    items.splice(fromIndex, 1);
+                    calculateEarnPerSec();
+                    renderItems();
+                    updateUI();
+                    moving = null;
+                    return;
+                }
+            }
+            // Reset if not merged
+            moving.style.position = '';
+            moving.style.left = '';
+            moving.style.top = '';
+            moving.style.width = '';
+            moving.style.height = '';
+            moving.style.zIndex = '';
+            moving = null;
+        }
+
+        // Add global listeners
+        document.addEventListener('mousemove', move);
+        document.addEventListener('touchmove', move, { passive: false });
+        document.addEventListener('mouseup', drop);
+        document.addEventListener('touchend', drop);
+        document.addEventListener('touchcancel', drop);
 
         // Earning Loop
         setInterval(() => {
@@ -352,11 +405,10 @@
             }, 5000);
         });
 
-        // Auto Mode Toggle (here it just enables continuous earning, but since interval always runs, perhaps auto collects or something; for now, placebo)
+        // Auto Mode Toggle
         document.getElementById('auto-btn').addEventListener('click', () => {
             autoMode = !autoMode;
             document.getElementById('auto-btn').textContent = autoMode ? 'Auto On' : 'Auto Mode';
-            // Could add auto-merge logic if desired
         });
 
         // Buy Car
