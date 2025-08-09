@@ -1,255 +1,285 @@
-<!DOCTYPE html>
-<html lang="en" >
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Drift & Merge Game - Telegram Mini App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SJ COIN — دفع بـ TON</title>
+
+  <!-- Firebase (v9 modular) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Axios for HTTP requests -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- TonConnect SDK & UI (unpkg) -->
+  <script src="https://unpkg.com/@tonconnect/sdk/dist/tonconnect.min.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui/dist/tonconnect-ui.min.js"></script>
+
   <style>
-    body { background: #121212; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
-    #inventory { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-    .car-slot { background: #222; padding: 10px; border-radius: 8px; text-align: center; cursor: grab; user-select: none; }
-    .car-level { font-weight: bold; margin-top: 5px; }
-    #stats { margin-top: 15px; font-size: 18px; }
-    button { margin: 5px; padding: 10px 15px; font-size: 16px; border-radius: 6px; border: none; cursor: pointer; }
-    #boostBtn { background: #ff5500; color: white; }
-    #autoBtn { background: #007bff; color: white; }
+    body{font-family:system-ui,Segoe UI,Arial;max-width:900px;margin:16px auto;padding:12px;}
+    .card{border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(0,0,0,0.06);margin-bottom:14px;background:#fff;}
+    h1{margin:0 0 10px 0}
+    label{display:block;margin:8px 0 4px}
+    input, button, select{padding:10px;border-radius:8px;border:1px solid #ddd;width:100%;box-sizing:border-box}
+    button{cursor:pointer;margin-top:8px}
+    .muted{color:#666;font-size:0.9rem}
+    .status{padding:10px;border-radius:8px;margin-top:8px}
+    .ok{background:#e6ffef;border:1px solid #b6f0cf}
+    .warn{background:#fff7e6;border:1px solid #f2d49c}
   </style>
 </head>
 <body>
-
-  <h1>Drift & Merge</h1>
-
-  <div id="inventory"></div>
-
-  <div id="stats">
-    Coins: <span id="coins">0</span> |
-    Income/sec: <span id="incomePerSec">0</span> |
-    Energy: <span id="energy">0</span>
+  <div class="card">
+    <h1>SJ COIN — اشترِ بـ TON</h1>
+    <p class="muted">ادفع TON لتحصل على رصيد SJ داخل حسابك (تجريبي). أدخل المبلغ (TON) واضغط "إنشاء فاتورة" ثم اضغط "دفع بـ TON".</p>
   </div>
 
-  <button id="boostBtn">BOOST</button>
-  <button id="autoBtn">AUTO MODE</button>
+  <div class="card" id="app">
+    <label>عنوان محفظة التاجر (MERCHANT_ADDRESS)</label>
+    <input id="merchantAddress" placeholder="ضع عنوان محفظتك هنا (مثلاً EQ... أو UQ...)" />
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <label>المبلغ (TON)</label>
+    <input id="amountTon" type="number" step="0.000001" min="0" value="0.1" />
 
-  <script>
-    // --- Firebase Setup ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-      authDomain: "metawarefare-gaming.firebaseapp.com",
-      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-      projectId: "metawarefare-gaming",
-      storageBucket: "metawarefare-gaming.appspot.com",
-      messagingSenderId: "551352148152",
-      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+    <label>اسم المستخدم / معرف داخل التطبيق</label>
+    <input id="userId" placeholder="مثلاً user_123" />
+
+    <button id="createInvoiceBtn">إنشاء فاتورة</button>
+
+    <div id="invoiceBlock" style="display:none;margin-top:12px">
+      <div><strong>Invoice ID:</strong> <span id="invoiceId"></span></div>
+      <div><strong>الحالة:</strong> <span id="invoiceStatus">pending</span></div>
+      <button id="payBtn">دفع بـ TON (فتح المحفظة)</button>
+      <div style="margin-top:8px">
+        <button id="checkBtn">فحص حالة الفاتورة الآن</button>
+        <button id="startPollBtn">بدء المراقبة (كل 8 ثواني)</button>
+        <button id="stopPollBtn" style="display:none">إيقاف المراقبة</button>
+      </div>
+      <div id="log" style="margin-top:10px;font-size:0.9rem;color:#333"></div>
+    </div>
+
+    <div style="margin-top:12px" class="muted">
+      <strong>ملاحظة أمان:</strong> لا تستخدم هذه الصفحة لحفظ مفاتيحك الخاصة. التحقق النهائي من الدفع وإصدار Jettons يجب أن يتم من السيرفر. هذه واجهة تجريبية فقط.
+    </div>
+  </div>
+
+<script>
+/* ====== إعدادات (ضع القيم المناسبة هنا) ====== */
+const FIREBASE_CONFIG = {
+  // ضع هنا Firebase config الخاص بمشروعك
+  apiKey: "REPLACE_ME",
+  authDomain: "REPLACE_ME",
+  projectId: "REPLACE_ME",
+  databaseURL: "REPLACE_ME",
+  storageBucket: "REPLACE_ME",
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
+};
+
+// عنوان محفظة التاجر التي تستقبل TON (ضع عنوانك)
+let MERCHANT_ADDRESS = "";
+
+// TonCenter / RPC endpoint - ضع مفتاح API إن وُجد (مثال: https://toncenter.com/api/v2)
+let TONCENTER_API_URL = "https://toncenter.com/api/v2";
+let TONCENTER_API_KEY = "REPLACE_WITH_YOUR_TONCENTER_API_KEY";
+
+/* ====== تهيئة Firebase (compat - واجهة سريعة) ====== */
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore(); // سنستخدم Firestore لتخزين الفواتير
+
+/* ====== إعداد TonConnect ======
+ * نستخدم @tonconnect/sdk لفتح محفظة المستخدم وطلب إرسال تحويل.
+ * المراجع: TonConnect docs (integration). 1
+ */
+const { TonConnect } = window.TonConnectSdk || window.tonconnect; // بعض الحزم تعرض اسم مختلف
+const tonConnect = new TonConnect({});
+
+/* ======= عناصر الواجهة ======= */
+const merchantAddressInput = document.getElementById('merchantAddress');
+const amountTonInput = document.getElementById('amountTon');
+const userIdInput = document.getElementById('userId');
+const createInvoiceBtn = document.getElementById('createInvoiceBtn');
+const invoiceBlock = document.getElementById('invoiceBlock');
+const invoiceIdSpan = document.getElementById('invoiceId');
+const invoiceStatusSpan = document.getElementById('invoiceStatus');
+const payBtn = document.getElementById('payBtn');
+const checkBtn = document.getElementById('checkBtn');
+const logDiv = document.getElementById('log');
+const startPollBtn = document.getElementById('startPollBtn');
+const stopPollBtn = document.getElementById('stopPollBtn');
+
+let currentInvoice = null;
+let pollInterval = null;
+
+/* ====== دوال مساعدة ====== */
+function log(msg) {
+  const ts = new Date().toLocaleTimeString();
+  logDiv.innerHTML = `[${ts}] ${msg}<br>` + logDiv.innerHTML;
+}
+
+function uuidv4() {
+  // معرف فريد بسيط
+  return 'xxxxxx'.replace(/[x]/g, function(){ return Math.floor(Math.random()*16).toString(16); }) + Date.now().toString(16);
+}
+
+/* ====== إنشاء فاتورة في Firestore ====== */
+createInvoiceBtn.addEventListener('click', async () => {
+  MERCHANT_ADDRESS = merchantAddressInput.value.trim();
+  const amountTon = parseFloat(amountTonInput.value);
+  const userId = userIdInput.value.trim() || ("user_"+uuidv4().slice(0,6));
+
+  if (!MERCHANT_ADDRESS) { alert('ضع عنوان محفظة التاجر'); return; }
+  if (!amountTon || amountTon <= 0) { alert('ضع مبلغ صحيح بالـ TON'); return; }
+
+  const invoiceId = "sj_" + uuidv4();
+  const invoice = {
+    invoiceId,
+    userId,
+    amountTon,
+    amountNano: Math.round(amountTon * 1e9), // TON -> nanotons
+    status: "pending",
+    merchantAddress: MERCHANT_ADDRESS,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  // خزن الفاتورة
+  await db.collection('invoices').doc(invoiceId).set(invoice);
+  currentInvoice = invoice;
+  invoiceBlock.style.display = 'block';
+  invoiceIdSpan.textContent = invoiceId;
+  invoiceStatusSpan.textContent = "pending";
+  log("تم إنشاء الفاتورة: " + invoiceId);
+
+  // تخزن الmerchant address محلياً في حال لم تُحدد بعد
+  log("عنوان التاجر: " + MERCHANT_ADDRESS);
+});
+
+/* ====== فتح TonConnect لطلب الدفع ====== */
+payBtn.addEventListener('click', async () => {
+  if (!currentInvoice) { alert('أنشئ فاتورة أولاً'); return; }
+
+  try {
+    // تأكد اتصال TonConnect
+    if (!tonConnect || !tonConnect.connect) {
+      alert('TonConnect SDK غير مُحمّل. راجع إعداداتك.');
+      return;
+    }
+
+    // اطلب من المستخدم اختيار محفظة وفتح النافذة
+    const connectRes = await tonConnect.connect();
+    log('اتصل بالمحفظة: ' + JSON.stringify(connectRes?.account));
+
+    // جهّز طلب التحويل: نضيف comment لتحديد الفاتورة
+    const transferRequest = {
+      address: currentInvoice.merchantAddress,
+      amount: String(currentInvoice.amountNano), // بالنانوتون
+      // بعض المحافظ تتيح comment/text - TonConnect docs توضح التفاصيل. 2
+      comment: `SJ_INVOICE:${currentInvoice.invoiceId}`
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // --- Telegram Mini App Setup ---
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    // TonConnect يعيد رابط أو يفتح واجهة المحفظة لإرسال المعاملة
+    // الAPI قد تختلف حسب نسخة SDK - راجع docs لو ظهرت أخطاء. 3
+    await tonConnect.sendTransaction(transferRequest);
+    log('تم إرسال طلب الدفع إلى المحفظة (انتظر تأكيد المعاملة من المستخدم)');
+  } catch (err) {
+    console.error(err);
+    alert('خطأ أثناء فتح المحفظة: ' + (err.message || err));
+  }
+});
 
-    // --- Game Data ---
-    let playerId = tg.initDataUnsafe?.user?.id || 'guest';
-    let inventory = [];  // array of cars { id, model, level }
-    let coins = 0;
-    let energy = 0;
-    let incomePerSec = 0;
-    let boostActive = false;
-    let autoMode = false;
+/* ====== فحص المعاملة عبر TonCenter / RPC ======
+  هذا فحص بسيط يبحث في معاملات عنوان التاجر عن نص التعليق `SJ_INVOICE:...`.
+  **تحذير:** بعض indexers تُرجع الهيكل مشفراً أو تحت حقل مختلف — لذلك الفحص النهائي يجب أن يتم على الباك-إند باستخدام decode مناسب. 4
+*/
+async function checkInvoicePaidOnce(invoiceId) {
+  if (!invoiceId) return {paid:false};
 
-    // Inventory UI container
-    const inventoryEl = document.getElementById('inventory');
-    const coinsEl = document.getElementById('coins');
-    const energyEl = document.getElementById('energy');
-    const incomeEl = document.getElementById('incomePerSec');
-    const boostBtn = document.getElementById('boostBtn');
-    const autoBtn = document.getElementById('autoBtn');
+  try {
+    // نستخدم endpoint getTransactions (مثال TonCenter)
+    // وثائق getTransactions: TonCenter / QuickNode / Chainstack. 5
+    const url = `${TONCENTER_API_URL}/getTransactions?address=${encodeURIComponent(MERCHANT_ADDRESS)}&limit=40`;
+    const headers = TONCENTER_API_KEY ? { 'X-API-Key': TONCENTER_API_KEY } : {};
+    const res = await axios.get(url, { headers });
 
-    // --- Load Player Data ---
-    function loadPlayerData() {
-      db.ref('players/' + playerId).once('value').then(snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          inventory = data.inventory || [];
-          coins = data.coins || 0;
-          energy = data.energy || 0;
-        } else {
-          // New player starter data
-          inventory = [
-            { id: generateId(), model: 'CarA', level: 1 },
-            { id: generateId(), model: 'CarA', level: 1 },
-            { id: generateId(), model: 'CarB', level: 1 }
-          ];
-          coins = 100;
-          energy = 10;
-          savePlayerData();
-        }
-        calculateIncome();
-        renderInventory();
-        updateStats();
-      });
-    }
+    // قد تختلف البنية حسب provider؛ هنا نتوقع res.data.result.transactions أو res.data.result
+    const txs = res.data.result || res.data.transactions || [];
 
-    // --- Save Player Data ---
-    function savePlayerData() {
-      db.ref('players/' + playerId).set({
-        inventory,
-        coins,
-        energy
-      });
-    }
-
-    // --- Generate Unique ID ---
-    function generateId() {
-      return '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    // --- Render Inventory ---
-    function renderInventory() {
-      inventoryEl.innerHTML = '';
-      inventory.forEach(car => {
-        const slot = document.createElement('div');
-        slot.className = 'car-slot';
-        slot.draggable = true;
-        slot.dataset.id = car.id;
-        slot.innerHTML = `
-          <div>${car.model}</div>
-          <div class="car-level">Lvl ${car.level}</div>
-        `;
-
-        // Drag and drop handlers
-        slot.addEventListener('dragstart', e => {
-          e.dataTransfer.setData('text/plain', car.id);
-        });
-        slot.addEventListener('dragover', e => {
-          e.preventDefault();
-        });
-        slot.addEventListener('drop', e => {
-          e.preventDefault();
-          const sourceId = e.dataTransfer.getData('text/plain');
-          const targetId = car.id;
-          mergeCars(sourceId, targetId);
-        });
-
-        inventoryEl.appendChild(slot);
-      });
-    }
-
-    // --- Merge Cars ---
-    function mergeCars(sourceId, targetId) {
-      if (sourceId === targetId) return;
-
-      const sourceCar = inventory.find(c => c.id === sourceId);
-      const targetCar = inventory.find(c => c.id === targetId);
-
-      if (!sourceCar || !targetCar) return;
-
-      if (sourceCar.model === targetCar.model && sourceCar.level === targetCar.level) {
-        // Merge logic: remove both and add higher level car
-        inventory = inventory.filter(c => c.id !== sourceId && c.id !== targetId);
-        const newCar = {
-          id: generateId(),
-          model: sourceCar.model,
-          level: sourceCar.level + 1
-        };
-        inventory.push(newCar);
-        calculateIncome();
-        savePlayerData();
-        renderInventory();
-        updateStats();
-        alert(`Merged two level ${sourceCar.level} ${sourceCar.model} cars into level ${newCar.level}!`);
-      } else {
-        alert('Only cars of same model and level can be merged!');
+    for (const tx of txs) {
+      // حاول إيجاد النص في in_message.body أو in_message.message
+      const inMsg = tx.in_message || tx.in_message || tx.in_message?.message || tx.in_message;
+      // بعض النودز تحتوي body كنص مشفّر؛ إذ لم تجده هنا، تحتاج باك-إند لفك الشفرة
+      const bodyStr = JSON.stringify(tx);
+      if (bodyStr.includes(`SJ_INVOICE:${invoiceId}`)) {
+        // تحقق المبلغ (ابحث في fields المناسبة)
+        // هنا نعتبر أي وجود مرتبط بالفاتورة يعني دفع (لمثال فقط)
+        return { paid: true, txHash: tx.transaction_id || tx.hash || tx.lt || null, raw: tx };
       }
     }
+    return { paid:false };
+  } catch (err) {
+    console.error('checkInvoicePaidOnce error', err);
+    return { paid:false, error: err.message || err };
+  }
+}
 
-    // --- Calculate Passive Income per Second ---
-    function calculateIncome() {
-      // Example: base income 10 coins per level
-      incomePerSec = inventory.reduce((sum, car) => sum + (car.level * 10), 0);
-      incomeEl.textContent = incomePerSec;
+/* زر الفحص اليدوي */
+checkBtn.addEventListener('click', async () => {
+  if (!currentInvoice) return alert('ليس هناك فاتورة.');
+  log('جاري الفحص...');
+  const r = await checkInvoicePaidOnce(currentInvoice.invoiceId);
+  if (r.paid) {
+    log('تم العثور على الدفع! tx: ' + (r.txHash || 'unknown'));
+    invoiceStatusSpan.textContent = "paid";
+    // حدّث الفاتورة في Firestore
+    await db.collection('invoices').doc(currentInvoice.invoiceId).update({ status: "paid", paidAt: firebase.firestore.FieldValue.serverTimestamp(), tx: r.txHash || null });
+    // هنا تنفذ منطق الإعطاء: إضافة رصيد SJ في Firebase أو استدعاء باك-إند لإرسال Jetton
+    log('تحديث الفاتورة في Firestore: paid');
+  } else {
+    log('لم يتم العثور على الدفع بعد.');
+  }
+});
+
+/* مراقبة دورية */
+startPollBtn.addEventListener('click', () => {
+  if (!currentInvoice) return alert('ليس هناك فاتورة.');
+  startPollBtn.style.display = 'none';
+  stopPollBtn.style.display = 'inline-block';
+  pollInterval = setInterval(async () => {
+    log('poll: فحص الفاتورة...');
+    const r = await checkInvoicePaidOnce(currentInvoice.invoiceId);
+    if (r.paid) {
+      log('poll: المدفوعات وجدت! tx: ' + (r.txHash || 'unknown'));
+      invoiceStatusSpan.textContent = "paid";
+      await db.collection('invoices').doc(currentInvoice.invoiceId).update({ status: "paid", paidAt: firebase.firestore.FieldValue.serverTimestamp(), tx: r.txHash || null });
+      // أغلق المراقبة
+      clearInterval(pollInterval);
+      stopPollBtn.style.display = 'none';
+      startPollBtn.style.display = 'inline-block';
+      alert('تم تأكيد الدفع! الفاتورة مدفوعة.');
+    } else {
+      log('poll: لم يدفع بعد.');
     }
+  }, 8000);
+});
 
-    // --- Update UI Stats ---
-    function updateStats() {
-      coinsEl.textContent = coins.toFixed(0);
-      energyEl.textContent = energy.toFixed(0);
-      incomeEl.textContent = incomePerSec.toFixed(0);
-    }
+stopPollBtn.addEventListener('click', () => {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = null;
+  stopPollBtn.style.display = 'none';
+  startPollBtn.style.display = 'inline-block';
+  log('تم إيقاف المراقبة.');
+});
 
-    // --- Drift & Earn Simulation ---
-    function driftEarn(tick = 1000) {
-      let earnAmount = incomePerSec;
-      if (boostActive) {
-        earnAmount *= 2;  // Double income on boost
-      }
-      coins += earnAmount * (tick / 1000);
-      energy += 1 * (tick / 1000);  // Gain energy slowly while drifting
-
-      updateStats();
-      savePlayerData();
-    }
-
-    // --- Boost Handling ---
-    boostBtn.addEventListener('click', () => {
-      if (energy < 5) {
-        alert('Not enough energy to boost!');
-        return;
-      }
-      energy -= 5;
-      boostActive = true;
-      updateStats();
-
-      setTimeout(() => {
-        boostActive = false;
-        updateStats();
-      }, 10000);  // Boost lasts 10 seconds
-    });
-
-    // --- Auto Mode ---
-    autoBtn.addEventListener('click', () => {
-      autoMode = !autoMode;
-      autoBtn.textContent = autoMode ? 'AUTO MODE ON' : 'AUTO MODE OFF';
-      if (autoMode) {
-        autoPlay();
-      }
-    });
-
-    function autoPlay() {
-      if (!autoMode) return;
-
-      // Auto-merge cars if possible
-      for (let i = 0; i < inventory.length; i++) {
-        for (let j = i + 1; j < inventory.length; j++) {
-          if (inventory[i].model === inventory[j].model && inventory[i].level === inventory[j].level) {
-            mergeCars(inventory[i].id, inventory[j].id);
-            break;
-          }
-        }
-      }
-      // Auto boost if energy available
-      if (energy >= 5 && !boostActive) {
-        boostBtn.click();
-      }
-
-      // Continue drifting (earn coins)
-      driftEarn();
-
-      // Repeat every second
-      setTimeout(autoPlay, 1000);
-    }
-
-    // --- Initialize ---
-    loadPlayerData();
-
-    // Start passive earning every second
-    setInterval(() => {
-      if (!autoMode) driftEarn();
-    }, 1000);
-  </script>
+/* عند تحميل الصفحة، ضع عنوان التاجر إن كان موجوداً سابقاً (تذكّر تعيين المتغيرات) */
+window.addEventListener('load', () => {
+  // يمكن تعبئته تلقائياً أو تحميله من إعدادات
+  if (MERCHANT_ADDRESS) {
+    merchantAddressInput.value = MERCHANT_ADDRESS;
+  }
+  log('الصفحة جاهزة. تأكد من إعداد المتغيرات (FIREBASE_CONFIG, MERCHANT_ADDRESS, TONCENTER_API_KEY).');
+});
+</script>
 </body>
 </html>
