@@ -1,396 +1,218 @@
 <!doctype html>
+
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SJ COIN — دفع بـ TON</title>
-
-  <!-- Firebase (compat - سهل للدمج السريع) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- Axios -->
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-  <!-- TonConnect SDK (UMD) -->
-  <script src="https://unpkg.com/@tonconnect/sdk@1.0.8/dist/tonconnect.umd.js"></script>
-
-  <!-- Telegram Web App SDK (اختياري — عندما تعمل داخل Mini App) -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <style>
-    :root { --bg:#f6f7fb; --card:#ffffff; --accent:#0b8bdc; --muted:#6b7280; }
-    body{font-family:system-ui,Segoe UI,Arial;max-width:980px;margin:18px auto;padding:14px;background:var(--bg);color:#111}
-    .card{background:var(--card);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
-    h1{margin:0 0 6px;font-size:1.3rem}
-    label{display:block;margin:10px 0 6px}
-    input, select, button, textarea{padding:10px;border-radius:8px;border:1px solid #e6e9ef;width:100%;box-sizing:border-box}
-    button{background:var(--accent);color:white;border:none;cursor:pointer}
-    .muted{color:var(--muted);font-size:0.95rem}
-    #log{font-size:0.9rem;color:#222;margin-top:12px;max-height:220px;overflow:auto}
-    .small{font-size:0.9rem;color:var(--muted)}
-    .row{display:flex;gap:10px}
-    .col{flex:1}
-    @media (max-width:640px){ .row{flex-direction:column} }
-  </style>
-</head>
+  <title>SJ COIN — دفع بـ TON (Mini App)</title>  <!-- Telegram Web App SDK -->  <script src="https://telegram.org/js/telegram-web-app.js"></script>  <!-- TonConnect UI -->  <script src="https://unpkg.com/@tonconnect/ui"></script>  <!-- Firebase (compat — سهل للبدء) -->  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>  <style>
+    body{font-family: system-ui, Arial; padding:16px; background:#f7f7fb}
+    .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(10,10,30,0.06);max-width:720px;margin:12px auto}
+    button{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+    .primary{background:#2b6ef6;color:white}
+    .muted{background:#efefef}
+    .center{text-align:center}
+  </style></head>
 <body>
   <div class="card">
-    <h1>SJ COIN — اشترِ بـ TON</h1>
-    <div class="muted">ادفع TON لتحصل على رصيد SJ داخل حسابك. الواجهة تحفظ الفاتورة في Firestore، وتطلب الدفع عبر TonConnect.</div>
-  </div>
+    <h2 class="center">SJ COIN — دفع بـ TON</h2><p>تأكد أن ملف <code>tonconnect-manifest.json</code> موجود على نفس الدومين مع البيانات الصحيحة (url, name, iconUrl).</p>
 
-  <div class="card" id="app">
-    <div class="row">
-      <div class="col">
-        <label>عنوان محفظة التاجر (MERCHANT_ADDRESS)</label>
-        <input id="merchantAddress" placeholder="مثلاً UQD1TlRrCeCd..." />
-      </div>
-      <div style="width:160px">
-        <label>السعر (1 TON = ؟ SJ)</label>
-        <input id="rateSJPerTON" value="1000" />
-      </div>
-    </div>
+<div id="wallet-info" style="margin-bottom:12px">لم يتصل أي محفظة بعد.</div>
 
-    <label>المبلغ (TON)</label>
-    <input id="amountTon" type="number" step="0.000001" min="0" value="0.1" />
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  <div id="ton-connect"></div>
+  <button id="payBtn" class="primary">ادفع 1 TON واحصل على 1000 SJ</button>
+  <button id="logoutBtn" class="muted">فصل المحفظة</button>
+</div>
 
-    <label>معرّف المستخدم (userId)</label>
-    <input id="userId" placeholder="مثلاً user_123 أو leave empty for auto" />
+<hr />
+<p><strong>الحالة:</strong> <span id="status">جاهز</span></p>
 
-    <div style="margin-top:12px" class="row">
-      <button id="createInvoiceBtn" style="flex:1">إنشاء فاتورة</button>
-      <button id="connectWalletBtn" style="flex:1;background:#2bde73">ربط محفظة TON</button>
-    </div>
-
-    <div id="invoiceBlock" style="display:none;margin-top:14px">
-      <div><strong>Invoice ID:</strong> <span id="invoiceId"></span></div>
-      <div><strong>الحالة:</strong> <span id="invoiceStatus">pending</span></div>
-      <div class="row" style="margin-top:8px">
-        <button id="payBtn">دفع بـ TON (افتح المحفظة)</button>
-        <button id="checkBtn" style="background:#f59e0b">فحص الفاتورة الآن</button>
-      </div>
-      <div style="margin-top:8px" class="small">يمكنك بدء المراقبة التلقائية أيضاً.</div>
-      <div style="margin-top:8px">
-        <button id="startPollBtn" style="background:#06b6d4">بدء المراقبة (كل 8 ثواني)</button>
-        <button id="stopPollBtn" style="display:none">إيقاف المراقبة</button>
-      </div>
-
-      <div id="log"></div>
-    </div>
-
-    <div style="margin-top:12px" class="muted">
-      <strong>ملاحظة أمان:</strong> هذه واجهة أمامية للتجربة. لا تحفظ مفاتيح خاصة في الـ HTML. التحقق النهائي وإصدار الـ Jetton يجب أن يتم في سيرفر/Cloud Function. إذا أردت أرسل لك كود الـ Cloud Function مع هذا الواجهة جاهز.
-    </div>
-  </div>
-
-<script>
-/* ================== إعدادات افتراضية (معبأة) ================== */
-/* وضّعت هنا بيانات Firebase التي أعطيتني إياها */
-const FIREBASE_CONFIG = {
+  </div><script>
+// ==========================
+// 1) إعداد Firebase — غيّر القيم هنا لتطابق مشروعك
+// (يمكنك استخدام القيم الموجودة في محادثتنا، أو استبدالها بقيمك الخاصة)
+// ==========================
+const firebaseConfig = {
   apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
   authDomain: "metawarefare-gaming.firebaseapp.com",
   databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
   projectId: "metawarefare-gaming",
   storageBucket: "metawarefare-gaming.appspot.com",
   messagingSenderId: "551352148152",
-  appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+  appId: "1:551352148152:web:xxxxxxxxxxxxxxxx"
 };
 
-// ضع هنا عنوان محفظة الاستلام (التاجر) الافتراضي (يمكن تغييره عبر الحقل)
-const DEFAULT_MERCHANT_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-// Ton RPC provider (لا تنسى وضع API KEY إن استخدمت TonCenter أو QuickNode إذا لزم)
-let TONCENTER_API_URL = "https://toncenter.com/api/v2";
-let TONCENTER_API_KEY = ""; // ضع مفتاحك لو لديك
-
-/* ========== تهيئة Firebase ========== */
-firebase.initializeApp(FIREBASE_CONFIG);
-const db = firebase.firestore();
-
-/* ========== تهيئة TonConnect ========== */
-const tonConnect = new window.TonConnectSdk.TonConnect({
-  // خيارات إن احتجت، حالياً نستخدم default
+// ==========================
+// 2) إعداد TonConnectUI
+// تأكد أن manifestUrl يشير إلى ملف tonconnect-manifest.json على دومينك
+// ==========================
+const tonConnectUI = new TonConnectUI.TonConnectUI({
+  manifestUrl: window.location.origin + '/tonconnect-manifest.json'
 });
-let connectedAccount = null;
 
-/* ========== عناصر الواجهة ========== */
-const merchantAddressInput = document.getElementById('merchantAddress');
-const amountTonInput = document.getElementById('amountTon');
-const userIdInput = document.getElementById('userId');
-const createInvoiceBtn = document.getElementById('createInvoiceBtn');
-const invoiceBlock = document.getElementById('invoiceBlock');
-const invoiceIdSpan = document.getElementById('invoiceId');
-const invoiceStatusSpan = document.getElementById('invoiceStatus');
-const payBtn = document.getElementById('payBtn');
-const checkBtn = document.getElementById('checkBtn');
-const logDiv = document.getElementById('log');
-const startPollBtn = document.getElementById('startPollBtn');
-const stopPollBtn = document.getElementById('stopPollBtn');
-const connectWalletBtn = document.getElementById('connectWalletBtn');
-const rateSJPerTONInput = document.getElementById('rateSJPerTON');
+let activeAccount = null; // يحتفظ بمعلومة المحفظة المتصلة
 
-let currentInvoice = null;
-let pollInterval = null;
+// Render زر TonConnect
+tonConnectUI.renderWidget('#ton-connect');
 
-function log(msg) {
-  const ts = new Date().toLocaleTimeString();
-  logDiv.innerHTML = `<div>[${ts}] ${msg}</div>` + logDiv.innerHTML;
-}
+// الاستماع لحدث الاتصال
+tonConnectUI.on('connect', ({account}) => {
+  activeAccount = account;
+  document.getElementById('wallet-info').innerText = `متصل: ${account.name || account.address}`;
+  setStatus('محفظة متصلة');
+});
 
-function uuidShort() {
-  return Math.random().toString(16).slice(2,8);
-}
+tonConnectUI.on('disconnect', () => {
+  activeAccount = null;
+  document.getElementById('wallet-info').innerText = 'لم يتصل أي محفظة بعد.';
+  setStatus('محفظة مفصولة');
+});
 
-/* عرض قيمة افتراضية للعنوان */
-merchantAddressInput.value = DEFAULT_MERCHANT_ADDRESS;
+// ==========================
+// 3) زر الدفع — إنشاء طلب دفع وطلب إرسال الترانزاكشن
+// استبدل `TO_WALLET_ADDRESS` بعنوان محفظتك على TON
+// ==========================
+const TO_WALLET_ADDRESS = 'UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz'; // عنوان SJ
+const SJ_REWARD = 1000; // عدد الكوينات التي تُضاف بعد الدفع
 
-/* ================== إنشاء فاتورة ================== */
-createInvoiceBtn.addEventListener('click', async () => {
-  const merchant = merchantAddressInput.value.trim();
-  const amountTon = parseFloat(amountTonInput.value);
-  const userId = userIdInput.value.trim() || ("user_" + uuidShort());
-  const rate = parseFloat(rateSJPerTONInput.value) || 1000;
+async function payOneTON() {
+  if (!tonConnectUI || !activeAccount) {
+    setStatus('يرجى توصيل المحفظة أولاً');
+    return;
+  }
 
-  if (!merchant) { alert('ضع عنوان محفظة التاجر'); return; }
-  if (!amountTon || amountTon <= 0) { alert('ضع مبلغ صحيح بالـ TON'); return; }
+  setStatus('إنشاء طلب الدفع...');
 
-  const invoiceId = "sj_" + Date.now().toString(16) + "_" + uuidShort();
-  const invoiceDoc = {
-    invoiceId,
-    userId,
-    merchantAddress: merchant,
-    amountTon,
-    amountNano: Math.round(amountTon * 1e9),
-    status: "pending",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    rateSJPerTON: rate
+  // مقدار الدفع بوحدة nanotons (1 TON = 1e9 nanotons)
+  const amountNanotons = (1 * 1e9).toString();
+
+  const transaction = {
+    validUntil: Math.floor(Date.now() / 1000) + 300, // صالح لمدة 5 دقائق
+    messages: [
+      {
+        address: TO_WALLET_ADDRESS,
+        amount: amountNanotons
+      }
+    ]
   };
 
   try {
-    await db.collection('invoices').doc(invoiceId).set(invoiceDoc);
-    currentInvoice = invoiceDoc;
-    invoiceBlock.style.display = 'block';
-    invoiceIdSpan.textContent = invoiceId;
-    invoiceStatusSpan.textContent = "pending";
-    log('تم إنشاء الفاتورة: ' + invoiceId + ' للمبلغ ' + amountTon + ' TON');
+    const result = await tonConnectUI.sendTransaction(transaction);
+    // `result` يحتوي على info من المحفظة (مثل id أو hash اعتمادًا على المحفظة)
+    console.log('نتيجة إرسال الترانزاكشن:', result);
+    setStatus('تم إرسال طلب الدفع — التحقق من الدفع...');
+
+    // نرسل إلى Firebase لإعلام السيرفر بالتحقق (أو التحقق من العقدة مباشرة من هنا)
+    await notifyServerOfPendingPayment(result);
+    setStatus('أُرسلت طلبية التحقق للسيرفر');
   } catch (err) {
-    console.error(err);
-    alert('خطأ في إنشاء الفاتورة: ' + (err.message || err));
-  }
-});
-
-/* ================== ربط المحفظة ================== */
-connectWalletBtn.addEventListener('click', async () => {
-  try {
-    const state = await tonConnect.connect();
-    // state.accounts ممكن مصفوفة
-    connectedAccount = (state && state.account) ? state.account.address : (state && state.accounts && state.accounts[0]) ? state.accounts[0].address : null;
-    if (!connectedAccount && state && state.connected && state.account) connectedAccount = state.account.address;
-    if (!connectedAccount && state && state.accounts) connectedAccount = state.accounts[0]?.address || null;
-    log('محفظة متصلة: ' + (connectedAccount || JSON.stringify(state)));
-    if (connectedAccount) {
-      connectWalletBtn.innerText = 'محفظة متصلة';
-      connectWalletBtn.style.background = '#999';
-    }
-  } catch (err) {
-    console.error('connectWallet error', err);
-    alert('فشل في ربط المحفظة: ' + (err.message || err));
-  }
-});
-
-/* ================== دفع الفاتورة (فتح محفظة وطلب التحويل) ================== */
-payBtn.addEventListener('click', async () => {
-  if (!currentInvoice) { alert('أنشئ فاتورة أولاً'); return; }
-  try {
-    // تأكد أن TonConnect متصل أو اطلب الاتصال
-    if (!tonConnect || !tonConnect.connect) { alert('TonConnect غير محمّل'); return; }
-    // نضمن الاتصال
-    await tonConnect.connect();
-    // نجهز الرسالة — نضع invoiceId في payload (base64) وأيضاً في comment داخل body كـ backup
-    const invoiceId = currentInvoice.invoiceId;
-    const payloadBase64 = btoa(`SJ_INVOICE:${invoiceId}`); // ملاحظة: بعض المحافظ تتطلب payload بتنسيق خاص - هذا حل تجريبي
-    const messages = [
-      {
-        address: currentInvoice.merchantAddress,
-        amount: String(currentInvoice.amountNano),
-        payload: payloadBase64
-        // لاحظ: ليست كل المحافظ تقرأ payload كبساطة — لذا نضيف أيضاً comment في sendTransaction إن سمح SDK
-      }
-    ];
-
-    // بعض إصدارات الـ SDK تستخدم sendTransaction({messages, validUntil}) ، بعضها تستخدم طرق أخرى.
-    // نحاول إرسال طلب قياسي:
-    try {
-      await tonConnect.sendTransaction({
-        validUntil: Math.floor(Date.now() / 1000) + 600,
-        messages
-      });
-      log('طلب الدفع أُرسل لواجهة المحفظة. انتظر تأكيد المستخدم على المعاملة.');
-    } catch (eSend) {
-      // إن فشل الشكل السابق، نجرب شكل بديل (بعض محافظ تتوقع حقل message.comment)
-      try {
-        await tonConnect.sendTransaction({
-          validUntil: Math.floor(Date.now() / 1000) + 600,
-          messages: [
-            {
-              address: currentInvoice.merchantAddress,
-              amount: String(currentInvoice.amountNano),
-              comment: `SJ_INVOICE:${invoiceId}`
-            }
-          ]
-        });
-        log('طلب الدفع (بديل) أُرسل لواجهة المحفظة.');
-      } catch (e2) {
-        console.error('both sendTransaction attempts failed', eSend, e2);
-        alert('فشل إرسال طلب الدفع إلى المحفظة. راجع console.');
-      }
-    }
-
-  } catch (err) {
-    console.error('payBtn error', err);
-    alert('خطأ أثناء طلب الدفع: ' + (err.message || err));
-  }
-});
-
-/* ================== فحص الفاتورة (استعلام مباشر عبر TonCenter) ================== */
-async function checkInvoicePaidOnce(invoiceId) {
-  try {
-    // جلب الفاتورة من Firestore (لتأكد القيم)
-    const doc = await db.collection('invoices').doc(invoiceId).get();
-    if (!doc.exists) return { paid:false, err:'invoice not found' };
-    const invoice = doc.data();
-    const merchant = invoice.merchantAddress;
-    const amountNano = invoice.amountNano || Math.round((invoice.amountTon || 0) * 1e9);
-
-    // اطلب معاملات العنوان من TonCenter (أو مزود مشابه)
-    const url = `${TONCENTER_API_URL}/getTransactions?address=${encodeURIComponent(merchant)}&limit=50`;
-    const headers = TONCENTER_API_KEY ? { 'X-API-Key': TONCENTER_API_KEY } : {};
-    const res = await axios.get(url, { headers, timeout: 10000 });
-    const txs = res.data.result || res.data.transactions || [];
-
-    for (const tx of txs) {
-      const txStr = JSON.stringify(tx);
-      if (txStr.includes(`SJ_INVOICE:${invoiceId}`) || txStr.includes(invoiceId)) {
-        // محاولة فحص مقدار
-        // نبحث في الحقول عن قيمة عددية كافية
-        let candidates = [];
-        if (tx.value) candidates.push(Number(tx.value));
-        if (tx.amount) candidates.push(Number(tx.amount));
-        if (tx.in_message && (tx.in_message.value || tx.in_message.amount)) {
-          candidates.push(Number(tx.in_message.value || tx.in_message.amount));
-        }
-        // إن وجد قيمة كافية نعتبرها مدفوعة
-        for (const c of candidates) {
-          if (!isNaN(c) && c >= amountNano) {
-            return { paid:true, txHash: tx.transaction_id || tx.hash || null, raw: tx };
-          }
-        }
-        // بعض indexers يعطون body base64: نحاول فكها
-        try {
-          if (tx.in_message && tx.in_message.body) {
-            const b = atob(tx.in_message.body);
-            if (b.includes(`SJ_INVOICE:${invoiceId}`)) {
-              return { paid:true, txHash: tx.transaction_id || tx.hash || null, raw: tx };
-            }
-          }
-        } catch(e) { /* ignore */ }
-      }
-    }
-
-    return { paid:false };
-  } catch (err) {
-    console.error('checkInvoicePaidOnce error', err);
-    return { paid:false, err: err.message || err };
+    console.error('فشل إرسال الترانزاكشن', err);
+    setStatus('فشل إرسال الترانزاكشن');
   }
 }
 
-/* زر الفحص اليدوي */
-checkBtn.addEventListener('click', async () => {
-  if (!currentInvoice) return alert('أنشئ فاتورة أولاً');
-  log('تفحص الفاتورة...');
-  const invoiceId = currentInvoice.invoiceId;
-  const r = await checkInvoicePaidOnce(invoiceId);
-  if (r.paid) {
-    invoiceStatusSpan.textContent = "paid";
-    log('تم العثور على الدفع — tx: ' + (r.txHash || 'unknown'));
-    await db.collection('invoices').doc(invoiceId).update({ status: "paid", paidAt: firebase.firestore.FieldValue.serverTimestamp(), txHash: r.txHash || null });
-    // امنح المستخدم رصيد SJ داخلي
-    const userId = currentInvoice.userId || currentInvoice.userWallet || ("u_"+invoiceId);
-    const rate = parseFloat(rateSJPerTONInput.value) || 1000;
-    const creditSJ = (currentInvoice.amountTon || 0) * rate;
-    const balRef = db.collection('balances').doc(userId);
-    await db.runTransaction(async (t) => {
-      const d = await t.get(balRef);
-      const prev = d.exists && d.data().balance ? d.data().balance : 0;
-      t.set(balRef, { balance: prev + creditSJ, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    });
-    log('أضيف رصيد SJ للمستخدم: ' + creditSJ);
-  } else {
-    log('لم يتم العثور على الدفع بعد.');
-    if (r.err) log('خطأ: ' + r.err);
+// رابط زر
+document.getElementById('payBtn').addEventListener('click', async () => {
+  // إذا لم تتصل المحفظة، افتح واجهة TonConnect
+  if (!activeAccount) {
+    await tonConnectUI.connect();
+    return; // عند الاتصال سيستدعي المستخدم مرة أخرى
   }
+  await payOneTON();
 });
 
-/* ================== مراقبة دورية ================== */
-startPollBtn.addEventListener('click', () => {
-  if (!currentInvoice) return alert('أنشئ فاتورة أولاً');
-  startPollBtn.style.display = 'none';
-  stopPollBtn.style.display = 'inline-block';
-  pollInterval = setInterval(async () => {
-    log('poll: فحص الفاتورة...');
-    const r = await checkInvoicePaidOnce(currentInvoice.invoiceId);
-    if (r.paid) {
-      invoiceStatusSpan.textContent = "paid";
-      await db.collection('invoices').doc(currentInvoice.invoiceId).update({ status: "paid", paidAt: firebase.firestore.FieldValue.serverTimestamp(), txHash: r.txHash || null });
-      log('poll: الدفع تم تأكيده!');
-      // منح الرصيد كما في الفحص اليدوي
-      const userId = currentInvoice.userId || ("u_"+currentInvoice.invoiceId);
-      const rate = parseFloat(rateSJPerTONInput.value) || 1000;
-      const creditSJ = (currentInvoice.amountTon || 0) * rate;
-      const balRef = db.collection('balances').doc(userId);
-      await db.runTransaction(async (t) => {
-        const d = await t.get(balRef);
-        const prev = d.exists && d.data().balance ? d.data().balance : 0;
-        t.set(balRef, { balance: prev + creditSJ, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      });
-      clearInterval(pollInterval);
-      stopPollBtn.style.display = 'none';
-      startPollBtn.style.display = 'inline-block';
-      alert('تم تأكيد الدفع! الفاتورة مدفوعة.');
-    } else {
-      log('poll: لا تزال الفاتورة بانتظار الدفع.');
-    }
-  }, 8000);
+// زر فصل المحفظة
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  tonConnectUI.disconnect();
 });
 
-stopPollBtn.addEventListener('click', () => {
-  if (pollInterval) clearInterval(pollInterval);
-  pollInterval = null;
-  stopPollBtn.style.display = 'none';
-  startPollBtn.style.display = 'inline-block';
-  log('توقفت المراقبة.');
-});
+// ==========================
+// 4) إرسال بيانات الدفع إلى Firebase — يُفترض أن هناك Cloud Function تتحقق فعليًا
+// سنسجل الدفع كـ pending تحت payments/ ثم السيرفر (Cloud Function) سيؤكدها بعد التحقق
+// ==========================
+async function notifyServerOfPendingPayment(txResult) {
+  const userId = getTelegramUserId();
+  const paymentKey = db.ref('payments').push().key;
+  const payload = {
+    userId,
+    txResult,
+    to: TO_WALLET_ADDRESS,
+    amountNanotons: (1 * 1e9).toString(),
+    status: 'pending',
+    createdAt: Date.now()
+  };
+  await db.ref(`payments/${paymentKey}`).set(payload);
+}
 
-/* ================== Telegram WebApp init (اختياري) ================== */
-try {
-  if (window.Telegram.WebApp) {
+// ======== مساعدة: الحصول على Telegram user id من WebApp
+function getTelegramUserId() {
+  try {
     const tg = window.Telegram.WebApp;
-    tg.expand && tg.expand();
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-      log('تم فتح داخل Telegram Mini App — المستخدم: ' + (user.username || (user.first_name || '') + ' ' + (user.last_name || '')));
-    } else {
-      log('تم فتح داخل Telegram Mini App');
-    }
+    return tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'anonymous';
+  } catch (e) {
+    return 'anonymous';
   }
-} catch (e) { /* ignore */ }
+}
 
-/* عند تحميل الصفحة */
-window.addEventListener('load', () => {
-  log('واجهة جاهزة. تأكد من deploy للCloud Functions للتحقق النهائي.');
-});
-</script>
-</body>
+function setStatus(s) {
+  document.getElementById('status').innerText = s;
+}
+
+// ==========================
+// 5) (مهم) مثال على Cloud Function (Node.js) تتحقق من الدفع عبر TonCenter/tonapi
+// انسخ الكود إلى مشروع Functions في Firebase ثم اضبط KEY و URL كما تريد
+// ==========================
+/*
+// functions/index.js
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const fetch = require('node-fetch');
+admin.initializeApp();
+
+// استبدل TOKEN_API_KEY بمفتاحك إن استخدمت خدمة تحتاج لمفتاح
+const TONCENTER_API = 'https://toncenter.com/api/v2';
+const TONCENTER_API_KEY = ''; // اختياري
+
+exports.verifyTonPayments = functions.database.ref('/payments/{paymentId}')
+  .onCreate(async (snap, ctx) => {
+    const payment = snap.val();
+    const paymentId = ctx.params.paymentId;
+
+    // هنا يجب أن تبحث عن عملية تحويل من address -> TO_WALLET_ADDRESS بنفس المبلغ
+    // أبسط طريقة: لو محفظتك (TO_WALLET_ADDRESS) تتلقى txn id من المحفظة، ابحث بالـ hash
+    // إذا كانت المحفظة لا تعطي hash reliably، يمكنك استخدام searchTransactions API
+
+    // مثال: استعلام by hash (لو متوفر في payment.txResult)
+    const hash = payment.txResult && payment.txResult.hash;
+    if (!hash) {
+      // لو لا يوجد hash — ستحتاج إلى طريقة أخرى (مثل مراقبة جميع التحويلات لوصول مبلغ محدد)
+      return null;
+    }
+
+    const resp = await fetch(`${TONCENTER_API}/getTransactions?account=${TO_WALLET_ADDRESS}&limit=50`, {
+      headers: {
+        'X-API-Key': TONCENTER_API_KEY
+      }
+    });
+    const data = await resp.json();
+    // تحقق من وجود hash أو من تطابق المبلغ
+
+    // لو تحققنا بنجاح:
+    await admin.database().ref(`/payments/${paymentId}`).update({status: 'confirmed', confirmedAt: Date.now()});
+
+    // اضف السِجِل للرصيد
+    const userBalanceRef = admin.database().ref(`/users/${payment.userId}/balance`);
+    await userBalanceRef.transaction(current => (current || 0) + ${SJ_REWARD});
+
+    return null;
+  });
+*/
+
+// ==========================
+// انتهى الملف — تذكّر الخطوات التالية في التوثيق أدناه
+// ==========================
+</script></body>
 </html>
