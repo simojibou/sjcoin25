@@ -13,9 +13,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
+  <!-- Web3.js for NFT Integration -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
+
   <style>
     body {
-      margin: 0; 
+      margin: 0;
       background: linear-gradient(to top, #f2875a, #3f2c71);
       font-family: Arial, sans-serif;
       color: white;
@@ -82,27 +85,31 @@
       0%, 100% { filter: blur(0); }
       50% { filter: blur(2px); }
     }
-    #inventory {
+    .earning-grid {
       margin: 15px 10px;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
     }
-    .crate {
-      background: #f5c542;
+    .slot {
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       height: 70px;
-      background-image: url('https://i.imgur.com/7v1cL8Z.png');
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       cursor: pointer;
       transition: transform 0.2s;
     }
-    .crate:hover {
+    .slot.occupied {
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .slot:hover {
       transform: scale(1.1);
     }
-    #controls {
+    #controls, #game-modes {
       margin: 10px;
       display: flex;
       justify-content: center;
@@ -123,6 +130,14 @@
       cursor: not-allowed;
       box-shadow: none;
     }
+    #car-shop {
+      margin: 10px;
+      text-align: center;
+    }
+    #earn-sec {
+      margin: 10px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -141,6 +156,10 @@
       <span id="sjcoin-balance">0</span>
     </div>
     <div class="balance-box">
+      <img src="https://i.imgur.com/4TIlw9Z.png" alt="Energy" />
+      <span id="energy-balance">0</span>
+    </div>
+    <div class="balance-box">
       <img src="https://i.imgur.com/4TIlw9Z.png" alt="Total Balance" />
       <span id="total-balance">0</span>
     </div>
@@ -150,25 +169,43 @@
     <img id="car" src="https://i.imgur.com/E4X8UOe.png" alt="Car" />
   </div>
 
-  <div id="inventory">
-    <!-- صناديق -->
+  <div id="earn-sec" class="balance-box">
+    <span>EARN/SEC: </span><span id="earn-rate">0</span>
+  </div>
+
+  <div id="inventory" class="earning-grid">
+    <!-- 12 slots for cars -->
+  </div>
+
+  <div id="car-shop" class="balance-box">
+    <button id="buy-car-btn">Buy Car (100 Blue Tokens)</button>
   </div>
 
   <div id="controls">
     <button id="boost-btn">BOOST</button>
     <button id="auto-btn">AUTO MODE</button>
+    <button id="nft-claim-btn">DRFT NFT CLAIM</button>
+    <button id="connect-wallet-btn">Connect Wallet</button>
+  </div>
+
+  <div id="game-modes" class="controls">
+    <button id="garage-btn">Garage</button>
+    <button id="pvp-btn">DRFT PARTY PVP</button>
+    <button id="roadtrip-btn">Road Trip</button>
+    <button id="spin-btn">Spin</button>
   </div>
 
   <script>
-    // تهيئة Telegram WebApp SDK
+    // Initialize Telegram WebApp SDK
     const tg = window.Telegram.WebApp;
     tg.expand();
 
+    // Back button
     document.getElementById('back-btn').onclick = () => {
-      tg.close(); // إغلاق الميني آب
+      tg.close();
     };
 
-    // تهيئة Firebase
+    // Initialize Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -181,14 +218,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // مصادقة مستخدم Telegram Mini App تلقائيًا باستخدام Telegram User ID كمفتاح
+    // Authenticate with Telegram
     async function loginWithTelegram() {
       const user = tg.initDataUnsafe?.user || null;
       if (!user) {
-        alert("يرجى فتح هذا التطبيق داخل Telegram");
+        alert("Please open this app within Telegram");
         return null;
       }
-      // حفظ بيانات المستخدم في Firestore
       const userDocRef = db.collection('users').doc(user.id.toString());
       await userDocRef.set({
         username: user.username || '',
@@ -199,71 +235,273 @@
       return userDocRef;
     }
 
-    // تحميل رصيد المستخدم وصناديقه
+    // Load user data
     async function loadUserData(userDocRef) {
       const doc = await userDocRef.get();
       if (!doc.exists) {
-        await userDocRef.set({
+        const initialData = {
           coins: 0,
           sjcoins: 10000,
-          crates: 7,
-          carCount: 1
-        });
-        return {
-          coins: 0,
-          sjcoins: 10000,
-          crates: 7,
+          energy: 5,
+          cars: Array(12).fill(0),
           carCount: 1
         };
+        await userDocRef.set(initialData);
+        return initialData;
       }
       return doc.data();
     }
 
-    // تحديث الواجهة وعرض الرصيد الكلي
+    // Update UI
     function updateUI(data) {
-      const coins = data.coins ?? 0;
-      const sjcoins = data.sjcoins ?? 0;
-
-      document.getElementById('coin-balance').textContent = coins;
-      document.getElementById('sjcoin-balance').textContent = (sjcoins / 1000) + 'k';
-
-      // حساب الرصيد الكلي: نجمع coins + (sjcoins مقسومة على 1000 لعرضها بوحدة k)
-      const total = coins + sjcoins / 1000;
-      document.getElementById('total-balance').textContent = total.toFixed(1) + 'k';
+      document.getElementById('coin-balance').textContent = data.coins ?? 0;
+      document.getElementById('sjcoin-balance').textContent = (data.sjcoins / 1000) + 'k';
+      document.getElementById('energy-balance').textContent = data.energy ?? 0;
+      document.getElementById('total-balance').textContent = (data.coins + data.sjcoins / 1000).toFixed(1) + 'k';
 
       const inventory = document.getElementById('inventory');
       inventory.innerHTML = '';
-      for(let i = 0; i < (data.crates ?? 0); i++) {
-        const crateDiv = document.createElement('div');
-        crateDiv.className = 'crate';
-        crateDiv.title = 'DRFT Crate';
-        inventory.appendChild(crateDiv);
+      (data.cars || Array(12).fill(0)).forEach((level, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.index = i;
+        slot.dataset.level = level;
+        slot.draggable = level > 0;
+        if (level > 0) {
+          slot.classList.add('occupied');
+          slot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder for car levels
+        }
+        inventory.appendChild(slot);
+      });
+      setupDragAndDrop();
+    }
+
+    // Initialize grid
+    function initializeGrid() {
+      const inventory = document.getElementById('inventory');
+      inventory.innerHTML = '';
+      for (let i = 0; i < 12; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.index = i;
+        slot.dataset.level = '0';
+        inventory.appendChild(slot);
       }
     }
 
-    // تفعيل زر البوست (مثلاً زيادة مؤقتة)
-    document.getElementById('boost-btn').addEventListener('click', () => {
-      alert('Boost activated!');
-      // هنا يمكن إضافة منطق زيادة الأرباح مؤقتاً
-    });
-
-    // تفعيل زر الوضع التلقائي
-    document.getElementById('auto-btn').addEventListener('click', () => {
-      alert('Auto Mode activated!');
-      // منطق الوضع التلقائي
-    });
-
-    async function main() {
-      const userDocRef = await loginWithTelegram();
-      if (!userDocRef) return;
-      let userData = await loadUserData(userDocRef);
-      updateUI(userData);
-
-      // استمع لتحديثات الرصيد من Firestore مباشرة
-      db.collection('users').doc(tg.initDataUnsafe.user.id.toString())
-        .onSnapshot(doc => {
-          updateUI(doc.data());
+    // Drag-and-drop for merging
+    let draggedSlot = null;
+    function setupDragAndDrop() {
+      const slots = document.querySelectorAll('.slot');
+      slots.forEach(slot => {
+        slot.addEventListener('dragstart', (e) => {
+          if (slot.dataset.level !== '0') {
+            draggedSlot = slot;
+            e.dataTransfer.setData('text/plain', slot.dataset.index);
+          }
         });
+        slot.addEventListener('dragover', (e) => e.preventDefault());
+        slot.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const targetSlot = e.currentTarget;
+          if (draggedSlot && targetSlot.dataset.level === draggedSlot.dataset.level && targetSlot.dataset.level !== '0') {
+            const newLevel = parseInt(targetSlot.dataset.level) + 1;
+            targetSlot.dataset.level = newLevel;
+            targetSlot.classList.add('occupied');
+            targetSlot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder
+            draggedSlot.dataset.level = '0';
+            draggedSlot.classList.remove('occupied');
+            draggedSlot.style.backgroundImage = '';
+            await updateUserCarData();
+          }
+          draggedSlot = null;
+        });
+      });
+    }
+
+    // Buy car
+    document.getElementById('buy-car-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.sjcoins >= 100) {
+        await userDocRef.update({
+          sjcoins: userData.sjcoins - 100,
+          carCount: (userData.carCount || 0) + 1
+        });
+        addCarToGrid(1);
+      } else {
+        alert('Not enough Blue Tokens!');
+      }
+    });
+
+    // Add car to grid
+    function addCarToGrid(level) {
+      const slots = document.querySelectorAll('.slot');
+      for (let slot of slots) {
+        if (slot.dataset.level === '0') {
+          slot.dataset.level = level;
+          slot.classList.add('occupied');
+          slot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder
+          slot.draggable = true;
+          break;
+        }
+      }
+      updateUserCarData();
+    }
+
+    // Update Firestore with car data
+    async function updateUserCarData() {
+      const slots = document.querySelectorAll('.slot');
+      const carData = Array.from(slots).map(slot => parseInt(slot.dataset.level));
+      await db.collection('users').doc(tg.initDataUnsafe.user.id.toString()).update({
+        cars: carData
+      });
+    }
+
+    // Calculate EARN/SEC
+    function calculateEarnRate() {
+      const slots = document.querySelectorAll('.slot');
+      let earnRate = 0;
+      slots.forEach(slot => {
+        const level = parseInt(slot.dataset.level);
+        if (level > 0) earnRate += level * 10;
+      });
+      document.getElementById('earn-rate').textContent = earnRate;
+      return earnRate;
+    }
+
+    // Periodically update coins
+    setInterval(async () => {
+      const earnRate = calculateEarnRate();
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      await userDocRef.update({
+        coins: (userData.coins || 0) + earnRate
+      });
+    }, 1000);
+
+    // Initialize energy
+    async function initializeEnergy() {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (!userData.energy) {
+        await userDocRef.update({ energy: 5 });
+      }
+      setInterval(async () => {
+        const userData = (await userDocRef.get()).data();
+        if (userData.energy < 10) {
+          await userDocRef.update({ energy: userData.energy + 1 });
+        }
+      }, 10 * 60 * 1000);
+    }
+
+    // Game modes
+    document.getElementById('garage-btn').addEventListener('click', () => {
+      alert('Garage: View and manage your car collection.');
+    });
+
+    document.getElementById('pvp-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.energy >= 1) {
+        await userDocRef.update({ energy: userData.energy - 1 });
+        alert('Entering DRFT PARTY PVP!');
+      } else {
+        alert('Not enough energy!');
+      }
+    });
+
+    document.getElementById('roadtrip-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.energy >= 1) {
+        await userDocRef.update({ energy: userData.energy - 1 });
+        alert('Starting Road Trip mission!');
+      } else {
+        alert('Not enough energy!');
+      }
+    });
+
+    document.getElementById('spin-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.sjcoins >= 50) {
+        await userDocRef.update({ sjcoins: userData.sjcoins - 50 });
+        const prize = Math.random() < 0.5 ? '100 Coins' : 'Level 1 Car';
+        alert(`You won: ${prize}!`);
+        if (prize === '100 Coins') {
+          await userDocRef.update({ coins: (userData.coins || 0) + 100 });
+        } else {
+          addCarToGrid(1);
+        }
+      } else {
+        alert('Not enough Blue Tokens!');
+      }
+    });
+
+    // Boost and Auto Mode
+    document.getElementById('boost-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.sjcoins >= 200) {
+        await userDocRef.update({ sjcoins: userData.sjcoins - 200 });
+        alert('Boost activated: 2x earnings for 5 minutes!');
+      } else {
+        alert('Not enough Blue Tokens!');
+      }
+    });
+
+    document.getElementById('auto-btn').addEventListener('click', async () => {
+      alert('Auto Mode: Automatically merges cars for 10 minutes.');
+    });
+
+    // Web3/NFT Integration
+    document.getElementById('connect-wallet-btn').addEventListener('click', async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          alert(`Wallet connected: ${accounts[0]}`);
+          await db.collection('users').doc(tg.initDataUnsafe.user.id.toString()).update({
+            walletAddress: accounts[0]
+          });
+        } catch (error) {
+          alert('Failed to connect wallet: ' + error.message);
+        }
+      } else {
+        alert('Please install MetaMask!');
+      }
+    });
+
+    document.getElementById('nft-claim-btn').addEventListener('click', async () => {
+      const userDocRef = db.collection('users').doc(tg.initDataUnsafe.user.id.toString());
+      const userData = (await userDocRef.get()).data();
+      if (userData.cars && userData.cars.some(level => level >= 5)) {
+        alert('Minting NFT for high-level car!');
+      } else {
+        alert('You need a Level 5 car to mint an NFT!');
+      }
+    });
+
+    // Main function
+    async function main() {
+      try {
+        const userDocRef = await loginWithTelegram();
+        if (!userDocRef) return;
+        let userData = await loadUserData(userDocRef);
+        updateUI(userData);
+        initializeGrid();
+        setupDragAndDrop();
+        initializeEnergy();
+
+        db.collection('users').doc(tg.initDataUnsafe.user.id.toString())
+          .onSnapshot(doc => {
+            updateUI(doc.data());
+            calculateEarnRate();
+          });
+      } catch (error) {
+        console.error('Error in main:', error);
+        alert('An error occurred. Please try again.');
+      }
     }
     main();
   </script>
