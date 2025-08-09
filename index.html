@@ -2,90 +2,193 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Idle Drift & Merge - Telegram Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Drift Party Clone</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
-        .screen { display: none; padding: 20px; }
-        .active { display: block; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .slot { width: 80px; height: 80px; background-color: #ddd; border: 1px solid #aaa; text-align: center; line-height: 80px; cursor: pointer; }
-        .car { draggable: true; }
-        .currency { margin: 10px 0; font-weight: bold; }
-        button { padding: 10px; margin: 5px; background-color: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a2a;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #top-bar {
+            background: linear-gradient(to bottom, #ff69b4, #8a2be2);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #user-info {
+            display: flex;
+            align-items: center;
+        }
+        #user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: grey;
+        }
+        #balances {
+            margin-left: 10px;
+        }
+        #balances span {
+            display: block;
+            font-size: 14px;
+        }
+        #menu-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .menu-btn {
+            background: #4b0082;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #game-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #ff8c00, #ffd700 20%, #000 80%);
+        }
+        #road {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 200px;
+            background: #333;
+            border-top: 5px solid orange;
+        }
+        #car {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 40px;
+            background: red;
+            border-radius: 10px;
+            animation: drift 2s infinite alternate;
+        }
+        @keyframes drift {
+            0% { transform: translateX(-50%) rotate(0deg); }
+            100% { transform: translateX(-50%) rotate(5deg); }
+        }
+        #trail {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 20px;
+            background: blue;
+            opacity: 0.5;
+            filter: blur(5px);
+            animation: trail-animate 1s infinite;
+        }
+        @keyframes trail-animate {
+            0% { width: 100px; }
+            100% { width: 150px; }
+        }
+        #earn-sec {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        #boost-btn, #auto-btn {
+            background: pink;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50px;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+        #item-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 10px;
+            background: #00008b;
+        }
+        .item {
+            background: #ffd700;
+            border-radius: 10px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: black;
+            cursor: pointer;
+        }
+        #bottom-nav {
+            background: #00008b;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        #earn-display {
+            background: pink;
+            border-radius: 50px;
+            padding: 5px 15px;
+            font-size: 18px;
+        }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
-        <button onclick="showScreen('earn')">Earn</button>
-        <button onclick="showScreen('garage')">Garage</button>
-        <button onclick="showScreen('pvp')">DRFT PARTY PVP</button>
-        <button onclick="showScreen('roadtrip')">Road Trip</button>
-        <button onclick="showScreen('leaderboard')">Rating</button>
-        <button onclick="showScreen('spin')">Spin</button>
-        <button onclick="showScreen('nft')">DRFT NFT CLAIM</button>
-    </nav>
-
-    <!-- Earn Screen -->
-    <div id="earn" class="screen active">
-        <h2>Earn Screen</h2>
-        <div class="currency">Gold: <span id="gold">10000</span> | Blue Tokens: <span id="blue">0</span> | Energy: <span id="energy">5/10</span></div>
-        <div>EARN/SEC: <span id="earnPerSec">0</span></div>
-        <div class="grid" id="earningGrid"></div>
-        <button onclick="buyCar()">Buy Level 1 Car (100 Blue)</button>
-        <button onclick="activateBoost()">Boost (2x for 5min)</button>
-        <button onclick="toggleAutoMode()">Auto Mode</button>
+    <div id="top-bar">
+        <div id="user-info">
+            <div id="user-avatar"></div>
+            <div id="balances">
+                <span id="coins">Coins: 0</span>
+                <span id="pineapples">Pineapples: 10k</span>
+            </div>
+        </div>
+        <div id="menu-buttons">
+            <button class="menu-btn">Support Badge</button>
+            <button class="menu-btn">VIP PVP</button>
+            <button class="menu-btn">NFT Claim</button>
+            <button class="menu-btn">Rating</button>
+            <button class="menu-btn">Spin</button>
+            <button class="menu-btn">Road Trip</button>
+        </div>
     </div>
-
-    <!-- Garage Screen -->
-    <div id="garage" class="screen">
-        <h2>Garage</h2>
-        <div id="carCollection"></div>
+    <div id="game-area">
+        <div id="road"></div>
+        <div id="car"></div>
+        <div id="trail"></div>
     </div>
-
-    <!-- PVP Screen -->
-    <div id="pvp" class="screen">
-        <h2>DRFT PARTY PVP</h2>
-        <select id="pvpCarSelect"></select>
-        <button onclick="startPVP()">Race!</button>
-        <div id="pvpResult"></div>
+    <div id="earn-sec">Earn/Sec: 0/sec</div>
+    <div style="text-align: center;">
+        <button id="boost-btn">Boost</button>
+        <button id="auto-btn">Auto Mode</button>
     </div>
-
-    <!-- Road Trip Screen -->
-    <div id="roadtrip" class="screen">
-        <h2>Road Trip Missions</h2>
-        <button onclick="startMission()">Start Mission (1 Energy)</button>
-        <div id="missionResult"></div>
+    <div id="item-grid">
+        <!-- Items will be dynamically added here -->
     </div>
-
-    <!-- Leaderboard Screen -->
-    <div id="leaderboard" class="screen">
-        <h2>Rating Leaderboard</h2>
-        <ul id="leaderboardList"></ul>
-    </div>
-
-    <!-- Spin Screen -->
-    <div id="spin" class="screen">
-        <h2>Spin the Wheel</h2>
-        <button onclick="spinWheel()">Spin (Watch Ad or 1 Token)</button>
-        <div id="spinResult"></div>
-    </div>
-
-    <!-- NFT Screen -->
-    <div id="nft" class="screen">
-        <h2>DRFT NFT CLAIM</h2>
-        <button onclick="connectWallet()">Connect Wallet</button>
-        <select id="nftCarSelect"></select>
-        <button onclick="mintNFT()">Mint NFT</button>
-        <div id="nftResult"></div>
+    <div id="bottom-nav">
+        <button class="nav-btn">Mining</button>
+        <button class="nav-btn">Garage</button>
+        <div id="earn-display">$ 100</div>
+        <button class="nav-btn">Earn</button>
+        <button class="nav-btn">Friends</button>
     </div>
 
     <script>
@@ -99,372 +202,136 @@
             messagingSenderId: "551352148152",
             appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
         };
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        const storage = firebase.storage();
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
         // Telegram Mini App Integration
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        const user = tg.initDataUnsafe.user; // Get Telegram user data
-
-        // Custom Auth with Telegram User
-        async function telegramAuth() {
-            const token = await getCustomTokenFromServer(user.id); // Assume a server function to generate Firebase custom token based on Telegram ID
-            await auth.signInWithCustomToken(token);
-        }
-        // Placeholder for custom token generation (use Cloud Functions in production)
-        async function getCustomTokenFromServer(telegramId) {
-            // In production, call a backend endpoint to verify and generate token
-            return 'dummy-token'; // Replace with actual implementation
-        }
-
-        // Game State
-        let gold = 10000;
-        let blue = 0;
-        let energy = 5;
-        let maxEnergy = 10;
-        let earnPerSec = 0;
-        let cars = []; // Array of car objects {id: unique, level: 1, earning: 1}
-        let gridSlots = Array(12).fill(null); // 12 slots
-        let nextCarId = 0;
-        let carCost = 100; // Initial blue cost for level 1 car
-        let boostActive = false;
-        let autoMode = false;
-        let userDocRef;
-
-        // Initialize
-        async function init() {
-            await telegramAuth();
-            userDocRef = db.collection('users').doc(auth.currentUser.uid);
-            await loadUserData();
-            renderGrid();
-            renderCurrencies();
-            updateEarnPerSec();
-            setInterval(earnLoop, 1000); // Earn every second
-            setInterval(regenEnergy, 600000); // Regen energy every 10 min
-            loadLeaderboard();
-        }
-
-        async function loadUserData() {
-            const doc = await userDocRef.get();
-            if (doc.exists) {
-                const data = doc.data();
-                gold = data.gold || 10000;
-                blue = data.blue || 0;
-                energy = data.energy || 5;
-                cars = data.cars || [];
-                gridSlots = data.gridSlots || Array(12).fill(null);
-                nextCarId = data.nextCarId || 0;
-            } else {
-                await saveUserData();
+        let userId = 'test_user'; // Fallback for non-Telegram environment
+        let userName = 'Test User';
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+            const initData = window.Telegram.WebApp.initDataUnsafe || {};
+            if (initData.user) {
+                userId = initData.user.id.toString();
+                userName = initData.user.username || initData.user.first_name;
+                document.getElementById('user-avatar').style.backgroundImage = `url(${initData.user.photo_url || ''})`;
             }
         }
 
-        async function saveUserData() {
-            await userDocRef.set({
-                gold, blue, energy, cars, gridSlots, nextCarId
+        // Game State Variables
+        let coins = 0;
+        let pineapples = 10000;
+        let earnPerSec = 0;
+        let items = [
+            { type: 'container', level: 1 },
+            { type: 'container', level: 1 },
+            { type: 'container', level: 1 },
+            { type: 'car', level: 1 },
+            { type: 'car', level: 2 }
+            // Add more as needed, up to grid size
+        ];
+        let autoMode = false;
+
+        // User Data Path
+        const userRef = db.ref('users/' + userId);
+
+        // Load User Data from Firebase
+        userRef.once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                coins = data.coins || 0;
+                pineapples = data.pineapples || 10000;
+                earnPerSec = data.earnPerSec || 0;
+                items = data.items || items;
+            }
+            updateUI();
+            renderItems();
+        });
+
+        // Save Data Function
+        function saveData() {
+            userRef.set({
+                coins,
+                pineapples,
+                earnPerSec,
+                items,
+                name: userName
             });
         }
 
-        function renderCurrencies() {
-            document.getElementById('gold').innerText = gold;
-            document.getElementById('blue').innerText = blue;
-            document.getElementById('energy').innerText = `${energy}/${maxEnergy}`;
+        // Update UI Function
+        function updateUI() {
+            document.getElementById('coins').textContent = `Coins: ${coins}`;
+            document.getElementById('pineapples').textContent = `Pineapples: ${formatNumber(pineapples)}`;
+            document.getElementById('earn-sec').textContent = `Earn/Sec: ${earnPerSec}/sec`;
+            document.getElementById('earn-display').textContent = `$ ${coins}`;
+            saveData();
         }
 
-        function updateEarnPerSec() {
-            earnPerSec = gridSlots.reduce((total, slot) => {
-                if (slot !== null) {
-                    const car = cars.find(c => c.id === slot);
-                    return total + (car ? getCarEarning(car.level) : 0);
-                }
-                return total;
-            }, 0);
-            if (boostActive) earnPerSec *= 2;
-            document.getElementById('earnPerSec').innerText = earnPerSec;
+        // Format Large Numbers (e.g., 10k, 10m)
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(3) + 'm';
+            if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+            return num;
         }
 
-        function getCarEarning(level) {
-            return Math.pow(2, level); // Exponential earning increase
-        }
-
-        function earnLoop() {
-            gold += earnPerSec;
-            renderCurrencies();
-            saveUserData();
-        }
-
-        function regenEnergy() {
-            if (energy < maxEnergy) energy++;
-            renderCurrencies();
-            saveUserData();
-        }
-
-        // Render Earning Grid
-        function renderGrid() {
-            const grid = document.getElementById('earningGrid');
+        // Render Items in Grid
+        function renderItems() {
+            const grid = document.getElementById('item-grid');
             grid.innerHTML = '';
-            gridSlots.forEach((slot, index) => {
+            items.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'slot';
-                if (slot !== null) {
-                    const car = cars.find(c => c.id === slot);
-                    div.innerText = `Car L${car.level}`;
-                    div.dataset.carId = car.id;
-                    div.draggable = true;
-                } else {
-                    div.innerText = 'Empty';
-                }
-                div.addEventListener('dragstart', dragStart);
-                div.addEventListener('dragover', dragOver);
-                div.addEventListener('drop', drop);
-                div.dataset.index = index;
+                div.className = 'item';
+                div.textContent = `${item.type.toUpperCase()} Lvl ${item.level}`;
+                div.addEventListener('click', () => upgradeItem(item));
                 grid.appendChild(div);
             });
         }
 
-        // Drag & Drop for Merge and Placement
-        function dragStart(e) {
-            e.dataTransfer.setData('text', e.target.dataset.carId);
-        }
-
-        function dragOver(e) {
-            e.preventDefault();
-        }
-
-        function drop(e) {
-            e.preventDefault();
-            const draggedId = parseInt(e.dataTransfer.getData('text'));
-            const targetIndex = parseInt(e.target.dataset.index);
-            const draggedSlotIndex = gridSlots.findIndex(id => id === draggedId);
-            const targetCarId = gridSlots[targetIndex];
-
-            if (targetCarId === null) {
-                // Place in empty slot
-                gridSlots[draggedSlotIndex] = null;
-                gridSlots[targetIndex] = draggedId;
+        // Upgrade Item (Simple Logic: Cost coins to level up, increase earnPerSec)
+        function upgradeItem(item) {
+            const cost = item.level * 100;
+            if (coins >= cost) {
+                coins -= cost;
+                item.level++;
+                earnPerSec += item.level * 10; // Arbitrary increase
+                updateUI();
+                renderItems();
             } else {
-                // Merge if same level
-                const draggedCar = cars.find(c => c.id === draggedId);
-                const targetCar = cars.find(c => c.id === targetCarId);
-                if (draggedCar.level === targetCar.level) {
-                    // Merge
-                    targetCar.level++;
-                    cars = cars.filter(c => c.id !== draggedId); // Remove dragged car
-                    gridSlots[draggedSlotIndex] = null;
-                }
-            }
-            updateEarnPerSec();
-            renderGrid();
-            saveUserData();
-        }
-
-        // Buy Car
-        function buyCar() {
-            if (blue >= carCost) {
-                blue -= carCost;
-                carCost += 10; // Increase cost slightly
-                cars.push({id: nextCarId++, level: 1, earning: getCarEarning(1)});
-                renderCurrencies();
-                renderGarage();
-                saveUserData();
+                alert('Not enough coins!');
             }
         }
 
-        // Boost
-        function activateBoost() {
-            boostActive = true;
-            updateEarnPerSec();
-            setTimeout(() => {
-                boostActive = false;
-                updateEarnPerSec();
-            }, 300000); // 5 minutes
-        }
-
-        // Auto Mode (Premium: Auto Merge simulation)
-        function toggleAutoMode() {
-            autoMode = !autoMode;
+        // Earning Loop
+        setInterval(() => {
             if (autoMode) {
-                setInterval(autoMerge, 60000); // Auto merge every minute
+                coins += earnPerSec;
+                updateUI();
             }
-        }
+        }, 1000);
 
-        function autoMerge() {
-            // Simple auto merge logic: Find two same level cars in garage and merge
-            const levelGroups = {};
-            cars.forEach(car => {
-                if (!levelGroups[car.level]) levelGroups[car.level] = [];
-                levelGroups[car.level].push(car);
-            });
-            for (let level in levelGroups) {
-                if (levelGroups[level].length >= 2) {
-                    const car1 = levelGroups[level][0];
-                    const car2 = levelGroups[level][1];
-                    car1.level++;
-                    cars = cars.filter(c => c !== car2);
-                    break; // Merge one pair
-                }
-            }
-            renderGarage();
-            saveUserData();
-        }
+        // Boost Button (Temporary boost)
+        document.getElementById('boost-btn').addEventListener('click', () => {
+            earnPerSec *= 2;
+            setTimeout(() => { earnPerSec /= 2; updateUI(); }, 5000);
+            updateUI();
+        });
 
-        // Garage Render
-        function renderGarage() {
-            const collection = document.getElementById('carCollection');
-            collection.innerHTML = '';
-            cars.forEach(car => {
-                const div = document.createElement('div');
-                div.className = 'slot car';
-                div.innerText = `Car L${car.level}`;
-                div.dataset.carId = car.id;
-                div.draggable = true;
-                div.addEventListener('dragstart', dragStart);
-                collection.appendChild(div);
-            });
-        }
+        // Auto Mode Toggle
+        document.getElementById('auto-btn').addEventListener('click', () => {
+            autoMode = !autoMode;
+            document.getElementById('auto-btn').textContent = autoMode ? 'Auto On' : 'Auto Mode';
+        });
 
-        // PVP (Simple simulation)
-        async function startPVP() {
-            if (energy < 1) return;
-            energy--;
-            const selectedCarLevel = parseInt(document.getElementById('pvpCarSelect').value);
-            // Simulate race: Higher level wins more often
-            const win = Math.random() < (selectedCarLevel / 10);
-            if (win) {
-                blue += 50;
-                document.getElementById('pvpResult').innerText = 'Victory! +50 Blue';
-            } else {
-                document.getElementById('pvpResult').innerText = 'Defeat!';
-            }
-            renderCurrencies();
-            saveUserData();
-            updateLeaderboard();
-        }
+        // Basic Car Animation (CSS handles most)
+        // You can extend with canvas if needed, but CSS suffices for simple drift
 
-        // Populate PVP car select
-        function populatePVPSelect() {
-            const select = document.getElementById('pvpCarSelect');
-            select.innerHTML = '';
-            cars.forEach(car => {
-                const option = document.createElement('option');
-                option.value = car.level;
-                option.text = `Car L${car.level}`;
-                select.appendChild(option);
-            });
-        }
-
-        // Road Trip Mission
-        function startMission() {
-            if (energy < 1) return;
-            energy--;
-            // Simulate mission success
-            const success = Math.random() > 0.3;
-            if (success) {
-                gold += 1000;
-                document.getElementById('missionResult').innerText = 'Mission Complete! +1000 Gold';
-            } else {
-                document.getElementById('missionResult').innerText = 'Mission Failed!';
-            }
-            renderCurrencies();
-            saveUserData();
-        }
-
-        // Leaderboard
-        async function loadLeaderboard() {
-            const snapshot = await db.collection('users').orderBy('gold', 'desc').limit(10).get();
-            const list = document.getElementById('leaderboardList');
-            list.innerHTML = '';
-            snapshot.forEach(doc => {
-                const li = document.createElement('li');
-                li.innerText = `${doc.id}: ${doc.data().gold} Gold`;
-                list.appendChild(li);
-            });
-        }
-
-        async function updateLeaderboard() {
-            // Leaderboard updated on load, but in real-time use Firestore listeners
-        }
-
-        // Spin Wheel (Simple random prize)
-        function spinWheel() {
-            // Assume ad watched or token used
-            const prizes = ['100 Gold', '50 Blue', 'Level 1 Car', 'Boost'];
-            const prize = prizes[Math.floor(Math.random() * prizes.length)];
-            if (prize === '100 Gold') gold += 100;
-            else if (prize === '50 Blue') blue += 50;
-            else if (prize === 'Level 1 Car') cars.push({id: nextCarId++, level: 1, earning: getCarEarning(1)});
-            else if (prize === 'Boost') activateBoost();
-            document.getElementById('spinResult').innerText = `You won: ${prize}`;
-            renderCurrencies();
-            saveUserData();
-        }
-
-        // Web3/NFT Integration (Example with Polygon, using Ethers.js)
-        let provider;
-        let signer;
-        let contract; // Assume a pre-deployed NFT contract
-        const contractAddress = 'YOUR_NFT_CONTRACT_ADDRESS'; // Replace with actual contract address
-        const abi = [ // Basic ERC721 ABI for mint
-            'function mint(uint256 carLevel) public returns (uint256)'
-        ];
-
-        async function connectWallet() {
-            if (window.ethereum) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send('eth_requestAccounts', []);
-                signer = provider.getSigner();
-                contract = new ethers.Contract(contractAddress, abi, signer);
-                document.getElementById('nftResult').innerText = 'Wallet Connected!';
-            } else {
-                document.getElementById('nftResult').innerText = 'Install MetaMask!';
-            }
-        }
-
-        function populateNFTSelect() {
-            const select = document.getElementById('nftCarSelect');
-            select.innerHTML = '';
-            cars.filter(car => car.level >= 5).forEach(car => { // Only high-level cars
-                const option = document.createElement('option');
-                option.value = car.id;
-                option.text = `Car L${car.level}`;
-                select.appendChild(option);
-            });
-        }
-
-        async function mintNFT() {
-            const carId = parseInt(document.getElementById('nftCarSelect').value);
-            const car = cars.find(c => c.id === carId);
-            try {
-                const tx = await contract.mint(car.level);
-                await tx.wait();
-                // Remove from in-game after mint
-                cars = cars.filter(c => c.id !== carId);
-                const slotIndex = gridSlots.findIndex(id => id === carId);
-                if (slotIndex !== -1) gridSlots[slotIndex] = null;
-                document.getElementById('nftResult').innerText = 'NFT Minted!';
-                renderGrid();
-                renderGarage();
-                saveUserData();
-            } catch (error) {
-                document.getElementById('nftResult').innerText = 'Mint Failed: ' + error.message;
-            }
-        }
-
-        // Screen Navigation
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-            if (screenId === 'garage') renderGarage();
-            if (screenId === 'pvp') populatePVPSelect();
-            if (screenId === 'nft') populateNFTSelect();
-        }
-
-        // Init on load
-        init();
+        // Initial Update
+        updateUI();
+        renderItems();
     </script>
 </body>
 </html>
