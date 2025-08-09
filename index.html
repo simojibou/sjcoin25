@@ -166,7 +166,7 @@
   </div>
 
   <div id="game-area">
-    <img id="car" src="https://i.imgur.com/E4X8UOe.png" alt="Car" />
+    <img id="car" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s" alt="Car" />
   </div>
 
   <div id="earn-sec" class="balance-box">
@@ -217,6 +217,14 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+
+    // Car images by level
+    const carImages = {
+      1: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s',
+      2: 'https://static.vecteezy.com/system/resources/previews/035/576/135/non_2x/ai-generated-3d-rendering-of-a-beautiful-car-on-transparent-background-ai-generated-free-png.png',
+      3: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQougtztrb_I2tTLnrE3nOavP-nNhsnuqUoVg&s',
+      4: 'https://png.pngtree.com/png-clipart/20240701/original/pngtree-3d-style-taxi-car-app-icon-for-game-design-logo-png-image_15459452.png'
+    };
 
     // Authenticate with Telegram
     async function loginWithTelegram() {
@@ -269,7 +277,7 @@
         slot.draggable = level > 0;
         if (level > 0) {
           slot.classList.add('occupied');
-          slot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder for car levels
+          slot.style.backgroundImage = `url('${carImages[level] || carImages[1]}')`;
         }
         inventory.appendChild(slot);
       });
@@ -308,7 +316,7 @@
             const newLevel = parseInt(targetSlot.dataset.level) + 1;
             targetSlot.dataset.level = newLevel;
             targetSlot.classList.add('occupied');
-            targetSlot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder
+            targetSlot.style.backgroundImage = `url('${carImages[newLevel] || carImages[1]}')`;
             draggedSlot.dataset.level = '0';
             draggedSlot.classList.remove('occupied');
             draggedSlot.style.backgroundImage = '';
@@ -341,7 +349,7 @@
         if (slot.dataset.level === '0') {
           slot.dataset.level = level;
           slot.classList.add('occupied');
-          slot.style.backgroundImage = `url('https://i.imgur.com/E4X8UOe.png')`; // Placeholder
+          slot.style.backgroundImage = `url('${carImages[level]}')`;
           slot.draggable = true;
           break;
         }
