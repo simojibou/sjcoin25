@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Drift Party Clone</title>
+    <title>Idle Drift & Merge</title>
     <style>
         body {
             margin: 0;
@@ -127,7 +127,7 @@
             justify-content: center;
             font-size: 12px;
             color: black;
-            cursor: pointer;
+            cursor: move;
         }
         #bottom-nav {
             background: #00008b;
@@ -141,11 +141,18 @@
             color: white;
             cursor: pointer;
         }
-        #earn-display {
+        #buy-car {
             background: pink;
             border-radius: 50px;
             padding: 5px 15px;
             font-size: 18px;
+            cursor: pointer;
+        }
+        #instructions {
+            padding: 10px;
+            background: #4b0082;
+            margin: 10px;
+            border-radius: 10px;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
@@ -157,8 +164,8 @@
         <div id="user-info">
             <div id="user-avatar"></div>
             <div id="balances">
-                <span id="coins">Coins: 0</span>
-                <span id="pineapples">Pineapples: 10k</span>
+                <span id="premium">Premium: 0</span>
+                <span id="idle">Idle: 10k</span>
             </div>
         </div>
         <div id="menu-buttons">
@@ -186,9 +193,19 @@
     <div id="bottom-nav">
         <button class="nav-btn">Mining</button>
         <button class="nav-btn">Garage</button>
-        <div id="earn-display">$ 100</div>
+        <button id="buy-car">Buy Car Lvl 1 - $ <span id="buy-cost">100</span></button>
         <button class="nav-btn">Earn</button>
         <button class="nav-btn">Friends</button>
+    </div>
+    <div id="instructions">
+        <h3>How to Play Idle Drift & Merge</h3>
+        <p>1. Buy basic cars using your idle currency (pineapple icon).</p>
+        <p>2. Place them in the grid to start earning passively (earn/sec).</p>
+        <p>3. Drag one car onto another identical level car to merge them into a higher level car, which earns more.</p>
+        <p>4. Use Boost for temporary earnings multiplier.</p>
+        <p>5. Toggle Auto Mode to automatically earn without manual collection (premium feature simulation).</p>
+        <p>6. Explore other modes like PVP, Road Trip for more rewards.</p>
+        <p>Connect your wallet for NFT claiming (not implemented yet).</p>
     </div>
 
     <script>
@@ -208,7 +225,7 @@
         const db = firebase.database();
 
         // Telegram Mini App Integration
-        let userId = 'test_user'; // Fallback for non-Telegram environment
+        let userId = 'test_user'; // Fallback
         let userName = 'Test User';
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.ready();
@@ -221,115 +238,143 @@
             }
         }
 
-        // Game State Variables
-        let coins = 0;
-        let pineapples = 10000;
+        // Game State
+        let premiumCurrency = 0;
+        let idleCurrency = 10000;
         let earnPerSec = 0;
         let items = [
-            { type: 'container', level: 1 },
-            { type: 'container', level: 1 },
-            { type: 'container', level: 1 },
+            { type: 'crate', level: 1 },
+            { type: 'crate', level: 1 },
+            { type: 'crate', level: 1 },
             { type: 'car', level: 1 },
-            { type: 'car', level: 2 }
-            // Add more as needed, up to grid size
+            { type: 'car', level: 1 }
         ];
         let autoMode = false;
+        let buyCost = 100;
 
         // User Data Path
         const userRef = db.ref('users/' + userId);
 
-        // Load User Data from Firebase
+        // Load User Data
         userRef.once('value').then(snapshot => {
             const data = snapshot.val();
             if (data) {
-                coins = data.coins || 0;
-                pineapples = data.pineapples || 10000;
-                earnPerSec = data.earnPerSec || 0;
+                premiumCurrency = data.premiumCurrency || 0;
+                idleCurrency = data.idleCurrency || 10000;
                 items = data.items || items;
+                buyCost = data.buyCost || 100;
             }
+            calculateEarnPerSec();
             updateUI();
             renderItems();
         });
 
-        // Save Data Function
+        // Save Data
         function saveData() {
             userRef.set({
-                coins,
-                pineapples,
-                earnPerSec,
+                premiumCurrency,
+                idleCurrency,
                 items,
+                buyCost,
                 name: userName
             });
         }
 
-        // Update UI Function
+        // Update UI
         function updateUI() {
-            document.getElementById('coins').textContent = `Coins: ${coins}`;
-            document.getElementById('pineapples').textContent = `Pineapples: ${formatNumber(pineapples)}`;
+            document.getElementById('premium').textContent = `Premium: ${premiumCurrency}`;
+            document.getElementById('idle').textContent = `Idle: ${formatNumber(idleCurrency)}`;
             document.getElementById('earn-sec').textContent = `Earn/Sec: ${earnPerSec}/sec`;
-            document.getElementById('earn-display').textContent = `$ ${coins}`;
+            document.getElementById('buy-cost').textContent = buyCost;
             saveData();
         }
 
-        // Format Large Numbers (e.g., 10k, 10m)
+        // Format Number
         function formatNumber(num) {
             if (num >= 1000000) return (num / 1000000).toFixed(3) + 'm';
             if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
             return num;
         }
 
-        // Render Items in Grid
+        // Calculate Earn Per Sec
+        function calculateEarnPerSec() {
+            earnPerSec = items.reduce((sum, item) => sum + Math.pow(2, item.level - 1) * 10, 0);
+        }
+
+        // Render Items
         function renderItems() {
             const grid = document.getElementById('item-grid');
             grid.innerHTML = '';
-            items.forEach(item => {
+            items.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'item';
                 div.textContent = `${item.type.toUpperCase()} Lvl ${item.level}`;
-                div.addEventListener('click', () => upgradeItem(item));
+                div.draggable = true;
+                div.dataset.index = index;
+                div.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                });
+                div.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                div.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (fromIndex === index) return;
+                    const fromItem = items[fromIndex];
+                    const toItem = items[index];
+                    if (fromItem.type === toItem.type && fromItem.level === toItem.level) {
+                        toItem.level += 1;
+                        items.splice(fromIndex, 1);
+                        calculateEarnPerSec();
+                        renderItems();
+                        updateUI();
+                    }
+                });
                 grid.appendChild(div);
             });
         }
 
-        // Upgrade Item (Simple Logic: Cost coins to level up, increase earnPerSec)
-        function upgradeItem(item) {
-            const cost = item.level * 100;
-            if (coins >= cost) {
-                coins -= cost;
-                item.level++;
-                earnPerSec += item.level * 10; // Arbitrary increase
-                updateUI();
-                renderItems();
-            } else {
-                alert('Not enough coins!');
-            }
-        }
-
         // Earning Loop
         setInterval(() => {
-            if (autoMode) {
-                coins += earnPerSec;
-                updateUI();
-            }
+            idleCurrency += earnPerSec;
+            updateUI();
         }, 1000);
 
-        // Boost Button (Temporary boost)
+        // Boost Button
         document.getElementById('boost-btn').addEventListener('click', () => {
+            const original = earnPerSec;
             earnPerSec *= 2;
-            setTimeout(() => { earnPerSec /= 2; updateUI(); }, 5000);
             updateUI();
+            setTimeout(() => {
+                earnPerSec = original;
+                updateUI();
+            }, 5000);
         });
 
-        // Auto Mode Toggle
+        // Auto Mode Toggle (here it just enables continuous earning, but since interval always runs, perhaps auto collects or something; for now, placebo)
         document.getElementById('auto-btn').addEventListener('click', () => {
             autoMode = !autoMode;
             document.getElementById('auto-btn').textContent = autoMode ? 'Auto On' : 'Auto Mode';
+            // Could add auto-merge logic if desired
         });
 
-        // Basic Car Animation (CSS handles most)
-        // You can extend with canvas if needed, but CSS suffices for simple drift
+        // Buy Car
+        document.getElementById('buy-car').addEventListener('click', () => {
+            if (idleCurrency >= buyCost) {
+                idleCurrency -= buyCost;
+                items.push({ type: 'car', level: 1 });
+                buyCost += 25; // Increase cost
+                calculateEarnPerSec();
+                renderItems();
+                updateUI();
+            } else {
+                alert('Not enough idle currency!');
+            }
+        });
 
-        // Initial Update
+        // Initial
+        calculateEarnPerSec();
         updateUI();
         renderItems();
     </script>
