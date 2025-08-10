@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SJ COIN - المهام اليومية</title>
+<title>SJ COIN - المهام اليومية من Firebase</title>
 <style>
   body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
   .task { background: #fff; margin-bottom: 15px; padding: 10px; border-radius: 8px; display: flex; align-items: center; }
@@ -12,106 +12,73 @@
   .task-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
   .task-link { color: #0077cc; text-decoration: none; }
   .task-coins { color: #444; margin-bottom: 5px; }
-  button { background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-  button:disabled { background-color: #aaa; cursor: default; }
 </style>
 </head>
 <body>
 
-<h2>مهامك اليومية في SJ COIN</h2>
+<h2>مهامك اليومية من Firebase</h2>
 
-<div id="tasks"></div>
+<div id="tasks">جارِ تحميل المهام...</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// بيانات المهام اليومية كما في JSON
-const dailyTasks = {
-  daily1: {
-    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgliJ7D4iSASNLkZIMCmN6ulNfLUkjObKbUA&s",
-    is_rewarded: false,
-    link: "https://instagram.com/simo.jibou",
-    name: "تابع إنستغرامي",
-    reward_coins: 100,
-    type: "daily"
-  },
-  daily2: {
-    image: "/images/youtube.png",
-    is_rewarded: false,
-    link: "https://youtube.com/@simojibou",
-    name: "YouTube",
-    reward_coins: 100,
-    type: "daily"
-  },
-  daily3: {
-    image: "/images/download.png",
-    is_rewarded: false,
-    link: "https://example.com/download",
-    name: "تحميل",
-    reward_coins: 150,
-    type: "daily"
-  },
-  daily4: {
-    image: "/images/sj-hero.png",
-    is_rewarded: false,
-    link: "https://play.google.com/store/apps/details?id=com.gamehero.sj",
-    name: "لعبة SJ Hero",
-    reward_coins: 200,
-    type: "daily"
-  },
-  daily5: {
-    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfNl6P_Dp_NAovW8CsNQARgm8f7uXh0W9ebw&s",
-    is_rewarded: false,
-    link: "https://play.google.com/store/apps/details?id=com.sj.store",
-    name: "تطبيق SJ Store",
-    reward_coins: 200,
-    type: "daily"
-  }
+// إعداد Firebase بمعلومات مشروعك
+const firebaseConfig = {
+  apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+  authDomain: "metawarefare-gaming.firebaseapp.com",
+  databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+  projectId: "metawarefare-gaming",
+  storageBucket: "metawarefare-gaming.appspot.com",
+  messagingSenderId: "551352148152",
+  appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
 };
+firebase.initializeApp(firebaseConfig);
 
-// عرض المهام في الصفحة
-function renderTasks() {
+const db = firebase.database();
+
+function renderTasks(tasks) {
   const container = document.getElementById("tasks");
   container.innerHTML = "";
   
-  Object.keys(dailyTasks).forEach(key => {
-    const task = dailyTasks[key];
+  if (!tasks) {
+    container.innerHTML = "<p>لا توجد مهام حالياً.</p>";
+    return;
+  }
+  
+  Object.keys(tasks).forEach(key => {
+    const task = tasks[key];
     const taskDiv = document.createElement("div");
     taskDiv.className = "task";
     
+    // تعويض الصور النسبية لو تحتاج (يمكن تعدل حسب الاستضافة)
+    let imgSrc = task.image;
+    if (!imgSrc.startsWith("http")) {
+      imgSrc = "https://yourdomain.com" + imgSrc; // عدل هذا لو عندك استضافة خاصة للصور
+    }
+    
     taskDiv.innerHTML = `
-      <img src="${task.image}" alt="${task.name}" />
+      <img src="${imgSrc}" alt="${task.name}" />
       <div class="task-info">
         <div class="task-name">${task.name}</div>
         <a href="${task.link}" target="_blank" class="task-link">اذهب إلى المهمة</a>
         <div class="task-coins">مكافأة: ${task.reward_coins} عملة SJ</div>
       </div>
-      <button ${task.is_rewarded ? "disabled" : ""} data-key="${key}">
-        ${task.is_rewarded ? "تم الحصول على المكافأة" : "اكمل المهمة"}
-      </button>
     `;
     
     container.appendChild(taskDiv);
   });
 }
 
-// عند الضغط على زر إكمال المهمة
-document.getElementById("tasks").addEventListener("click", e => {
-  if (e.target.tagName === "BUTTON" && !e.target.disabled) {
-    const key = e.target.getAttribute("data-key");
-    if (key && dailyTasks[key]) {
-      // تعيين حالة المكافأة كمكتملة
-      dailyTasks[key].is_rewarded = true;
-      alert(`شكراً لإكمال المهمة! لقد حصلت على ${dailyTasks[key].reward_coins} عملة SJ.`);
-      
-      // هنا يمكنك إضافة كود تحديث الرصيد في Firebase
-      // updateUserBalance(dailyTasks[key].reward_coins);
-      // وتحديث حالة المهمة في Firebase أيضاً
-      
-      renderTasks();
-    }
-  }
+// الاستماع للمهام من Firebase Realtime Database
+db.ref("DailyTasks").on("value", snapshot => {
+  const data = snapshot.val();
+  renderTasks(data);
+}, error => {
+  document.getElementById("tasks").innerHTML = "خطأ في تحميل المهام: " + error.message;
 });
-
-renderTasks();
 </script>
 
 </body>
