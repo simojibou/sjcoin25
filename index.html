@@ -156,8 +156,7 @@
 
   <header>
     <div id="user-stats">
-      <span id="sj-coin-balance">SJ: ...</span>
-      <span id="total-balance">Total: ...</span>
+      <span id="sj-coin-balance">Balance: ...</span>
     </div>
   </header>
 
@@ -189,7 +188,7 @@
 
     const totalDays = 30;
     let userData = {
-      sjCoins: 1000,
+      balance: 0,
       claimedDays: [],
       lastMonth: null
     };
@@ -227,14 +226,18 @@
         const docRef = db.collection("users").doc(String(userId));
         const doc = await docRef.get();
         if (doc.exists) {
-          userData = doc.data();
+          const data = doc.data();
+          userData.balance = data.balance ?? 0;
+          // فقط خزن claimedDays و lastMonth لو موجودة أو افتراضي
+          userData.claimedDays = data.claimedDays || [];
+          userData.lastMonth = data.lastMonth || null;
         } else {
           userData = {
-            sjCoins: 1000,
+            balance: 1000, // قيمة مبدئية
             claimedDays: [],
             lastMonth: null,
           };
-          await docRef.set(userData);
+          await db.collection("users").doc(String(userId)).set(userData);
         }
       } catch (e) {
         console.error("Firestore read error:", e);
@@ -244,26 +247,15 @@
 
     async function saveUserData() {
       try {
-        await db.collection("users").doc(String(userId)).set(userData);
+        // خزّن فقط claimedDays و lastMonth و balance
+        await db.collection("users").doc(String(userId)).set({
+          balance: userData.balance,
+          claimedDays: userData.claimedDays,
+          lastMonth: userData.lastMonth
+        }, { merge: true });
       } catch (e) {
         console.error("Firestore write error:", e);
         tg.showAlert("حدث خطأ أثناء حفظ بياناتك.");
-      }
-    }
-
-    async function loadTotalBalance() {
-      try {
-        const docRef = db.collection("stats").doc("totalBalance");
-        const doc = await docRef.get();
-        if (doc.exists) {
-          const data = doc.data();
-          document.getElementById('total-balance').innerText = `Total: ${data.amount ?? '0'}`;
-        } else {
-          document.getElementById('total-balance').innerText = 'Total: 0';
-        }
-      } catch (e) {
-        console.error("Error loading total balance:", e);
-        document.getElementById('total-balance').innerText = 'Total: error';
       }
     }
 
@@ -287,7 +279,7 @@
     }
 
     function updateUserBalanceUI() {
-      document.getElementById('sj-coin-balance').innerText = `SJ: ${userData.sjCoins}`;
+      document.getElementById('sj-coin-balance').innerText = `Balance: ${userData.balance}`;
     }
 
     function renderRewardsGrid() {
@@ -324,7 +316,7 @@
       const day = parseInt(btn.dataset.day);
       const rewardAmount = getRewardAmount(day);
 
-      userData.sjCoins += rewardAmount;
+      userData.balance += rewardAmount;
       userData.claimedDays.push(day);
 
       await saveUserData();
@@ -382,7 +374,6 @@
       }
 
       await loadUserData();
-      await loadTotalBalance();
       checkAndResetMonth();
 
       updateUserBalanceUI();
