@@ -1,181 +1,381 @@
-<!doctype html>
-
-<html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SJ Exchange Directory — Telegram Mini App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>SJ COIN - Daily Rewards</title>
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Firebase SDK (compat for simplicity) -->
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,\"Noto Naskh Arabic\";background:#f6f7fb;margin:0;padding:12px}
-    header{display:flex;align-items:center;justify-content:space-between}
-    h1{font-size:18px;margin:8px 0}
-    .card{background:#fff;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(8,15,52,0.06)}
-    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
-    .btn-primary{background:#2563eb;color:#fff}
-    .small{font-size:13px;color:#555}
-    input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef;margin-top:6px}
-    .row{display:flex;gap:8px}
-    .col{flex:1}
+    :root {
+      --bg-color: #0d1221;
+      --secondary-bg-color: #1a223a;
+      --text-color: #ffffff;
+      --accent-color: #ff3c7f;
+      --free-color: #00ffaa;
+      --border-color: #2e3a62;
+    }
+
+    body {
+      background-color: var(--tg-theme-bg-color, var(--bg-color));
+      color: var(--tg-theme-text-color, var(--text-color));
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 10px 0;
+    }
+
+    #user-stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+    }
+    
+    #user-stats span {
+      background-color: var(--secondary-bg-color);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    main {
+      text-align: center;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    main h1 {
+      margin: 10px 0 20px 0;
+      font-size: 2em;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    main p {
+      color: #aaa;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    #rewards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px,1fr));
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+    }
+
+    .reward-node {
+      background-color: var(--secondary-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1.2;
+      position: relative;
+      user-select: none;
+    }
+    
+    .reward-node.claimed {
+      opacity: 0.5;
+    }
+    
+    .reward-node .day-label {
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 1.1em;
+    }
+
+    .reward-node .item-amount {
+      font-size: 1.3em;
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: var(--free-color);
+    }
+
+    .reward-node button {
+      background-color: var(--free-color);
+      color: black;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 0;
+      width: 100%;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .reward-node button:hover:not(:disabled) {
+      background-color: #00e699;
+    }
+
+    .reward-node button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    
+    footer {
+      margin-top: auto;
+      padding-top: 20px;
+    }
+
+    #back-button {
+      background-color: var(--secondary-bg-color);
+      color: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      padding: 15px;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
   <header>
-    <h1>SJ Exchange Directory — دليل الصرافين</h1>
-    <div id="tg-user" class="small"></div>
-  </header>  <section class="card">
-    <h2 class="small">أضف صراف جديد</h2>
-    <div>
-      <input id="name" placeholder="اسم الصراف (مثال: FastExchanger)" />
-      <input id="location" placeholder="المنطقة / البلد (اختياري)" />
-      <select id="methods">
-        <option value="alipay">Alipay</option>
-        <option value="wechat">WeChat Pay</option>
-        <option value="bank">Bank Transfer</option>
-        <option value="other">Other</option>
-      </select>
-      <input id="min" placeholder="الحد الأدنى (USDT)" />
-      <input id="max" placeholder="الحد الأقصى (USDT)" />
-      <textarea id="notes" placeholder="ملاحظات مثل أوقات العمل أو متطلبات KYC" rows="3"></textarea>
-      <div style="margin-top:8px;text-align:left">
-        <button class="btn btn-primary" id="addBtn">أضف الصراف</button>
-      </div>
+    <div id="user-stats">
+      <span id="sj-coin-balance">SJ: ...</span>
     </div>
-  </section>  <section id="list" class="card">
-    <h2 class="small">قائمة الصرافين</h2>
-    <div id="exchangers"></div>
-  </section>  <template id="exchanger-template">
-    <div class="excard">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <strong class="ex-name"></strong>
-        <span class="small ex-methods"></span>
-      </div>
-      <div class="small ex-location"></div>
-      <div class="small">حدود: <span class="ex-min"></span> — <span class="ex-max"></span> USDT</div>
-      <p class="small ex-notes"></p>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn" data-action="contact">عرض تفاصيل الدفع</button>
-        <button class="btn" data-action="review">تقييم / شكوى</button>
-      </div>
-    </div>
-    <hr/>
-  </template>  <script>
-    // === Firebase config: استبدل القيم بالقيم الخاصة بمشروعك ===
+  </header>
+
+  <main>
+    <h1>SJ COIN DAILY REWARDS</h1>
+    <p>Next reset in: <span id="countdown-timer">...</span></p>
+    
+    <div id="rewards-grid"></div>
+  </main>
+
+  <footer>
+    <button id="back-button">BACK</button>
+  </footer>
+
+  <script>
+    // إعداد Firebase
     const firebaseConfig = {
-      apiKey: "REPLACE_API_KEY",
-      authDomain: "REPLACE_PROJECT.firebaseapp.com",
-      projectId: "REPLACE_PROJECT",
-      storageBucket: "REPLACE_PROJECT.appspot.com",
-      messagingSenderId: "...",
-      appId: "..."
+      apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+      authDomain: "metawarefare-gaming.firebaseapp.com",
+      databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+      projectId: "metawarefare-gaming",
+      storageBucket: "metawarefare-gaming.appspot.com",
+      messagingSenderId: "551352148152",
+      appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Telegram Web App init
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    const totalDays = 30;
+    let userData = {
+      sjCoins: 1000,
+      claimedDays: [],
+      lastMonth: null
+    };
 
-    // عرض بيانات المستخدم من Telegram (إذا متاحة)
-    const tgUserDiv = document.getElementById('tg-user');
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-      const u = tg.initDataUnsafe.user;
-      tgUserDiv.textContent = `@${u.username || ''} — ${u.first_name || ''}`;
+    // Telegram WebApp أو mock للمتصفح
+    const tg = window.Telegram?.WebApp || {
+      ready: () => console.log("Telegram WebApp mock ready"),
+      showAlert: (msg) => alert(msg),
+      HapticFeedback: {
+        notificationOccurred: (type) => console.log(`Haptic feedback: ${type}`)
+      },
+      close: () => console.log("Closing Mini App"),
+      themeParams: {
+        bg_color: '#0d1221',
+        text_color: '#ffffff',
+        button_color: '#ff3c7f',
+        button_text_color: '#ffffff',
+        secondary_bg_color: '#1a223a',
+      },
+      initDataUnsafe: {
+        user: {
+          id: null // سيُملأ عند التشغيل الحقيقي داخل Telegram
+        }
+      }
+    };
+
+    let userId = null;
+
+    async function loadUserData() {
+      if (!userId) {
+        tg.showAlert("خطأ: لم يتم التعرف على المستخدم. الرجاء فتح التطبيق من Telegram.");
+        tg.close();
+        return;
+      }
+      try {
+        const docRef = db.collection("users").doc(String(userId));
+        const doc = await docRef.get();
+        if (doc.exists) {
+          userData = doc.data();
+        } else {
+          userData = {
+            sjCoins: 1000,
+            claimedDays: [],
+            lastMonth: null,
+          };
+          await docRef.set(userData);
+        }
+      } catch (e) {
+        console.error("Firestore read error:", e);
+        tg.showAlert("حدث خطأ أثناء تحميل بياناتك.");
+      }
     }
 
-    // تسجيل دخول صامت: يستخدم Anonymous auth لتجنب UX معقد
-    auth.signInAnonymously().catch(console.error);
+    async function saveUserData() {
+      try {
+        await db.collection("users").doc(String(userId)).set(userData);
+      } catch (e) {
+        console.error("Firestore write error:", e);
+        tg.showAlert("حدث خطأ أثناء حفظ بياناتك.");
+      }
+    }
 
-    // إضافة صراف
-    document.getElementById('addBtn').addEventListener('click', async ()=>{
-      const data = {
-        name: document.getElementById('name').value.trim(),
-        location: document.getElementById('location').value.trim(),
-        methods: document.getElementById('methods').value,
-        min: parseFloat(document.getElementById('min').value) || 0,
-        max: parseFloat(document.getElementById('max').value) || 0,
-        notes: document.getElementById('notes').value.trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        owner: auth.currentUser ? auth.currentUser.uid : null,
-        verified: false,
-        reviewsCount: 0,
-        rating: 0
-      };
-      if(!data.name){alert('أدخل اسم الصراف');return}
-      await db.collection('exchangers').add(data);
-      alert('تمت الإضافة. سيظهر بعد المراجعة.');
-      // تنظيف الحقول
-      ['name','location','min','max','notes'].forEach(id=>document.getElementById(id).value='');
-    });
+    function checkAndResetMonth() {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      if (userData.lastMonth === null || userData.lastMonth !== currentMonth) {
+        userData.claimedDays = [];
+        userData.lastMonth = currentMonth;
+        saveUserData();
+      }
+    }
 
-    // الاستماع لقاعدة الصرافين
-    db.collection('exchangers').orderBy('createdAt','desc').onSnapshot(snap=>{
-      const list = document.getElementById('exchangers');
-      list.innerHTML='';
-      snap.forEach(doc=>{
-        const d = doc.data();
-        // only show verified by default
-        if(d.verified !== true) return;
-        const t = document.getElementById('exchanger-template').content.cloneNode(true);
-        t.querySelector('.ex-name').textContent = d.name;
-        t.querySelector('.ex-methods').textContent = d.methods;
-        t.querySelector('.ex-location').textContent = d.location || '';
-        t.querySelector('.ex-min').textContent = d.min;
-        t.querySelector('.ex-max').textContent = d.max;
-        t.querySelector('.ex-notes').textContent = d.notes || '';
-        const contactBtn = t.querySelector('[data-action="contact"]');
-        contactBtn.addEventListener('click', ()=>{
-          alert('تفاصيل الدفع ستُعرض هنا (قيد التطوير) — تواصل عبر WeChat/Alipay');
-        });
-        const reviewBtn = t.querySelector('[data-action="review"]');
-        reviewBtn.addEventListener('click', ()=>{
-          const comment = prompt('اكتب تقييمك أو شكواك');
-          if(comment) db.collection('reviews').add({exchangerId: doc.id, text: comment, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
-        });
-        list.appendChild(t);
+    function getRewardAmount(dayIndex) {
+      return 50 + (dayIndex - 1) * 10;
+    }
+
+    function getTodayDayNumber() {
+      const day = new Date().getDate();
+      return day > totalDays ? totalDays : day;
+    }
+
+    function updateUserBalanceUI() {
+      document.getElementById('sj-coin-balance').innerText = `SJ: ${userData.sjCoins}`;
+    }
+
+    function renderRewardsGrid() {
+      const grid = document.getElementById('rewards-grid');
+      grid.innerHTML = '';
+      const today = getTodayDayNumber();
+
+      for(let day = 1; day <= totalDays; day++) {
+        const isClaimed = userData.claimedDays.includes(day);
+        const rewardAmount = getRewardAmount(day);
+
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'reward-node';
+        if (isClaimed) nodeEl.classList.add('claimed');
+
+        nodeEl.innerHTML = `
+          <div class="day-label">Day ${day}</div>
+          <div class="item-amount">${rewardAmount} SJ</div>
+          <button ${ (isClaimed || day > today) ? 'disabled' : '' } data-day="${day}">
+            ${isClaimed ? 'Claimed' : (day === today ? 'Claim Now' : 'Locked')}
+          </button>
+        `;
+
+        if (!isClaimed && day === today) {
+          nodeEl.querySelector('button').addEventListener('click', claimReward);
+        }
+
+        grid.appendChild(nodeEl);
+      }
+    }
+
+    async function claimReward(event) {
+      const btn = event.target;
+      const day = parseInt(btn.dataset.day);
+      const rewardAmount = getRewardAmount(day);
+
+      userData.sjCoins += rewardAmount;
+      userData.claimedDays.push(day);
+
+      await saveUserData();
+
+      tg.HapticFeedback.notificationOccurred('success');
+      tg.showAlert(`You claimed ${rewardAmount} SJ for day ${day}!`);
+
+      updateUserBalanceUI();
+      renderRewardsGrid();
+    }
+
+    function startCountdownToMidnight() {
+      const countdownEl = document.getElementById('countdown-timer');
+
+      function updateTimer() {
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24,0,0,0);
+
+        const diff = midnight - now;
+        if (diff <= 0) {
+          checkAndResetMonth();
+          renderRewardsGrid();
+          return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        countdownEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
+      }
+
+      updateTimer();
+      setInterval(updateTimer, 1000);
+    }
+
+    function applyTelegramTheme(theme) {
+      document.documentElement.style.setProperty('--tg-theme-bg-color', theme.bg_color);
+      document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color);
+      document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color);
+      document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
+      document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      tg.ready();
+      applyTelegramTheme(tg.themeParams);
+
+      userId = tg.initDataUnsafe?.user?.id;
+      if (!userId) {
+        tg.showAlert("خطأ: لم يتم التعرف على المستخدم. الرجاء فتح التطبيق من Telegram.");
+        tg.close();
+        return;
+      }
+
+      await loadUserData();
+      checkAndResetMonth();
+
+      updateUserBalanceUI();
+      renderRewardsGrid();
+      startCountdownToMidnight();
+
+      // تعديل زر BACK للذهاب إلى index.html
+      document.getElementById('back-button').addEventListener('click', () => {
+        window.location.href = "index.html";
       });
     });
+  </script>
 
-    // إدارة بسيطة: Admin toggle to verify (مثال تفاعلي فقط)
-    // في تطبيق حقيقي قم بعمل لوحة إدارة منفصلة مع صلاحيات مقيدة.
-  </script>  <!-- ملاحظات: 1) هذه نسخة بداية - تحتاج تحسينات أمنية وواجهة. 2) استبدل إعدادات Firebase بقيم مشروعك. --></body>
-</html>/* Firestore suggested schema
-
-exchangers (collection)
-
-{name, location, methods, min, max, notes, owner, verified, createdAt, rating, reviewsCount}
-
-
-reviews
-
-{exchangerId, userId, text, rating, createdAt}
-
-
-reports
-
-{exchangerId, userId, reason, evidence, status, createdAt}
-
-
-users (optional)
-
-{uid, telegramUsername, isAdmin, verifiedProvider}
-
-
-
-Security Rules (example) service cloud.firestore { match /databases/{database}/documents { match /exchangers/{doc} { allow read: if true; allow create: if request.auth != null; // only admins can set verified:true allow update: if request.auth != null && ( request.resource.data.verified == resource.data.verified || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ); allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true; } match /reviews/{doc} { allow create: if request.auth != null; allow read: if true; allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true; } match /users/{doc} { allow read: if request.auth != null; allow write: if request.auth != null && request.auth.uid == doc; } } }
-
-Cloud Functions ideas (Node.js)
-
-onCreate review -> recalculate average rating for exchanger
-
-onReport -> send email to admins
-
-scheduled job -> remove exchangers with many complaints */
-
-
+</body>
+</html>
