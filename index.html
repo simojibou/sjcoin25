@@ -51,6 +51,8 @@
       background-color: var(--secondary-bg-color);
       padding: 5px 12px;
       border-radius: 20px;
+      min-width: 120px;
+      text-align: center;
     }
 
     main {
@@ -155,6 +157,7 @@
   <header>
     <div id="user-stats">
       <span id="sj-coin-balance">SJ: ...</span>
+      <span id="total-balance">Total: ...</span>
     </div>
   </header>
 
@@ -191,7 +194,6 @@
       lastMonth: null
     };
 
-    // Telegram WebApp أو mock للمتصفح
     const tg = window.Telegram?.WebApp || {
       ready: () => console.log("Telegram WebApp mock ready"),
       showAlert: (msg) => alert(msg),
@@ -208,7 +210,7 @@
       },
       initDataUnsafe: {
         user: {
-          id: null // سيُملأ عند التشغيل الحقيقي داخل Telegram
+          id: null
         }
       }
     };
@@ -246,6 +248,22 @@
       } catch (e) {
         console.error("Firestore write error:", e);
         tg.showAlert("حدث خطأ أثناء حفظ بياناتك.");
+      }
+    }
+
+    async function loadTotalBalance() {
+      try {
+        const docRef = db.collection("stats").doc("totalBalance");
+        const doc = await docRef.get();
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById('total-balance').innerText = `Total: ${data.amount ?? '0'}`;
+        } else {
+          document.getElementById('total-balance').innerText = 'Total: 0';
+        }
+      } catch (e) {
+        console.error("Error loading total balance:", e);
+        document.getElementById('total-balance').innerText = 'Total: error';
       }
     }
 
@@ -364,13 +382,13 @@
       }
 
       await loadUserData();
+      await loadTotalBalance();
       checkAndResetMonth();
 
       updateUserBalanceUI();
       renderRewardsGrid();
       startCountdownToMidnight();
 
-      // تعديل زر BACK للذهاب إلى index.html
       document.getElementById('back-button').addEventListener('click', () => {
         window.location.href = "index.html";
       });
