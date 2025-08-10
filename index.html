@@ -1,42 +1,127 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SJ COIN - الرصيد والمهام اليومية</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>SJ COIN - Daily Tasks</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
-  #user-info { margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
-  #user-info img { width: 50px; height: 50px; border-radius: 50%; }
-  .task { background: #fff; margin-bottom: 15px; padding: 10px; border-radius: 8px; display: flex; align-items: center; }
-  .task img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-left: 15px; }
-  .task-info { flex-grow: 1; }
-  .task-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-  .task-link { color: #0077cc; text-decoration: none; }
-  .task-coins { color: #444; margin-bottom: 5px; }
-  button { background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-  button:disabled { background-color: #aaa; cursor: default; }
+  /* Mini app mobile-friendly style */
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f3f7;
+    color: #222;
+    padding: 16px;
+  }
+  #user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  #user-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ccc;
+  }
+  #user-name {
+    font-weight: 600;
+    font-size: 1.2rem;
+  }
+  #user-balance {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #2e8b57;
+  }
+  h2 {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
+  #tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .task {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+  }
+  .task img {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+  }
+  .task-info {
+    flex-grow: 1;
+  }
+  .task-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+  .task-link {
+    display: inline-block;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #1a73e8;
+    text-decoration: none;
+  }
+  .task-reward {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  button {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  button:disabled {
+    background-color: #aaa;
+    cursor: default;
+  }
 </style>
 </head>
 <body>
 
 <div id="user-info">
-  <img id="user-photo" src="" alt="صورة المستخدم" />
+  <img id="user-photo" src="" alt="User Photo" />
   <div>
-    <div id="user-name">جارِ تحميل اسم المستخدم...</div>
-    <div>الرصيد: <span id="user-balance">0</span> عملة SJ</div>
+    <div id="user-name">Loading user...</div>
+    <div>Balance: <span id="user-balance">0</span> SJ Coins</div>
   </div>
 </div>
 
-<h2>مهامك اليومية</h2>
-<div id="tasks">جارِ تحميل المهام...</div>
+<h2>Daily Tasks</h2>
+<div id="tasks">Loading tasks...</div>
+
+<!-- Telegram Web App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// إعداد Firebase بمعلومات مشروعك
+// Init Telegram Web App
+const tg = window.Telegram.WebApp;
+tg.expand();
+tg.MainButton.text = "Close";
+tg.MainButton.onClick(() => tg.close());
+
+// Firebase config (your project info)
 const firebaseConfig = {
   apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
   authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -47,42 +132,40 @@ const firebaseConfig = {
   appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
 };
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
-// هنا عيّن معرف المستخدم الذي تريد جلب بياناته (مثلاً رقم هاتف أو ID المستخدم)
-const userId = "1723867100";
+const userId = "1723867100"; // Set user id here
 
+// Render user info and tasks
 function renderTasks(tasks, completedTasks) {
   const container = document.getElementById("tasks");
   container.innerHTML = "";
-  
   if (!tasks) {
-    container.innerHTML = "<p>لا توجد مهام حالياً.</p>";
+    container.innerHTML = "<p>No tasks available.</p>";
     return;
   }
-  
+
   Object.keys(tasks).forEach(key => {
     const task = tasks[key];
-    const isCompleted = completedTasks && completedTasks[key] === true;
-
-    const taskDiv = document.createElement("div");
-    taskDiv.className = "task";
+    const completed = completedTasks && completedTasks[key] === true;
 
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc; // عدل حسب استضافتك للصور
+      imgSrc = "https://yourdomain.com" + imgSrc; // Adjust if needed
     }
+
+    const taskDiv = document.createElement("div");
+    taskDiv.className = "task";
 
     taskDiv.innerHTML = `
       <img src="${imgSrc}" alt="${task.name}" />
       <div class="task-info">
         <div class="task-name">${task.name}</div>
-        <a href="${task.link}" target="_blank" class="task-link">اذهب إلى المهمة</a>
-        <div class="task-coins">مكافأة: ${task.reward_coins} عملة SJ</div>
+        <a href="${task.link}" target="_blank" rel="noopener" class="task-link">Go to task</a>
+        <div class="task-reward">Reward: ${task.reward_coins} SJ Coins</div>
       </div>
-      <button ${isCompleted ? "disabled" : ""} data-key="${key}">
-        ${isCompleted ? "تم الحصول على المكافأة" : "اكمل المهمة"}
+      <button ${completed ? "disabled" : ""} data-key="${key}">
+        ${completed ? "Completed" : "Complete Task"}
       </button>
     `;
 
@@ -90,55 +173,50 @@ function renderTasks(tasks, completedTasks) {
   });
 }
 
-// جلب بيانات المستخدم والرصيد
+// Load user data and tasks
 function loadUserData() {
-  db.ref("users/" + userId).once("value").then(snapshot => {
-    const userData = snapshot.val();
-    if (!userData) {
-      alert("المستخدم غير موجود!");
+  db.ref(`users/${userId}`).once("value").then(userSnap => {
+    const user = userSnap.val();
+    if (!user) {
+      alert("User not found!");
       return;
     }
-    
-    document.getElementById("user-name").textContent = userData.name || "اسم غير متوفر";
-    document.getElementById("user-balance").textContent = userData.balance || 0;
-    document.getElementById("user-photo").src = userData.photo || "https://via.placeholder.com/50";
-    
-    // بعد جلب بيانات المستخدم، جلب المهام مع حالة المهام المكتملة
-    db.ref("DailyTasks").once("value").then(taskSnapshot => {
-      const tasksData = taskSnapshot.val();
-      renderTasks(tasksData, userData.completedTasks);
+
+    document.getElementById("user-name").textContent = user.name || "No Name";
+    document.getElementById("user-balance").textContent = user.balance || 0;
+    document.getElementById("user-photo").src = user.photo || "https://via.placeholder.com/56";
+
+    db.ref("DailyTasks").once("value").then(tasksSnap => {
+      renderTasks(tasksSnap.val(), user.completedTasks);
     });
   });
 }
 
-// حدث الضغط على أزرار "اكمل المهمة"
+// Handle task completion button click
 document.getElementById("tasks").addEventListener("click", e => {
   if (e.target.tagName === "BUTTON" && !e.target.disabled) {
     const key = e.target.getAttribute("data-key");
     if (!key) return;
 
-    // تحديث حالة المهمة في قاعدة بيانات المستخدم
-    const updates = {};
-    updates[`users/${userId}/completedTasks/${key}`] = true;
-
-    // تحديث رصيد المستخدم (زيادة حسب مكافأة المهمة)
     db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
       const reward = taskSnap.val()?.reward_coins || 0;
 
-      db.ref(`users/${userId}/balance`).transaction(currentBalance => {
-        return (currentBalance || 0) + reward;
-      }).then(() => {
-        // تحديث حالة المهمة مكتملة
-        return db.ref().update(updates);
-      }).then(() => {
-        alert(`مبروك! حصلت على ${reward} عملة SJ.`);
-        // إعادة تحميل بيانات المستخدم والمهام لتحديث العرض
-        loadUserData();
-      });
+      // Update user balance transactionally
+      db.ref(`users/${userId}/balance`).transaction(balance => (balance || 0) + reward)
+        .then(() => {
+          // Mark task completed for user
+          return db.ref(`users/${userId}/completedTasks/${key}`).set(true);
+        })
+        .then(() => {
+          alert(`Congrats! You earned ${reward} SJ Coins.`);
+          loadUserData(); // Refresh UI
+        })
+        .catch(err => alert("Error updating data: " + err.message));
     });
   }
 });
 
+// Start loading data
 loadUserData();
 </script>
 
