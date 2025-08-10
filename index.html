@@ -1,178 +1,278 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>SJ COIN - Daily Rewards</title>
+  <title>SJ COIN Tap2Earn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> <!-- منع الزووم -->
 
+  <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- TonConnect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 
   <style>
-    :root {
-      --bg-color: #0d1221;
-      --secondary-bg-color: #1a223a;
-      --text-color: #ffffff;
-      --accent-color: #ff3c7f;
-      --free-color: #00ffaa;
-      --border-color: #2e3a62;
-    }
-
     body {
-      background-color: var(--tg-theme-bg-color, var(--bg-color));
-      color: var(--tg-theme-text-color, var(--text-color));
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      box-sizing: border-box;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    header {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding: 10px 0;
-    }
-
-    #user-stats {
-      display: flex;
-      gap: 15px;
-      font-weight: bold;
-    }
-    
-    #user-stats span {
-      background-color: var(--secondary-bg-color);
-      padding: 5px 12px;
-      border-radius: 20px;
-      min-width: 120px;
+      font-family: 'Arial', sans-serif;
+      background: url('https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
       text-align: center;
-    }
-
-    main {
-      text-align: center;
-      flex-grow: 1;
-      overflow-y: auto;
-    }
-
-    main h1 {
-      margin: 10px 0 20px 0;
-      font-size: 2em;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    main p {
-      color: #aaa;
-      margin-bottom: 20px;
-      font-weight: bold;
-    }
-
-    #rewards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px,1fr));
-      gap: 12px;
-      max-width: 600px;
-      margin: 0 auto 20px auto;
-    }
-
-    .reward-node {
-      background-color: var(--secondary-bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 10px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      aspect-ratio: 1 / 1.2;
-      position: relative;
+      -webkit-tap-highlight-color: transparent; /* إزالة تظليل الضغط الأزرق */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
       user-select: none;
     }
-    
-    .reward-node.claimed {
-      opacity: 0.5;
-    }
-    
-    .reward-node .day-label {
-      font-weight: bold;
-      margin-bottom: 6px;
-      font-size: 1.1em;
+
+    .game-container {
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 20px;
+      margin-top: 20px;
     }
 
-    .reward-node .item-amount {
-      font-size: 1.3em;
-      font-weight: bold;
-      margin-bottom: 6px;
-      color: var(--free-color);
+    h1 {
+      color: #ffd700;
+      font-size: 26px;
+      margin: 0;
     }
 
-    .reward-node button {
-      background-color: var(--free-color);
-      color: black;
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+      min-width: 0;
+    }
+
+    .profile-pic {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 4px solid #ffd700;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .username {
+      font-size: 22px;
+      color: #ffd700;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .coin-balance {
+      font-size: 18px;
+      color: #ffff66;
+      white-space: nowrap;
+      flex-shrink: 0;
+      user-select: text; /* السماح بنسخ النص */
+    }
+
+    #ton-connect {
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      font-size: 15px;
+    }
+
+    .coin-display {
+      font-size: 26px;
+      margin: 10px 0;
+      color: #ffff66;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .coin-logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+
+    .avatar {
+      margin: 20px 0;
+      cursor: pointer;
+    }
+
+    .avatar img {
+      width: 160px;
+      border-radius: 50%;
+      border: 5px solid #ffd700;
+    }
+
+    .progress-bar {
+      background-color: #444;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      margin: 15px 0;
+    }
+
+    .progress {
+      width: 33%;
+      height: 100%;
+      background-color: #00e676;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .tap-button {
+      margin-top: 20px;
+      font-size: 20px;
+      background-color: #4caf50;
       border: none;
-      border-radius: 8px;
-      padding: 8px 0;
-      width: 100%;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .reward-node button:hover:not(:disabled) {
-      background-color: #00e699;
-    }
-
-    .reward-node button:disabled {
-      background-color: #555;
-      cursor: not-allowed;
-    }
-    
-    footer {
-      margin-top: auto;
-      padding-top: 20px;
-    }
-
-    #back-button {
-      background-color: var(--secondary-bg-color);
-      color: white;
-      border: 1px solid var(--border-color);
+      padding: 15px 30px;
       border-radius: 12px;
-      width: 100%;
-      padding: 15px;
-      font-size: 1.2em;
-      font-weight: bold;
+      color: white;
       cursor: pointer;
     }
+
+    .tap-button:hover {
+      background-color: #43a047;
+    }
+
+    .button {
+      background-color: #007aff;
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 10px auto;
+    }
+
+    .button:hover {
+      background-color: #005fc0;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 30px;
+      font-size: 15px;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .tabs button {
+      flex: 1;
+      background-color: #333;
+      border: none;
+      color: #fff;
+      padding: 10px 5px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .tabs button:hover {
+      background-color: #555;
+    }
+
   </style>
 </head>
 <body>
+  <div class="game-container">
 
-  <header>
-    <div id="user-stats">
-      <span id="sj-coin-balance">Balance: ...</span>
+    <!-- Header with profile pic, username, balance, wallet -->
+    <div class="header">
+      <div class="user-info">
+        <img id="userPic" class="profile-pic" src="" alt="Profile" />
+        <div class="username" id="username">👤</div>
+        <div class="coin-balance" id="totalBalance">Loading...</div>
+      </div>
+      <div id="ton-connect"></div>
     </div>
-  </header>
 
-  <main>
-    <h1>SJ COIN DAILY REWARDS</h1>
-    <p>Next reset in: <span id="countdown-timer">...</span></p>
-    
-    <div id="rewards-grid"></div>
-  </main>
+    <div class="stats">
+      <div>💰 Tap: +1</div>
+      <div>🔁 To next level: 15K</div>
+      <div>⏰ Hourly: +0</div>
+    </div>
 
-  <footer>
-    <button id="back-button">BACK</button>
-  </footer>
+    <!-- Coin Display -->
+    <div class="coin-display" id="coinCount" tabindex="-1" aria-label="SJ COIN Balance">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="coin-logo" />
+      <span id="coinAmount">Loading...</span>
+    </div>
+
+    <!-- Avatar (also tap to earn) -->
+    <div class="avatar" onclick="tapToEarn()" role="button" tabindex="0" aria-label="Tap to earn SJ COIN">
+      <img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" alt="SJ Frog Avatar" />
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress" id="progressBar"></div>
+    </div>
+    <div class="info-text">📈 Level: 1/5 (Starter)</div>
+
+    <!-- Tap Button -->
+    <button class="tap-button" onclick="tapToEarn()">👆 Tap to Earn</button>
+
+    <!-- Buy Button -->
+    <button class="button" onclick="buyCoin()">💸 Buy 100 SJ</button>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button onclick="window.location.href='earning.html'">🍄 Explore</button>
+      <button onclick="window.location.href='sjap.html'">🎯 Missions</button>
+      <button onclick="window.location.href='friends.html'">👥 Friends</button>
+      <button onclick="window.location.href='pys.html'">💎 Bounty</button>
+    </div>
+  </div>
 
   <script>
-    // إعداد Firebase
+    // Telegram WebApp Setup
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user;
+    const userId = user?.id?.toString();
+    document.getElementById("username").innerText = user?.first_name || "Guest";
+
+    // Set user profile pic or fallback
+    const userPicElem = document.getElementById("userPic");
+    if(user?.photo_url) {
+      userPicElem.src = user.photo_url;
+    } else {
+      userPicElem.src = "https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true"; // fallback image
+    }
+
+    // Firebase Config for your project
     const firebaseConfig = {
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -183,208 +283,73 @@
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const totalDays = 30;
-    let userData = {
-      balance: 0,
-      claimedDays: [],
-      lastMonth: null
-    };
+    // TonConnect UI Setup
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect'
+    });
 
-    const tg = window.Telegram?.WebApp || {
-      ready: () => console.log("Telegram WebApp mock ready"),
-      showAlert: (msg) => alert(msg),
-      HapticFeedback: {
-        notificationOccurred: (type) => console.log(`Haptic feedback: ${type}`)
-      },
-      close: () => console.log("Closing Mini App"),
-      themeParams: {
-        bg_color: '#0d1221',
-        text_color: '#ffffff',
-        button_color: '#ff3c7f',
-        button_text_color: '#ffffff',
-        secondary_bg_color: '#1a223a',
-      },
-      initDataUnsafe: {
-        user: {
-          id: null
-        }
-      }
-    };
+    // Global balance variable
+    let balance = 0;
 
-    let userId = null;
-
-    async function loadUserData() {
-      if (!userId) {
-        tg.showAlert("خطأ: لم يتم التعرف على المستخدم. الرجاء فتح التطبيق من Telegram.");
-        tg.close();
-        return;
-      }
+    async function loadBalance() {
+      if (!userId) return;
       try {
-        const docRef = db.collection("users").doc(String(userId));
-        const doc = await docRef.get();
+        const doc = await db.collection("users").doc(userId).get();
         if (doc.exists) {
           const data = doc.data();
-          userData.balance = data.balance ?? 0;
-          // فقط خزن claimedDays و lastMonth لو موجودة أو افتراضي
-          userData.claimedDays = data.claimedDays || [];
-          userData.lastMonth = data.lastMonth || null;
+          balance = data.balance || 0;
+          updateBalanceDisplay(balance);
         } else {
-          userData = {
-            balance: 1000, // قيمة مبدئية
-            claimedDays: [],
-            lastMonth: null,
-          };
-          await db.collection("users").doc(String(userId)).set(userData);
+          balance = 0;
+          updateBalanceDisplay(balance);
         }
-      } catch (e) {
-        console.error("Firestore read error:", e);
-        tg.showAlert("حدث خطأ أثناء تحميل بياناتك.");
+      } catch (error) {
+        console.error("Error loading balance:", error);
       }
     }
 
-    async function saveUserData() {
-      try {
-        // خزّن فقط claimedDays و lastMonth و balance
-        await db.collection("users").doc(String(userId)).set({
-          balance: userData.balance,
-          claimedDays: userData.claimedDays,
-          lastMonth: userData.lastMonth
-        }, { merge: true });
-      } catch (e) {
-        console.error("Firestore write error:", e);
-        tg.showAlert("حدث خطأ أثناء حفظ بياناتك.");
-      }
+    function updateBalanceDisplay(value) {
+      document.getElementById("totalBalance").innerText = `Balance: ${value.toLocaleString()} SJ COIN`;
+      document.getElementById("coinAmount").innerText = `${value.toLocaleString()} SJ COIN`;
     }
 
-    function checkAndResetMonth() {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      if (userData.lastMonth === null || userData.lastMonth !== currentMonth) {
-        userData.claimedDays = [];
-        userData.lastMonth = currentMonth;
-        saveUserData();
-      }
-    }
-
-    function getRewardAmount(dayIndex) {
-      return 50 + (dayIndex - 1) * 10;
-    }
-
-    function getTodayDayNumber() {
-      const day = new Date().getDate();
-      return day > totalDays ? totalDays : day;
-    }
-
-    function updateUserBalanceUI() {
-      document.getElementById('sj-coin-balance').innerText = `Balance: ${userData.balance}`;
-    }
-
-    function renderRewardsGrid() {
-      const grid = document.getElementById('rewards-grid');
-      grid.innerHTML = '';
-      const today = getTodayDayNumber();
-
-      for(let day = 1; day <= totalDays; day++) {
-        const isClaimed = userData.claimedDays.includes(day);
-        const rewardAmount = getRewardAmount(day);
-
-        const nodeEl = document.createElement('div');
-        nodeEl.className = 'reward-node';
-        if (isClaimed) nodeEl.classList.add('claimed');
-
-        nodeEl.innerHTML = `
-          <div class="day-label">Day ${day}</div>
-          <div class="item-amount">${rewardAmount} SJ</div>
-          <button ${ (isClaimed || day > today) ? 'disabled' : '' } data-day="${day}">
-            ${isClaimed ? 'Claimed' : (day === today ? 'Claim Now' : 'Locked')}
-          </button>
-        `;
-
-        if (!isClaimed && day === today) {
-          nodeEl.querySelector('button').addEventListener('click', claimReward);
+    async function tapToEarn() {
+      balance += 1;
+      updateBalanceDisplay(balance);
+      if (userId) {
+        try {
+          await db.collection("users").doc(userId).set({ balance: balance }, { merge: true });
+        } catch (error) {
+          console.error("Error updating balance:", error);
         }
-
-        grid.appendChild(nodeEl);
       }
     }
 
-    async function claimReward(event) {
-      const btn = event.target;
-      const day = parseInt(btn.dataset.day);
-      const rewardAmount = getRewardAmount(day);
+    function buyCoin() {
+      const purchaseData = {
+        action: "buy",
+        amount: 100,
+        timestamp: Date.now(),
+        user: user?.id || null
+      };
 
-      userData.balance += rewardAmount;
-      userData.claimedDays.push(day);
-
-      await saveUserData();
-
-      tg.HapticFeedback.notificationOccurred('success');
-      tg.showAlert(`You claimed ${rewardAmount} SJ for day ${day}!`);
-
-      updateUserBalanceUI();
-      renderRewardsGrid();
+      tg.sendData(JSON.stringify(purchaseData));
+      alert("📦 Purchase request sent for 100 SJ COIN. Check the bot.");
     }
 
-    function startCountdownToMidnight() {
-      const countdownEl = document.getElementById('countdown-timer');
+    // Disable blue highlight on coin display
+    const coinCountElem = document.getElementById("coinCount");
+    coinCountElem.addEventListener("mousedown", e => e.preventDefault());
+    coinCountElem.addEventListener("click", e => e.preventDefault());
+    coinCountElem.onclick = null;
 
-      function updateTimer() {
-        const now = new Date();
-        const midnight = new Date(now);
-        midnight.setHours(24,0,0,0);
-
-        const diff = midnight - now;
-        if (diff <= 0) {
-          checkAndResetMonth();
-          renderRewardsGrid();
-          return;
-        }
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        countdownEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
-      }
-
-      updateTimer();
-      setInterval(updateTimer, 1000);
-    }
-
-    function applyTelegramTheme(theme) {
-      document.documentElement.style.setProperty('--tg-theme-bg-color', theme.bg_color);
-      document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color);
-      document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color);
-      document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
-      document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      tg.ready();
-      applyTelegramTheme(tg.themeParams);
-
-      userId = tg.initDataUnsafe?.user?.id;
-      if (!userId) {
-        tg.showAlert("خطأ: لم يتم التعرف على المستخدم. الرجاء فتح التطبيق من Telegram.");
-        tg.close();
-        return;
-      }
-
-      await loadUserData();
-      checkAndResetMonth();
-
-      updateUserBalanceUI();
-      renderRewardsGrid();
-      startCountdownToMidnight();
-
-      document.getElementById('back-button').addEventListener('click', () => {
-        window.location.href = "index.html";
-      });
-    });
+    // Load initial balance from Firebase
+    loadBalance();
   </script>
-
 </body>
 </html>
