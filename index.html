@@ -3,21 +3,32 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SJ COIN - المهام اليومية من Firebase</title>
+<title>SJ COIN - الرصيد والمهام اليومية</title>
 <style>
   body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
+  #user-info { margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+  #user-info img { width: 50px; height: 50px; border-radius: 50%; }
   .task { background: #fff; margin-bottom: 15px; padding: 10px; border-radius: 8px; display: flex; align-items: center; }
   .task img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-left: 15px; }
   .task-info { flex-grow: 1; }
   .task-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
   .task-link { color: #0077cc; text-decoration: none; }
   .task-coins { color: #444; margin-bottom: 5px; }
+  button { background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+  button:disabled { background-color: #aaa; cursor: default; }
 </style>
 </head>
 <body>
 
-<h2>مهامك اليومية من Firebase</h2>
+<div id="user-info">
+  <img id="user-photo" src="" alt="صورة المستخدم" />
+  <div>
+    <div id="user-name">جارِ تحميل اسم المستخدم...</div>
+    <div>الرصيد: <span id="user-balance">0</span> عملة SJ</div>
+  </div>
+</div>
 
+<h2>مهامك اليومية</h2>
 <div id="tasks">جارِ تحميل المهام...</div>
 
 <!-- Firebase SDK -->
@@ -39,7 +50,10 @@ firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
-function renderTasks(tasks) {
+// هنا عيّن معرف المستخدم الذي تريد جلب بياناته (مثلاً رقم هاتف أو ID المستخدم)
+const userId = "1723867100";
+
+function renderTasks(tasks, completedTasks) {
   const container = document.getElementById("tasks");
   container.innerHTML = "";
   
@@ -50,15 +64,16 @@ function renderTasks(tasks) {
   
   Object.keys(tasks).forEach(key => {
     const task = tasks[key];
+    const isCompleted = completedTasks && completedTasks[key] === true;
+
     const taskDiv = document.createElement("div");
     taskDiv.className = "task";
-    
-    // تعويض الصور النسبية لو تحتاج (يمكن تعدل حسب الاستضافة)
+
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc; // عدل هذا لو عندك استضافة خاصة للصور
+      imgSrc = "https://yourdomain.com" + imgSrc; // عدل حسب استضافتك للصور
     }
-    
+
     taskDiv.innerHTML = `
       <img src="${imgSrc}" alt="${task.name}" />
       <div class="task-info">
@@ -66,19 +81,65 @@ function renderTasks(tasks) {
         <a href="${task.link}" target="_blank" class="task-link">اذهب إلى المهمة</a>
         <div class="task-coins">مكافأة: ${task.reward_coins} عملة SJ</div>
       </div>
+      <button ${isCompleted ? "disabled" : ""} data-key="${key}">
+        ${isCompleted ? "تم الحصول على المكافأة" : "اكمل المهمة"}
+      </button>
     `;
-    
+
     container.appendChild(taskDiv);
   });
 }
 
-// الاستماع للمهام من Firebase Realtime Database
-db.ref("DailyTasks").on("value", snapshot => {
-  const data = snapshot.val();
-  renderTasks(data);
-}, error => {
-  document.getElementById("tasks").innerHTML = "خطأ في تحميل المهام: " + error.message;
+// جلب بيانات المستخدم والرصيد
+function loadUserData() {
+  db.ref("users/" + userId).once("value").then(snapshot => {
+    const userData = snapshot.val();
+    if (!userData) {
+      alert("المستخدم غير موجود!");
+      return;
+    }
+    
+    document.getElementById("user-name").textContent = userData.name || "اسم غير متوفر";
+    document.getElementById("user-balance").textContent = userData.balance || 0;
+    document.getElementById("user-photo").src = userData.photo || "https://via.placeholder.com/50";
+    
+    // بعد جلب بيانات المستخدم، جلب المهام مع حالة المهام المكتملة
+    db.ref("DailyTasks").once("value").then(taskSnapshot => {
+      const tasksData = taskSnapshot.val();
+      renderTasks(tasksData, userData.completedTasks);
+    });
+  });
+}
+
+// حدث الضغط على أزرار "اكمل المهمة"
+document.getElementById("tasks").addEventListener("click", e => {
+  if (e.target.tagName === "BUTTON" && !e.target.disabled) {
+    const key = e.target.getAttribute("data-key");
+    if (!key) return;
+
+    // تحديث حالة المهمة في قاعدة بيانات المستخدم
+    const updates = {};
+    updates[`users/${userId}/completedTasks/${key}`] = true;
+
+    // تحديث رصيد المستخدم (زيادة حسب مكافأة المهمة)
+    db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
+      const reward = taskSnap.val()?.reward_coins || 0;
+
+      db.ref(`users/${userId}/balance`).transaction(currentBalance => {
+        return (currentBalance || 0) + reward;
+      }).then(() => {
+        // تحديث حالة المهمة مكتملة
+        return db.ref().update(updates);
+      }).then(() => {
+        alert(`مبروك! حصلت على ${reward} عملة SJ.`);
+        // إعادة تحميل بيانات المستخدم والمهام لتحديث العرض
+        loadUserData();
+      });
+    });
+  }
 });
+
+loadUserData();
 </script>
 
 </body>
