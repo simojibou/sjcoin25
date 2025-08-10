@@ -8,8 +8,8 @@
   body {
     margin: 0;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: #f0f3f7;
-    color: #222;
+    background: #000000; /* خلفية سوداء */
+    color: #eee; /* نص فاتح */
     padding: 16px;
   }
   header {
@@ -19,7 +19,7 @@
     margin-bottom: 20px;
   }
   #back-btn {
-    background-color: #1a73e8;
+    background-color: #3399ff; /* زر أزرق فاتح */
     color: white;
     border: none;
     padding: 8px 14px;
@@ -38,7 +38,7 @@
     height: 56px;
     border-radius: 50%;
     object-fit: cover;
-    background: #ccc;
+    background: #222;
   }
   #user-name {
     font-weight: 600;
@@ -47,7 +47,7 @@
   #user-balance {
     font-weight: 700;
     font-size: 1rem;
-    color: #2e8b57;
+    color: #3fdb91; /* أخضر فاتح */
   }
   h2 {
     font-size: 1.3rem;
@@ -59,19 +59,20 @@
     gap: 12px;
   }
   .task {
-    background: #fff;
+    background: #111;
     border-radius: 12px;
     padding: 12px;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.8);
   }
   .task img {
     width: 56px;
     height: 56px;
     border-radius: 10px;
     object-fit: cover;
+    background: #222;
   }
   .task-info {
     flex-grow: 1;
@@ -81,19 +82,19 @@
     font-size: 1.1rem;
     margin-bottom: 4px;
   }
-  .task-link {
+  a.task-link {
     display: inline-block;
     font-size: 0.9rem;
     margin-bottom: 6px;
-    color: #1a73e8;
+    color: #66aaff; /* أزرق فاتح */
     text-decoration: none;
   }
   .task-reward {
     font-size: 0.9rem;
-    color: #555;
+    color: #ccc;
   }
   button.complete-btn {
-    background-color: #1a73e8;
+    background-color: #3399ff; /* زر أزرق فاتح */
     color: white;
     border: none;
     padding: 8px 14px;
@@ -103,7 +104,7 @@
     user-select: none;
   }
   button.complete-btn:disabled {
-    background-color: #aaa;
+    background-color: #555; /* رمادي داكن */
     cursor: default;
   }
 </style>
@@ -161,7 +162,7 @@ function renderTasks(tasks, completedTasks) {
 
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc; // غيّر هذا حسب استضافة صورك
+      imgSrc = "https://yourdomain.com" + imgSrc; // غيّر حسب استضافتك
     }
 
     const taskDiv = document.createElement("div");
@@ -203,7 +204,6 @@ function loadUserData() {
     db.ref("DailyTasks").once("value").then(tasksSnap => {
       const tasks = tasksSnap.val();
 
-      // حساب مجموع مكافآت المهام المكتملة فقط
       let tasksTotalReward = 0;
       if (user.completedTasks) {
         for (const taskKey in user.completedTasks) {
@@ -213,7 +213,6 @@ function loadUserData() {
         }
       }
 
-      // المجموع = رصيد أساسي + مكافآت المهام المكتملة
       const totalBalance = (user.balance || 0) + tasksTotalReward;
 
       document.getElementById("user-name").textContent = user.name || "No Name";
@@ -233,11 +232,8 @@ document.getElementById("tasks").addEventListener("click", e => {
     db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
       const reward = taskSnap.val()?.reward_coins || 0;
 
-      // تحديث الرصيد الأساسي فقط (لنفترض أنك تريد فقط تعديل رصيد "user.balance")
       db.ref(`users/${userId}/balance`).transaction(balance => (balance || 0) + reward)
-        .then(() => {
-          return db.ref(`users/${userId}/completedTasks/${key}`).set(true);
-        })
+        .then(() => db.ref(`users/${userId}/completedTasks/${key}`).set(true))
         .then(() => {
           alert(`Congrats! You earned ${reward} SJ Coins.`);
           loadUserData();
