@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>SJ COIN - Daily Tasks</title>
 <style>
-  /* Mini app mobile-friendly style */
   body {
     margin: 0;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -115,13 +114,12 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// Init Telegram Web App
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.MainButton.text = "Close";
 tg.MainButton.onClick(() => tg.close());
 
-// Firebase config (your project info)
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
   authDomain: "metawarefare-gaming.firebaseapp.com",
@@ -134,9 +132,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const userId = "1723867100"; // Set user id here
+const userId = String(tg.initDataUnsafe.user.id);
 
-// Render user info and tasks
 function renderTasks(tasks, completedTasks) {
   const container = document.getElementById("tasks");
   container.innerHTML = "";
@@ -151,7 +148,7 @@ function renderTasks(tasks, completedTasks) {
 
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc; // Adjust if needed
+      imgSrc = "https://yourdomain.com" + imgSrc; // Change if needed
     }
 
     const taskDiv = document.createElement("div");
@@ -173,12 +170,21 @@ function renderTasks(tasks, completedTasks) {
   });
 }
 
-// Load user data and tasks
 function loadUserData() {
   db.ref(`users/${userId}`).once("value").then(userSnap => {
     const user = userSnap.val();
+
     if (!user) {
-      alert("User not found!");
+      // Create new user if not exists
+      const newUser = {
+        balance: 0,
+        name: tg.initDataUnsafe.user?.first_name || "New User",
+        photo: tg.initDataUnsafe.user?.photo_url || "",
+        completedTasks: {}
+      };
+      db.ref(`users/${userId}`).set(newUser).then(() => {
+        loadUserData();
+      });
       return;
     }
 
@@ -192,7 +198,6 @@ function loadUserData() {
   });
 }
 
-// Handle task completion button click
 document.getElementById("tasks").addEventListener("click", e => {
   if (e.target.tagName === "BUTTON" && !e.target.disabled) {
     const key = e.target.getAttribute("data-key");
@@ -201,10 +206,10 @@ document.getElementById("tasks").addEventListener("click", e => {
     db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
       const reward = taskSnap.val()?.reward_coins || 0;
 
-      // Update user balance transactionally
+      // Transactionally update balance
       db.ref(`users/${userId}/balance`).transaction(balance => (balance || 0) + reward)
         .then(() => {
-          // Mark task completed for user
+          // Mark task completed
           return db.ref(`users/${userId}/completedTasks/${key}`).set(true);
         })
         .then(() => {
@@ -216,7 +221,6 @@ document.getElementById("tasks").addEventListener("click", e => {
   }
 });
 
-// Start loading data
 loadUserData();
 </script>
 
