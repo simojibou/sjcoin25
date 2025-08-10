@@ -140,11 +140,9 @@ tg.MainButton.onClick(() => tg.close());
 const userId = String(tg.initDataUnsafe.user.id);
 
 document.getElementById("back-btn").addEventListener("click", () => {
-  // يرجع للصفحة السابقة في المتصفح
   if (window.history.length > 1) {
     window.history.back();
   } else {
-    // لو ما في صفحة سابقة، يغلق الميني آب (اختياري)
     tg.close();
   }
 });
@@ -163,7 +161,7 @@ function renderTasks(tasks, completedTasks) {
 
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc;
+      imgSrc = "https://yourdomain.com" + imgSrc; // غيّر هذا حسب استضافة صورك
     }
 
     const taskDiv = document.createElement("div");
@@ -202,12 +200,27 @@ function loadUserData() {
       return;
     }
 
-    document.getElementById("user-name").textContent = user.name || "No Name";
-    document.getElementById("user-balance").textContent = user.balance || 0;
-    document.getElementById("user-photo").src = user.photo || "https://via.placeholder.com/56";
-
     db.ref("DailyTasks").once("value").then(tasksSnap => {
-      renderTasks(tasksSnap.val(), user.completedTasks);
+      const tasks = tasksSnap.val();
+
+      // حساب مجموع مكافآت المهام المكتملة فقط
+      let tasksTotalReward = 0;
+      if (user.completedTasks) {
+        for (const taskKey in user.completedTasks) {
+          if (user.completedTasks[taskKey] && tasks[taskKey]) {
+            tasksTotalReward += tasks[taskKey].reward_coins || 0;
+          }
+        }
+      }
+
+      // المجموع = رصيد أساسي + مكافآت المهام المكتملة
+      const totalBalance = (user.balance || 0) + tasksTotalReward;
+
+      document.getElementById("user-name").textContent = user.name || "No Name";
+      document.getElementById("user-photo").src = user.photo || "https://via.placeholder.com/56";
+      document.getElementById("user-balance").textContent = totalBalance;
+
+      renderTasks(tasks, user.completedTasks);
     });
   });
 }
@@ -220,6 +233,7 @@ document.getElementById("tasks").addEventListener("click", e => {
     db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
       const reward = taskSnap.val()?.reward_coins || 0;
 
+      // تحديث الرصيد الأساسي فقط (لنفترض أنك تريد فقط تعديل رصيد "user.balance")
       db.ref(`users/${userId}/balance`).transaction(balance => (balance || 0) + reward)
         .then(() => {
           return db.ref(`users/${userId}/completedTasks/${key}`).set(true);
