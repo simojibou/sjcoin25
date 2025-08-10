@@ -12,11 +12,26 @@
     color: #222;
     padding: 16px;
   }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  #back-btn {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
   #user-info {
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
     gap: 12px;
+    flex-grow: 1;
   }
   #user-photo {
     width: 56px;
@@ -77,7 +92,7 @@
     font-size: 0.9rem;
     color: #555;
   }
-  button {
+  button.complete-btn {
     background-color: #1a73e8;
     color: white;
     border: none;
@@ -87,7 +102,7 @@
     cursor: pointer;
     user-select: none;
   }
-  button:disabled {
+  button.complete-btn:disabled {
     background-color: #aaa;
     cursor: default;
   }
@@ -95,13 +110,16 @@
 </head>
 <body>
 
-<div id="user-info">
-  <img id="user-photo" src="" alt="User Photo" />
-  <div>
-    <div id="user-name">Loading user...</div>
-    <div>Balance: <span id="user-balance">0</span> SJ Coins</div>
+<header>
+  <button id="back-btn">Back</button>
+  <div id="user-info">
+    <img id="user-photo" src="" alt="User Photo" />
+    <div>
+      <div id="user-name">Loading user...</div>
+      <div>Balance: <span id="user-balance">0</span> SJ Coins</div>
+    </div>
   </div>
-</div>
+</header>
 
 <h2>Daily Tasks</h2>
 <div id="tasks">Loading tasks...</div>
@@ -119,20 +137,17 @@ tg.expand();
 tg.MainButton.text = "Close";
 tg.MainButton.onClick(() => tg.close());
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-  authDomain: "metawarefare-gaming.firebaseapp.com",
-  databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-  projectId: "metawarefare-gaming",
-  storageBucket: "metawarefare-gaming.appspot.com",
-  messagingSenderId: "551352148152",
-  appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 const userId = String(tg.initDataUnsafe.user.id);
+
+document.getElementById("back-btn").addEventListener("click", () => {
+  // يرجع للصفحة السابقة في المتصفح
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    // لو ما في صفحة سابقة، يغلق الميني آب (اختياري)
+    tg.close();
+  }
+});
 
 function renderTasks(tasks, completedTasks) {
   const container = document.getElementById("tasks");
@@ -148,7 +163,7 @@ function renderTasks(tasks, completedTasks) {
 
     let imgSrc = task.image;
     if (!imgSrc.startsWith("http")) {
-      imgSrc = "https://yourdomain.com" + imgSrc; // Change if needed
+      imgSrc = "https://yourdomain.com" + imgSrc;
     }
 
     const taskDiv = document.createElement("div");
@@ -161,7 +176,7 @@ function renderTasks(tasks, completedTasks) {
         <a href="${task.link}" target="_blank" rel="noopener" class="task-link">Go to task</a>
         <div class="task-reward">Reward: ${task.reward_coins} SJ Coins</div>
       </div>
-      <button ${completed ? "disabled" : ""} data-key="${key}">
+      <button class="complete-btn" ${completed ? "disabled" : ""} data-key="${key}">
         ${completed ? "Completed" : "Complete Task"}
       </button>
     `;
@@ -175,7 +190,6 @@ function loadUserData() {
     const user = userSnap.val();
 
     if (!user) {
-      // Create new user if not exists
       const newUser = {
         balance: 0,
         name: tg.initDataUnsafe.user?.first_name || "New User",
@@ -206,20 +220,30 @@ document.getElementById("tasks").addEventListener("click", e => {
     db.ref(`DailyTasks/${key}`).once("value").then(taskSnap => {
       const reward = taskSnap.val()?.reward_coins || 0;
 
-      // Transactionally update balance
       db.ref(`users/${userId}/balance`).transaction(balance => (balance || 0) + reward)
         .then(() => {
-          // Mark task completed
           return db.ref(`users/${userId}/completedTasks/${key}`).set(true);
         })
         .then(() => {
           alert(`Congrats! You earned ${reward} SJ Coins.`);
-          loadUserData(); // Refresh UI
+          loadUserData();
         })
         .catch(err => alert("Error updating data: " + err.message));
     });
   }
 });
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+  authDomain: "metawarefare-gaming.firebaseapp.com",
+  databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
+  projectId: "metawarefare-gaming",
+  storageBucket: "metawarefare-gaming.appspot.com",
+  messagingSenderId: "551352148152",
+  appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 loadUserData();
 </script>
