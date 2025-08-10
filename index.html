@@ -1,156 +1,181 @@
 <!doctype html>
+
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SJ COIN — دفع بـ TON (Mini App)</title>
-
-  <!-- Telegram Web App SDK -->
+  <title>SJ Exchange Directory — Telegram Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui"></script>
-
-  <!-- Firebase -->
+  <!-- Firebase SDK (compat for simplicity) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
-    body { font-family: system-ui, Arial; padding: 16px; background: #f7f7fb }
-    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(10,10,30,0.06); max-width: 720px; margin: 12px auto }
-    button { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer }
-    .primary { background: #2b6ef6; color: white }
-    .muted { background: #efefef }
-    .center { text-align: center }
+    body{font-family:system-ui,Segoe UI,Roboto,\"Noto Naskh Arabic\";background:#f6f7fb;margin:0;padding:12px}
+    header{display:flex;align-items:center;justify-content:space-between}
+    h1{font-size:18px;margin:8px 0}
+    .card{background:#fff;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(8,15,52,0.06)}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    .btn-primary{background:#2563eb;color:#fff}
+    .small{font-size:13px;color:#555}
+    input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef;margin-top:6px}
+    .row{display:flex;gap:8px}
+    .col{flex:1}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2 class="center">SJ COIN — دفع بـ TON</h2>
-
-    <div id="wallet-info" style="margin-bottom:12px">لم يتصل أي محفظة بعد.</div>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <div id="ton-connect"></div>
-      <button id="payBtn" class="primary">ادفع 1 TON واحصل على 1000 SJ</button>
-      <button id="logoutBtn" class="muted">فصل المحفظة</button>
+  <header>
+    <h1>SJ Exchange Directory — دليل الصرافين</h1>
+    <div id="tg-user" class="small"></div>
+  </header>  <section class="card">
+    <h2 class="small">أضف صراف جديد</h2>
+    <div>
+      <input id="name" placeholder="اسم الصراف (مثال: FastExchanger)" />
+      <input id="location" placeholder="المنطقة / البلد (اختياري)" />
+      <select id="methods">
+        <option value="alipay">Alipay</option>
+        <option value="wechat">WeChat Pay</option>
+        <option value="bank">Bank Transfer</option>
+        <option value="other">Other</option>
+      </select>
+      <input id="min" placeholder="الحد الأدنى (USDT)" />
+      <input id="max" placeholder="الحد الأقصى (USDT)" />
+      <textarea id="notes" placeholder="ملاحظات مثل أوقات العمل أو متطلبات KYC" rows="3"></textarea>
+      <div style="margin-top:8px;text-align:left">
+        <button class="btn btn-primary" id="addBtn">أضف الصراف</button>
+      </div>
     </div>
+  </section>  <section id="list" class="card">
+    <h2 class="small">قائمة الصرافين</h2>
+    <div id="exchangers"></div>
+  </section>  <template id="exchanger-template">
+    <div class="excard">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong class="ex-name"></strong>
+        <span class="small ex-methods"></span>
+      </div>
+      <div class="small ex-location"></div>
+      <div class="small">حدود: <span class="ex-min"></span> — <span class="ex-max"></span> USDT</div>
+      <p class="small ex-notes"></p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" data-action="contact">عرض تفاصيل الدفع</button>
+        <button class="btn" data-action="review">تقييم / شكوى</button>
+      </div>
+    </div>
+    <hr/>
+  </template>  <script>
+    // === Firebase config: استبدل القيم بالقيم الخاصة بمشروعك ===
+    const firebaseConfig = {
+      apiKey: "REPLACE_API_KEY",
+      authDomain: "REPLACE_PROJECT.firebaseapp.com",
+      projectId: "REPLACE_PROJECT",
+      storageBucket: "REPLACE_PROJECT.appspot.com",
+      messagingSenderId: "...",
+      appId: "..."
+    };
 
-    <hr />
-    <p><strong>الحالة:</strong> <span id="status">جاهز</span></p>
-  </div>
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-<script>
-// إعداد Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-  authDomain: "metawarefare-gaming.firebaseapp.com",
-  databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-  projectId: "metawarefare-gaming",
-  storageBucket: "metawarefare-gaming.appspot.com",
-  messagingSenderId: "551352148152",
-  appId: "1:551352148152:web:xxxxxxxxxxxxxxxx"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// إعداد TonConnect
-const tonConnectUI = new TonConnectUI.TonConnectUI({
-  manifestUrl: window.location.origin + '/tonconnect-manifest.json'
-});
-let activeAccount = null;
-tonConnectUI.renderWidget('#ton-connect');
-
-tonConnectUI.on('connect', ({account}) => {
-  activeAccount = account;
-  document.getElementById('wallet-info').innerText = `متصل: ${account.address}`;
-  setStatus('محفظة متصلة');
-});
-tonConnectUI.on('disconnect', () => {
-  activeAccount = null;
-  document.getElementById('wallet-info').innerText = 'لم يتصل أي محفظة بعد.';
-  setStatus('محفظة مفصولة');
-});
-
-// إعدادات الدفع
-const TO_WALLET_ADDRESS = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
-const SJ_REWARD = 1000;
-const TON_API = "https://toncenter.com/api/v2"; // Ton API
-const TON_API_KEY = ""; // مفتاح API إذا عندك
-
-document.getElementById('payBtn').addEventListener('click', async () => {
-  if (!activeAccount) {
-    await tonConnectUI.connect();
-    return;
-  }
-  await payOneTON();
-});
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  tonConnectUI.disconnect();
-});
-
-async function payOneTON() {
-  setStatus('إنشاء طلب الدفع...');
-  const amountNanotons = (1 * 1e9).toString();
-  const transaction = {
-    validUntil: Math.floor(Date.now() / 1000) + 300,
-    messages: [{ address: TO_WALLET_ADDRESS, amount: amountNanotons }]
-  };
-  try {
-    const result = await tonConnectUI.sendTransaction(transaction);
-    console.log('Transaction result:', result);
-    setStatus('تم الدفع، جاري التحقق...');
-    await verifyPayment(result);
-  } catch (err) {
-    console.error(err);
-    setStatus('فشل الدفع');
-  }
-}
-
-async function verifyPayment(txResult) {
-  try {
-    const resp = await fetch(`${TON_API}/getTransactions?account=${TO_WALLET_ADDRESS}&limit=50`, {
-      headers: TON_API_KEY ? { "X-API-Key": TON_API_KEY } : {}
-    });
-    const data = await resp.json();
-    if (!data.ok || !data.result) {
-      setStatus('خطأ في Ton API');
-      return;
-    }
-    const found = data.result.find(
-      tx => tx.in_msg && tx.in_msg.source &&
-            tx.in_msg.value >= 1e9
-    );
-    if (found) {
-      await updateUserBalance();
-      setStatus('تم التحقق وإضافة الرصيد ✅');
-    } else {
-      setStatus('لم يتم العثور على المعاملة ❌');
-    }
-  } catch (err) {
-    console.error(err);
-    setStatus('خطأ أثناء التحقق');
-  }
-}
-
-async function updateUserBalance() {
-  const userId = getTelegramUserId();
-  const ref = db.ref(`/users/${userId}/balance`);
-  await ref.transaction(bal => (bal || 0) + SJ_REWARD);
-}
-
-function getTelegramUserId() {
-  try {
+    // Telegram Web App init
     const tg = window.Telegram.WebApp;
-    return tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'anonymous';
-  } catch {
-    return 'anonymous';
-  }
-}
+    tg.expand();
 
-function setStatus(msg) {
-  document.getElementById('status').innerText = msg;
-}
-</script>
-</body>
-</html>
+    // عرض بيانات المستخدم من Telegram (إذا متاحة)
+    const tgUserDiv = document.getElementById('tg-user');
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      const u = tg.initDataUnsafe.user;
+      tgUserDiv.textContent = `@${u.username || ''} — ${u.first_name || ''}`;
+    }
+
+    // تسجيل دخول صامت: يستخدم Anonymous auth لتجنب UX معقد
+    auth.signInAnonymously().catch(console.error);
+
+    // إضافة صراف
+    document.getElementById('addBtn').addEventListener('click', async ()=>{
+      const data = {
+        name: document.getElementById('name').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        methods: document.getElementById('methods').value,
+        min: parseFloat(document.getElementById('min').value) || 0,
+        max: parseFloat(document.getElementById('max').value) || 0,
+        notes: document.getElementById('notes').value.trim(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        owner: auth.currentUser ? auth.currentUser.uid : null,
+        verified: false,
+        reviewsCount: 0,
+        rating: 0
+      };
+      if(!data.name){alert('أدخل اسم الصراف');return}
+      await db.collection('exchangers').add(data);
+      alert('تمت الإضافة. سيظهر بعد المراجعة.');
+      // تنظيف الحقول
+      ['name','location','min','max','notes'].forEach(id=>document.getElementById(id).value='');
+    });
+
+    // الاستماع لقاعدة الصرافين
+    db.collection('exchangers').orderBy('createdAt','desc').onSnapshot(snap=>{
+      const list = document.getElementById('exchangers');
+      list.innerHTML='';
+      snap.forEach(doc=>{
+        const d = doc.data();
+        // only show verified by default
+        if(d.verified !== true) return;
+        const t = document.getElementById('exchanger-template').content.cloneNode(true);
+        t.querySelector('.ex-name').textContent = d.name;
+        t.querySelector('.ex-methods').textContent = d.methods;
+        t.querySelector('.ex-location').textContent = d.location || '';
+        t.querySelector('.ex-min').textContent = d.min;
+        t.querySelector('.ex-max').textContent = d.max;
+        t.querySelector('.ex-notes').textContent = d.notes || '';
+        const contactBtn = t.querySelector('[data-action="contact"]');
+        contactBtn.addEventListener('click', ()=>{
+          alert('تفاصيل الدفع ستُعرض هنا (قيد التطوير) — تواصل عبر WeChat/Alipay');
+        });
+        const reviewBtn = t.querySelector('[data-action="review"]');
+        reviewBtn.addEventListener('click', ()=>{
+          const comment = prompt('اكتب تقييمك أو شكواك');
+          if(comment) db.collection('reviews').add({exchangerId: doc.id, text: comment, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+        });
+        list.appendChild(t);
+      });
+    });
+
+    // إدارة بسيطة: Admin toggle to verify (مثال تفاعلي فقط)
+    // في تطبيق حقيقي قم بعمل لوحة إدارة منفصلة مع صلاحيات مقيدة.
+  </script>  <!-- ملاحظات: 1) هذه نسخة بداية - تحتاج تحسينات أمنية وواجهة. 2) استبدل إعدادات Firebase بقيم مشروعك. --></body>
+</html>/* Firestore suggested schema
+
+exchangers (collection)
+
+{name, location, methods, min, max, notes, owner, verified, createdAt, rating, reviewsCount}
+
+
+reviews
+
+{exchangerId, userId, text, rating, createdAt}
+
+
+reports
+
+{exchangerId, userId, reason, evidence, status, createdAt}
+
+
+users (optional)
+
+{uid, telegramUsername, isAdmin, verifiedProvider}
+
+
+
+Security Rules (example) service cloud.firestore { match /databases/{database}/documents { match /exchangers/{doc} { allow read: if true; allow create: if request.auth != null; // only admins can set verified:true allow update: if request.auth != null && ( request.resource.data.verified == resource.data.verified || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ); allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true; } match /reviews/{doc} { allow create: if request.auth != null; allow read: if true; allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true; } match /users/{doc} { allow read: if request.auth != null; allow write: if request.auth != null && request.auth.uid == doc; } } }
+
+Cloud Functions ideas (Node.js)
+
+onCreate review -> recalculate average rating for exchanger
+
+onReport -> send email to admins
+
+scheduled job -> remove exchangers with many complaints */
+
+
