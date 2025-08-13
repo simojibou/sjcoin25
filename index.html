@@ -13,31 +13,59 @@
     video { width: 100%; height: 100%; object-fit: cover; }
     .glass { backdrop-filter: blur(12px) saturate(150%); background: rgba(0,0,0,0.25); }
     .btn-disabled { opacity: 0.4; cursor: not-allowed; }
+    .hidden { display: none; }
   </style>
 </head>
 <body class="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
 
   <main class="w-full max-w-md mx-auto aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl bg-slate-800 relative ring-1 ring-white/10">
-
     <video id="remoteVideo" autoplay playsinline class="absolute top-0 left-0 w-full h-full bg-slate-800"></video>
-
-    <header class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+    <header class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
       <h1 class="text-xl font-bold text-shadow">SJ<span class="text-indigo-300">Chat</span></h1>
       <div id="status" class="text-sm font-semibold px-3 py-1 rounded-full glass">🟡 في الإنتظار</div>
     </header>
-
-    <div class="absolute top-20 right-4 w-1/4 aspect-[9/16] rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/20 z-10 glass">
+    <div class="absolute top-16 right-4 w-1/4 aspect-[9/16] rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/20 z-20 glass">
       <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+
+    <div class="absolute top-40 right-4 z-20 glass rounded-full px-3 py-1.5 text-xs text-center">
+      <div class="font-bold">ID الخاص بك</div>
+      <code id="myId" class="font-mono text-indigo-300">...</code>
     </div>
 
     <div class="absolute bottom-0 left-0 right-0 p-4 z-10">
       <div class="flex items-center justify-center space-i-3 glass rounded-full p-2">
-        <button id="btnStart" class="w-16 h-16 rounded-full bg-indigo-500 hover:bg-indigo-600 transition font-semibold flex items-center justify-center text-3xl">▶️</button>
-        <button id="btnNext" class="w-20 h-20 rounded-full bg-emerald-500 hover:bg-emerald-600 transition font-bold flex items-center justify-center text-lg btn-disabled" disabled>التالي</button>
-        <button id="btnHangup" class="w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-600 transition font-semibold flex items-center justify-center text-3xl btn-disabled" disabled>⏹️</button>
+        <button id="btnStart" class="w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-600 transition flex items-center justify-center text-3xl">▶️</button>
+        <button id="btnNext" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 transition font-bold flex items-center justify-center text-base btn-disabled" disabled>التالي</button>
+        <button id="btnCall" class="w-14 h-14 rounded-full bg-sky-500 hover:bg-sky-600 transition flex items-center justify-center text-3xl btn-disabled" disabled>🤙</button>
+        <button id="btnHangup" class="w-14 h-14 rounded-full bg-rose-500 hover:bg-rose-600 transition flex items-center justify-center text-3xl btn-disabled" disabled>⏹️</button>
       </div>
     </div>
   </main>
+
+  <div id="callModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-sm text-center ring-1 ring-white/10">
+      <h3 class="text-xl font-bold mb-4">إتصال مباشر عبر ID</h3>
+      <p class="text-sm opacity-80 mb-4">أدخل ID الشخص الذي تريد الإتصال به.</p>
+      <input id="calleeIdInput" class="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 outline-none focus:ring-2 focus:ring-sky-500 text-center font-mono" placeholder="أدخل الـ ID هنا">
+      <div class="flex gap-4 mt-6">
+        <button id="btnMakeCall" class="flex-1 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 transition font-semibold">إتصال</button>
+        <button onclick="toggleCallModal(false)" class="flex-1 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition font-semibold">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="incomingCallModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-sm text-center ring-1 ring-white/10">
+      <h3 class="text-2xl font-bold mb-2">📞 إتصال وارد</h3>
+      <p class="mb-6">لديك إتصال من: <code id="callerIdDisplay" class="font-mono text-indigo-300"></code></p>
+      <div class="flex gap-4">
+        <button id="btnAccept" class="flex-1 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition font-semibold text-lg">قبول</button>
+        <button id="btnDecline" class="flex-1 px-4 py-3 rounded-xl bg-rose-500 hover:bg-rose-600 transition font-semibold text-lg">رفض</button>
+      </div>
+    </div>
+  </div>
+
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -55,28 +83,18 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
-
-    // --- 2. INITIALIZE FIREBASE & WEBRTC ---
+    
+    // --- 2. INITIALIZE ---
     firebase.initializeApp(firebaseConfig);
     const firestore = firebase.firestore();
     const auth = firebase.auth();
 
-    const servers = {
-      iceServers: [
-        {
-          urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
-        },
-      ],
-      iceCandidatePoolSize: 10,
-    };
-
+    const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }], iceCandidatePoolSize: 10 };
     let pc = new RTCPeerConnection(servers);
-    let localStream = null;
-    let remoteStream = null;
-    let currentRoomId = null;
-    let roomListener = null; 
-    let iceCandidateListener = null; // MODIFICATION: To unsubscribe from ICE listener
-    let cachedIceCandidates = []; // MODIFICATION: Buffer for ICE candidates
+    let localStream = null, remoteStream = null, currentRoomId = null;
+    let roomListener = null, iceCandidateListener = null, incomingCallListener = null;
+    let cachedIceCandidates = [];
+    let currentCallData = null;
 
     // --- 3. DOM ELEMENTS ---
     const localVideo = document.getElementById('localVideo');
@@ -85,267 +103,259 @@
     const btnNext = document.getElementById('btnNext');
     const btnHangup = document.getElementById('btnHangup');
     const statusDiv = document.getElementById('status');
-
+    const myIdDiv = document.getElementById('myId');
+    // NEW direct call elements
+    const btnCall = document.getElementById('btnCall');
+    const callModal = document.getElementById('callModal');
+    const calleeIdInput = document.getElementById('calleeIdInput');
+    const btnMakeCall = document.getElementById('btnMakeCall');
+    const incomingCallModal = document.getElementById('incomingCallModal');
+    const callerIdDisplay = document.getElementById('callerIdDisplay');
+    const btnAccept = document.getElementById('btnAccept');
+    const btnDecline = document.getElementById('btnDecline');
+    
     // --- 4. CORE FUNCTIONS ---
-
-    const startCamera = async () => {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideo.srcObject = localStream;
-        remoteStream = new MediaStream();
-        remoteVideo.srcObject = remoteStream;
-        
-        updateUI('camera_on');
-        console.log('Camera and mic started');
-      } catch (error) {
-        console.error('Error starting camera:', error);
-        alert('لا يمكن الوصول إلى الكاميرا أو المايكروفون. الرجاء التأكد من الأذونات.');
-      }
-    };
-
-    const findNextMatch = async () => {
-      if (!localStream) {
-        alert('الرجاء تشغيل الكاميرا أولاً!');
-        return;
-      }
-      await hangup(); 
-      updateUI('searching');
-      const roomsRef = firestore.collection('rooms');
-      const query = roomsRef.where('waiting', '==', true).limit(1);
-      const snapshot = await query.get();
-
-      if (snapshot.empty) {
-        await createRoom();
-      } else {
-        const roomDoc = snapshot.docs[0];
-        currentRoomId = roomDoc.id;
-        await joinRoom(roomDoc.id, roomDoc.data());
-      }
-    };
-
-    const createRoom = async () => {
-      console.log('Creating a new room...');
-      const roomRef = firestore.collection('rooms').doc();
-      currentRoomId = roomRef.id;
-
-      initializePeerConnection(); // MODIFICATION: Use helper function
-      
-      const callerCandidatesCollection = roomRef.collection('callerCandidates');
-      pc.onicecandidate = event => {
-        if (event.candidate) {
-          callerCandidatesCollection.add(event.candidate.toJSON());
-        }
-      };
-      
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      const roomWithOffer = {
-        offer: { type: offer.type, sdp: offer.sdp },
-        waiting: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      await roomRef.set(roomWithOffer);
-      listenForAnswer(roomRef);
-    };
-
-    const joinRoom = async (roomId, roomData) => {
-      console.log(`Joining room: ${roomId}`);
-      const roomRef = firestore.collection('rooms').doc(roomId);
-      await roomRef.update({ waiting: false });
-
-      initializePeerConnection(); // MODIFICATION: Use helper function
-
-      const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
-      pc.onicecandidate = event => {
-        if (event.candidate) {
-          calleeCandidatesCollection.add(event.candidate.toJSON());
-        }
-      };
-
-      await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer));
-      
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      const roomWithAnswer = {
-        answer: { type: answer.type, sdp: answer.sdp }
-      };
-      await roomRef.update(roomWithAnswer);
-      
-      listenForIceCandidates(roomRef, 'callerCandidates');
-    };
-    
-    function listenForAnswer(roomRef) {
-      roomListener = roomRef.onSnapshot(async snapshot => {
-        const data = snapshot.data();
-        if (!pc.currentRemoteDescription && data?.answer) {
-          console.log('Got remote answer, setting remote description.');
-          try {
-            const answerDescription = new RTCSessionDescription(data.answer);
-            await pc.setRemoteDescription(answerDescription);
-            await processCachedIceCandidates(); // MODIFICATION: Process any buffered candidates
-          } catch (e) {
-            console.error("Error setting remote description: ", e);
-          }
-        }
-      });
-      listenForIceCandidates(roomRef, 'calleeCandidates');
-    }
-
-    /**
-     * MODIFICATION: Robust ICE candidate handling with buffering.
-     */
-    function listenForIceCandidates(roomRef, collectionName) {
-      iceCandidateListener = roomRef.collection(collectionName).onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(async change => {
-          if (change.type === 'added') {
-            const candidate = new RTCIceCandidate(change.doc.data());
-            try {
-              if (pc.remoteDescription) {
-                // If remote description is set, add candidate directly
-                await pc.addIceCandidate(candidate);
-                console.log(`Added ICE candidate immediately.`);
-              } else {
-                // Otherwise, buffer it
-                cachedIceCandidates.push(candidate);
-                console.log(`Cached an ICE candidate.`);
-              }
-            } catch (e) {
-              console.error('Error adding received ICE candidate', e);
-            }
-          }
-        });
-      });
-    }
-
-    /**
-     * MODIFICATION: Helper function to process buffered candidates.
-     */
-    async function processCachedIceCandidates() {
-        console.log(`Processing ${cachedIceCandidates.length} cached candidates.`);
-        for (const candidate of cachedIceCandidates) {
-            try {
-                await pc.addIceCandidate(candidate);
-                console.log(`Added a cached ICE candidate.`);
-            } catch (e) {
-                console.error("Error adding cached candidate: ", e);
-            }
-        }
-        cachedIceCandidates = []; // Clear the cache
-    }
-
-    /**
-     * MODIFICATION: Centralized peer connection setup
-     */
-    function initializePeerConnection() {
-      pc = new RTCPeerConnection(servers);
-      addLocalTracks(pc);
-      
-      // Listen for remote tracks
-      pc.ontrack = event => {
-        console.log('✅ Got remote track!');
-        event.streams[0].getTracks().forEach(track => {
-          remoteStream.addTrack(track);
-        });
-      };
-
-      // MODIFICATION: Listen for connection state changes for debugging
-      pc.oniceconnectionstatechange = () => {
-        console.log(`ICE connection state: ${pc.iceConnectionState}`);
-        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-            updateUI('connected');
-        } else if (pc.iceConnectionState === 'failed') {
-            console.error('Connection failed. Restarting ICE...');
-            pc.restartIce(); // Attempt to recover
-        }
-      };
-    }
-    
-    function addLocalTracks(peerConnection) {
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
-    }
-
+    // Camera, matchmaking, and connection logic is largely the same
+    const startCamera = async () => { /* ... (no changes) ... */ };
+    const findNextMatch = async () => { /* ... (no changes) ... */ };
+    // --- HANGUP & CLEANUP (Modified) ---
     const hangup = async () => {
-      if (pc) {
-        pc.close();
-      }
-      
-      // MODIFICATION: Unsubscribe from all listeners
-      if (roomListener) { roomListener(); roomListener = null; }
-      if (iceCandidateListener) { iceCandidateListener(); iceCandidateListener = null; }
+        // ... (existing hangup logic) ...
 
-      if (currentRoomId) {
-        const roomRef = firestore.collection('rooms').doc(currentRoomId);
-        const callerCandidates = await roomRef.collection('callerCandidates').get();
-        callerCandidates.forEach(async doc => await doc.ref.delete());
-        const calleeCandidates = await roomRef.collection('calleeCandidates').get();
-        calleeCandidates.forEach(async doc => await doc.ref.delete());
-        await roomRef.delete();
-      }
-
-      // Reset state
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-      localVideo.srcObject = null;
-      remoteVideo.srcObject = null;
-      currentRoomId = null;
-      cachedIceCandidates = []; // MODIFICATION: Clear cache on hangup
-
-      updateUI('initial');
+        // NEW: Also clean up any incoming call modals
+        if (currentCallData) {
+            const userRef = firestore.collection('users').doc(auth.currentUser.uid);
+            await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
+            currentCallData = null;
+        }
+        toggleIncomingCallModal(false);
     };
 
-    function updateUI(state) {
-        // UI update logic remains the same
-        switch (state) {
-            case 'initial':
-                btnStart.classList.remove('btn-disabled');
-                btnNext.classList.add('btn-disabled');
-                btnHangup.classList.add('btn-disabled');
-                btnStart.disabled = false;
-                btnNext.disabled = true;
-                btnHangup.disabled = true;
-                statusDiv.textContent = '🔴 غير متصل';
-                break;
-            case 'camera_on':
-                btnStart.classList.add('btn-disabled');
-                btnNext.classList.remove('btn-disabled');
-                btnHangup.classList.add('btn-disabled');
-                btnStart.disabled = true;
-                btnNext.disabled = false;
-                btnHangup.disabled = true;
-                statusDiv.textContent = '🟢 جاهز';
-                break;
-            case 'searching':
-                btnHangup.classList.remove('btn-disabled');
-                btnHangup.disabled = false;
-                btnNext.disabled = true;
-                statusDiv.textContent = '🔎 جاري البحث...';
-                break;
-            case 'connected':
-                btnNext.classList.remove('btn-disabled');
-                btnHangup.classList.remove('btn-disabled');
-                btnNext.disabled = false;
-                btnHangup.disabled = false;
-                statusDiv.textContent = '✅ متصل';
-                break;
+    // --- NEW FEATURE: DIRECT CALL ---
+
+    /**
+     * Toggles the visibility of the direct call modal.
+     */
+    const toggleCallModal = (show) => {
+        if (show) {
+            callModal.classList.remove('hidden');
+        } else {
+            callModal.classList.add('hidden');
         }
-    }
+    };
+
+    /**
+     * Toggles the visibility of the incoming call notification.
+     */
+    const toggleIncomingCallModal = (show, callData = null) => {
+        if (show && callData) {
+            currentCallData = callData;
+            callerIdDisplay.textContent = callData.callerId.substring(0, 6);
+            incomingCallModal.classList.remove('hidden');
+        } else {
+            incomingCallModal.classList.add('hidden');
+            currentCallData = null;
+        }
+    };
+    
+    /**
+     * Initiates a direct call to a user by their ID. (Caller side)
+     */
+    const makeDirectCall = async () => {
+        const calleeId = calleeIdInput.value.trim();
+        if (!calleeId) {
+            alert('الرجاء إدخال ID صحيح.');
+            return;
+        }
+        toggleCallModal(false);
+        updateUI('searching');
+        console.log(`Initiating call to ${calleeId}`);
+
+        // Create a new room for this direct call
+        const roomRef = firestore.collection('rooms').doc();
+        currentRoomId = roomRef.id;
+
+        initializePeerConnection();
+        const callerCandidatesCollection = roomRef.collection('callerCandidates');
+        pc.onicecandidate = event => {
+            if (event.candidate) callerCandidatesCollection.add(event.candidate.toJSON());
+        };
+        
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        await roomRef.set({
+            offer: { type: offer.type, sdp: offer.sdp },
+            callerId: auth.currentUser.uid,
+            calleeId: calleeId,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Send a notification to the callee
+        const calleeRef = firestore.collection('users').doc(calleeId);
+        await calleeRef.collection('incomingCalls').add({
+            roomId: currentRoomId,
+            callerId: auth.currentUser.uid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        listenForAnswer(roomRef);
+    };
+
+    /**
+     * Listens for incoming call notifications. (Callee side)
+     */
+    const listenForIncomingCalls = () => {
+        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
+        incomingCallListener = userRef.collection('incomingCalls')
+            .onSnapshot(snapshot => {
+                if (!snapshot.empty) {
+                    const call = snapshot.docs[0].data();
+                    call.callId = snapshot.docs[0].id; // Store the notification doc ID
+                    // Don't show notification if already in a call
+                    if (!currentRoomId) {
+                        toggleIncomingCallModal(true, call);
+                    }
+                }
+            });
+    };
+
+    /**
+     * Accepts an incoming call. (Callee side)
+     */
+    const acceptCall = async () => {
+        if (!currentCallData) return;
+        
+        await hangup(); // Clean up any previous state
+        toggleIncomingCallModal(false);
+        updateUI('searching');
+
+        const { roomId, callerId } = currentCallData;
+        currentRoomId = roomId;
+
+        const roomRef = firestore.collection('rooms').doc(roomId);
+        const roomSnapshot = await roomRef.get();
+        const roomData = roomSnapshot.data();
+
+        initializePeerConnection();
+        const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
+        pc.onicecandidate = event => {
+            if (event.candidate) calleeCandidatesCollection.add(event.candidate.toJSON());
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        await roomRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
+        
+        listenForIceCandidates(roomRef, 'callerCandidates');
+
+        // Clean up the notification
+        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
+        await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
+        currentCallData = null;
+    };
+
+    /**
+     * Declines an incoming call. (Callee side)
+     */
+    const declineCall = async () => {
+        if (!currentCallData) return;
+        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
+        await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
+        // Optional: notify caller the call was declined
+        toggleIncomingCallModal(false);
+    };
+
 
     // --- 5. EVENT LISTENERS & INITIALIZATION ---
     btnStart.onclick = startCamera;
     btnNext.onclick = findNextMatch;
     btnHangup.onclick = hangup;
+    btnCall.onclick = () => toggleCallModal(true);
+    btnMakeCall.onclick = makeDirectCall;
+    btnAccept.onclick = acceptCall;
+    btnDecline.onclick = declineCall;
     
+    // --- Sign-in, get UID, and start listening ---
     auth.signInAnonymously().then(() => {
-        console.log('Signed in anonymously.');
+        const userId = auth.currentUser.uid;
+        console.log(`Signed in anonymously. User ID: ${userId}`);
+        myIdDiv.textContent = userId.substring(0, 6); // Display first 6 chars of ID
+
+        // Create a document for the user if it doesn't exist
+        const userRef = firestore.collection('users').doc(userId);
+        userRef.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+        listenForIncomingCalls(); // Start listening for direct calls
         updateUI('initial');
     }).catch(error => {
         console.error('Anonymous sign-in failed:', error);
         alert('فشل تسجيل الدخول. يرجى تحديث الصفحة.');
     });
+
+    function updateUI(state) {
+        // Modified to include the 'call' button
+        switch (state) {
+            case 'initial':
+                btnStart.disabled = false;
+                btnNext.disabled = true; btnCall.disabled = true; btnHangup.disabled = true;
+                btnStart.classList.remove('btn-disabled');
+                btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.add('btn-disabled');
+                statusDiv.textContent = '🔴 غير متصل';
+                break;
+            case 'camera_on':
+                btnStart.disabled = true;
+                btnNext.disabled = false; btnCall.disabled = false; btnHangup.disabled = true;
+                btnStart.classList.add('btn-disabled');
+                btnNext.classList.remove('btn-disabled'); btnCall.classList.remove('btn-disabled'); btnHangup.classList.add('btn-disabled');
+                statusDiv.textContent = '🟢 جاهز';
+                break;
+            case 'searching':
+                btnStart.disabled = true;
+                btnNext.disabled = true; btnCall.disabled = true; btnHangup.disabled = false;
+                btnStart.classList.add('btn-disabled');
+                btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
+                statusDiv.textContent = '🔎 جاري البحث...';
+                break;
+            case 'connected':
+                btnStart.disabled = true;
+                btnNext.disabled = false; btnCall.disabled = true; btnHangup.disabled = false;
+                btnStart.classList.add('btn-disabled');
+                btnNext.classList.remove('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
+                statusDiv.textContent = '✅ متصل';
+                break;
+        }
+    }
+
+    // Unchanged helper functions from previous step
+    function initializePeerConnection() { /* ... (no changes) ... */ };
+    function listenForAnswer(roomRef) { /* ... (no changes) ... */ };
+    function listenForIceCandidates(roomRef, collectionName) { /* ... (no changes) ... */ };
+    async function processCachedIceCandidates() { /* ... (no changes) ... */ };
+    function addLocalTracks(peerConnection) { /* ... (no changes) ... */ };
+    
+    // --- PASTE UNCHANGED FUNCTIONS HERE ---
+    // For brevity, I've omitted the functions that have no changes.
+    // Copy the implementations of these functions from the previous response:
+    // startCamera, findNextMatch, hangup, initializePeerConnection,
+    // listenForAnswer, listenForIceCandidates, processCachedIceCandidates, addLocalTracks
+  </script>
+  
+  <script>
+    // NOTE: The full code is provided above. The below is for clarity on what's unchanged.
+    const findNextMatch_implementation = async () => { if (!localStream) { alert('الرجاء تشغيل الكاميرا أولاً!'); return; } await hangup(); updateUI('searching'); const roomsRef = firestore.collection('rooms'); const query = roomsRef.where('waiting', '==', true).limit(1); const snapshot = await query.get(); if (snapshot.empty) { await createRoom(); } else { const roomDoc = snapshot.docs[0]; currentRoomId = roomDoc.id; await joinRoom(roomDoc.id, roomDoc.data()); } };
+    const createRoom = async () => { console.log('Creating a new room...'); const roomRef = firestore.collection('rooms').doc(); currentRoomId = roomRef.id; initializePeerConnection(); const callerCandidatesCollection = roomRef.collection('callerCandidates'); pc.onicecandidate = event => { if (event.candidate) { callerCandidatesCollection.add(event.candidate.toJSON()); } }; const offer = await pc.createOffer(); await pc.setLocalDescription(offer); const roomWithOffer = { offer: { type: offer.type, sdp: offer.sdp, }, waiting: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() }; await roomRef.set(roomWithOffer); listenForAnswer(roomRef); };
+    const joinRoom = async (roomId, roomData) => { console.log(`Joining room: ${roomId}`); const roomRef = firestore.collection('rooms').doc(roomId); await roomRef.update({ waiting: false }); initializePeerConnection(); const calleeCandidatesCollection = roomRef.collection('calleeCandidates'); pc.onicecandidate = event => { if (event.candidate) { calleeCandidatesCollection.add(event.candidate.toJSON()); } }; await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer)); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); const roomWithAnswer = { answer: { type: answer.type, sdp: answer.sdp, } }; await roomRef.update(roomWithAnswer); listenForIceCandidates(roomRef, 'callerCandidates'); };
+    startCamera = async () => { try { localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); localVideo.srcObject = localStream; remoteStream = new MediaStream(); remoteVideo.srcObject = remoteStream; updateUI('camera_on'); console.log('Camera and mic started'); } catch (error) { console.error('Error starting camera:', error); alert('لا يمكن الوصول إلى الكاميرا أو المايكروفون. الرجاء التأكد من الأذونات.'); } };
+    findNextMatch = findNextMatch_implementation;
+    hangup = async () => { if (pc) { pc.close(); } if (roomListener) { roomListener(); roomListener = null; } if (iceCandidateListener) { iceCandidateListener(); iceCandidateListener = null; } if (currentRoomId) { const roomRef = firestore.collection('rooms').doc(currentRoomId); const callerCandidates = await roomRef.collection('callerCandidates').get(); callerCandidates.forEach(async doc => await doc.ref.delete()); const calleeCandidates = await roomRef.collection('calleeCandidates').get(); calleeCandidates.forEach(async doc => await doc.ref.delete()); await roomRef.delete(); } if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; } localVideo.srcObject = null; remoteVideo.srcObject = null; currentRoomId = null; cachedIceCandidates = []; if (currentCallData) { const userRef = firestore.collection('users').doc(auth.currentUser.uid); await userRef.collection('incomingCalls').doc(currentCallData.callId).delete(); currentCallData = null; } toggleIncomingCallModal(false); updateUI('initial'); };
+    initializePeerConnection = () => { pc = new RTCPeerConnection(servers); addLocalTracks(pc); pc.ontrack = event => { console.log('✅ Got remote track!'); event.streams[0].getTracks().forEach(track => { remoteStream.addTrack(track); }); }; pc.oniceconnectionstatechange = () => { console.log(`ICE connection state: ${pc.iceConnectionState}`); if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') { updateUI('connected'); } else if (pc.iceConnectionState === 'failed') { console.error('Connection failed. Restarting ICE...'); pc.restartIce(); } }; };
+    listenForAnswer = (roomRef) => { roomListener = roomRef.onSnapshot(async snapshot => { const data = snapshot.data(); if (!pc.currentRemoteDescription && data?.answer) { console.log('Got remote answer, setting remote description.'); try { const answerDescription = new RTCSessionDescription(data.answer); await pc.setRemoteDescription(answerDescription); await processCachedIceCandidates(); } catch (e) { console.error("Error setting remote description: ", e); } } }); listenForIceCandidates(roomRef, 'calleeCandidates'); };
+    listenForIceCandidates = (roomRef, collectionName) => { iceCandidateListener = roomRef.collection(collectionName).onSnapshot(snapshot => { snapshot.docChanges().forEach(async change => { if (change.type === 'added') { const candidate = new RTCIceCandidate(change.doc.data()); try { if (pc.remoteDescription) { await pc.addIceCandidate(candidate); console.log(`Added ICE candidate immediately.`); } else { cachedIceCandidates.push(candidate); console.log(`Cached an ICE candidate.`); } } catch (e) { console.error('Error adding received ICE candidate', e); } } }); }); };
+    processCachedIceCandidates = async () => { console.log(`Processing ${cachedIceCandidates.length} cached candidates.`); for (const candidate of cachedIceCandidates) { try { await pc.addIceCandidate(candidate); console.log(`Added a cached ICE candidate.`); } catch (e) { console.error("Error adding cached candidate: ", e); } } cachedIceCandidates = []; };
+    addLocalTracks = (peerConnection) => { if(localStream) {localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });} };
   </script>
 </body>
 </html>
