@@ -278,7 +278,15 @@
 
     // --- Initialization ---
     (async () => {
-      // Anonymous auth if needed, but skipping for now as not required for Firestore
+      try {
+        await auth.signInAnonymously();
+        console.log('Signed in anonymously');
+      } catch (err) {
+        console.error('Authentication error:', err);
+        alert('فشل في تسجيل الدخول المجهول. تأكد من إعدادات Firebase.');
+        return;
+      }
+
       userRandomId = generateRandomId(10); // Increased length to reduce collisions
       myIdDiv.textContent = userRandomId;
 
@@ -310,4 +318,4 @@
     })();
   </script>
 </body>
-  </html>
+</html>
