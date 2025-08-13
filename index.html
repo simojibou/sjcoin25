@@ -10,9 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
-    /* Ensure videos fill their containers properly */
     video { width: 100%; height: 100%; object-fit: cover; }
-    /* Custom glass effect for better readability */
     .glass { backdrop-filter: blur(12px) saturate(150%); background: rgba(0,0,0,0.25); }
     .btn-disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
@@ -63,7 +61,6 @@
     const firestore = firebase.firestore();
     const auth = firebase.auth();
 
-    // WebRTC configuration - using a public STUN server
     const servers = {
       iceServers: [
         {
@@ -77,7 +74,9 @@
     let localStream = null;
     let remoteStream = null;
     let currentRoomId = null;
-    let roomListener = null; // To unsubscribe from Firestore listener
+    let roomListener = null; 
+    let iceCandidateListener = null; // MODIFICATION: To unsubscribe from ICE listener
+    let cachedIceCandidates = []; // MODIFICATION: Buffer for ICE candidates
 
     // --- 3. DOM ELEMENTS ---
     const localVideo = document.getElementById('localVideo');
@@ -89,9 +88,6 @@
 
     // --- 4. CORE FUNCTIONS ---
 
-    /**
-     * Starts the camera and microphone, displaying the stream locally.
-     */
     const startCamera = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -107,47 +103,33 @@
       }
     };
 
-    /**
-     * Finds a waiting room or creates a new one to start a chat.
-     */
     const findNextMatch = async () => {
       if (!localStream) {
         alert('الرجاء تشغيل الكاميرا أولاً!');
         return;
       }
-
-      await hangup(); // End any previous call
+      await hangup(); 
       updateUI('searching');
-
       const roomsRef = firestore.collection('rooms');
-      // Look for a room that is waiting for someone to join
       const query = roomsRef.where('waiting', '==', true).limit(1);
       const snapshot = await query.get();
 
       if (snapshot.empty) {
-        // No waiting rooms, so create a new one
         await createRoom();
       } else {
-        // Found a waiting room, join it
         const roomDoc = snapshot.docs[0];
         currentRoomId = roomDoc.id;
         await joinRoom(roomDoc.id, roomDoc.data());
       }
     };
 
-    /**
-     * Creates a new chat room in Firestore and waits for a callee.
-     */
     const createRoom = async () => {
       console.log('Creating a new room...');
       const roomRef = firestore.collection('rooms').doc();
       currentRoomId = roomRef.id;
 
-      // Initialize the peer connection and get local tracks
-      pc = new RTCPeerConnection(servers);
-      addLocalTracks(pc);
+      initializePeerConnection(); // MODIFICATION: Use helper function
       
-      // Collect ICE candidates
       const callerCandidatesCollection = roomRef.collection('callerCandidates');
       pc.onicecandidate = event => {
         if (event.candidate) {
@@ -155,38 +137,24 @@
         }
       };
       
-      // Create an offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
       const roomWithOffer = {
-        offer: {
-          type: offer.type,
-          sdp: offer.sdp,
-        },
-        waiting: true, // Mark this room as waiting for a partner
+        offer: { type: offer.type, sdp: offer.sdp },
+        waiting: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       await roomRef.set(roomWithOffer);
-
-      // Listen for the callee's answer
       listenForAnswer(roomRef);
     };
 
-    /**
-     * Joins an existing room and answers the call.
-     */
     const joinRoom = async (roomId, roomData) => {
       console.log(`Joining room: ${roomId}`);
       const roomRef = firestore.collection('rooms').doc(roomId);
-
-      // Mark the room as no longer waiting
       await roomRef.update({ waiting: false });
 
-      pc = new RTCPeerConnection(servers);
-      addLocalTracks(pc);
+      initializePeerConnection(); // MODIFICATION: Use helper function
 
-      // Collect ICE candidates
       const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
       pc.onicecandidate = event => {
         if (event.candidate) {
@@ -194,123 +162,143 @@
         }
       };
 
-      // Set remote description from the offer
       await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer));
       
-      // Create an answer
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-
       const roomWithAnswer = {
-        answer: {
-          type: answer.type,
-          sdp: answer.sdp,
-        }
+        answer: { type: answer.type, sdp: answer.sdp }
       };
       await roomRef.update(roomWithAnswer);
       
-      // Listen for the caller's ICE candidates
       listenForIceCandidates(roomRef, 'callerCandidates');
-      listenForRemoteStream();
     };
     
-    /**
-     * Caller-side function to listen for the callee's answer.
-     */
     function listenForAnswer(roomRef) {
       roomListener = roomRef.onSnapshot(async snapshot => {
         const data = snapshot.data();
         if (!pc.currentRemoteDescription && data?.answer) {
-          console.log('Got remote answer');
-          const answerDescription = new RTCSessionDescription(data.answer);
-          await pc.setRemoteDescription(answerDescription);
-          updateUI('connected');
+          console.log('Got remote answer, setting remote description.');
+          try {
+            const answerDescription = new RTCSessionDescription(data.answer);
+            await pc.setRemoteDescription(answerDescription);
+            await processCachedIceCandidates(); // MODIFICATION: Process any buffered candidates
+          } catch (e) {
+            console.error("Error setting remote description: ", e);
+          }
         }
       });
       listenForIceCandidates(roomRef, 'calleeCandidates');
-      listenForRemoteStream();
     }
 
     /**
-     * Listens for ICE candidates from the other peer.
+     * MODIFICATION: Robust ICE candidate handling with buffering.
      */
     function listenForIceCandidates(roomRef, collectionName) {
-      roomRef.collection(collectionName).onSnapshot(snapshot => {
+      iceCandidateListener = roomRef.collection(collectionName).onSnapshot(snapshot => {
         snapshot.docChanges().forEach(async change => {
           if (change.type === 'added') {
-            let data = change.doc.data();
-            await pc.addIceCandidate(new RTCIceCandidate(data));
-            console.log(`Added ${collectionName} ICE candidate`);
+            const candidate = new RTCIceCandidate(change.doc.data());
+            try {
+              if (pc.remoteDescription) {
+                // If remote description is set, add candidate directly
+                await pc.addIceCandidate(candidate);
+                console.log(`Added ICE candidate immediately.`);
+              } else {
+                // Otherwise, buffer it
+                cachedIceCandidates.push(candidate);
+                console.log(`Cached an ICE candidate.`);
+              }
+            } catch (e) {
+              console.error('Error adding received ICE candidate', e);
+            }
           }
         });
       });
     }
 
     /**
-     * Adds local media tracks to the peer connection.
+     * MODIFICATION: Helper function to process buffered candidates.
      */
+    async function processCachedIceCandidates() {
+        console.log(`Processing ${cachedIceCandidates.length} cached candidates.`);
+        for (const candidate of cachedIceCandidates) {
+            try {
+                await pc.addIceCandidate(candidate);
+                console.log(`Added a cached ICE candidate.`);
+            } catch (e) {
+                console.error("Error adding cached candidate: ", e);
+            }
+        }
+        cachedIceCandidates = []; // Clear the cache
+    }
+
+    /**
+     * MODIFICATION: Centralized peer connection setup
+     */
+    function initializePeerConnection() {
+      pc = new RTCPeerConnection(servers);
+      addLocalTracks(pc);
+      
+      // Listen for remote tracks
+      pc.ontrack = event => {
+        console.log('✅ Got remote track!');
+        event.streams[0].getTracks().forEach(track => {
+          remoteStream.addTrack(track);
+        });
+      };
+
+      // MODIFICATION: Listen for connection state changes for debugging
+      pc.oniceconnectionstatechange = () => {
+        console.log(`ICE connection state: ${pc.iceConnectionState}`);
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            updateUI('connected');
+        } else if (pc.iceConnectionState === 'failed') {
+            console.error('Connection failed. Restarting ICE...');
+            pc.restartIce(); // Attempt to recover
+        }
+      };
+    }
+    
     function addLocalTracks(peerConnection) {
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
     }
 
-    /**
-     * Listens for the remote media stream.
-     */
-    function listenForRemoteStream() {
-        pc.ontrack = event => {
-            console.log('Got remote track');
-            event.streams[0].getTracks().forEach(track => {
-                remoteStream.addTrack(track);
-            });
-            updateUI('connected');
-        };
-    }
-
-    /**
-     * Ends the call, closes connections, and cleans up the database.
-     */
     const hangup = async () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
       if (pc) {
         pc.close();
       }
-
-      // Clean up the UI
-      localVideo.srcObject = null;
-      remoteVideo.srcObject = null;
-
-      // Unsubscribe from Firestore listener to prevent memory leaks
-      if (roomListener) {
-        roomListener();
-        roomListener = null;
-      }
       
-      // Delete the room from Firestore if it exists
+      // MODIFICATION: Unsubscribe from all listeners
+      if (roomListener) { roomListener(); roomListener = null; }
+      if (iceCandidateListener) { iceCandidateListener(); iceCandidateListener = null; }
+
       if (currentRoomId) {
         const roomRef = firestore.collection('rooms').doc(currentRoomId);
-        // Delete subcollections first
         const callerCandidates = await roomRef.collection('callerCandidates').get();
         callerCandidates.forEach(async doc => await doc.ref.delete());
         const calleeCandidates = await roomRef.collection('calleeCandidates').get();
         calleeCandidates.forEach(async doc => await doc.ref.delete());
-        // Delete the room document
         await roomRef.delete();
-        console.log(`Deleted room: ${currentRoomId}`);
       }
 
+      // Reset state
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
       currentRoomId = null;
-      pc = new RTCPeerConnection(servers); // Reset the connection object
+      cachedIceCandidates = []; // MODIFICATION: Clear cache on hangup
+
       updateUI('initial');
     };
 
-    /**
-     * Updates the UI buttons and status based on the app's state.
-     */
     function updateUI(state) {
+        // UI update logic remains the same
         switch (state) {
             case 'initial':
                 btnStart.classList.remove('btn-disabled');
@@ -333,7 +321,7 @@
             case 'searching':
                 btnHangup.classList.remove('btn-disabled');
                 btnHangup.disabled = false;
-                btnNext.disabled = true; // Disable "Next" while searching
+                btnNext.disabled = true;
                 statusDiv.textContent = '🔎 جاري البحث...';
                 break;
             case 'connected':
@@ -346,12 +334,11 @@
         }
     }
 
-    // --- 5. EVENT LISTENERS ---
+    // --- 5. EVENT LISTENERS & INITIALIZATION ---
     btnStart.onclick = startCamera;
     btnNext.onclick = findNextMatch;
     btnHangup.onclick = hangup;
     
-    // Auto-sign in anonymously when the app loads
     auth.signInAnonymously().then(() => {
         console.log('Signed in anonymously.');
         updateUI('initial');
