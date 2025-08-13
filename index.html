@@ -17,7 +17,6 @@
   </style>
 </head>
 <body class="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
-
   <main class="w-full max-w-md mx-auto aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl bg-slate-800 relative ring-1 ring-white/10">
     <video id="remoteVideo" autoplay playsinline class="absolute top-0 left-0 w-full h-full bg-slate-800"></video>
     <header class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
@@ -27,7 +26,6 @@
     <div class="absolute top-16 right-4 w-1/4 aspect-[9/16] rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/20 z-20 glass">
       <video id="localVideo" autoplay playsinline muted></video>
     </div>
-
     <div class="absolute top-40 right-4 z-20 glass rounded-full px-3 py-1.5 text-xs text-center">
       <div class="font-bold">ID الخاص بك</div>
       <code id="myId" class="font-mono text-indigo-300">...</code>
@@ -42,7 +40,7 @@
       </div>
     </div>
   </main>
-
+  <!-- Direct Call Modal -->
   <div id="callModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
     <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-sm text-center ring-1 ring-white/10">
       <h3 class="text-xl font-bold mb-4">إتصال مباشر عبر ID</h3>
@@ -54,7 +52,7 @@
       </div>
     </div>
   </div>
-
+  <!-- Incoming Call Modal -->
   <div id="incomingCallModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
     <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-sm text-center ring-1 ring-white/10">
       <h3 class="text-2xl font-bold mb-2">📞 إتصال وارد</h3>
@@ -65,16 +63,13 @@
       </div>
     </div>
   </div>
-
-
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-  
   <script>
-    // --- 1. FIREBASE CONFIGURATION ---
+    // --- Firebase Configuration ---
     const firebaseConfig = {
-      // IMPORTANT: Replace with your own Firebase project configuration
       apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
       authDomain: "metawarefare-gaming.firebaseapp.com",
       databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
@@ -83,29 +78,24 @@
       messagingSenderId: "551352148152",
       appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
     };
-    
-    // --- 2. INITIALIZE ---
+
     firebase.initializeApp(firebaseConfig);
     const firestore = firebase.firestore();
     const auth = firebase.auth();
 
     const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }], iceCandidatePoolSize: 10 };
-    let pc = new RTCPeerConnection(servers);
-    let localStream = null, remoteStream = null, currentRoomId = null;
-    let roomListener = null, iceCandidateListener = null, incomingCallListener = null;
-    let cachedIceCandidates = [];
-    let currentCallData = null;
+    let pc, localStream = null, remoteStream = null;
+    let currentRoomId = null, roomListener = null, iceCandidateListener = null, incomingCallListener = null;
+    let cachedIceCandidates = [], currentCallData = null, userRandomId = null;
 
-    // --- 3. DOM ELEMENTS ---
     const localVideo = document.getElementById('localVideo');
     const remoteVideo = document.getElementById('remoteVideo');
     const btnStart = document.getElementById('btnStart');
     const btnNext = document.getElementById('btnNext');
     const btnHangup = document.getElementById('btnHangup');
+    const btnCall = document.getElementById('btnCall');
     const statusDiv = document.getElementById('status');
     const myIdDiv = document.getElementById('myId');
-    // NEW direct call elements
-    const btnCall = document.getElementById('btnCall');
     const callModal = document.getElementById('callModal');
     const calleeIdInput = document.getElementById('calleeIdInput');
     const btnMakeCall = document.getElementById('btnMakeCall');
@@ -113,249 +103,211 @@
     const callerIdDisplay = document.getElementById('callerIdDisplay');
     const btnAccept = document.getElementById('btnAccept');
     const btnDecline = document.getElementById('btnDecline');
-    
-    // --- 4. CORE FUNCTIONS ---
-    // Camera, matchmaking, and connection logic is largely the same
-    const startCamera = async () => { /* ... (no changes) ... */ };
-    const findNextMatch = async () => { /* ... (no changes) ... */ };
-    // --- HANGUP & CLEANUP (Modified) ---
-    const hangup = async () => {
-        // ... (existing hangup logic) ...
 
-        // NEW: Also clean up any incoming call modals
-        if (currentCallData) {
-            const userRef = firestore.collection('users').doc(auth.currentUser.uid);
-            await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
-            currentCallData = null;
-        }
-        toggleIncomingCallModal(false);
-    };
-
-    // --- NEW FEATURE: DIRECT CALL ---
-
-    /**
-     * Toggles the visibility of the direct call modal.
-     */
-    const toggleCallModal = (show) => {
-        if (show) {
-            callModal.classList.remove('hidden');
-        } else {
-            callModal.classList.add('hidden');
-        }
-    };
-
-    /**
-     * Toggles the visibility of the incoming call notification.
-     */
-    const toggleIncomingCallModal = (show, callData = null) => {
-        if (show && callData) {
-            currentCallData = callData;
-            callerIdDisplay.textContent = callData.callerId.substring(0, 6);
-            incomingCallModal.classList.remove('hidden');
-        } else {
-            incomingCallModal.classList.add('hidden');
-            currentCallData = null;
-        }
-    };
-    
-    /**
-     * Initiates a direct call to a user by their ID. (Caller side)
-     */
-    const makeDirectCall = async () => {
-        const calleeId = calleeIdInput.value.trim();
-        if (!calleeId) {
-            alert('الرجاء إدخال ID صحيح.');
-            return;
-        }
-        toggleCallModal(false);
-        updateUI('searching');
-        console.log(`Initiating call to ${calleeId}`);
-
-        // Create a new room for this direct call
-        const roomRef = firestore.collection('rooms').doc();
-        currentRoomId = roomRef.id;
-
-        initializePeerConnection();
-        const callerCandidatesCollection = roomRef.collection('callerCandidates');
-        pc.onicecandidate = event => {
-            if (event.candidate) callerCandidatesCollection.add(event.candidate.toJSON());
-        };
-        
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        
-        await roomRef.set({
-            offer: { type: offer.type, sdp: offer.sdp },
-            callerId: auth.currentUser.uid,
-            calleeId: calleeId,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        // Send a notification to the callee
-        const calleeRef = firestore.collection('users').doc(calleeId);
-        await calleeRef.collection('incomingCalls').add({
-            roomId: currentRoomId,
-            callerId: auth.currentUser.uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        listenForAnswer(roomRef);
-    };
-
-    /**
-     * Listens for incoming call notifications. (Callee side)
-     */
-    const listenForIncomingCalls = () => {
-        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
-        incomingCallListener = userRef.collection('incomingCalls')
-            .onSnapshot(snapshot => {
-                if (!snapshot.empty) {
-                    const call = snapshot.docs[0].data();
-                    call.callId = snapshot.docs[0].id; // Store the notification doc ID
-                    // Don't show notification if already in a call
-                    if (!currentRoomId) {
-                        toggleIncomingCallModal(true, call);
-                    }
-                }
-            });
-    };
-
-    /**
-     * Accepts an incoming call. (Callee side)
-     */
-    const acceptCall = async () => {
-        if (!currentCallData) return;
-        
-        await hangup(); // Clean up any previous state
-        toggleIncomingCallModal(false);
-        updateUI('searching');
-
-        const { roomId, callerId } = currentCallData;
-        currentRoomId = roomId;
-
-        const roomRef = firestore.collection('rooms').doc(roomId);
-        const roomSnapshot = await roomRef.get();
-        const roomData = roomSnapshot.data();
-
-        initializePeerConnection();
-        const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
-        pc.onicecandidate = event => {
-            if (event.candidate) calleeCandidatesCollection.add(event.candidate.toJSON());
-        };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        await roomRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
-        
-        listenForIceCandidates(roomRef, 'callerCandidates');
-
-        // Clean up the notification
-        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
-        await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
-        currentCallData = null;
-    };
-
-    /**
-     * Declines an incoming call. (Callee side)
-     */
-    const declineCall = async () => {
-        if (!currentCallData) return;
-        const userRef = firestore.collection('users').doc(auth.currentUser.uid);
-        await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
-        // Optional: notify caller the call was declined
-        toggleIncomingCallModal(false);
-    };
-
-
-    // --- 5. EVENT LISTENERS & INITIALIZATION ---
-    btnStart.onclick = startCamera;
-    btnNext.onclick = findNextMatch;
-    btnHangup.onclick = hangup;
-    btnCall.onclick = () => toggleCallModal(true);
-    btnMakeCall.onclick = makeDirectCall;
-    btnAccept.onclick = acceptCall;
-    btnDecline.onclick = declineCall;
-    
-    // --- Sign-in, get UID, and start listening ---
-    auth.signInAnonymously().then(() => {
-        const userId = auth.currentUser.uid;
-        console.log(`Signed in anonymously. User ID: ${userId}`);
-        myIdDiv.textContent = userId.substring(0, 6); // Display first 6 chars of ID
-
-        // Create a document for the user if it doesn't exist
-        const userRef = firestore.collection('users').doc(userId);
-        userRef.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
-        listenForIncomingCalls(); // Start listening for direct calls
-        updateUI('initial');
-    }).catch(error => {
-        console.error('Anonymous sign-in failed:', error);
-        alert('فشل تسجيل الدخول. يرجى تحديث الصفحة.');
-    });
-
-    function updateUI(state) {
-        // Modified to include the 'call' button
-        switch (state) {
-            case 'initial':
-                btnStart.disabled = false;
-                btnNext.disabled = true; btnCall.disabled = true; btnHangup.disabled = true;
-                btnStart.classList.remove('btn-disabled');
-                btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.add('btn-disabled');
-                statusDiv.textContent = '🔴 غير متصل';
-                break;
-            case 'camera_on':
-                btnStart.disabled = true;
-                btnNext.disabled = false; btnCall.disabled = false; btnHangup.disabled = true;
-                btnStart.classList.add('btn-disabled');
-                btnNext.classList.remove('btn-disabled'); btnCall.classList.remove('btn-disabled'); btnHangup.classList.add('btn-disabled');
-                statusDiv.textContent = '🟢 جاهز';
-                break;
-            case 'searching':
-                btnStart.disabled = true;
-                btnNext.disabled = true; btnCall.disabled = true; btnHangup.disabled = false;
-                btnStart.classList.add('btn-disabled');
-                btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
-                statusDiv.textContent = '🔎 جاري البحث...';
-                break;
-            case 'connected':
-                btnStart.disabled = true;
-                btnNext.disabled = false; btnCall.disabled = true; btnHangup.disabled = false;
-                btnStart.classList.add('btn-disabled');
-                btnNext.classList.remove('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
-                statusDiv.textContent = '✅ متصل';
-                break;
-        }
+    // --- Helper Functions ---
+    function generateRandomId(length = 6) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for(let i=0;i<length;i++) result += chars.charAt(Math.floor(Math.random()*chars.length));
+      return result;
     }
 
-    // Unchanged helper functions from previous step
-    function initializePeerConnection() { /* ... (no changes) ... */ };
-    function listenForAnswer(roomRef) { /* ... (no changes) ... */ };
-    function listenForIceCandidates(roomRef, collectionName) { /* ... (no changes) ... */ };
-    async function processCachedIceCandidates() { /* ... (no changes) ... */ };
-    function addLocalTracks(peerConnection) { /* ... (no changes) ... */ };
-    
-    // --- PASTE UNCHANGED FUNCTIONS HERE ---
-    // For brevity, I've omitted the functions that have no changes.
-    // Copy the implementations of these functions from the previous response:
-    // startCamera, findNextMatch, hangup, initializePeerConnection,
-    // listenForAnswer, listenForIceCandidates, processCachedIceCandidates, addLocalTracks
-  </script>
-  
-  <script>
-    // NOTE: The full code is provided above. The below is for clarity on what's unchanged.
-    const findNextMatch_implementation = async () => { if (!localStream) { alert('الرجاء تشغيل الكاميرا أولاً!'); return; } await hangup(); updateUI('searching'); const roomsRef = firestore.collection('rooms'); const query = roomsRef.where('waiting', '==', true).limit(1); const snapshot = await query.get(); if (snapshot.empty) { await createRoom(); } else { const roomDoc = snapshot.docs[0]; currentRoomId = roomDoc.id; await joinRoom(roomDoc.id, roomDoc.data()); } };
-    const createRoom = async () => { console.log('Creating a new room...'); const roomRef = firestore.collection('rooms').doc(); currentRoomId = roomRef.id; initializePeerConnection(); const callerCandidatesCollection = roomRef.collection('callerCandidates'); pc.onicecandidate = event => { if (event.candidate) { callerCandidatesCollection.add(event.candidate.toJSON()); } }; const offer = await pc.createOffer(); await pc.setLocalDescription(offer); const roomWithOffer = { offer: { type: offer.type, sdp: offer.sdp, }, waiting: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() }; await roomRef.set(roomWithOffer); listenForAnswer(roomRef); };
-    const joinRoom = async (roomId, roomData) => { console.log(`Joining room: ${roomId}`); const roomRef = firestore.collection('rooms').doc(roomId); await roomRef.update({ waiting: false }); initializePeerConnection(); const calleeCandidatesCollection = roomRef.collection('calleeCandidates'); pc.onicecandidate = event => { if (event.candidate) { calleeCandidatesCollection.add(event.candidate.toJSON()); } }; await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer)); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); const roomWithAnswer = { answer: { type: answer.type, sdp: answer.sdp, } }; await roomRef.update(roomWithAnswer); listenForIceCandidates(roomRef, 'callerCandidates'); };
-    startCamera = async () => { try { localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); localVideo.srcObject = localStream; remoteStream = new MediaStream(); remoteVideo.srcObject = remoteStream; updateUI('camera_on'); console.log('Camera and mic started'); } catch (error) { console.error('Error starting camera:', error); alert('لا يمكن الوصول إلى الكاميرا أو المايكروفون. الرجاء التأكد من الأذونات.'); } };
-    findNextMatch = findNextMatch_implementation;
-    hangup = async () => { if (pc) { pc.close(); } if (roomListener) { roomListener(); roomListener = null; } if (iceCandidateListener) { iceCandidateListener(); iceCandidateListener = null; } if (currentRoomId) { const roomRef = firestore.collection('rooms').doc(currentRoomId); const callerCandidates = await roomRef.collection('callerCandidates').get(); callerCandidates.forEach(async doc => await doc.ref.delete()); const calleeCandidates = await roomRef.collection('calleeCandidates').get(); calleeCandidates.forEach(async doc => await doc.ref.delete()); await roomRef.delete(); } if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; } localVideo.srcObject = null; remoteVideo.srcObject = null; currentRoomId = null; cachedIceCandidates = []; if (currentCallData) { const userRef = firestore.collection('users').doc(auth.currentUser.uid); await userRef.collection('incomingCalls').doc(currentCallData.callId).delete(); currentCallData = null; } toggleIncomingCallModal(false); updateUI('initial'); };
-    initializePeerConnection = () => { pc = new RTCPeerConnection(servers); addLocalTracks(pc); pc.ontrack = event => { console.log('✅ Got remote track!'); event.streams[0].getTracks().forEach(track => { remoteStream.addTrack(track); }); }; pc.oniceconnectionstatechange = () => { console.log(`ICE connection state: ${pc.iceConnectionState}`); if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') { updateUI('connected'); } else if (pc.iceConnectionState === 'failed') { console.error('Connection failed. Restarting ICE...'); pc.restartIce(); } }; };
-    listenForAnswer = (roomRef) => { roomListener = roomRef.onSnapshot(async snapshot => { const data = snapshot.data(); if (!pc.currentRemoteDescription && data?.answer) { console.log('Got remote answer, setting remote description.'); try { const answerDescription = new RTCSessionDescription(data.answer); await pc.setRemoteDescription(answerDescription); await processCachedIceCandidates(); } catch (e) { console.error("Error setting remote description: ", e); } } }); listenForIceCandidates(roomRef, 'calleeCandidates'); };
-    listenForIceCandidates = (roomRef, collectionName) => { iceCandidateListener = roomRef.collection(collectionName).onSnapshot(snapshot => { snapshot.docChanges().forEach(async change => { if (change.type === 'added') { const candidate = new RTCIceCandidate(change.doc.data()); try { if (pc.remoteDescription) { await pc.addIceCandidate(candidate); console.log(`Added ICE candidate immediately.`); } else { cachedIceCandidates.push(candidate); console.log(`Cached an ICE candidate.`); } } catch (e) { console.error('Error adding received ICE candidate', e); } } }); }); };
-    processCachedIceCandidates = async () => { console.log(`Processing ${cachedIceCandidates.length} cached candidates.`); for (const candidate of cachedIceCandidates) { try { await pc.addIceCandidate(candidate); console.log(`Added a cached ICE candidate.`); } catch (e) { console.error("Error adding cached candidate: ", e); } } cachedIceCandidates = []; };
-    addLocalTracks = (peerConnection) => { if(localStream) {localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });} };
+    function updateUI(state) {
+      switch(state){
+        case 'initial':
+          btnStart.disabled=false; btnNext.disabled=true; btnCall.disabled=true; btnHangup.disabled=true;
+          btnStart.classList.remove('btn-disabled'); btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.add('btn-disabled');
+          statusDiv.textContent='🔴 غير متصل';
+          break;
+        case 'camera_on':
+          btnStart.disabled=true; btnNext.disabled=false; btnCall.disabled=false; btnHangup.disabled=true;
+          btnStart.classList.add('btn-disabled'); btnNext.classList.remove('btn-disabled'); btnCall.classList.remove('btn-disabled'); btnHangup.classList.add('btn-disabled');
+          statusDiv.textContent='🟢 جاهز';
+          break;
+        case 'searching':
+          btnStart.disabled=true; btnNext.disabled=true; btnCall.disabled=true; btnHangup.disabled=false;
+          btnStart.classList.add('btn-disabled'); btnNext.classList.add('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
+          statusDiv.textContent='🔎 جاري البحث...';
+          break;
+        case 'connected':
+          btnStart.disabled=true; btnNext.disabled=false; btnCall.disabled=true; btnHangup.disabled=false;
+          btnStart.classList.add('btn-disabled'); btnNext.classList.remove('btn-disabled'); btnCall.classList.add('btn-disabled'); btnHangup.classList.remove('btn-disabled');
+          statusDiv.textContent='✅ متصل';
+          break;
+      }
+    }
+
+    function toggleCallModal(show){ show ? callModal.classList.remove('hidden') : callModal.classList.add('hidden'); }
+    function toggleIncomingCallModal(show, callData=null){
+      if(show && callData){ currentCallData=callData; callerIdDisplay.textContent=callData.callerId.substring(0,6); incomingCallModal.classList.remove('hidden'); }
+      else{ incomingCallModal.classList.add('hidden'); currentCallData=null; }
+    }
+
+    // --- Camera & Tracks ---
+    const startCamera = async () => {
+      try{
+        localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+        localVideo.srcObject=localStream;
+        remoteStream = new MediaStream();
+        remoteVideo.srcObject=remoteStream;
+        updateUI('camera_on');
+        console.log('Camera and mic started');
+      }catch(err){ console.error(err); alert('لا يمكن الوصول للكاميرا/الميكروفون'); }
+    }
+
+    function addLocalTracks(peerConnection){ if(localStream) localStream.getTracks().forEach(t=>peerConnection.addTrack(t, localStream)); }
+
+    function initializePeerConnection(){
+      pc=new RTCPeerConnection(servers);
+      addLocalTracks(pc);
+      pc.ontrack=event=>{ event.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t)); };
+      pc.oniceconnectionstatechange=()=>{ if(pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed'){ updateUI('connected'); } else if(pc.iceConnectionState==='failed'){ pc.restartIce(); } };
+    }
+
+    async function processCachedIceCandidates(){ for(const c of cachedIceCandidates) try{ await pc.addIceCandidate(c); }catch(e){ console.error(e); } cachedIceCandidates=[]; }
+    function listenForIceCandidates(roomRef, collectionName){ iceCandidateListener=roomRef.collection(collectionName).onSnapshot(snap=>{ snap.docChanges().forEach(async change=>{ if(change.type==='added'){ const candidate=new RTCIceCandidate(change.doc.data()); if(pc.remoteDescription){ await pc.addIceCandidate(candidate); } else cachedIceCandidates.push(candidate); } }); }); }
+
+    async function listenForAnswer(roomRef){ roomListener=roomRef.onSnapshot(async snap=>{ const data=snap.data(); if(!pc.currentRemoteDescription && data?.answer){ await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); await processCachedIceCandidates(); } }); listenForIceCandidates(roomRef,'calleeCandidates'); }
+
+    // --- Hangup ---
+    async function hangup(){
+      if(pc) pc.close();
+      if(roomListener){ roomListener(); roomListener=null; }
+      if(iceCandidateListener){ iceCandidateListener(); iceCandidateListener=null; }
+      if(currentRoomId){
+        const roomRef=firestore.collection('rooms').doc(currentRoomId);
+        const callerCandidates=await roomRef.collection('callerCandidates').get();
+        callerCandidates.forEach(async d=>await d.ref.delete());
+        const calleeCandidates=await roomRef.collection('calleeCandidates').get();
+        calleeCandidates.forEach(async d=>await d.ref.delete());
+        await roomRef.delete();
+      }
+      if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+      localVideo.srcObject=null; remoteVideo.srcObject=null;
+      currentRoomId=null; cachedIceCandidates=[];
+      if(currentCallData){ const userRef=firestore.collection('users').doc(userRandomId); await userRef.collection('incomingCalls').doc(currentCallData.callId).delete(); currentCallData=null; }
+      toggleIncomingCallModal(false); updateUI('initial');
+    }
+
+    // --- Random Search ---
+    async function searchRandom() {
+      updateUI('searching');
+      const waitingRooms = await firestore.collection('rooms').where('calleeId', '==', null).where('callerId', '!=', userRandomId).orderBy('createdAt').limit(1).get();
+      if (!waitingRooms.empty) {
+        const roomDoc = waitingRooms.docs[0];
+        currentRoomId = roomDoc.id;
+        const roomRef = roomDoc.ref;
+        initializePeerConnection();
+        const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
+        pc.onicecandidate = event => { if (event.candidate) calleeCandidatesCollection.add(event.candidate.toJSON()); };
+        await pc.setRemoteDescription(new RTCSessionDescription(roomDoc.data().offer));
+        listenForIceCandidates(roomRef, 'callerCandidates');
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await roomRef.update({ answer: { type: answer.type, sdp: answer.sdp }, calleeId: userRandomId });
+      } else {
+        const roomRef = firestore.collection('rooms').doc();
+        currentRoomId = roomRef.id;
+        initializePeerConnection();
+        const callerCandidatesCollection = roomRef.collection('callerCandidates');
+        pc.onicecandidate = event => { if (event.candidate) callerCandidatesCollection.add(event.candidate.toJSON()); };
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await roomRef.set({ offer: { type: offer.type, sdp: offer.sdp }, callerId: userRandomId, calleeId: null, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        listenForAnswer(roomRef);
+      }
+    }
+
+    // --- Direct Call ---
+    const makeDirectCall = async ()=>{
+      const calleeId=calleeIdInput.value.trim();
+      if(!calleeId) return alert('الرجاء إدخال ID صحيح.');
+      toggleCallModal(false); updateUI('searching');
+
+      const roomRef=firestore.collection('rooms').doc();
+      currentRoomId=roomRef.id;
+
+      initializePeerConnection();
+      const callerCandidatesCollection=roomRef.collection('callerCandidates');
+      pc.onicecandidate=event=>{ if(event.candidate) callerCandidatesCollection.add(event.candidate.toJSON()); };
+
+      const offer=await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      await roomRef.set({
+        offer:{ type:offer.type, sdp:offer.sdp },
+        callerId:userRandomId,
+        calleeId:calleeId,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      const calleeRef=firestore.collection('users').doc(calleeId);
+      await calleeRef.collection('incomingCalls').add({
+        roomId:currentRoomId,
+        callerId:userRandomId,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      listenForAnswer(roomRef);
+    }
+
+    const acceptCall=async ()=>{
+      if(!currentCallData) return;
+      await hangup();
+      toggleIncomingCallModal(false);
+      updateUI('searching');
+
+      const { roomId } = currentCallData;
+      currentRoomId = roomId;
+      const roomRef = firestore.collection('rooms').doc(roomId);
+      const roomSnapshot = await roomRef.get();
+      const roomData = roomSnapshot.data();
+
+      initializePeerConnection();
+      const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
+      pc.onicecandidate = event => { if(event.candidate) calleeCandidatesCollection.add(event.candidate.toJSON()); };
+      await pc.setRemoteDescription(new RTCSessionDescription(roomData.offer));
+      listenForIceCandidates(roomRef, 'callerCandidates');
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await roomRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
+      const userRef = firestore.collection('users').doc(userRandomId);
+      await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
+      currentCallData = null;
+    }
+
+    // --- Initialization ---
+    (async () => {
+      // Anonymous auth if needed, but skipping for now as not required for Firestore
+      userRandomId = generateRandomId(10); // Increased length to reduce collisions
+      myIdDiv.textContent = userRandomId;
+
+      const userRef = firestore.collection('users').doc(userRandomId);
+      incomingCallListener = userRef.collection('incomingCalls').onSnapshot(snap => {
+        snap.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            toggleIncomingCallModal(true, { callId: change.doc.id, roomId: data.roomId, callerId: data.callerId });
+          }
+        });
+      });
+
+      btnStart.onclick = startCamera;
+      btnNext.onclick = searchRandom;
+      btnCall.onclick = () => toggleCallModal(true);
+      btnMakeCall.onclick = makeDirectCall;
+      btnHangup.onclick = hangup;
+      btnAccept.onclick = acceptCall;
+      btnDecline.onclick = async () => {
+        if (currentCallData) {
+          const userRef = firestore.collection('users').doc(userRandomId);
+          await userRef.collection('incomingCalls').doc(currentCallData.callId).delete();
+        }
+        toggleIncomingCallModal(false);
+      };
+
+      updateUI('initial');
+    })();
   </script>
 </body>
-</html>
+  </html>
