@@ -8,7 +8,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -42,9 +41,8 @@
             <button class="whatsapp-btn">📞 تواصل عبر واتساب</button>
           `;
 
-          // عند الضغط على الزر يفتح واتساب بالرقم
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
-            const phone = product.des.replace(/\D/g, ""); // تنظيف الرقم
+            const phone = product.des.replace(/\D/g, "");
             window.open(`https://wa.me/${phone}`, "_blank");
           });
 
@@ -61,10 +59,21 @@
       margin: 0;
       padding: 20px;
       color: #fff;
+      text-align: center;
+    }
+    .logo {
+      width: 120px;
+      margin: 0 auto 10px;
+      display: block;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    .logo:hover {
+      transform: scale(1.1);
     }
     h1 {
-      text-align: center;
       color: #fff;
+      margin: 0 0 20px;
     }
     .product-list {
       display: grid;
@@ -115,6 +124,7 @@
   </style>
 </head>
 <body>
+  <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
   <h1>🛒 SJ STORE</h1>
   <div class="product-list" id="product-list"></div>
 </body>
