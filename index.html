@@ -118,8 +118,10 @@
     #android-popup img { width: 40px; height: 40px; border-radius: 8px;}
     #android-popup button { background: #00aaff; border: none; padding: 6px 10px; border-radius: 8px; color: #fff; cursor: pointer;}
     #android-popup #close-popup { background: #888; }
-    #google-play-btn { display: inline-flex; align-items: center; gap: 6px; background: #3DDC84; color: #fff; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; }
-    #google-play-btn img { width: 20px; height: 20px; }
+
+    /* Google Play official badge */
+    #google-play-btn { display: block; margin: 5px auto 0; border: none; background: none; cursor: pointer; }
+    #google-play-btn img { width: 180px; height: auto; }
 
     @media (max-width: 480px) {
       h1 { font-size: 1.2em; }
@@ -129,7 +131,7 @@
       .whatsapp-btn { font-size: 12px; padding: 6px 10px; }
       #android-popup { font-size: 13px; padding: 10px; flex-direction: column; gap: 8px; }
       #android-popup img { width: 50px; height: 50px; }
-      #google-play-btn img { width: 24px; height: 24px; }
+      #google-play-btn img { width: 160px; }
     }
   </style>
 </head>
@@ -142,10 +144,10 @@
   <div id="android-popup">
     <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
     <span>📲 Download the SJ STORE app from Google Play!</span>
-    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
       <button id="install-btn">Install</button>
       <button id="google-play-btn">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Arrow_logo.png" alt="Google Play"> Google Play
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Google_Play_Store_badge_EN.svg/2560px-Google_Play_Store_badge_EN.svg.png" alt="Google Play Store">
       </button>
       <button id="close-popup">✖ Close</button>
     </div>
