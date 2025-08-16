@@ -61,38 +61,30 @@
         });
       });
 
-      // Android popup with two buttons
+      // Android popup
       const isAndroid = /Android/i.test(navigator.userAgent);
       const popup = document.getElementById("android-popup");
-      const pwaBtn = document.getElementById("pwa-install-btn");
-      const playBtn = document.getElementById("google-play-btn");
+      const installBtn = document.getElementById("install-btn");
       const closeBtn = document.getElementById("close-popup");
       let deferredPrompt;
 
       if (isAndroid) popup.style.display = "flex";
 
-      // PWA install
       window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        pwaBtn.style.display = "inline-block";
+        installBtn.style.display = "inline-block";
       });
 
-      pwaBtn.addEventListener("click", async () => {
+      installBtn.addEventListener("click", async () => {
         if (deferredPrompt) {
           deferredPrompt.prompt();
           await deferredPrompt.userChoice;
           deferredPrompt = null;
-          pwaBtn.style.display = "none";
+          installBtn.style.display = "none";
         }
       });
 
-      // Google Play button
-      playBtn.addEventListener("click", () => {
-        window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
-      });
-
-      // Close popup
       closeBtn.addEventListener("click", () => popup.style.display = "none");
     });
 
@@ -123,7 +115,6 @@
     #android-popup img { width: 40px; height: 40px; border-radius: 8px;}
     #android-popup button { background: #00aaff; border: none; padding: 6px 10px; border-radius: 8px; color: #fff; cursor: pointer;}
     #android-popup #close-popup { background: #888; }
-    #android-popup button { margin: 2px; }
 
     @media (max-width: 480px) {
       h1 { font-size: 1.2em; }
@@ -144,10 +135,9 @@
   <!-- Android install popup -->
   <div id="android-popup">
     <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
-    <span>📲 Download the SJ STORE app!</span>
+    <span>📲 Download the SJ STORE app from Google Play!</span>
     <div>
-      <button id="pwa-install-btn" style="display:none;">Install PWA</button>
-      <button id="google-play-btn">Google Play</button>
+      <button id="install-btn">Install</button>
       <button id="close-popup">✖ Close</button>
     </div>
   </div>
