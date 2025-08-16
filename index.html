@@ -137,6 +137,12 @@
       align-items: center;
       gap: 10px;
       font-size: 14px;
+      flex-wrap: wrap;
+    }
+    #android-popup img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
     }
     #android-popup button {
       background: #00aaff;
@@ -157,6 +163,7 @@
       .price { font-size: 12px; }
       .whatsapp-btn { font-size: 12px; padding: 6px 10px; }
       #android-popup { font-size: 13px; padding: 10px; flex-direction: column; gap: 8px; }
+      #android-popup img { width: 50px; height: 50px; }
     }
   </style>
 </head>
@@ -167,6 +174,7 @@
 
   <!-- Android install popup -->
   <div id="android-popup">
+    <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
     <span>📲 حمل تطبيق SJ STORE من Google Play!</span>
     <div>
       <button id="install-btn">تحميل</button>
