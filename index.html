@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -45,7 +45,7 @@
             <img src="${product.photo}" alt="${product.title}">
             <h3>${product.title}</h3>
             <p class="price">${product.price} DH</p>
-            <button class="whatsapp-btn">📞 تواصل عبر واتساب</button>
+            <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
           `;
 
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
@@ -57,7 +57,7 @@
         });
       });
 
-      // كشف إذا كان الجهاز أندرويد لإظهار popup
+      // Show Android popup only
       const isAndroid = /Android/i.test(navigator.userAgent);
       if (isAndroid) {
         const popup = document.getElementById("android-popup");
@@ -120,7 +120,7 @@
     }
     .whatsapp-btn:hover { background: #1ebe5d; }
 
-    /* Popup Android */
+    /* Android popup */
     #android-popup {
       display: none;
       position: fixed;
@@ -175,10 +175,10 @@
   <!-- Android install popup -->
   <div id="android-popup">
     <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
-    <span>📲 حمل تطبيق SJ STORE من Google Play!</span>
+    <span>📲 Download the SJ STORE app from Google Play!</span>
     <div>
-      <button id="install-btn">تحميل</button>
-      <button id="close-popup">✖ إغلاق</button>
+      <button id="install-btn">Install</button>
+      <button id="close-popup">✖ Close</button>
     </div>
   </div>
 </body>
