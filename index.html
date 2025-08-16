@@ -61,19 +61,39 @@
         });
       });
 
-      // Show Android popup only
+      // Android popup with two buttons
       const isAndroid = /Android/i.test(navigator.userAgent);
-      if (isAndroid) {
-        const popup = document.getElementById("android-popup");
-        popup.style.display = "flex";
+      const popup = document.getElementById("android-popup");
+      const pwaBtn = document.getElementById("pwa-install-btn");
+      const playBtn = document.getElementById("google-play-btn");
+      const closeBtn = document.getElementById("close-popup");
+      let deferredPrompt;
 
-        document.getElementById("install-btn").addEventListener("click", () => {
-          window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
-        });
-        document.getElementById("close-popup").addEventListener("click", () => {
-          popup.style.display = "none";
-        });
-      }
+      if (isAndroid) popup.style.display = "flex";
+
+      // PWA install
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        pwaBtn.style.display = "inline-block";
+      });
+
+      pwaBtn.addEventListener("click", async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          pwaBtn.style.display = "none";
+        }
+      });
+
+      // Google Play button
+      playBtn.addEventListener("click", () => {
+        window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
+      });
+
+      // Close popup
+      closeBtn.addEventListener("click", () => popup.style.display = "none");
     });
 
     // Register Service Worker
@@ -103,6 +123,7 @@
     #android-popup img { width: 40px; height: 40px; border-radius: 8px;}
     #android-popup button { background: #00aaff; border: none; padding: 6px 10px; border-radius: 8px; color: #fff; cursor: pointer;}
     #android-popup #close-popup { background: #888; }
+    #android-popup button { margin: 2px; }
 
     @media (max-width: 480px) {
       h1 { font-size: 1.2em; }
@@ -123,9 +144,10 @@
   <!-- Android install popup -->
   <div id="android-popup">
     <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
-    <span>📲 Download the SJ STORE app from Google Play!</span>
+    <span>📲 Download the SJ STORE app!</span>
     <div>
-      <button id="install-btn">Install</button>
+      <button id="pwa-install-btn" style="display:none;">Install PWA</button>
+      <button id="google-play-btn">Google Play</button>
       <button id="close-popup">✖ Close</button>
     </div>
   </div>
