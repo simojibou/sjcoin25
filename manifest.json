@@ -1,0 +1,20 @@
+{
+  "name": "SJ STORE",
+  "short_name": "SJ",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121833",
+  "theme_color": "#121833",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
