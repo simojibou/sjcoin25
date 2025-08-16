@@ -61,31 +61,19 @@
         });
       });
 
-      // Android popup
+      // Show Android popup only
       const isAndroid = /Android/i.test(navigator.userAgent);
-      const popup = document.getElementById("android-popup");
-      const installBtn = document.getElementById("install-btn");
-      const closeBtn = document.getElementById("close-popup");
-      let deferredPrompt;
+      if (isAndroid) {
+        const popup = document.getElementById("android-popup");
+        popup.style.display = "flex";
 
-      if (isAndroid) popup.style.display = "flex";
-
-      window.addEventListener("beforeinstallprompt", (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = "inline-block";
-      });
-
-      installBtn.addEventListener("click", async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          deferredPrompt = null;
-          installBtn.style.display = "none";
-        }
-      });
-
-      closeBtn.addEventListener("click", () => popup.style.display = "none");
+        document.getElementById("install-btn").addEventListener("click", () => {
+          window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
+        });
+        document.getElementById("close-popup").addEventListener("click", () => {
+          popup.style.display = "none";
+        });
+      }
     });
 
     // Register Service Worker
