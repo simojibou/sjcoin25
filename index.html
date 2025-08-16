@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>SJ STORE</title>
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      font-family: Tahoma, sans-serif;
+      background: #f9f9f9;
       margin: 0;
       padding: 20px;
     }
@@ -23,7 +24,7 @@
       margin-top: 30px;
     }
     .product {
-      background: white;
+      background: #fff;
       border-radius: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       padding: 15px;
@@ -47,32 +48,14 @@
       color: #007bff;
       margin: 5px 0;
     }
-    .contact {
-      color: #555;
-      font-size: 14px;
-      margin-bottom: 10px;
-    }
-    .btn {
-      display: inline-block;
-      background: #25d366;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-    .btn:hover {
-      background: #1ebc57;
-    }
   </style>
 </head>
 <body>
-  <h1>SJ STORE</h1>
+  <h1>🛒 SJ STORE</h1>
   <div class="product-list" id="product-list"></div>
 
   <script>
-    // إعداد Firebase
+    // بيانات Firebase الخاصة بك
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -90,25 +73,20 @@
 
     const productList = document.getElementById("product-list");
 
-    // قراءة المنتجات من Firebase
+    // جلب المنتجات من Firebase
     db.ref("Product").on("value", (snapshot) => {
-      productList.innerHTML = ""; // تفريغ القائمة
+      productList.innerHTML = ""; // تفريغ القائمة قبل إعادة الرسم
       snapshot.forEach((child) => {
         const product = child.val();
 
         const div = document.createElement("div");
         div.classList.add("product");
 
-        // زر شراء عبر واتساب
-        const whatsappNumber = product.des.replace(/\s+/g, "");
-        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=السلام عليكم، أود شراء المنتج: ${product.title}`;
-
         div.innerHTML = `
           <img src="${product.photo}" alt="${product.title}">
           <h3>${product.title}</h3>
           <p class="price">${product.price} DH</p>
-          <p class="contact">📞 ${product.des}</p>
-          <a href="${whatsappUrl}" target="_blank" class="btn">شراء عبر واتساب</a>
+          <p>${product.des}</p>
         `;
 
         productList.appendChild(div);
