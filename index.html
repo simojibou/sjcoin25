@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SJ STORE</title>
   <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
-  <!-- Manifest لتثبيت التطبيق -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,6 +56,20 @@
           container.appendChild(div);
         });
       });
+
+      // كشف إذا كان الجهاز أندرويد لإظهار popup
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        const popup = document.getElementById("android-popup");
+        popup.style.display = "flex";
+
+        document.getElementById("install-btn").addEventListener("click", () => {
+          window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
+        });
+        document.getElementById("close-popup").addEventListener("click", () => {
+          popup.style.display = "none";
+        });
+      }
     });
   </script>
 
@@ -76,14 +89,9 @@
       border-radius: 50%;
       transition: transform 0.3s;
     }
-    .logo:hover {
-      transform: scale(1.1);
-    }
-    h1 {
-      color: #fff;
-      margin: 0 0 20px;
-      font-size: 1.5em;
-    }
+    .logo:hover { transform: scale(1.1); }
+    h1 { color: #fff; margin: 0 0 20px; font-size: 1.5em; }
+
     .product-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -102,53 +110,53 @@
       transform: translateY(-3px);
       box-shadow: 0 4px 10px rgba(255,255,255,0.3);
     }
-    .product img {
-      max-width: 100%;
-      border-radius: 10px;
-    }
-    .product h3 {
-      margin: 8px 0;
-      font-size: 16px;
-      color: #fff;
-    }
-    .price {
-      font-weight: bold;
-      color: #00aaff;
-      margin: 4px 0;
-    }
+    .product img { max-width: 100%; border-radius: 10px; }
+    .product h3 { margin: 8px 0; font-size: 16px; color: #fff; }
+    .price { font-weight: bold; color: #00aaff; margin: 4px 0; }
     .whatsapp-btn {
-      margin-top: 8px;
-      padding: 8px 12px;
-      background: #25D366;
+      margin-top: 8px; padding: 8px 12px;
+      background: #25D366; border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; cursor: pointer; transition: 0.3s;
+    }
+    .whatsapp-btn:hover { background: #1ebe5d; }
+
+    /* Popup Android */
+    #android-popup {
+      display: none;
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: #111;
+      color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 9999;
+      padding: 15px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    #android-popup button {
+      background: #00aaff;
       border: none;
+      padding: 6px 10px;
       border-radius: 8px;
       color: #fff;
-      font-size: 13px;
       cursor: pointer;
-      transition: 0.3s;
     }
-    .whatsapp-btn:hover {
-      background: #1ebe5d;
+    #android-popup #close-popup {
+      background: #888;
     }
 
-    /* تحسين تجربة الهاتف */
     @media (max-width: 480px) {
-      h1 {
-        font-size: 1.2em;
-      }
-      .logo {
-        width: 80px;
-      }
-      .product h3 {
-        font-size: 14px;
-      }
-      .price {
-        font-size: 12px;
-      }
-      .whatsapp-btn {
-        font-size: 12px;
-        padding: 6px 10px;
-      }
+      h1 { font-size: 1.2em; }
+      .logo { width: 80px; }
+      .product h3 { font-size: 14px; }
+      .price { font-size: 12px; }
+      .whatsapp-btn { font-size: 12px; padding: 6px 10px; }
+      #android-popup { font-size: 13px; padding: 10px; flex-direction: column; gap: 8px; }
     }
   </style>
 </head>
@@ -156,5 +164,14 @@
   <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
   <h1>🛒 SJ STORE</h1>
   <div class="product-list" id="product-list"></div>
+
+  <!-- Android install popup -->
+  <div id="android-popup">
+    <span>📲 حمل تطبيق SJ STORE من Google Play!</span>
+    <div>
+      <button id="install-btn">تحميل</button>
+      <button id="close-popup">✖ إغلاق</button>
+    </div>
+  </div>
 </body>
 </html>
