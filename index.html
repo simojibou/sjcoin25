@@ -4,9 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SJ STORE</title>
-  <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
+
+  <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
+  <meta name="theme-color" content="#121833">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -58,7 +61,7 @@
         });
       });
 
-      // Android install popup
+      // Android popup
       const isAndroid = /Android/i.test(navigator.userAgent);
       const popup = document.getElementById("android-popup");
       const installBtn = document.getElementById("install-btn");
@@ -108,7 +111,6 @@
     .whatsapp-btn { margin-top: 8px; padding: 8px 12px; background: #25D366; border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; transition: 0.3s;}
     .whatsapp-btn:hover { background: #1ebe5d; }
 
-    /* Android popup */
     #android-popup { display: none; position: fixed; bottom: 10px; left: 10px; right: 10px; background: #111; color: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 9999; padding: 15px; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap;}
     #android-popup img { width: 40px; height: 40px; border-radius: 8px;}
     #android-popup button { background: #00aaff; border: none; padding: 6px 10px; border-radius: 8px; color: #fff; cursor: pointer;}
