@@ -8,14 +8,12 @@
   <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
   <meta name="theme-color" content="#121833">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, remove, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -24,8 +22,7 @@
       projectId: "sj-one",
       storageBucket: "sj-one.appspot.com",
       messagingSenderId: "426335553508",
-      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-      measurementId: "G-YQTVZQWXGB"
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -40,12 +37,13 @@
       const logoutBtn = document.getElementById("logout-btn");
       const userInfo = document.getElementById("user-info");
       const adminPanel = document.getElementById("admin-panel");
+      const productRef = ref(db, "Product");
 
       // تحميل المنتجات
-      const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
         productContainer.innerHTML = "";
         snapshot.forEach((childSnapshot) => {
+          const key = childSnapshot.key;
           const product = childSnapshot.val();
           const div = document.createElement("div");
           div.classList.add("product");
@@ -53,14 +51,45 @@
             <img src="${product.photo}" alt="${product.title}">
             <h3>${product.title}</h3>
             <p class="price">${product.price} DH</p>
-            <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
+            <button class="whatsapp-btn">📞 WhatsApp</button>
+            <div class="admin-actions" style="display:none;">
+              <button class="edit-btn">✏ Edit</button>
+              <button class="delete-btn">🗑 Delete</button>
+            </div>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
             const phone = product.des.replace(/\D/g, "");
             window.open(`https://wa.me/${phone}`, "_blank");
           });
+
+          // أزرار الأدمن
+          div.querySelector(".edit-btn").addEventListener("click", () => {
+            const newTitle = prompt("📝 Title:", product.title);
+            const newPrice = prompt("💰 Price:", product.price);
+            const newPhoto = prompt("🖼 Photo URL:", product.photo);
+            const newPhone = prompt("📞 WhatsApp Number:", product.des);
+            if (newTitle && newPrice && newPhoto && newPhone) {
+              update(ref(db, "Product/" + key), {
+                title: newTitle,
+                price: newPrice,
+                photo: newPhoto,
+                des: newPhone
+              });
+            }
+          });
+          div.querySelector(".delete-btn").addEventListener("click", () => {
+            if (confirm("⚠ Delete this product?")) {
+              remove(ref(db, "Product/" + key));
+            }
+          });
+
           productContainer.appendChild(div);
         });
+
+        // لو الأدمن داخل → أظهر أزرار الإدارة
+        if (auth.currentUser && auth.currentUser.email === "simo.jibou@gmail.com") {
+          document.querySelectorAll(".admin-actions").forEach(el => el.style.display = "block");
+        }
       });
 
       // تحميل السلايدر
@@ -99,21 +128,33 @@
           loginBtn.style.display = "none";
           logoutBtn.style.display = "inline-block";
 
-          // لو المستخدم هو الأدمن
           if (user.email === "simo.jibou@gmail.com") {
             adminPanel.style.display = "block";
-          } else {
-            adminPanel.style.display = "none";
+            document.querySelectorAll(".admin-actions").forEach(el => el.style.display = "block");
           }
         } else {
           userInfo.innerHTML = "";
           loginBtn.style.display = "inline-block";
           logoutBtn.style.display = "none";
           adminPanel.style.display = "none";
+          document.querySelectorAll(".admin-actions").forEach(el => el.style.display = "none");
         }
       });
 
-      // إضافة سلايدر جديد (أدمن فقط)
+      // إضافة منتج جديد (أدمن فقط)
+      document.getElementById("add-product-btn").addEventListener("click", () => {
+        const title = prompt("📝 Title:");
+        const price = prompt("💰 Price:");
+        const photo = prompt("🖼 Photo URL:");
+        const phone = prompt("📞 WhatsApp Number:");
+        if (title && price && photo && phone) {
+          push(ref(db, "Product"), {
+            title, price, photo, des: phone
+          });
+        }
+      });
+
+      // إضافة سلايدر جديد
       document.getElementById("add-slide-btn").addEventListener("click", () => {
         const url = prompt("ضع رابط صورة السلايدر:");
         if (url) {
@@ -140,6 +181,7 @@
     .price { color: #00aaff; font-weight: bold; }
     .whatsapp-btn { background: #25D366; color: #fff; }
     #admin-panel { display: none; margin: 20px 0; padding: 10px; border: 1px solid #00aaff; border-radius: 8px; }
+    .admin-actions button { margin-top: 5px; display:block; width:100%; }
   </style>
 </head>
 <body>
@@ -157,6 +199,7 @@
   <div id="admin-panel">
     <h3>🛠️ Admin Panel</h3>
     <button id="add-slide-btn">➕ Add Slider Image</button>
+    <button id="add-product-btn">➕ Add Product</button>
   </div>
 
   <!-- المنتجات -->
