@@ -114,36 +114,6 @@
     .hidden {
       display: none;
     }
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal .box {
-      background: #1f1f1f;
-      padding: 16px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 420px;
-      color: #fff;
-    }
-    input[type="file"] {
-      display: block;
-      margin-top: 8px;
-      color: #fff;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      margin-top: 8px;
-      border-radius: 6px;
-      border: 1px solid #444;
-      background: #333;
-      color: #fff;
-    }
     .small {
       font-size: 13px;
       color: var(--muted);
@@ -165,7 +135,6 @@
           <p id="displayName" class="name">Username</p>
           <p id="productCount" class="meta">0 products</p>
           <div class="actions">
-            <button id="btnEdit" class="btn">Edit Profile</button>
             <button id="btnShare" class="btn">Share Link</button>
           </div>
         </div>
@@ -186,27 +155,12 @@
       </div>
       <div id="publicGrid" class="grid"></div>
     </section>
-    <div id="editModal" class="modal hidden">
-      <div class="box">
-        <h3>Edit Profile</h3>
-        <label>Full Name</label>
-        <input id="editName" type="text" placeholder="Full Name">
-        <label>Change Profile Picture</label>
-        <input id="editPhoto" type="file" accept="image/*">
-        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
-          <button id="saveProfile" class="btn">Save</button>
-          <button id="cancelEdit" class="btn" style="background:#777">Cancel</button>
-        </div>
-        <p id="editMsg" class="small"></p>
-      </div>
-    </div>
     <p id="status" class="small" style="margin-top:12px"></p>
   </div>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -223,7 +177,6 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const btnSign = document.getElementById('btnSign');
     const profileSection = document.getElementById('profileSection');
@@ -231,15 +184,8 @@
     const displayName = document.getElementById('displayName');
     const productCount = document.getElementById('productCount');
     const productsGrid = document.getElementById('productsGrid');
-    const btnEdit = document.getElementById('btnEdit');
     const btnShare = document.getElementById('btnShare');
     const status = document.getElementById('status');
-    const editModal = document.getElementById('editModal');
-    const editName = document.getElementById('editName');
-    const editPhoto = document.getElementById('editPhoto');
-    const saveProfile = document.getElementById('saveProfile');
-    const cancelEdit = document.getElementById('cancelEdit');
-    const editMsg = document.getElementById('editMsg');
     const publicProfile = document.getElementById('publicProfile');
     const publicPic = document.getElementById('publicPic');
     const publicName = document.getElementById('publicName');
@@ -258,8 +204,7 @@
           // Immediately update UI with Google data
           profilePic.src = user.photoURL || 'https://via.placeholder.com/150';
           displayName.textContent = user.displayName || user.email.split('@')[0];
-          editName.value = user.displayName || user.email.split('@')[0];
-          // Create or update Firestore document
+          // Create or update Firestore document with Google data
           const usersRef = doc(db, 'Users', user.uid);
           await setDoc(usersRef, {
             id: user.uid,
@@ -311,7 +256,7 @@
         currentUserDoc = null;
         profileSection.classList.add('hidden');
         publicProfile.classList.add('hidden');
-        status.textContent = 'Please sign in to view your profile';
+        status.textContent = 'Click "Sign In" to view your profile, or open a public profile link /u/username';
       }
     });
 
@@ -323,9 +268,8 @@
       const uSnap = await getDoc(uRef);
       if (uSnap.exists()) {
         const data = uSnap.data();
-        profilePic.src = decodeURIComponent(data.imageURL || currentUser.photoURL || 'https://via.placeholder.com/150');
-        displayName.textContent = data.username || currentUser.displayName || 'User';
-        editName.value = data.username || currentUser.displayName || '';
+        profilePic.src = decodeURIComponent(currentUser.photoURL || data.imageURL || 'https://via.placeholder.com/150');
+        displayName.textContent = currentUser.displayName || data.username || 'User';
         await loadProductsByUser(uid, productsGrid, productCount);
         status.textContent = '';
       } else {
@@ -363,47 +307,9 @@
       }
     }
 
-    btnEdit.addEventListener('click', () => {
-      editMsg.textContent = '';
-      editModal.classList.remove('hidden');
-    });
-
-    cancelEdit.addEventListener('click', () => editModal.classList.add('hidden'));
-
-    saveProfile.addEventListener('click', async () => {
-      if (!currentUser) return alert('Please sign in first');
-      const newName = editName.value.trim();
-      const file = editPhoto.files[0];
-      editMsg.textContent = 'Saving... Uploading image may take a moment';
-      try {
-        const userRef = doc(db, 'Users', currentUser.uid);
-        const updates = {};
-        if (newName && newName !== currentUser.displayName) updates.username = newName;
-        if (file) {
-          const path = `profile_pics/${currentUser.uid}-${Date.now()}`;
-          const sRef = storageRef(storage, path);
-          const uploadRes = await uploadBytes(sRef, file);
-          const url = await getDownloadURL(uploadRes.ref);
-          updates.imageURL = encodeURIComponent(url);
-        }
-        if (Object.keys(updates).length > 0) {
-          await updateDoc(userRef, updates);
-        }
-        currentUserDoc = (await getDoc(userRef)).data();
-        profilePic.src = decodeURIComponent(currentUserDoc.imageURL || currentUser.photoURL || 'https://via.placeholder.com/150');
-        displayName.textContent = currentUserDoc.username || currentUser.displayName || 'User';
-        editModal.classList.add('hidden');
-        editPhoto.value = '';
-        editMsg.textContent = 'Saved successfully';
-      } catch (e) {
-        console.error(e);
-        editMsg.textContent = 'Error: ' + e.message;
-      }
-    });
-
     btnShare.addEventListener('click', async () => {
       if (!currentUserDoc) return;
-      const username = (currentUserDoc.username || currentUser.displayName || currentUser.uid).replace(/\s+/g, '');
+      const username = (currentUser.displayName || currentUserDoc.username || currentUser.uid).replace(/\s+/g, '');
       const url = `${location.origin}/u/${encodeURIComponent(username)}`;
       try {
         await navigator.clipboard.writeText(url);
@@ -440,7 +346,7 @@
           } else {
             profileSection.classList.add('hidden');
             publicProfile.classList.add('hidden');
-            status.textContent = 'Click "Sign In" to view/edit your profile, or open a public profile link /u/username';
+            status.textContent = 'Click "Sign In" to view your profile, or open a public profile link /u/username';
           }
         }
       }
@@ -485,8 +391,8 @@
     async function displayPublicProfile(u) {
       publicProfile.classList.remove('hidden');
       profileSection.classList.add('hidden');
-      publicPic.src = decodeURIComponent(u.imageURL || u.photoURL || 'https://via.placeholder.com/150');
-      publicName.textContent = u.username || u.name || 'User';
+      publicPic.src = decodeURIComponent(u.imageURL || 'https://via.placeholder.com/150');
+      publicName.textContent = u.username || 'User';
       publicName.dataset.username = u.username || u.id;
       await loadProductsByUser(u.id, publicGrid, publicProductCount);
       status.textContent = '';
