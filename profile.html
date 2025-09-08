@@ -1,84 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SJ STORE - Profile</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SJ STORE — Profile</title>
   <style>
+    :root {
+      --bg: #000;
+      --card: #1f1f1f;
+      --muted: #a0a0a0;
+      --text: #fff;
+    }
     body {
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
+      font-family: system-ui, Arial;
       margin: 0;
-      padding: 0;
-      text-align: center;
+      background: var(--bg);
+      color: var(--text);
     }
-    .profile-header {
-      padding: 20px;
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 12px;
     }
-    .profile-pic {
-      width: 100px;
-      height: 100px;
+    header.top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .brand {
+      font-weight: 700;
+    }
+    .btn {
+      background: #333;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #444;
+    }
+    .profile-card {
+      background: var(--card);
+      padding: 16px;
+      border-radius: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .avatar {
+      width: 84px;
+      height: 84px;
       border-radius: 50%;
       object-fit: cover;
-      border: 3px solid white;
+      border: 2px solid #333;
     }
-    .products-grid {
+    .profile-info {
+      flex: 1;
+    }
+    .name {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .meta {
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-      padding: 20px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 12px;
     }
-    .product-card {
-      background: #1a1a1a;
-      border-radius: 10px;
-      padding: 10px;
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #333;
     }
-    .product-card img {
+    .card img {
       width: 100%;
-      height: 150px;
+      height: 120px;
       object-fit: cover;
-      border-radius: 10px;
     }
-    .product-title {
-      font-size: 14px;
-      margin-top: 5px;
+    .card-body {
+      padding: 6px;
+      font-size: 13px;
     }
-    .product-price {
-      color: #00ff99;
-      font-weight: bold;
+    .price {
+      font-weight: 700;
+      color: #fff;
     }
-    .login-btn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      background: #00ff99;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .avatar {
+        width: 66px;
+        height: 66px;
+      }
+    }
+    .hidden {
+      display: none;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal .box {
+      background: #1f1f1f;
+      padding: 16px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 420px;
+      color: #fff;
+    }
+    input[type="file"] {
+      display: block;
+      margin-top: 8px;
+      color: #fff;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #333;
+      color: #fff;
+    }
+    .small {
+      font-size: 13px;
+      color: var(--muted);
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <button id="loginBtn" class="login-btn">Login with Google</button>
-    <div id="profile" style="display:none;">
-      <div class="profile-header">
-        <img id="profilePic" class="profile-pic" src="" alt="Profile Picture">
-        <h2 id="fullName"></h2>
-        <p id="email"></p>
-        <p>Total Products: <span id="totalProducts">0</span></p>
-        <p>My Link: <a id="profileLink" href="#" target="_blank" style="color:#00ff99;"></a></p>
+  <div class="container">
+    <header class="top">
+      <div class="brand">SJ STORE</div>
+      <div>
+        <button id="btnSign" class="btn">Sign In</button>
       </div>
-      <div class="products-grid" id="productsGrid"></div>
+    </header>
+    <section id="profileSection" class="hidden">
+      <div class="profile-card">
+        <img id="profilePic" class="avatar" src="https://via.placeholder.com/150" alt="avatar">
+        <div class="profile-info">
+          <p id="displayName" class="name">Username</p>
+          <p id="productCount" class="meta">0 products</p>
+          <div class="actions">
+            <button id="btnEdit" class="btn">Edit Profile</button>
+            <button id="btnShare" class="btn">Share Link</button>
+          </div>
+        </div>
+      </div>
+      <div id="productsGrid" class="grid"></div>
+    </section>
+    <section id="publicProfile" class="hidden">
+      <p class="small">Viewing public profile</p>
+      <div class="profile-card">
+        <img id="publicPic" class="avatar" src="https://via.placeholder.com/150" alt="avatar">
+        <div class="profile-info">
+          <p id="publicName" class="name">Name</p>
+          <p id="publicProductCount" class="meta">0 products</p>
+          <div class="actions">
+            <button id="btnSharePublic" class="btn">Share Link</button>
+          </div>
+        </div>
+      </div>
+      <div id="publicGrid" class="grid"></div>
+    </section>
+    <div id="editModal" class="modal hidden">
+      <div class="box">
+        <h3>Edit Profile</h3>
+        <label>Full Name</label>
+        <input id="editName" type="text" placeholder="Full Name">
+        <label>Change Profile Picture</label>
+        <input id="editPhoto" type="file" accept="image/*">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button id="saveProfile" class="btn">Save</button>
+          <button id="cancelEdit" class="btn" style="background:#777">Cancel</button>
+        </div>
+        <p id="editMsg" class="small"></p>
+      </div>
     </div>
+    <p id="status" class="small" style="margin-top:12px"></p>
   </div>
-
   <script type="module">
-    // Firebase Config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -90,66 +219,260 @@
       measurementId: "G-YQTVZQWXGB"
     };
 
-    // Init Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    // Elements
-    const loginBtn = document.getElementById("loginBtn");
-    const profileDiv = document.getElementById("profile");
-    const profilePic = document.getElementById("profilePic");
-    const fullName = document.getElementById("fullName");
-    const email = document.getElementById("email");
-    const totalProducts = document.getElementById("totalProducts");
-    const profileLink = document.getElementById("profileLink");
-    const productsGrid = document.getElementById("productsGrid");
+    const btnSign = document.getElementById('btnSign');
+    const profileSection = document.getElementById('profileSection');
+    const profilePic = document.getElementById('profilePic');
+    const displayName = document.getElementById('displayName');
+    const productCount = document.getElementById('productCount');
+    const productsGrid = document.getElementById('productsGrid');
+    const btnEdit = document.getElementById('btnEdit');
+    const btnShare = document.getElementById('btnShare');
+    const status = document.getElementById('status');
+    const editModal = document.getElementById('editModal');
+    const editName = document.getElementById('editName');
+    const editPhoto = document.getElementById('editPhoto');
+    const saveProfile = document.getElementById('saveProfile');
+    const cancelEdit = document.getElementById('cancelEdit');
+    const editMsg = document.getElementById('editMsg');
+    const publicProfile = document.getElementById('publicProfile');
+    const publicPic = document.getElementById('publicPic');
+    const publicName = document.getElementById('publicName');
+    const publicProductCount = document.getElementById('publicProductCount');
+    const publicGrid = document.getElementById('publicGrid');
+    const btnSharePublic = document.getElementById('btnSharePublic');
 
-    // Login with Google
-    loginBtn.addEventListener("click", async () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
+    let currentUser = null;
+    let currentUserDoc = null;
 
-        // Show profile
-        loginBtn.style.display = "none";
-        profileDiv.style.display = "block";
-        profilePic.src = user.photoURL;
-        fullName.innerText = user.displayName;
-        email.innerText = user.email;
-
-        // Profile link
-        const username = user.displayName.replace(/\s+/g, '').toLowerCase();
-        const link = `https://sjstore.com/u/${username}`;
-        profileLink.href = link;
-        profileLink.innerText = link;
-
-        // Load products
-        loadProducts(user.uid);
-      } catch (error) {
-        console.error("Login error:", error);
+    btnSign.addEventListener('click', async () => {
+      if (!auth.currentUser) {
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (e) {
+          console.error(e);
+          status.textContent = 'Sign-in failed: ' + e.message;
+        }
+      } else {
+        await signOut(auth);
       }
     });
 
-    async function loadProducts(userId) {
-      const snapshot = await db.collection("Product").where("id", "==", userId).get();
-      let count = 0;
-      productsGrid.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        count++;
-        const card = `
-          <div class="product-card">
-            <img src="${data.photo}" alt="${data.title}">
-            <p class="product-title">${data.title}</p>
-            <p class="product-price">${data.price} $</p>
-          </div>
-        `;
-        productsGrid.innerHTML += card;
-      });
-      totalProducts.innerText = count;
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        btnSign.textContent = 'Sign Out';
+        currentUser = user;
+        const usersRef = doc(db, 'Users', user.uid);
+        const uSnap = await getDoc(usersRef);
+        if (!uSnap.exists()) {
+          await setDoc(usersRef, {
+            id: user.uid,
+            username: user.displayName || user.email.split('@')[0],
+            email: user.email || '',
+            imageURL: user.photoURL || '',
+            createdAt: new Date().toISOString(),
+            signup_type: 'Google'
+          });
+        }
+        currentUserDoc = (await getDoc(usersRef)).data();
+        showOwnProfile(user.uid);
+      } else {
+        btnSign.textContent = 'Sign In';
+        currentUser = null;
+        currentUserDoc = null;
+        profileSection.classList.add('hidden');
+      }
+    });
+
+    async function showOwnProfile(uid) {
+      profileSection.classList.remove('hidden');
+      publicProfile.classList.add('hidden');
+      status.textContent = 'Loading profile...';
+      const uRef = doc(db, 'Users', uid);
+      const uSnap = await getDoc(uRef);
+      if (uSnap.exists()) {
+        const data = uSnap.data();
+        profilePic.src = decodeURIComponent(data.imageURL || data.photoURL || currentUser.photoURL || 'https://via.placeholder.com/150');
+        displayName.textContent = data.username || currentUser.displayName || 'User';
+        editName.value = data.username || currentUser.displayName || '';
+        await loadProductsByUser(uid, productsGrid, productCount);
+        status.textContent = '';
+      } else {
+        status.textContent = 'User profile not found.';
+      }
     }
+
+    async function loadProductsByUser(uid, containerEl, countEl) {
+      containerEl.innerHTML = '';
+      countEl.textContent = 'Loading...';
+      try {
+        const prodCol = collection(db, 'Product');
+        const q = query(prodCol, where('id', '==', uid));
+        const snap = await getDocs(q);
+        const items = [];
+        snap.forEach(d => items.push(d.data()));
+        countEl.textContent = `${items.length} product${items.length === 1 ? '' : 's'}`;
+        if (items.length === 0) {
+          containerEl.innerHTML = `<div class="small" style="padding:12px">No products to display</div>`;
+          return;
+        }
+        items.sort((a, b) => (b.pId || 0) - (a.pId || 0));
+        for (const it of items) {
+          const card = document.createElement('div'); card.className = 'card';
+          const img = document.createElement('img'); img.src = it.photo || 'https://via.placeholder.com/300';
+          const body = document.createElement('div'); body.className = 'card-body';
+          body.innerHTML = `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.title || 'Untitled')}</div>
+                            <div class="price">$${escapeHtml(it.price || '0')}</div>`;
+          card.appendChild(img); card.appendChild(body);
+          containerEl.appendChild(card);
+        }
+      } catch (e) {
+        console.error(e);
+        countEl.textContent = 'Error loading products';
+      }
+    }
+
+    btnEdit.addEventListener('click', () => {
+      editMsg.textContent = '';
+      editModal.classList.remove('hidden');
+    });
+
+    cancelEdit.addEventListener('click', () => editModal.classList.add('hidden'));
+
+    saveProfile.addEventListener('click', async () => {
+      if (!currentUser) return alert('Please sign in first');
+      const newName = editName.value.trim();
+      const file = editPhoto.files[0];
+      editMsg.textContent = 'Saving... Uploading image may take a moment';
+      try {
+        const userRef = doc(db, 'Users', currentUser.uid);
+        const updates = {};
+        if (newName && newName !== currentUser.displayName) updates.username = newName;
+        if (file) {
+          const path = `profile_pics/${currentUser.uid}-${Date.now()}`;
+          const sRef = storageRef(storage, path);
+          const uploadRes = await uploadBytes(sRef, file);
+          const url = await getDownloadURL(uploadRes.ref);
+          updates.imageURL = encodeURIComponent(url);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(userRef, updates);
+        }
+        currentUserDoc = (await getDoc(userRef)).data();
+        profilePic.src = decodeURIComponent(currentUserDoc.imageURL || currentUser.photoURL || 'https://via.placeholder.com/150');
+        displayName.textContent = currentUserDoc.username || currentUser.displayName || 'User';
+        editModal.classList.add('hidden');
+        editPhoto.value = '';
+        editMsg.textContent = 'Saved successfully';
+      } catch (e) {
+        console.error(e);
+        editMsg.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    btnShare.addEventListener('click', async () => {
+      if (!currentUserDoc) return;
+      const username = (currentUserDoc.username || currentUser.displayName || currentUser.uid).replace(/\s+/g, '');
+      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Profile link copied: ' + url);
+      } catch (e) {
+        prompt('Copy the link manually:', url);
+      }
+    });
+
+    btnSharePublic.addEventListener('click', async () => {
+      const username = publicName.dataset.username;
+      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied: ' + url);
+      } catch (e) {
+        prompt('Copy the link:', url);
+      }
+    });
+
+    async function handleRouting() {
+      const path = location.pathname || '/';
+      if (path.startsWith('/u/')) {
+        const usernameParam = decodeURIComponent(path.replace('/u/', ''));
+        await showPublicByUsername(usernameParam);
+      } else {
+        const params = new URLSearchParams(location.search);
+        if (params.has('uid')) {
+          const uid = params.get('uid');
+          await showPublicByUid(uid);
+        } else {
+          if (auth.currentUser) {
+            showOwnProfile(auth.currentUser.uid);
+          } else {
+            profileSection.classList.add('hidden');
+            publicProfile.classList.add('hidden');
+            status.textContent = 'Click "Sign In" to view/edit your profile, or open a public profile link /u/username';
+          }
+        }
+      }
+    }
+
+    async function showPublicByUsername(usernameParam) {
+      status.textContent = 'Loading public profile...';
+      try {
+        const usersCol = collection(db, 'Users');
+        const q = query(usersCol, where('username', '==', usernameParam));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          status.textContent = 'User not found: ' + usernameParam;
+          return;
+        }
+        const docu = snap.docs[0];
+        const u = docu.data();
+        displayPublicProfile(u);
+      } catch (e) {
+        console.error(e);
+        status.textContent = 'Error loading profile';
+      }
+    }
+
+    async function showPublicByUid(uid) {
+      status.textContent = 'Loading public profile...';
+      try {
+        const uRef = doc(db, 'Users', uid);
+        const uSnap = await getDoc(uRef);
+        if (!uSnap.exists()) {
+          status.textContent = 'User not found';
+          return;
+        }
+        const u = uSnap.data();
+        displayPublicProfile(u);
+      } catch (e) {
+        console.error(e);
+        status.textContent = 'Error loading profile';
+      }
+    }
+
+    async function displayPublicProfile(u) {
+      publicProfile.classList.remove('hidden');
+      profileSection.classList.add('hidden');
+      publicPic.src = decodeURIComponent(u.imageURL || u.photoURL || 'https://via.placeholder.com/150');
+      publicName.textContent = u.username || u.name || 'User';
+      publicName.dataset.username = u.username || u.id;
+      await loadProductsByUser(u.id, publicGrid, publicProductCount);
+      status.textContent = '';
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+    }
+
+    window.addEventListener('load', handleRouting);
+    window.addEventListener('popstate', handleRouting);
   </script>
 </body>
 </html>
