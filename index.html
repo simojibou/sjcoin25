@@ -16,9 +16,9 @@
   <!-- Firebase v9 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, addDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -30,7 +30,7 @@
       measurementId: "G-YQTVZQWXGB"
     };
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db = getFirestore(app);
     const auth = getAuth(app);
     const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
@@ -41,6 +41,7 @@
       const profilePic = document.getElementById("profile-pic");
       const dropdownMenu = document.getElementById("dropdown-menu");
       const logoutOption = document.getElementById("logout-option");
+      const viewProfileOption = document.getElementById("view-profile-option");
       const sellNowOption = document.getElementById("sell-now-option");
       const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
@@ -56,32 +57,91 @@
       const sellModal = document.getElementById("sell-modal");
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
+      const editProfileModal = document.getElementById("edit-profile-modal");
+      const editProfileForm = document.getElementById("edit-profile-form");
+      const closeEditModal = document.getElementById("close-edit-modal");
+      const backToHomeBtn = document.getElementById("back-to-home");
+      const editProfileBtn = document.getElementById("edit-profile-btn");
       let currentUser = null;
-      let isAdmin = false;
-      let products = [];
+      let currentUserData = null;
+      let viewedUser = null;
+      let allProducts = [];
+      let userProducts = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let isAdmin = false;
       function updateCartCount() {
         cartCount.textContent = cart.length;
       }
       updateCartCount();
-      onAuthStateChanged(auth, (user) => {
+      function navigate(route) {
+        history.pushState({ route: route }, '', route);
+        handleRoute(route);
+      }
+      function handleRoute(route) {
+        if (route === '/' || route === '' || !route.startsWith('/u/')) {
+          document.getElementById('search-input').style.display = 'block';
+          document.getElementById('slider-container').style.display = 'block';
+          document.getElementById('product-list').style.display = 'block';
+          document.getElementById('profile-view').style.display = 'none';
+          loadAllProducts();
+          loadSliders();
+        } else {
+          const slug = route.split('/u/')[1].split('?')[0].split('#')[0].split('/')[0];
+          document.getElementById('search-input').style.display = 'none';
+          document.getElementById('slider-container').style.display = 'none';
+          document.getElementById('product-list').style.display = 'none';
+          document.getElementById('profile-view').style.display = 'block';
+          loadUserProfile(slug);
+        }
+      }
+      window.addEventListener('popstate', (e) => {
+        const route = e.state && e.state.route ? e.state.route : '/';
+        handleRoute(route);
+      });
+      onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         if (user) {
           loginBtn.style.display = "none";
-          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
           profilePic.style.display = "block";
-          profilePic.title = user.displayName || "User";
           isAdmin = user.email === "simo.jibou@gmail.com";
           adminPanel.style.display = isAdmin ? "block" : "none";
           if (isAdmin) loadAdminSliders();
+          const userRef = doc(db, 'Users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            currentUserData = { id: user.uid, ...userSnap.data() };
+          } else {
+            const displayName = user.displayName || user.email.split('@')[0];
+            const slug = displayName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            await setDoc(userRef, {
+              active: true,
+              createdAt: new Date().toISOString(),
+              email: user.email,
+              genders: 1,
+              id: user.uid,
+              imageURL: user.photoURL,
+              isOnline: 1,
+              lastSeen: new Date().toISOString(),
+              search: displayName,
+              signup_type: "Google",
+              username: displayName,
+              slug: slug
+            });
+            currentUserData = { id: user.uid, username: displayName, slug: slug, imageURL: user.photoURL };
+          }
+          profilePic.src = currentUserData.imageURL || user.photoURL || "https://via.placeholder.com/40";
+          profilePic.title = currentUserData.username || "User";
+          viewProfileOption.style.display = 'block';
         } else {
           loginBtn.style.display = "inline-block";
           profilePic.style.display = "none";
           dropdownMenu.style.display = "none";
           adminPanel.style.display = "none";
+          viewProfileOption.style.display = 'none';
           isAdmin = false;
+          currentUserData = null;
         }
-        renderProducts();
+        handleRoute(window.location.pathname || '/');
       });
       loginBtn.addEventListener("click", () => {
         signInWithPopup(auth, provider)
@@ -97,12 +157,19 @@
       profilePic.addEventListener("click", () => {
         dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
       });
+      viewProfileOption.addEventListener("click", () => {
+        dropdownMenu.style.display = "none";
+        if (currentUserData && currentUserData.slug) {
+          navigate(`/u/${currentUserData.slug}`);
+        }
+      });
       logoutOption.addEventListener("click", () => {
         signOut(auth)
           .then(() => {
             console.log("Logged out");
             alert("Logged out successfully!");
             dropdownMenu.style.display = "none";
+            navigate('/');
           })
           .catch((error) => {
             console.error("Logout error:", error.code, error.message);
@@ -116,6 +183,12 @@
       chatBtn.addEventListener("click", () => {
         window.location.href = "sjchat.html";
       });
+      backToHomeBtn.addEventListener("click", () => {
+        navigate('/');
+      });
+      editProfileBtn.addEventListener("click", () => {
+        showEditProfileModal();
+      });
       window.addEventListener("click", (e) => {
         if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
           dropdownMenu.style.display = "none";
@@ -123,37 +196,44 @@
         if (e.target === sellModal) {
           sellModal.style.display = "none";
         }
+        if (e.target === editProfileModal) {
+          editProfileModal.style.display = "none";
+        }
       });
       closeSellModal.addEventListener("click", () => {
         sellModal.style.display = "none";
       });
-      // Load products from Realtime Database
-      const productRef = ref(db, "Product");
-      onValue(productRef, (snapshot) => {
-        console.log("Fetching products from Realtime Database...");
-        products = [];
-        snapshot.forEach((childSnapshot) => {
-          const data = childSnapshot.val();
-          console.log("Product fetched:", childSnapshot.key, data);
-          products.push({
-            id: childSnapshot.key, // Use pId as the product ID
-            title: data.title,
-            price: data.price,
-            des: data.des,
-            photo: data.photo,
-            userId: data.id // Map 'id' from JSON to userId
-          });
-        });
-        console.log("Total products fetched:", products.length);
-        renderProducts(searchInput.value);
-      }, (error) => {
-        console.error("Error fetching products:", error.code, error.message, error);
-        alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
+      closeEditModal.addEventListener("click", () => {
+        editProfileModal.style.display = "none";
       });
+      async function loadAllProducts() {
+        const q = query(collection(db, 'Product'));
+        onSnapshot(q, (snapshot) => {
+          console.log("Fetching products from Firestore...");
+          allProducts = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            console.log("Product fetched:", doc.id, data);
+            allProducts.push({
+              id: doc.id,
+              title: data.title,
+              price: data.price,
+              des: data.des,
+              photo: data.photo,
+              userId: data.id
+            });
+          });
+          console.log("Total products fetched:", allProducts.length);
+          renderProducts(searchInput.value);
+        }, (error) => {
+          console.error("Error fetching products:", error);
+          alert(`Failed to load products: ${error.message}. Please check your Firestore configuration and permissions.`);
+        });
+      }
       function renderProducts(filter = "") {
         console.log("Rendering products with filter:", filter);
         container.innerHTML = "";
-        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        const filteredProducts = allProducts.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
         console.log("Filtered products:", filteredProducts.length);
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
@@ -202,36 +282,38 @@
         console.log("Search input changed:", e.target.value);
         renderProducts(e.target.value);
       });
-      const sliderRef = ref(db, "Sliders");
-      onValue(sliderRef, (snapshot) => {
-        console.log("Fetching sliders from Realtime Database...");
-        sliderContainer.innerHTML = "";
-        let slides = [];
-        snapshot.forEach((childSnapshot) => {
-          const slideData = { id: childSnapshot.key, ...childSnapshot.val() };
-          console.log("Slider fetched:", slideData);
-          slides.push(slideData);
-        });
-        if (slides.length > 0) {
-          slides.forEach((slide) => {
-            const element = slide.imageUrl.endsWith('.mp4') 
-              ? document.createElement("video") 
-              : document.createElement("img");
-            element.src = slide.imageUrl;
-            element.classList.add("slide");
-            if (element.tagName === "VIDEO") {
-              element.muted = true;
-              element.loop = true;
-              element.autoplay = true;
-            }
-            sliderContainer.appendChild(element);
+      function loadSliders() {
+        onSnapshot(collection(db, 'Sliders'), (snapshot) => {
+          console.log("Fetching sliders from Firestore...");
+          sliderContainer.innerHTML = "";
+          let slides = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const slideData = { id: doc.id, imageUrl: data.imageUrl };
+            console.log("Slider fetched:", slideData);
+            slides.push(slideData);
           });
-          startSlider(slides.length);
-        }
-      }, (error) => {
-        console.error("Error fetching sliders:", error.code, error.message, error);
-        alert("Failed to load sliders: " + error.message);
-      });
+          if (slides.length > 0) {
+            slides.forEach((slide) => {
+              const element = slide.imageUrl.endsWith('.mp4')
+                ? document.createElement("video")
+                : document.createElement("img");
+              element.src = slide.imageUrl;
+              element.classList.add("slide");
+              if (element.tagName === "VIDEO") {
+                element.muted = true;
+                element.loop = true;
+                element.autoplay = true;
+              }
+              sliderContainer.appendChild(element);
+            });
+            startSlider(slides.length);
+          }
+        }, (error) => {
+          console.error("Error fetching sliders:", error);
+          alert("Failed to load sliders: " + error.message);
+        });
+      }
       let slideIndex = 0;
       function startSlider(numSlides) {
         const slides = document.querySelectorAll(".slide");
@@ -254,42 +336,36 @@
         }, 5000);
       }
       function loadAdminSliders() {
-        onValue(sliderRef, (snapshot) => {
+        onSnapshot(collection(db, 'Sliders'), (snapshot) => {
           sliderList.innerHTML = "";
-          snapshot.forEach((childSnapshot) => {
-            const sliderId = childSnapshot.key;
-            const slide = childSnapshot.val();
+          snapshot.forEach((doc) => {
+            const sliderId = doc.id;
+            const data = doc.data();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            const element = slide.imageUrl.endsWith('.mp4') 
-              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
-              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            const element = data.imageUrl.endsWith('.mp4')
+              ? `<video src="${data.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
+              : `<img src="${data.imageUrl}" alt="Slider Image">`;
             div.innerHTML = `${element}<button>Delete</button>`;
-            div.querySelector("button").addEventListener("click", () => {
+            div.querySelector("button").addEventListener("click", async () => {
               if (confirm("Delete this slider item?")) {
-                remove(ref(db, `Sliders/${sliderId}`))
-                  .then(() => alert("Slider item deleted!"))
-                  .catch((error) => {
-                    console.error("Error deleting slider:", error.code, error.message);
-                    alert("Failed to delete slider item: " + error.message);
-                  });
+                await deleteDoc(doc(db, `Sliders/${sliderId}`));
+                alert("Slider item deleted!");
               }
             });
             sliderList.appendChild(div);
           });
         }, (error) => {
-          console.error("Error loading admin sliders:", error.code, error.message);
+          console.error("Error loading admin sliders:", error);
           alert("Failed to load sliders: " + error.message);
         });
       }
       async function uploadFile(file, path) {
         try {
-          // Validate file size (e.g., max 5MB)
-          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          const maxSize = 5 * 1024 * 1024;
           if (file.size > maxSize) {
             throw new Error("File size exceeds 5MB limit.");
           }
-          // Validate file type
           const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
           if (!allowedTypes.includes(file.type)) {
             throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
@@ -327,21 +403,21 @@
           return;
         }
         try {
-          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-          const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
-          await set(productRef, {
+          const photoUrl = await uploadFile(photoFile, `product_photo/${Date.now()}_${photoFile.name}`);
+          const pId = Date.now().toString();
+          const productRef = doc(collection(db, 'Product'), pId);
+          await setDoc(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           addProductForm.reset();
           alert("Product added successfully!");
         } catch (error) {
-          console.error("Error adding product:", error.code, error.message);
+          console.error("Error adding product:", error);
           alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
@@ -360,55 +436,45 @@
           return;
         }
         try {
-          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-          const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
-          await set(productRef, {
+          const photoUrl = await uploadFile(photoFile, `product_photo/${Date.now()}_${photoFile.name}`);
+          const pId = Date.now().toString();
+          const productRef = doc(collection(db, 'Product'), pId);
+          await setDoc(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
           alert("Product added successfully!");
         } catch (error) {
-          console.error("Error adding product:", error.code, error.message);
+          console.error("Error adding product:", error);
           alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
-      function editProduct(productId, product) {
+      async function editProduct(productId, product) {
         const newTitle = prompt("Edit Title:", product.title);
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         if (newTitle && newPrice && newDes) {
-          set(ref(db, `Product/${productId}`), {
+          await setDoc(doc(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
             photo: product.photo,
-            id: product.userId, // Preserve userId as 'id'
-            pId: productId // Preserve pId
-          }).then(() => {
-            alert("Product updated!");
-          }).catch((error) => {
-            console.error("Error updating product:", error.code, error.message);
-            alert("Failed to update product: " + error.message);
+            id: product.userId,
+            pId: productId
           });
+          alert("Product updated!");
         }
       }
-      function deleteProduct(productId) {
+      async function deleteProduct(productId) {
         if (confirm("Delete this product?")) {
-          remove(ref(db, `Product/${productId}`))
-            .then(() => {
-              alert("Product deleted!");
-            })
-            .catch((error) => {
-              console.error("Error deleting product:", error.code, error.message);
-              alert("Failed to delete product: " + error.message);
-            });
+          await deleteDoc(doc(db, `Product/${productId}`));
+          alert("Product deleted!");
         }
       }
       addSliderForm.addEventListener("submit", async (e) => {
@@ -424,12 +490,13 @@
         }
         try {
           const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
-          const newSliderRef = push(ref(db, "Sliders"));
-          await set(newSliderRef, { imageUrl: sliderUrl });
+          const sliderId = Date.now().toString();
+          const newSliderRef = doc(collection(db, 'Sliders'), sliderId);
+          await setDoc(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
           alert("Slider item added successfully!");
         } catch (error) {
-          console.error("Error adding slider item:", error.code, error.message);
+          console.error("Error adding slider item:", error);
           alert(`Failed to add slider item: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
@@ -468,6 +535,102 @@
           cartList.innerHTML = "<p>Your cart is empty.</p>";
         }
       }
+      async function loadUserProfile(slug) {
+        try {
+          const q = query(collection(db, 'Users'), where('slug', '==', slug));
+          const querySnapshot = await getDocs(q);
+          if (querySnapshot.empty) {
+            alert('User not found');
+            navigate('/');
+            return;
+          }
+          const userDoc = querySnapshot.docs[0];
+          viewedUser = { id: userDoc.id, ...userDoc.data() };
+          document.getElementById('profile-header-pic').src = viewedUser.imageURL || 'https://via.placeholder.com/150';
+          document.getElementById('profile-name').textContent = viewedUser.username;
+          const productQuery = query(collection(db, 'Product'), where('id', '==', viewedUser.id));
+          onSnapshot(productQuery, (snap) => {
+            userProducts = [];
+            snap.forEach((doc) => {
+              const data = doc.data();
+              userProducts.push({
+                id: doc.id,
+                title: data.title,
+                price: data.price,
+                photo: data.photo
+              });
+            });
+            renderUserProducts();
+            document.getElementById('product-count').textContent = `${userProducts.length} products`;
+          });
+          if (currentUser && currentUser.uid === viewedUser.id) {
+            editProfileBtn.style.display = 'inline-block';
+          } else {
+            editProfileBtn.style.display = 'none';
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          alert('Error loading profile');
+          navigate('/');
+        }
+      }
+      function renderUserProducts() {
+        const container = document.getElementById('user-product-list');
+        container.innerHTML = '';
+        userProducts.forEach((product) => {
+          const div = document.createElement('div');
+          div.classList.add('product');
+          div.innerHTML = `
+            <img src="${product.photo || 'https://via.placeholder.com/280'}" alt="${product.title}">
+            <h3>${product.title}</h3>
+            <p class="price">${product.price} DH</p>
+          `;
+          container.appendChild(div);
+        });
+        if (userProducts.length === 0) {
+          container.innerHTML = '<p>No products posted yet.</p>';
+        }
+      }
+      function showEditProfileModal() {
+        if (!currentUser || currentUser.uid !== viewedUser.id) return;
+        document.getElementById('edit-username').value = viewedUser.username;
+        document.getElementById('edit-profile-pic').value = '';
+        editProfileModal.style.display = 'block';
+      }
+      editProfileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
+        const newUsername = document.getElementById('edit-username').value;
+        const file = document.getElementById('edit-profile-pic').files[0];
+        let newImageURL = viewedUser.imageURL;
+        if (file) {
+          try {
+            newImageURL = await uploadFile(file, `profile_photos/${currentUser.uid}/${Date.now()}_${file.name}`);
+          } catch (err) {
+            alert('Error uploading image: ' + err.message);
+            return;
+          }
+        }
+        const newSlug = newUsername.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        try {
+          await updateProfile(currentUser, {
+            displayName: newUsername,
+            photoURL: newImageURL
+          });
+          await setDoc(doc(db, 'Users', currentUser.uid), {
+            username: newUsername,
+            slug: newSlug,
+            imageURL: newImageURL,
+            search: newUsername
+          }, { merge: true });
+          navigate(`/u/${newSlug}`);
+          editProfileModal.style.display = 'none';
+          alert('Profile updated!');
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          alert('Failed to update profile: ' + error.message);
+        }
+      });
       const isAndroid = /Android/i.test(navigator.userAgent);
       const popup = document.getElementById("android-popup");
       const pwaBtn = document.getElementById("pwa-install-btn");
@@ -492,7 +655,6 @@
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
       closeBtn.addEventListener("click", () => popup.style.display = "none");
-      // Service Worker Registration with Enhanced Error Handling
       if ("serviceWorker" in navigator) {
         console.log("Attempting to register service worker...");
         navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
@@ -670,6 +832,49 @@
       object-fit: cover;
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
+    }
+    /* Profile View */
+    #profile-view {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    #profile-header {
+      text-align: center;
+      padding: 2rem;
+    }
+    #profile-header-pic {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      object-fit: cover;
+    }
+    #profile-name {
+      font-size: 2rem;
+      margin: 1rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    #product-count {
+      font-size: 1.2rem;
+      color: #ccc;
+    }
+    #back-to-home, #edit-profile-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: border-color 0.3s, background-color 0.3s;
+      border-radius: 0;
+    }
+    #back-to-home:hover, #edit-profile-btn:hover {
+      border-color: #ccc;
+      background-color: #222;
     }
     /* Product List */
     .product-list {
@@ -850,7 +1055,7 @@
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    #cart-list, #sell-product-form {
+    #cart-list, #sell-product-form, #edit-profile-form {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -894,7 +1099,7 @@
     .remove-from-cart:hover {
       background: #e0e0e0;
     }
-    #close-modal, #close-sell-modal {
+    #close-modal, #close-sell-modal, #close-edit-modal {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -907,7 +1112,7 @@
       margin-top: 1rem;
       transition: border-color 0.3s;
     }
-    #close-modal:hover, #close-sell-modal:hover {
+    #close-modal:hover, #close-sell-modal:hover, #close-edit-modal:hover {
       border-color: #ccc;
     }
     /* Admin Actions */
@@ -1003,6 +1208,13 @@
       .header-right {
         gap: 0.5rem;
       }
+      #profile-header-pic {
+        width: 100px;
+        height: 100px;
+      }
+      #profile-name {
+        font-size: 1.5rem;
+      }
     }
     @media (max-width: 480px) {
       h1 {
@@ -1054,6 +1266,7 @@
         <img id="profile-pic" alt="Profile Pic">
         <div id="dropdown-menu" class="dropdown-menu">
           <button id="sell-now-option">Sell Now</button>
+          <button id="view-profile-option">View Profile</button>
           <button id="logout-option">Logout</button>
         </div>
       </div>
@@ -1063,6 +1276,16 @@
   <input type="text" id="search-input" placeholder="Search products...">
   <div id="slider-container"></div>
   <div class="product-list" id="product-list"></div>
+  <div id="profile-view">
+    <div id="profile-header">
+      <img id="profile-header-pic" alt="Profile Picture">
+      <h2 id="profile-name"></h2>
+      <p id="product-count">0 products</p>
+      <button id="back-to-home">← Back to Store</button>
+      <button id="edit-profile-btn">Edit Profile</button>
+    </div>
+    <div id="user-product-list" class="product-list"></div>
+  </div>
   <div id="admin-panel">
     <h2>Admin Control Panel</h2>
     <h3>Add Product</h3>
@@ -1098,6 +1321,17 @@
         <input type="file" id="sell-product-photo" accept="image/*" required>
         <button type="submit">Add Product</button>
         <button id="close-sell-modal">Close</button>
+      </form>
+    </div>
+  </div>
+  <div id="edit-profile-modal" class="modal">
+    <div class="modal-content">
+      <h2>Edit Profile</h2>
+      <form id="edit-profile-form">
+        <input type="text" id="edit-username" placeholder="Full Name" required>
+        <input type="file" id="edit-profile-pic" accept="image/*">
+        <button type="submit">Save Changes</button>
+        <button type="button" id="close-edit-modal">Cancel</button>
       </form>
     </div>
   </div>
