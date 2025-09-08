@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SJ STORE</title>
-
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
@@ -12,11 +11,12 @@
   <meta name="theme-color" content="#121833">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
   <!-- Firebase v9 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -28,12 +28,56 @@
       appId: "1:426335553508:web:248f76772f6f78419ca9f1",
       measurementId: "G-YQTVZQWXGB"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
 
     document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("product-list");
+      const sliderContainer = document.getElementById("slider-container");
+      const loginBtn = document.getElementById("login-btn");
+      const logoutBtn = document.getElementById("logout-btn");
+      const profilePic = document.getElementById("profile-pic");
+      const adminPanel = document.getElementById("admin-panel");
+      const addProductForm = document.getElementById("add-product-form");
+      const addSliderForm = document.getElementById("add-slider-form");
+      let currentUser = null;
+      let isAdmin = false;
+
+      // Handle Auth State
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          loginBtn.style.display = "none";
+          logoutBtn.style.display = "inline-block";
+          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
+          profilePic.style.display = "block";
+          isAdmin = user.email === "simo.jibou@gmail.com";
+          adminPanel.style.display = isAdmin ? "block" : "none";
+        } else {
+          loginBtn.style.display = "inline-block";
+          logoutBtn.style.display = "none";
+          profilePic.style.display = "none";
+          adminPanel.style.display = "none";
+          isAdmin = false;
+        }
+      });
+
+      // Google Login
+      loginBtn.addEventListener("click", () => {
+        signInWithPopup(auth, provider)
+          .then((result) => console.log("Logged in as", result.user.displayName))
+          .catch((error) => console.error("Login error:", error));
+      });
+
+      // Logout
+      logoutBtn.addEventListener("click", () => {
+        signOut(auth)
+          .then(() => console.log("Logged out"))
+          .catch((error) => console.error("Logout error:", error));
+      });
 
       // Load products from Firebase
       const productRef = ref(db, "Product");
@@ -41,24 +85,120 @@
         container.innerHTML = "";
         snapshot.forEach((childSnapshot) => {
           const product = childSnapshot.val();
-
+          const productId = childSnapshot.key;
           const div = document.createElement("div");
           div.classList.add("product");
-
           div.innerHTML = `
             <img src="${product.photo}" alt="${product.title}">
             <h3>${product.title}</h3>
             <p class="price">${product.price} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
           `;
+          if (isAdmin) {
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => editProduct(productId, product));
+            div.appendChild(editBtn);
 
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete";
+            deleteBtn.addEventListener("click", () => deleteProduct(productId));
+            div.appendChild(deleteBtn);
+          }
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
             const phone = product.des.replace(/\D/g, "");
             window.open(`https://wa.me/${phone}`, "_blank");
           });
-
           container.appendChild(div);
         });
+      });
+
+      // Load sliders from Firebase
+      const sliderRef = ref(db, "Sliders");
+      onValue(sliderRef, (snapshot) => {
+        sliderContainer.innerHTML = "";
+        let slides = [];
+        snapshot.forEach((childSnapshot) => {
+          slides.push(childSnapshot.val().imageUrl);
+        });
+        if (slides.length > 0) {
+          slides.forEach((url, index) => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.classList.add("slide");
+            img.style.display = index === 0 ? "block" : "none";
+            sliderContainer.appendChild(img);
+          });
+          startSlider(slides.length);
+        }
+      });
+
+      // Slider functionality
+      let slideIndex = 0;
+      function startSlider(numSlides) {
+        setInterval(() => {
+          const slides = document.querySelectorAll(".slide");
+          slides[slideIndex].style.display = "none";
+          slideIndex = (slideIndex + 1) % numSlides;
+          slides[slideIndex].style.display = "block";
+        }, 3000); // Change every 3 seconds
+      }
+
+      // Add Product Form (Admin)
+      addProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const title = document.getElementById("product-title").value;
+        const price = document.getElementById("product-price").value;
+        const des = document.getElementById("product-des").value;
+        const photoFile = document.getElementById("product-photo").files[0];
+
+        if (photoFile) {
+          const photoRef = storageRef(storage, `products/${photoFile.name}`);
+          await uploadBytes(photoRef, photoFile);
+          const photoUrl = await getDownloadURL(photoRef);
+
+          const newProductRef = push(ref(db, "Product"));
+          set(newProductRef, { title, price, des, photo: photoUrl });
+          addProductForm.reset();
+        }
+      });
+
+      // Edit Product (Admin)
+      function editProduct(productId, product) {
+        const newTitle = prompt("Edit Title:", product.title);
+        const newPrice = prompt("Edit Price:", product.price);
+        const newDes = prompt("Edit Description (Phone):", product.des);
+        // For simplicity, no photo edit here; can extend if needed
+        if (newTitle && newPrice && newDes) {
+          set(ref(db, `Product/${productId}`), {
+            title: newTitle,
+            price: newPrice,
+            des: newDes,
+            photo: product.photo
+          });
+        }
+      }
+
+      // Delete Product (Admin)
+      function deleteProduct(productId) {
+        if (confirm("Delete this product?")) {
+          remove(ref(db, `Product/${productId}`));
+        }
+      }
+
+      // Add Slider Image (Admin)
+      addSliderForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const sliderFile = document.getElementById("slider-image").files[0];
+        if (sliderFile) {
+          const sliderStorageRef = storageRef(storage, `sliders/${sliderFile.name}`);
+          await uploadBytes(sliderStorageRef, sliderFile);
+          const imageUrl = await getDownloadURL(sliderStorageRef);
+
+          const newSliderRef = push(ref(db, "Sliders"));
+          set(newSliderRef, { imageUrl });
+          addSliderForm.reset();
+        }
       });
 
       // Android popup with two buttons
@@ -68,16 +208,13 @@
       const playBtn = document.getElementById("google-play-btn");
       const closeBtn = document.getElementById("close-popup");
       let deferredPrompt;
-
       if (isAndroid) popup.style.display = "flex";
-
       // PWA install
       window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
         deferredPrompt = e;
         pwaBtn.style.display = "inline-block";
       });
-
       pwaBtn.addEventListener("click", async () => {
         if (deferredPrompt) {
           deferredPrompt.prompt();
@@ -86,16 +223,13 @@
           pwaBtn.style.display = "none";
         }
       });
-
       // Google Play button
       playBtn.addEventListener("click", () => {
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
-
       // Close popup
       closeBtn.addEventListener("click", () => popup.style.display = "none");
     });
-
     // Register Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js")
@@ -103,13 +237,15 @@
         .catch(err => console.error("Service Worker error", err));
     }
   </script>
-
   <style>
     body { font-family: Tahoma, sans-serif; background: #000; margin: 0; padding: 10px; color: #fff; text-align: center;}
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    #profile-pic { width: 40px; height: 40px; border-radius: 50%; display: none; }
     .logo { width: 100px; margin: 0 auto 10px; display: block; border-radius: 50%; transition: transform 0.3s;}
     .logo:hover { transform: scale(1.1); }
     h1 { color: #fff; margin: 0 0 20px; font-size: 1.5em; }
-
+    #slider-container { position: relative; max-width: 100%; height: 200px; overflow: hidden; margin-bottom: 20px; }
+    .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.5s; }
     .product-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;}
     .product { background: #111; border-radius: 12px; box-shadow: 0 2px 6px rgba(255,255,255,0.1); padding: 10px; text-align: center; transition: 0.3s;}
     .product:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(255,255,255,0.3);}
@@ -118,13 +254,15 @@
     .price { font-weight: bold; color: #00aaff; margin: 4px 0; }
     .whatsapp-btn { margin-top: 8px; padding: 8px 12px; background: #25D366; border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; transition: 0.3s;}
     .whatsapp-btn:hover { background: #1ebe5d; }
-
+    #admin-panel { display: none; margin-top: 20px; background: #111; padding: 15px; border-radius: 12px; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    input { padding: 8px; border-radius: 8px; border: none; }
+    button { padding: 8px; background: #00aaff; border: none; border-radius: 8px; color: #fff; cursor: pointer; }
     #android-popup { display: none; position: fixed; bottom: 10px; left: 10px; right: 10px; background: #111; color: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 9999; padding: 15px; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap;}
     #android-popup img { width: 40px; height: 40px; border-radius: 8px;}
     #android-popup button { background: #00aaff; border: none; padding: 6px 10px; border-radius: 8px; color: #fff; cursor: pointer;}
     #android-popup #close-popup { background: #888; }
     #android-popup button { margin: 2px; }
-
     @media (max-width: 480px) {
       h1 { font-size: 1.2em; }
       .logo { width: 80px; }
@@ -137,10 +275,31 @@
   </style>
 </head>
 <body>
+  <div class="header">
+    <button id="login-btn">Login with Google</button>
+    <button id="logout-btn" style="display:none;">Logout</button>
+    <img id="profile-pic" alt="Profile Pic">
+  </div>
   <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
   <h1>🛒 SJ STORE</h1>
+  <div id="slider-container"></div>
   <div class="product-list" id="product-list"></div>
-
+  <div id="admin-panel">
+    <h2>Admin Panel</h2>
+    <h3>Add Product</h3>
+    <form id="add-product-form">
+      <input type="text" id="product-title" placeholder="Title" required>
+      <input type="text" id="product-price" placeholder="Price (DH)" required>
+      <input type="text" id="product-des" placeholder="Description (Phone Number)" required>
+      <input type="file" id="product-photo" accept="image/*" required>
+      <button type="submit">Add Product</button>
+    </form>
+    <h3>Add Slider Image</h3>
+    <form id="add-slider-form">
+      <input type="file" id="slider-image" accept="image/*" required>
+      <button type="submit">Add to Slider</button>
+    </form>
+  </div>
   <!-- Android install popup -->
   <div id="android-popup">
     <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
