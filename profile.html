@@ -202,10 +202,13 @@
     <p id="status" class="small" style="margin-top:12px"></p>
   </div>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    // Debug: Verify Firestore imports
+    console.log('Firestore SDK loaded:', { getDoc, setDoc, collection, query, where, getDocs });
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -260,6 +263,7 @@
           displayName.textContent = user.displayName || user.email.split('@')[0];
           const usersRef = doc(db, 'Users', user.uid);
           try {
+            console.log('Attempting to set user doc for UID:', user.uid);
             await setDoc(usersRef, {
               id: user.uid,
               username: user.displayName || user.email.split('@')[0],
@@ -271,14 +275,22 @@
               isOnline: 1,
               lastSeen: new Date().toISOString()
             }, { merge: true });
-            console.log('User doc created/updated');
+            console.log('User doc created/updated for UID:', user.uid);
           } catch (firestoreError) {
             console.error('Firestore write error:', firestoreError);
             status.textContent = `Signed in, but profile save failed: ${firestoreError.message}. Check Firestore rules for /Users/${user.uid}.`;
             status.classList.add('error');
           }
           currentUser = user;
-          currentUserDoc = (await getDoc(usersRef)).data();
+          try {
+            console.log('Fetching user doc for UID:', user.uid);
+            const userDocSnap = await getDoc(usersRef);
+            currentUserDoc = userDocSnap.data();
+          } catch (e) {
+            console.error('Failed to fetch user doc:', e);
+            status.textContent = `Failed to load profile data: ${e.message}. Using Google data.`;
+            status.classList.add('error');
+          }
           showOwnProfile(user.uid);
         } catch (authError) {
           console.error('Auth error:', authError);
@@ -303,8 +315,10 @@
         currentUser = user;
         const usersRef = doc(db, 'Users', user.uid);
         try {
+          console.log('Checking user doc for UID:', user.uid);
           const uSnap = await getDoc(usersRef);
           if (!uSnap.exists()) {
+            console.log('Creating new user doc for UID:', user.uid);
             await setDoc(usersRef, {
               id: user.uid,
               username: user.displayName || user.email.split('@')[0],
@@ -371,13 +385,16 @@
       postMsg.textContent = 'Posting product...';
       try {
         const pId = Date.now().toString();
+        console.log('Uploading photo for product:', pId);
         let photoURL = '';
         if (file) {
           const path = `product_photo/${pId}`;
           const sRef = storageRef(storage, path);
           const uploadRes = await uploadBytes(sRef, file);
           photoURL = await getDownloadURL(uploadRes.ref);
+          console.log('Photo uploaded:', photoURL);
         }
+        console.log('Writing product doc:', pId);
         await setDoc(doc(db, 'Product', pId), {
           id: currentUser.uid,
           pId: pId,
@@ -407,6 +424,7 @@
       status.textContent = 'Loading profile...';
       try {
         const uRef = doc(db, 'Users', uid);
+        console.log('Fetching profile for UID:', uid);
         const uSnap = await getDoc(uRef);
         if (uSnap.exists()) {
           const data = uSnap.data();
@@ -431,6 +449,7 @@
       try {
         const prodCol = collection(db, 'Product');
         const q = query(prodCol, where('id', '==', uid));
+        console.log('Fetching products for UID:', uid);
         const snap = await getDocs(q);
         const items = [];
         snap.forEach(d => items.push(d.data()));
@@ -507,6 +526,7 @@
       try {
         const usersCol = collection(db, 'Users');
         const q = query(usersCol, where('username', '==', usernameParam));
+        console.log('Fetching public profile for username:', usernameParam);
         const snap = await getDocs(q);
         if (snap.empty) {
           status.textContent = 'User not found: ' + usernameParam;
@@ -527,6 +547,7 @@
       status.textContent = 'Loading public profile...';
       try {
         const uRef = doc(db, 'Users', uid);
+        console.log('Fetching public profile for UID:', uid);
         const uSnap = await getDoc(uRef);
         if (!uSnap.exists()) {
           status.textContent = 'User not found';
