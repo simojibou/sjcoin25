@@ -38,8 +38,9 @@
       const container = document.getElementById("product-list");
       const sliderContainer = document.getElementById("slider-container");
       const loginBtn = document.getElementById("login-btn");
-      const logoutBtn = document.getElementById("logout-btn");
       const profilePic = document.getElementById("profile-pic");
+      const dropdownMenu = document.getElementById("dropdown-menu");
+      const logoutOption = document.getElementById("logout-option");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
       const addSliderForm = document.getElementById("add-slider-form");
@@ -62,7 +63,6 @@
         currentUser = user;
         if (user) {
           loginBtn.style.display = "none";
-          logoutBtn.style.display = "inline-block";
           profilePic.src = user.photoURL || "https://via.placeholder.com/40";
           profilePic.style.display = "block";
           profilePic.title = user.displayName || "User";
@@ -71,8 +71,8 @@
           if (isAdmin) loadAdminSliders();
         } else {
           loginBtn.style.display = "inline-block";
-          logoutBtn.style.display = "none";
           profilePic.style.display = "none";
+          dropdownMenu.style.display = "none";
           adminPanel.style.display = "none";
           isAdmin = false;
         }
@@ -89,13 +89,22 @@
             alert("Login failed: " + error.message + ". Please ensure Google Sign-In is enabled in Firebase console and the domain is authorized.");
           });
       });
-      logoutBtn.addEventListener("click", () => {
+      profilePic.addEventListener("click", () => {
+        dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
+      });
+      logoutOption.addEventListener("click", () => {
         signOut(auth)
           .then(() => {
             console.log("Logged out");
             alert("Logged out successfully!");
+            dropdownMenu.style.display = "none";
           })
           .catch((error) => console.error("Logout error:", error));
+      });
+      window.addEventListener("click", (e) => {
+        if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
+          dropdownMenu.style.display = "none";
+        }
       });
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
@@ -343,7 +352,21 @@
       z-index: 1000;
       border-bottom: 1px solid #333;
     }
-    .header button {
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 50px;
+      height: 50px;
+      border-radius: 0;
+    }
+    #login-btn {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -355,23 +378,45 @@
       letter-spacing: 0.18em;
       transition: border-color 0.3s;
     }
-    .header button:hover {
+    #login-btn:hover {
       border-color: #ccc;
-    }
-    #logout-btn {
-      background: #000;
-      border-color: #fff;
     }
     #profile-pic {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       border: 2px solid #fff;
+      cursor: pointer;
+      display: none;
     }
-    .logo {
-      width: 50px;
-      height: 50px;
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #111;
+      border: 1px solid #333;
       border-radius: 0;
+      min-width: 120px;
+      z-index: 1001;
+    }
+    .dropdown-menu button {
+      width: 100%;
+      background: transparent;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+    }
+    .dropdown-menu button:hover {
+      background: #333;
     }
     /* Title */
     h1 {
@@ -722,6 +767,9 @@
         font-size: 0.75rem;
         padding: 0.5rem;
       }
+      .header-right {
+        gap: 0.5rem;
+      }
       #android-popup {
         flex-direction: column;
         text-align: center;
@@ -731,12 +779,18 @@
 </head>
 <body>
   <div class="header">
-    <div id="cart-icon">🛒 <span id="cart-count">0</span></div>
-    <div>
-      <button id="login-btn">Login</button>
-      <button id="logout-btn" style="display:none;">Logout</button>
-      <img id="profile-pic" alt="Profile Pic" style="display:none;">
+    <div class="header-left">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
+    </div>
+    <div class="header-right">
+      <div id="cart-icon">🛒 <span id="cart-count">0</span></div>
+      <button id="login-btn">Login</button>
+      <div class="dropdown">
+        <img id="profile-pic" alt="Profile Pic">
+        <div id="dropdown-menu" class="dropdown-menu">
+          <button id="logout-option">Logout</button>
+        </div>
+      </div>
     </div>
   </div>
   <h1>SJ STORE</h1>
