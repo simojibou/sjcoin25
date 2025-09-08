@@ -1,385 +1,155 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SJ STORE — بروفايل</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SJ STORE - Profile</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
   <style>
-    :root{
-      --bg:#000; --card:#1f1f1f; --muted:#a0a0a0; --text:#fff;
+    body {
+      background-color: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
     }
-    body{font-family: system-ui, Arial; margin:0; background:var(--bg); color:var(--text); direction:rtl;}
-    .container{max-width:980px;margin:0 auto;padding:12px}
-    header.top{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
-    .brand{font-weight:700}
-    .btn{background:#333;color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
-    .btn:hover{background:#444}
-    .profile-card{background:var(--card);padding:16px;border-radius:12px;display:flex;gap:16px;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-    .avatar{width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid #333}
-    .profile-info{flex:1}
-    .name{font-size:18px;font-weight:700;margin:0}
-    .meta{color:var(--muted);margin-top:4px}
-    .actions{display:flex;gap:8px;margin-top:8px}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
-    .card{background:var(--card);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;border:1px solid #333}
-    .card img{width:100%;height:120px;object-fit:cover}
-    .card-body{padding:6px;font-size:13px}
-    .price{font-weight:700;color:#fff}
-    /* responsive */
-    @media(max-width:600px){
-      .grid{grid-template-columns:repeat(3,1fr)}
-      .avatar{width:66px;height:66px}
+    .profile-header {
+      padding: 20px;
     }
-    /* modal */
-    .hidden{display:none}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center}
-    .modal .box{background:#1f1f1f;padding:16px;border-radius:8px;width:90%;max-width:420px;color:#fff}
-    input[type="file"]{display:block;margin-top:8px;color:#fff}
-    input[type="text"]{width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#333;color:#fff}
-    .small{font-size:13px;color:var(--muted)}
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid white;
+    }
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 20px;
+    }
+    .product-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .product-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .product-title {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .product-price {
+      color: #00ff99;
+      font-weight: bold;
+    }
+    .login-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #00ff99;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header class="top">
-      <div class="brand">SJ STORE</div>
-      <div>
-        <button id="btnSign" class="btn">تسجيل الدخول</button>
+  <div id="app">
+    <button id="loginBtn" class="login-btn">Login with Google</button>
+    <div id="profile" style="display:none;">
+      <div class="profile-header">
+        <img id="profilePic" class="profile-pic" src="" alt="Profile Picture">
+        <h2 id="fullName"></h2>
+        <p id="email"></p>
+        <p>Total Products: <span id="totalProducts">0</span></p>
+        <p>My Link: <a id="profileLink" href="#" target="_blank" style="color:#00ff99;"></a></p>
       </div>
-    </header>
-    <!-- الملف الشخصي -->
-    <section id="profileSection" class="hidden">
-      <div class="profile-card">
-        <img id="profilePic" class="avatar" src="https://via.placeholder.com/150" alt="avatar">
-        <div class="profile-info">
-          <p id="displayName" class="name">اسم المستخدم</p>
-          <p id="productCount" class="meta">0 منتجات</p>
-          <div class="actions">
-            <button id="btnEdit" class="btn">تعديل البروفايل</button>
-            <button id="btnShare" class="btn">مشاركة الرابط</button>
-          </div>
-        </div>
-      </div>
-      <!-- شبكة المنتجات -->
-      <div id="productsGrid" class="grid"></div>
-    </section>
-    <!-- عندما نزور بروفايل عام -->
-    <section id="publicProfile" class="hidden">
-      <p class="small">عرض بروفايل عام</p>
-      <div class="profile-card">
-        <img id="publicPic" class="avatar" src="https://via.placeholder.com/150" alt="avatar">
-        <div class="profile-info">
-          <p id="publicName" class="name">اسم</p>
-          <p id="publicProductCount" class="meta">0 منتجات</p>
-          <div class="actions">
-            <button id="btnSharePublic" class="btn">مشاركة الرابط</button>
-          </div>
-        </div>
-      </div>
-      <div id="publicGrid" class="grid"></div>
-    </section>
-    <!-- مودال تعديل -->
-    <div id="editModal" class="modal hidden">
-      <div class="box">
-        <h3>تعديل البروفايل</h3>
-        <label>الاسم</label>
-        <input id="editName" type="text" placeholder="الاسم الكامل">
-        <label>تغيير صورة البروفايل</label>
-        <input id="editPhoto" type="file" accept="image/*">
-        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
-          <button id="saveProfile" class="btn">حفظ</button>
-          <button id="cancelEdit" class="btn" style="background:#777">إلغاء</button>
-        </div>
-        <p id="editMsg" class="small"></p>
-      </div>
+      <div class="products-grid" id="productsGrid"></div>
     </div>
-    <p id="status" class="small" style="margin-top:12px"></p>
   </div>
-  <!-- Firebase SDK (modular v9) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
+  <script type="module">
+    // Firebase Config
     const firebaseConfig = {
-        apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-        authDomain: "sj-one.firebaseapp.com",
-        databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-        projectId: "sj-one",
-        storageBucket: "sj-one.appspot.com",
-        messagingSenderId: "426335553508",
-        appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-        measurementId: "G-YQTVZQWXGB"
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+    // Init Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    // DOM elements
-    const btnSign = document.getElementById('btnSign');
-    const profileSection = document.getElementById('profileSection');
-    const profilePic = document.getElementById('profilePic');
-    const displayName = document.getElementById('displayName');
-    const productCount = document.getElementById('productCount');
-    const productsGrid = document.getElementById('productsGrid');
-    const btnEdit = document.getElementById('btnEdit');
-    const btnShare = document.getElementById('btnShare');
-    const status = document.getElementById('status');
-    const editModal = document.getElementById('editModal');
-    const editName = document.getElementById('editName');
-    const editPhoto = document.getElementById('editPhoto');
-    const saveProfile = document.getElementById('saveProfile');
-    const cancelEdit = document.getElementById('cancelEdit');
-    const editMsg = document.getElementById('editMsg');
-    const publicProfile = document.getElementById('publicProfile');
-    const publicPic = document.getElementById('publicPic');
-    const publicName = document.getElementById('publicName');
-    const publicProductCount = document.getElementById('publicProductCount');
-    const publicGrid = document.getElementById('publicGrid');
-    const btnSharePublic = document.getElementById('btnSharePublic');
+    // Elements
+    const loginBtn = document.getElementById("loginBtn");
+    const profileDiv = document.getElementById("profile");
+    const profilePic = document.getElementById("profilePic");
+    const fullName = document.getElementById("fullName");
+    const email = document.getElementById("email");
+    const totalProducts = document.getElementById("totalProducts");
+    const profileLink = document.getElementById("profileLink");
+    const productsGrid = document.getElementById("productsGrid");
 
-    let currentUser = null;
-    let currentUserDoc = null;
+    // Login with Google
+    loginBtn.addEventListener("click", async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
 
-    // Sign in/out
-    btnSign.addEventListener('click', async () => {
-      if (!auth.currentUser) {
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (e) {
-          console.error(e);
-          status.textContent = 'فشل تسجيل الدخول: ' + e.message;
-        }
-      } else {
-        await signOut(auth);
+        // Show profile
+        loginBtn.style.display = "none";
+        profileDiv.style.display = "block";
+        profilePic.src = user.photoURL;
+        fullName.innerText = user.displayName;
+        email.innerText = user.email;
+
+        // Profile link
+        const username = user.displayName.replace(/\s+/g, '').toLowerCase();
+        const link = `https://sjstore.com/u/${username}`;
+        profileLink.href = link;
+        profileLink.innerText = link;
+
+        // Load products
+        loadProducts(user.uid);
+      } catch (error) {
+        console.error("Login error:", error);
       }
     });
 
-    // Auth state change
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        btnSign.textContent = 'تسجيل الخروج';
-        currentUser = user;
-        const usersRef = doc(db, 'Users', user.uid);
-        const uSnap = await getDoc(usersRef);
-        if (!uSnap.exists()) {
-          await setDoc(usersRef, {
-            id: user.uid,
-            username: user.displayName || user.email.split('@')[0],
-            email: user.email || '',
-            imageURL: user.photoURL || '',
-            createdAt: new Date().toISOString(),
-            signup_type: 'Google'
-          });
-        }
-        currentUserDoc = (await getDoc(usersRef)).data();
-        showOwnProfile(user.uid);
-      } else {
-        btnSign.textContent = 'تسجيل الدخول';
-        currentUser = null;
-        currentUserDoc = null;
-        profileSection.classList.add('hidden');
-      }
-    });
-
-    // Show own profile
-    async function showOwnProfile(uid) {
-      profileSection.classList.remove('hidden');
-      publicProfile.classList.add('hidden');
-      status.textContent = 'جاري تحميل بيانات البروفايل...';
-      const uRef = doc(db, 'Users', uid);
-      const uSnap = await getDoc(uRef);
-      if (uSnap.exists()) {
-        const data = uSnap.data();
-        profilePic.src = decodeURIComponent(data.imageURL || data.photoURL || currentUser.photoURL || 'https://via.placeholder.com/150');
-        displayName.textContent = data.username || currentUser.displayName || 'مستخدم';
-        editName.value = data.username || currentUser.displayName || '';
-        await loadProductsByUser(uid, productsGrid, productCount);
-        status.textContent = '';
-      } else {
-        status.textContent = 'ملف المستخدم غير موجود.';
-      }
+    async function loadProducts(userId) {
+      const snapshot = await db.collection("Product").where("id", "==", userId).get();
+      let count = 0;
+      productsGrid.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        count++;
+        const card = `
+          <div class="product-card">
+            <img src="${data.photo}" alt="${data.title}">
+            <p class="product-title">${data.title}</p>
+            <p class="product-price">${data.price} $</p>
+          </div>
+        `;
+        productsGrid.innerHTML += card;
+      });
+      totalProducts.innerText = count;
     }
-
-    // Load products by user
-    async function loadProductsByUser(uid, containerEl, countEl) {
-      containerEl.innerHTML = '';
-      countEl.textContent = 'جاري التحميل...';
-      try {
-        const prodCol = collection(db, 'Product');
-        const q = query(prodCol, where('id', '==', uid));
-        const snap = await getDocs(q);
-        const items = [];
-        snap.forEach(d => items.push(d.data()));
-        countEl.textContent = `${items.length} منتج${items.length === 1 ? '' : ''}`;
-        if (items.length === 0) {
-          containerEl.innerHTML = `<div class="small" style="padding:12px">لا توجد منتجات لعرضها</div>`;
-          return;
-        }
-        items.sort((a, b) => (b.pId || 0) - (a.pId || 0));
-        for (const it of items) {
-          const card = document.createElement('div'); card.className = 'card';
-          const img = document.createElement('img'); img.src = it.photo || 'https://via.placeholder.com/300';
-          const body = document.createElement('div'); body.className = 'card-body';
-          body.innerHTML = `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.title || 'بدون عنوان')}</div>
-                            <div class="price">${escapeHtml(it.price || '0')} MAD</div>`;
-          card.appendChild(img); card.appendChild(body);
-          containerEl.appendChild(card);
-        }
-      } catch (e) {
-        console.error(e);
-        countEl.textContent = 'خطأ في تحميل المنتجات';
-      }
-    }
-
-    // Edit profile
-    btnEdit.addEventListener('click', () => {
-      editMsg.textContent = '';
-      editModal.classList.remove('hidden');
-    });
-
-    cancelEdit.addEventListener('click', () => editModal.classList.add('hidden'));
-
-    saveProfile.addEventListener('click', async () => {
-      if (!currentUser) return alert('قم بتسجيل الدخول أولاً');
-      const newName = editName.value.trim();
-      const file = editPhoto.files[0];
-      editMsg.textContent = 'جاري الحفظ... قد يستغرق رفع الصورة بعض الوقت';
-      try {
-        const userRef = doc(db, 'Users', currentUser.uid);
-        const updates = {};
-        if (newName && newName !== currentUser.displayName) updates.username = newName;
-        if (file) {
-          const path = `profile_pics/${currentUser.uid}-${Date.now()}`;
-          const sRef = storageRef(storage, path);
-          const uploadRes = await uploadBytes(sRef, file);
-          const url = await getDownloadURL(uploadRes.ref);
-          updates.imageURL = encodeURIComponent(url);
-        }
-        if (Object.keys(updates).length > 0) {
-          await updateDoc(userRef, updates);
-        }
-        currentUserDoc = (await getDoc(userRef)).data();
-        profilePic.src = decodeURIComponent(currentUserDoc.imageURL || currentUser.photoURL || 'https://via.placeholder.com/150');
-        displayName.textContent = currentUserDoc.username || currentUser.displayName || 'مستخدم';
-        editModal.classList.add('hidden');
-        editPhoto.value = '';
-        editMsg.textContent = 'تم الحفظ';
-      } catch (e) {
-        console.error(e);
-        editMsg.textContent = 'خطأ: ' + e.message;
-      }
-    });
-
-    // Share profile link
-    btnShare.addEventListener('click', async () => {
-      if (!currentUserDoc) return;
-      const username = (currentUserDoc.username || currentUser.displayName || currentUser.uid).replace(/\s+/g, '');
-      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        alert('تم نسخ رابط البروفايل: ' + url);
-      } catch (e) {
-        prompt('انسخ الرابط يدوياً:', url);
-      }
-    });
-
-    btnSharePublic.addEventListener('click', async () => {
-      const username = publicName.dataset.username;
-      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        alert('تم نسخ الرابط: ' + url);
-      } catch (e) {
-        prompt('انسخ الرابط:', url);
-      }
-    });
-
-    // Handle routing
-    async function handleRouting() {
-      const path = location.pathname || '/';
-      if (path.startsWith('/u/')) {
-        const usernameParam = decodeURIComponent(path.replace('/u/', ''));
-        await showPublicByUsername(usernameParam);
-      } else {
-        const params = new URLSearchParams(location.search);
-        if (params.has('uid')) {
-          const uid = params.get('uid');
-          await showPublicByUid(uid);
-        } else {
-          if (auth.currentUser) {
-            showOwnProfile(auth.currentUser.uid);
-          } else {
-            profileSection.classList.add('hidden');
-            publicProfile.classList.add('hidden');
-            status.textContent = 'اضغط "تسجيل الدخول" لعرض وتحرير بروفايلك، أو افتح رابط بروفايل عام /u/username';
-          }
-        }
-      }
-    }
-
-    // Show public profile by username
-    async function showPublicByUsername(usernameParam) {
-      status.textContent = 'جاري تحميل بروفايل عام...';
-      try {
-        const usersCol = collection(db, 'Users');
-        const q = query(usersCol, where('username', '==', usernameParam));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          status.textContent = 'لم يتم العثور على المستخدم: ' + usernameParam;
-          return;
-        }
-        const docu = snap.docs[0];
-        const u = docu.data();
-        displayPublicProfile(u);
-      } catch (e) {
-        console.error(e);
-        status.textContent = 'خطأ عند جلب البروفايل';
-      }
-    }
-
-    // Show public profile by UID
-    async function showPublicByUid(uid) {
-      status.textContent = 'جاري تحميل بروفايل عام...';
-      try {
-        const uRef = doc(db, 'Users', uid);
-        const uSnap = await getDoc(uRef);
-        if (!uSnap.exists()) {
-          status.textContent = 'لم يتم العثور على المستخدم';
-          return;
-        }
-        const u = uSnap.data();
-        displayPublicProfile(u);
-      } catch (e) {
-        console.error(e);
-        status.textContent = 'خطأ عند جلب البروفايل';
-      }
-    }
-
-    // Display public profile
-    async function displayPublicProfile(u) {
-      publicProfile.classList.remove('hidden');
-      profileSection.classList.add('hidden');
-      publicPic.src = decodeURIComponent(u.imageURL || u.photoURL || 'https://via.placeholder.com/150');
-      publicName.textContent = u.username || u.name || 'مستخدم';
-      publicName.dataset.username = u.username || u.id;
-      await loadProductsByUser(u.id, publicGrid, publicProductCount);
-      status.textContent = '';
-    }
-
-    // Escape HTML for XSS prevention
-    function escapeHtml(text) {
-      if (!text) return '';
-      return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-    }
-
-    // Initialize routing
-    window.addEventListener('load', handleRouting);
-    window.addEventListener('popstate', handleRouting);
   </script>
 </body>
 </html>
