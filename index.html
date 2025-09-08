@@ -18,7 +18,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -106,7 +106,10 @@
             alert("Logged out successfully!");
             dropdownMenu.style.display = "none";
           })
-          .catch((error) => console.error("Logout error:", error));
+          .catch((error) => {
+            console.error("Logout error:", error);
+            alert("Logout failed: " + error.message);
+          });
       });
       sellNowOption.addEventListener("click", () => {
         dropdownMenu.style.display = "none";
@@ -135,7 +138,7 @@
         renderProducts(searchInput.value);
       }, (error) => {
         console.error("Error fetching products:", error);
-        alert("Failed to load products. Please try again.");
+        alert("Failed to load products: " + error.message);
       });
       function renderProducts(filter = "") {
         container.innerHTML = "";
@@ -175,6 +178,9 @@
           }
           container.appendChild(div);
         });
+        if (filteredProducts.length === 0) {
+          container.innerHTML = "<p>No products found.</p>";
+        }
       }
       searchInput.addEventListener("input", (e) => renderProducts(e.target.value));
       const sliderRef = ref(db, "Sliders");
@@ -202,7 +208,7 @@
         }
       }, (error) => {
         console.error("Error fetching sliders:", error);
-        alert("Failed to load sliders. Please try again.");
+        alert("Failed to load sliders: " + error.message);
       });
       let slideIndex = 0;
       function startSlider(numSlides) {
@@ -236,40 +242,61 @@
             div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
               if (confirm("Delete this slider item?")) {
-                remove(ref(db, `Sliders/${sliderId}`));
+                remove(ref(db, `Sliders/${sliderId}`))
+                  .then(() => alert("Slider item deleted!"))
+                  .catch((error) => {
+                    console.error("Error deleting slider:", error);
+                    alert("Failed to delete slider item: " + error.message);
+                  });
               }
             });
             sliderList.appendChild(div);
           });
+        }, (error) => {
+          console.error("Error loading admin sliders:", error);
+          alert("Failed to load sliders: " + error.message);
         });
+      }
+      async function uploadFile(file, path) {
+        try {
+          const fileRef = storageRef(storage, path);
+          const snapshot = await uploadBytes(fileRef, file);
+          const url = await getDownloadURL(snapshot.ref);
+          return url;
+        } catch (error) {
+          console.error("File upload error:", error);
+          throw new Error("Failed to upload file: " + error.message);
+        }
       }
       addProductForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
         const photoFile = document.getElementById("product-photo").files[0];
-        if (photoFile && currentUser) {
-          try {
-            const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
-            await uploadBytes(photoRef, photoFile);
-            const photoUrl = await getDownloadURL(photoRef);
-            await addDoc(collection(firestore, "Products"), {
-              title,
-              price,
-              des,
-              photo: photoUrl,
-              userId: currentUser.uid,
-              createdAt: new Date()
-            });
-            addProductForm.reset();
-            alert("Product added!");
-          } catch (error) {
-            console.error("Error adding product:", error);
-            alert("Failed to add product. Please try again.");
-          }
-        } else {
-          alert("Please select an image and ensure you are logged in.");
+        if (!photoFile) {
+          alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${photoFile.name}`);
+          await addDoc(collection(firestore, "Products"), {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            userId: currentUser.uid,
+            createdAt: new Date()
+          });
+          addProductForm.reset();
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error);
+          alert("Failed to add product: " + error.message);
         }
       });
       sellProductForm.addEventListener("submit", async (e) => {
@@ -282,36 +309,34 @@
         const price = document.getElementById("sell-product-price").value;
         const des = document.getElementById("sell-product-des").value;
         const photoFile = document.getElementById("sell-product-photo").files[0];
-        if (photoFile) {
-          try {
-            const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
-            await uploadBytes(photoRef, photoFile);
-            const photoUrl = await getDownloadURL(photoRef);
-            await addDoc(collection(firestore, "Products"), {
-              title,
-              price,
-              des,
-              photo: photoUrl,
-              userId: currentUser.uid,
-              createdAt: new Date()
-            });
-            sellProductForm.reset();
-            sellModal.style.display = "none";
-            alert("Product added successfully!");
-          } catch (error) {
-            console.error("Error adding product:", error);
-            alert("Failed to add product. Please try again.");
-          }
-        } else {
+        if (!photoFile) {
           alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${photoFile.name}`);
+          await addDoc(collection(firestore, "Products"), {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            userId: currentUser.uid,
+            createdAt: new Date()
+          });
+          sellProductForm.reset();
+          sellModal.style.display = "none";
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error);
+          alert("Failed to add product: " + error.message);
         }
       });
       function editProduct(productId, product) {
         const newTitle = prompt("Edit Title:", product.title);
         const newPrice = prompt("Edit Price:", product.price);
-        const newDes = prompt("Edit Description (Phone):", product.des);
+        const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         if (newTitle && newPrice && newDes) {
-          set(doc(firestore, "Products", productId), {
+          updateDoc(doc(firestore, "Products", productId), {
             title: newTitle,
             price: newPrice,
             des: newDes,
@@ -322,7 +347,7 @@
             alert("Product updated!");
           }).catch((error) => {
             console.error("Error updating product:", error);
-            alert("Failed to update product.");
+            alert("Failed to update product: " + error.message);
           });
         }
       }
@@ -334,26 +359,30 @@
             })
             .catch((error) => {
               console.error("Error deleting product:", error);
-              alert("Failed to delete product.");
+              alert("Failed to delete product: " + error.message);
             });
         }
       }
       addSliderForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!currentUser || !isAdmin) {
+          alert("Only admins can add slider items.");
+          return;
+        }
         const sliderFile = document.getElementById("slider-image").files[0];
-        if (sliderFile) {
-          try {
-            const sliderStorageRef = storageRef(storage, `sliders/${sliderFile.name}`);
-            await uploadBytes(sliderStorageRef, sliderFile);
-            const imageUrl = await getDownloadURL(sliderStorageRef);
-            const newSliderRef = push(ref(db, "Sliders"));
-            await set(newSliderRef, { imageUrl });
-            addSliderForm.reset();
-            alert("Slider item added!");
-          } catch (error) {
-            console.error("Error adding slider item:", error);
-            alert("Failed to add slider item. Please try again.");
-          }
+        if (!sliderFile) {
+          alert("Please select an image or video.");
+          return;
+        }
+        try {
+          const sliderUrl = await uploadFile(sliderFile, `sliders/${sliderFile.name}`);
+          const newSliderRef = push(ref(db, "Sliders"));
+          await set(newSliderRef, { imageUrl: sliderUrl });
+          addSliderForm.reset();
+          alert("Slider item added successfully!");
+        } catch (error) {
+          console.error("Error adding slider item:", error);
+          alert("Failed to add slider item: " + error.message);
         }
       });
       cartIcon.addEventListener("click", () => {
