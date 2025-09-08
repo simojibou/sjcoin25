@@ -41,6 +41,7 @@
       const profilePic = document.getElementById("profile-pic");
       const dropdownMenu = document.getElementById("dropdown-menu");
       const logoutOption = document.getElementById("logout-option");
+      const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
       const addSliderForm = document.getElementById("add-slider-form");
@@ -100,6 +101,9 @@
             dropdownMenu.style.display = "none";
           })
           .catch((error) => console.error("Logout error:", error));
+      });
+      chatBtn.addEventListener("click", () => {
+        window.location.href = "sjchat.html";
       });
       window.addEventListener("click", (e) => {
         if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
@@ -366,7 +370,7 @@
       height: 50px;
       border-radius: 0;
     }
-    #login-btn {
+    #login-btn, #chat-btn {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -378,7 +382,7 @@
       letter-spacing: 0.18em;
       transition: border-color 0.3s;
     }
-    #login-btn:hover {
+    #login-btn:hover, #chat-btn:hover {
       border-color: #ccc;
     }
     #profile-pic {
@@ -746,6 +750,9 @@
       .product img {
         height: 200px;
       }
+      .header-right {
+        gap: 0.5rem;
+      }
     }
     @media (max-width: 480px) {
       h1 {
@@ -784,6 +791,7 @@
     </div>
     <div class="header-right">
       <div id="cart-icon">🛒 <span id="cart-count">0</span></div>
+      <button id="chat-btn">Chat</button>
       <button id="login-btn">Login</button>
       <div class="dropdown">
         <img id="profile-pic" alt="Profile Pic">
