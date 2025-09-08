@@ -204,7 +204,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
     const firebaseConfig = {
@@ -274,7 +274,7 @@
             console.log('User doc created/updated');
           } catch (firestoreError) {
             console.error('Firestore write error:', firestoreError);
-            status.textContent = `Signed in, but profile save failed: ${firestoreError.message}. Check Firestore rules.`;
+            status.textContent = `Signed in, but profile save failed: ${firestoreError.message}. Check Firestore rules for /Users/${user.uid}.`;
             status.classList.add('error');
           }
           currentUser = user;
@@ -321,7 +321,7 @@
           showOwnProfile(user.uid);
         } catch (e) {
           console.error('Firestore access error:', e);
-          status.textContent = `Profile load failed: ${e.message}. Using Google data. Check Firestore rules.`;
+          status.textContent = `Profile load failed: ${e.message}. Using Google data. Check Firestore rules for /Users/${user.uid}.`;
           status.classList.add('error');
           profilePic.src = user.photoURL || 'https://via.placeholder.com/150';
           displayName.textContent = user.displayName || user.email.split('@')[0];
@@ -373,12 +373,12 @@
         const pId = Date.now().toString();
         let photoURL = '';
         if (file) {
-          const path = `product_photos/${currentUser.uid}-${pId}`;
+          const path = `product_photo/${pId}`;
           const sRef = storageRef(storage, path);
           const uploadRes = await uploadBytes(sRef, file);
           photoURL = await getDownloadURL(uploadRes.ref);
         }
-        await addDoc(collection(db, 'Product'), {
+        await setDoc(doc(db, 'Product', pId), {
           id: currentUser.uid,
           pId: pId,
           title: title,
@@ -393,10 +393,10 @@
         productDesc.value = '';
         productPhoto.value = '';
         postForm.classList.add('hidden');
-        showOwnProfile(currentUser.uid); // Refresh product grid
+        showOwnProfile(currentUser.uid);
       } catch (e) {
         console.error('Product post error:', e);
-        postMsg.textContent = `Failed to post product: ${e.message}. Check Firestore/Storage rules.`;
+        postMsg.textContent = `Failed to post product: ${e.message}. Check Firestore rules for /Product/${pId} or Storage rules for /product_photo/${pId}.`;
         postMsg.classList.add('error');
       }
     });
@@ -420,7 +420,7 @@
         }
       } catch (e) {
         console.error('Profile load error:', e);
-        status.textContent = `Failed to load profile: ${e.message}. Check Firestore rules.`;
+        status.textContent = `Failed to load profile: ${e.message}. Check Firestore rules for /Users/${uid}.`;
         status.classList.add('error');
       }
     }
@@ -518,7 +518,7 @@
         displayPublicProfile(u);
       } catch (e) {
         console.error('Public profile load error:', e);
-        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules.`;
+        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules for /Users.`;
         status.classList.add('error');
       }
     }
@@ -537,7 +537,7 @@
         displayPublicProfile(u);
       } catch (e) {
         console.error('Public profile load error:', e);
-        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules.`;
+        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules for /Users/${uid}.`;
         status.classList.add('error');
       }
     }
