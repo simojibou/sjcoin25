@@ -16,10 +16,10 @@
   <!-- Firebase v9 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-    import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -93,7 +93,7 @@
           })
           .catch((error) => {
             console.error("Login error:", error);
-            alert("Login failed: " + error.message + ". Please ensure Google Sign-In is enabled in Firebase console and the domain is authorized.");
+            alert("Login failed: " + error.message);
           });
       });
       profilePic.addEventListener("click", () => {
@@ -133,6 +133,9 @@
           products.push({ id: doc.id, ...doc.data() });
         });
         renderProducts(searchInput.value);
+      }, (error) => {
+        console.error("Error fetching products:", error);
+        alert("Failed to load products. Please try again.");
       });
       function renderProducts(filter = "") {
         container.innerHTML = "";
@@ -179,41 +182,60 @@
         sliderContainer.innerHTML = "";
         let slides = [];
         snapshot.forEach((childSnapshot) => {
-          slides.push(childSnapshot.val().imageUrl);
+          slides.push({ id: childSnapshot.key, ...childSnapshot.val() });
         });
         if (slides.length > 0) {
-          slides.forEach((url) => {
-            const img = document.createElement("img");
-            img.src = url;
-            img.classList.add("slide");
-            sliderContainer.appendChild(img);
+          slides.forEach((slide) => {
+            const element = slide.imageUrl.endsWith('.mp4') 
+              ? document.createElement("video") 
+              : document.createElement("img");
+            element.src = slide.imageUrl;
+            element.classList.add("slide");
+            if (element.tagName === "VIDEO") {
+              element.muted = true;
+              element.loop = true;
+              element.autoplay = true;
+            }
+            sliderContainer.appendChild(element);
           });
           startSlider(slides.length);
         }
+      }, (error) => {
+        console.error("Error fetching sliders:", error);
+        alert("Failed to load sliders. Please try again.");
       });
       let slideIndex = 0;
       function startSlider(numSlides) {
         const slides = document.querySelectorAll(".slide");
         if (slides.length === 0) return;
-        slides.forEach(slide => slide.style.opacity = 0);
+        slides.forEach(slide => {
+          slide.style.opacity = 0;
+          if (slide.tagName === "VIDEO") slide.pause();
+        });
         slides[0].style.opacity = 1;
+        if (slides[0].tagName === "VIDEO") slides[0].play();
         setInterval(() => {
           slides[slideIndex].style.opacity = 0;
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
           slideIndex = (slideIndex + 1) % numSlides;
           slides[slideIndex].style.opacity = 1;
-        }, 3000);
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].play();
+        }, 5000);
       }
       function loadAdminSliders() {
         onValue(sliderRef, (snapshot) => {
           sliderList.innerHTML = "";
           snapshot.forEach((childSnapshot) => {
             const sliderId = childSnapshot.key;
-            const url = childSnapshot.val().imageUrl;
+            const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            div.innerHTML = `<img src="${url}" alt="Slider Image"><button>Delete</button>`;
+            const element = slide.imageUrl.endsWith('.mp4') 
+              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
+              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
-              if (confirm("Delete this slider image?")) {
+              if (confirm("Delete this slider item?")) {
                 remove(ref(db, `Sliders/${sliderId}`));
               }
             });
@@ -227,19 +249,27 @@
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
         const photoFile = document.getElementById("product-photo").files[0];
-        if (photoFile) {
-          const photoRef = storageRef(storage, `products/${photoFile.name}`);
-          await uploadBytes(photoRef, photoFile);
-          const photoUrl = await getDownloadURL(photoRef);
-          await addDoc(collection(firestore, "Products"), {
-            title,
-            price,
-            des,
-            photo: photoUrl,
-            userId: currentUser.uid
-          });
-          addProductForm.reset();
-          alert("Product added!");
+        if (photoFile && currentUser) {
+          try {
+            const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
+            await uploadBytes(photoRef, photoFile);
+            const photoUrl = await getDownloadURL(photoRef);
+            await addDoc(collection(firestore, "Products"), {
+              title,
+              price,
+              des,
+              photo: photoUrl,
+              userId: currentUser.uid,
+              createdAt: new Date()
+            });
+            addProductForm.reset();
+            alert("Product added!");
+          } catch (error) {
+            console.error("Error adding product:", error);
+            alert("Failed to add product. Please try again.");
+          }
+        } else {
+          alert("Please select an image and ensure you are logged in.");
         }
       });
       sellProductForm.addEventListener("submit", async (e) => {
@@ -253,19 +283,27 @@
         const des = document.getElementById("sell-product-des").value;
         const photoFile = document.getElementById("sell-product-photo").files[0];
         if (photoFile) {
-          const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
-          await uploadBytes(photoRef, photoFile);
-          const photoUrl = await getDownloadURL(photoRef);
-          await addDoc(collection(firestore, "Products"), {
-            title,
-            price,
-            des,
-            photo: photoUrl,
-            userId: currentUser.uid
-          });
-          sellProductForm.reset();
-          sellModal.style.display = "none";
-          alert("Product added successfully!");
+          try {
+            const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
+            await uploadBytes(photoRef, photoFile);
+            const photoUrl = await getDownloadURL(photoRef);
+            await addDoc(collection(firestore, "Products"), {
+              title,
+              price,
+              des,
+              photo: photoUrl,
+              userId: currentUser.uid,
+              createdAt: new Date()
+            });
+            sellProductForm.reset();
+            sellModal.style.display = "none";
+            alert("Product added successfully!");
+          } catch (error) {
+            console.error("Error adding product:", error);
+            alert("Failed to add product. Please try again.");
+          }
+        } else {
+          alert("Please select an image.");
         }
       });
       function editProduct(productId, product) {
@@ -273,32 +311,49 @@
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit Description (Phone):", product.des);
         if (newTitle && newPrice && newDes) {
-          set(ref(db, `Product/${productId}`), {
+          set(doc(firestore, "Products", productId), {
             title: newTitle,
             price: newPrice,
             des: newDes,
-            photo: product.photo
+            photo: product.photo,
+            userId: product.userId,
+            createdAt: product.createdAt
+          }).then(() => {
+            alert("Product updated!");
+          }).catch((error) => {
+            console.error("Error updating product:", error);
+            alert("Failed to update product.");
           });
-          alert("Product updated!");
         }
       }
       function deleteProduct(productId) {
         if (confirm("Delete this product?")) {
-          remove(ref(db, `Product/${productId}`));
-          alert("Product deleted!");
+          deleteDoc(doc(firestore, "Products", productId))
+            .then(() => {
+              alert("Product deleted!");
+            })
+            .catch((error) => {
+              console.error("Error deleting product:", error);
+              alert("Failed to delete product.");
+            });
         }
       }
       addSliderForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const sliderFile = document.getElementById("slider-image").files[0];
         if (sliderFile) {
-          const sliderStorageRef = storageRef(storage, `sliders/${sliderFile.name}`);
-          await uploadBytes(sliderStorageRef, sliderFile);
-          const imageUrl = await getDownloadURL(sliderStorageRef);
-          const newSliderRef = push(ref(db, "Sliders"));
-          set(newSliderRef, { imageUrl });
-          addSliderForm.reset();
-          alert("Slider image added!");
+          try {
+            const sliderStorageRef = storageRef(storage, `sliders/${sliderFile.name}`);
+            await uploadBytes(sliderStorageRef, sliderFile);
+            const imageUrl = await getDownloadURL(sliderStorageRef);
+            const newSliderRef = push(ref(db, "Sliders"));
+            await set(newSliderRef, { imageUrl });
+            addSliderForm.reset();
+            alert("Slider item added!");
+          } catch (error) {
+            console.error("Error adding slider item:", error);
+            alert("Failed to add slider item. Please try again.");
+          }
         }
       });
       cartIcon.addEventListener("click", () => {
@@ -660,7 +715,7 @@
     .slider-item:hover {
       transform: scale(1.02);
     }
-    .slider-item img {
+    .slider-item img, .slider-item video {
       max-width: 100%;
       border-radius: 0;
     }
@@ -924,9 +979,9 @@
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
-    <h3>Add Slider Image</h3>
+    <h3>Add Slider Item</h3>
     <form id="add-slider-form">
-      <input type="file" id="slider-image" accept="image/*" required>
+      <input type="file" id="slider-image" accept="image/*,video/mp4" required>
       <button type="submit">Add to Slider</button>
     </form>
     <h3>Current Sliders</h3>
