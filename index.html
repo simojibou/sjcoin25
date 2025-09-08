@@ -231,8 +231,6 @@
           const photoRef = storageRef(storage, `products/${photoFile.name}`);
           await uploadBytes(photoRef, photoFile);
           const photoUrl = await getDownloadURL(photoRef);
-          const newProductRef = push(ref(db, "Product"));
-          set(newProductRef, { title, price, des, photo: photoUrl });
           await addDoc(collection(firestore, "Products"), {
             title,
             price,
@@ -415,8 +413,8 @@
       gap: 1rem;
     }
     .logo {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       border-radius: 0;
     }
     #login-btn, #chat-btn {
@@ -429,10 +427,11 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, background-color 0.3s;
     }
     #login-btn:hover, #chat-btn:hover {
       border-color: #ccc;
+      background-color: #222;
     }
     #profile-pic {
       width: 40px;
@@ -453,37 +452,39 @@
       background: #111;
       border: 1px solid #333;
       border-radius: 0;
-      min-width: 120px;
+      min-width: 150px;
       z-index: 1001;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
     }
     .dropdown-menu button {
       width: 100%;
       background: transparent;
       color: #fff;
       border: none;
-      padding: 0.5rem 1rem;
+      padding: 0.75rem 1rem;
       text-align: left;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
     }
     .dropdown-menu button:hover {
       background: #333;
     }
     /* Title */
     h1 {
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 700;
       text-align: center;
-      margin: 1rem 0;
+      margin: 1.5rem 0;
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
     /* Search */
     #search-input {
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       padding: 0.75rem 1rem;
       border: 1px solid #333;
       background: #000;
@@ -492,18 +493,24 @@
       margin: 0 auto 2rem;
       display: block;
       border-radius: 0;
+      transition: border-color 0.3s;
     }
     #search-input::placeholder {
       color: #666;
+    }
+    #search-input:focus {
+      border-color: #fff;
+      outline: none;
     }
     /* Slider */
     #slider-container {
       position: relative;
       max-width: 100%;
-      height: 400px;
+      height: 600px;
       margin: 0 auto 2rem;
       overflow: hidden;
       border-radius: 0;
+      border: 1px solid #333;
     }
     .slide {
       position: absolute;
@@ -513,12 +520,12 @@
       height: 100%;
       object-fit: cover;
       opacity: 0;
-      transition: opacity 0.5s;
+      transition: opacity 0.5s ease-in-out;
     }
     /* Product List */
     .product-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 2rem;
       max-width: 1200px;
       margin: 0 auto;
@@ -526,29 +533,30 @@
     .product {
       background: #111;
       border-radius: 0;
-      padding: 1rem;
-      transition: transform 0.3s;
+      padding: 1.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
       border: 1px solid #333;
     }
     .product:hover {
       transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     .product img {
       max-width: 100%;
       border-radius: 0;
       margin-bottom: 1rem;
-      height: 250px;
+      height: 280px;
       object-fit: cover;
     }
     .product h3 {
-      font-size: 1.125rem;
+      font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
     .price {
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: #fff;
       margin-bottom: 1rem;
@@ -570,9 +578,15 @@
       background: #25D366;
       color: #fff;
     }
+    .whatsapp-btn:hover {
+      background: #1ebe56;
+    }
     .add-to-cart-btn {
       background: #fff;
       color: #000;
+    }
+    .add-to-cart-btn:hover {
+      background: #e0e0e0;
     }
     /* Admin Panel */
     #admin-panel {
@@ -582,18 +596,25 @@
       background: #111;
       padding: 2rem;
       border: 1px solid #333;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     #admin-panel h2, #admin-panel h3 {
       color: #fff;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
+      font-size: 1.5rem;
     }
     form {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.5rem;
+      background: #222;
+      padding: 1.5rem;
+      border: 1px solid #333;
+      border-radius: 0;
     }
     input {
       padding: 0.75rem;
@@ -601,6 +622,12 @@
       background: #000;
       color: #fff;
       border-radius: 0;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      border-color: #fff;
+      outline: none;
     }
     button[type="submit"] {
       background: #fff;
@@ -611,21 +638,31 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    button[type="submit"]:hover {
+      background: #e0e0e0;
     }
     /* Slider List */
     #slider-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
     }
     .slider-item {
       background: #222;
       padding: 1rem;
       border: 1px solid #333;
+      border-radius: 0;
+      transition: transform 0.3s;
+    }
+    .slider-item:hover {
+      transform: scale(1.02);
     }
     .slider-item img {
       max-width: 100%;
+      border-radius: 0;
     }
     .slider-item button {
       width: 100%;
@@ -638,6 +675,10 @@
       letter-spacing: 0.18em;
       cursor: pointer;
       margin-top: 0.5rem;
+      transition: background 0.3s;
+    }
+    .slider-item button:hover {
+      background: #e0e0e0;
     }
     /* Cart and Sell Modals */
     .modal {
@@ -658,11 +699,12 @@
       width: 90%;
       max-width: 600px;
       border: 1px solid #333;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     #cart-list, #sell-product-form {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.5rem;
     }
     .cart-item {
       background: #222;
@@ -674,8 +716,8 @@
       border: 1px solid #333;
     }
     .cart-item img {
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
       border-radius: 0;
       object-fit: cover;
     }
@@ -698,6 +740,10 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    .remove-from-cart:hover {
+      background: #e0e0e0;
     }
     #close-modal, #close-sell-modal {
       background: transparent;
@@ -710,6 +756,10 @@
       letter-spacing: 0.18em;
       cursor: pointer;
       margin-top: 1rem;
+      transition: border-color 0.3s;
+    }
+    #close-modal:hover, #close-sell-modal:hover {
+      border-color: #ccc;
     }
     /* Admin Actions */
     .admin-actions {
@@ -727,11 +777,18 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
     }
     .admin-actions button:nth-child(2) {
       border-color: #fff;
       background: #fff;
       color: #000;
+    }
+    .admin-actions button:hover {
+      background: #333;
+    }
+    .admin-actions button:nth-child(2):hover {
+      background: #e0e0e0;
     }
     /* Android Popup */
     #android-popup {
@@ -766,11 +823,18 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    #android-popup button:hover {
+      background: #e0e0e0;
     }
     #android-popup #close-popup {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
+    }
+    #android-popup #close-popup:hover {
+      border-color: #ccc;
     }
     /* Responsive */
     @media (max-width: 768px) {
@@ -784,16 +848,19 @@
       .product img {
         height: 200px;
       }
+      #slider-container {
+        height: 400px;
+      }
       .header-right {
         gap: 0.5rem;
       }
     }
     @media (max-width: 480px) {
       h1 {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
       }
       #slider-container {
-        height: 250px;
+        height: 300px;
       }
       .product {
         padding: 1rem;
@@ -814,6 +881,13 @@
       #android-popup {
         flex-direction: column;
         text-align: center;
+      }
+      .logo {
+        width: 50px;
+        height: 50px;
+      }
+      .modal-content {
+        padding: 1.5rem;
       }
     }
   </style>
@@ -841,12 +915,12 @@
   <div id="slider-container"></div>
   <div class="product-list" id="product-list"></div>
   <div id="admin-panel">
-    <h2>Admin Panel</h2>
+    <h2>Admin Control Panel</h2>
     <h3>Add Product</h3>
     <form id="add-product-form">
       <input type="text" id="product-title" placeholder="Product Title" required>
       <input type="text" id="product-price" placeholder="Price (DH)" required>
-      <input type="text" id="product-des" placeholder="Phone Number" required>
+      <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
