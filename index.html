@@ -19,6 +19,7 @@
     import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+    import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -31,6 +32,7 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const firestore = getFirestore(app);
     const auth = getAuth(app);
     const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
@@ -41,6 +43,7 @@
       const profilePic = document.getElementById("profile-pic");
       const dropdownMenu = document.getElementById("dropdown-menu");
       const logoutOption = document.getElementById("logout-option");
+      const sellNowOption = document.getElementById("sell-now-option");
       const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
@@ -52,6 +55,9 @@
       const cartModal = document.getElementById("cart-modal");
       const cartList = document.getElementById("cart-list");
       const closeModal = document.getElementById("close-modal");
+      const sellModal = document.getElementById("sell-modal");
+      const sellProductForm = document.getElementById("sell-product-form");
+      const closeSellModal = document.getElementById("close-sell-modal");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
@@ -102,6 +108,10 @@
           })
           .catch((error) => console.error("Logout error:", error));
       });
+      sellNowOption.addEventListener("click", () => {
+        dropdownMenu.style.display = "none";
+        sellModal.style.display = "block";
+      });
       chatBtn.addEventListener("click", () => {
         window.location.href = "sjchat.html";
       });
@@ -109,12 +119,18 @@
         if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
           dropdownMenu.style.display = "none";
         }
+        if (e.target === sellModal) {
+          sellModal.style.display = "none";
+        }
       });
-      const productRef = ref(db, "Product");
-      onValue(productRef, (snapshot) => {
+      closeSellModal.addEventListener("click", () => {
+        sellModal.style.display = "none";
+      });
+      // Load products from Firestore
+      onSnapshot(collection(firestore, "Products"), (snapshot) => {
         products = [];
-        snapshot.forEach((childSnapshot) => {
-          products.push({ id: childSnapshot.key, ...childSnapshot.val() });
+        snapshot.forEach((doc) => {
+          products.push({ id: doc.id, ...doc.data() });
         });
         renderProducts(searchInput.value);
       });
@@ -217,8 +233,41 @@
           const photoUrl = await getDownloadURL(photoRef);
           const newProductRef = push(ref(db, "Product"));
           set(newProductRef, { title, price, des, photo: photoUrl });
+          await addDoc(collection(firestore, "Products"), {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            userId: currentUser.uid
+          });
           addProductForm.reset();
           alert("Product added!");
+        }
+      });
+      sellProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
+        const title = document.getElementById("sell-product-title").value;
+        const price = document.getElementById("sell-product-price").value;
+        const des = document.getElementById("sell-product-des").value;
+        const photoFile = document.getElementById("sell-product-photo").files[0];
+        if (photoFile) {
+          const photoRef = storageRef(storage, `products/${currentUser.uid}/${photoFile.name}`);
+          await uploadBytes(photoRef, photoFile);
+          const photoUrl = await getDownloadURL(photoRef);
+          await addDoc(collection(firestore, "Products"), {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            userId: currentUser.uid
+          });
+          sellProductForm.reset();
+          sellModal.style.display = "none";
+          alert("Product added successfully!");
         }
       });
       function editProduct(productId, product) {
@@ -590,22 +639,7 @@
       cursor: pointer;
       margin-top: 0.5rem;
     }
-    /* Cart */
-    .cart-icon {
-      cursor: pointer;
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    #cart-count {
-      background: #fff;
-      color: #000;
-      border-radius: 50%;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 700;
-    }
+    /* Cart and Sell Modals */
     .modal {
       position: fixed;
       z-index: 1001;
@@ -625,7 +659,7 @@
       max-width: 600px;
       border: 1px solid #333;
     }
-    #cart-list {
+    #cart-list, #sell-product-form {
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -665,7 +699,7 @@
       letter-spacing: 0.18em;
       cursor: pointer;
     }
-    #close-modal {
+    #close-modal, #close-sell-modal {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -796,6 +830,7 @@
       <div class="dropdown">
         <img id="profile-pic" alt="Profile Pic">
         <div id="dropdown-menu" class="dropdown-menu">
+          <button id="sell-now-option">Sell Now</button>
           <button id="logout-option">Logout</button>
         </div>
       </div>
@@ -828,6 +863,19 @@
       <h2>My Cart</h2>
       <div id="cart-list"></div>
       <button id="close-modal">Close</button>
+    </div>
+  </div>
+  <div id="sell-modal" class="modal">
+    <div class="modal-content">
+      <h2>Sell a Product</h2>
+      <form id="sell-product-form">
+        <input type="text" id="sell-product-title" placeholder="Product Title" required>
+        <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
+        <input type="text" id="sell-product-des" placeholder="WhatsApp Phone Number" required>
+        <input type="file" id="sell-product-photo" accept="image/*" required>
+        <button type="submit">Add Product</button>
+        <button id="close-sell-modal">Close</button>
+      </form>
     </div>
   </div>
   <div id="android-popup">
