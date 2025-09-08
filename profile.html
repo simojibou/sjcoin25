@@ -253,7 +253,28 @@
     btnSign.addEventListener('click', async () => {
       if (!auth.currentUser) {
         try {
-          await signInWithPopup(auth, provider);
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+          // Immediately update UI with Google data
+          profilePic.src = user.photoURL || 'https://via.placeholder.com/150';
+          displayName.textContent = user.displayName || user.email.split('@')[0];
+          editName.value = user.displayName || user.email.split('@')[0];
+          // Create or update Firestore document
+          const usersRef = doc(db, 'Users', user.uid);
+          await setDoc(usersRef, {
+            id: user.uid,
+            username: user.displayName || user.email.split('@')[0],
+            email: user.email || '',
+            imageURL: user.photoURL || '',
+            createdAt: new Date().toISOString(),
+            signup_type: 'Google',
+            active: true,
+            isOnline: 1,
+            lastSeen: new Date().toISOString()
+          }, { merge: true });
+          currentUser = user;
+          currentUserDoc = (await getDoc(usersRef)).data();
+          showOwnProfile(user.uid);
         } catch (e) {
           console.error(e);
           status.textContent = 'Sign-in failed: ' + e.message;
@@ -276,7 +297,10 @@
             email: user.email || '',
             imageURL: user.photoURL || '',
             createdAt: new Date().toISOString(),
-            signup_type: 'Google'
+            signup_type: 'Google',
+            active: true,
+            isOnline: 1,
+            lastSeen: new Date().toISOString()
           });
         }
         currentUserDoc = (await getDoc(usersRef)).data();
@@ -286,6 +310,8 @@
         currentUser = null;
         currentUserDoc = null;
         profileSection.classList.add('hidden');
+        publicProfile.classList.add('hidden');
+        status.textContent = 'Please sign in to view your profile';
       }
     });
 
@@ -297,7 +323,7 @@
       const uSnap = await getDoc(uRef);
       if (uSnap.exists()) {
         const data = uSnap.data();
-        profilePic.src = decodeURIComponent(data.imageURL || data.photoURL || currentUser.photoURL || 'https://via.placeholder.com/150');
+        profilePic.src = decodeURIComponent(data.imageURL || currentUser.photoURL || 'https://via.placeholder.com/150');
         displayName.textContent = data.username || currentUser.displayName || 'User';
         editName.value = data.username || currentUser.displayName || '';
         await loadProductsByUser(uid, productsGrid, productCount);
