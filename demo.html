@@ -16,9 +16,9 @@
   <!-- Firebase v9 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -41,6 +41,7 @@
       const profilePic = document.getElementById("profile-pic");
       const dropdownMenu = document.getElementById("dropdown-menu");
       const logoutOption = document.getElementById("logout-option");
+      const sellNowOption = document.getElementById("sell-now-option");
       const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
@@ -52,6 +53,9 @@
       const cartModal = document.getElementById("cart-modal");
       const cartList = document.getElementById("cart-list");
       const closeModal = document.getElementById("close-modal");
+      const sellModal = document.getElementById("sell-modal");
+      const sellProductForm = document.getElementById("sell-product-form");
+      const closeSellModal = document.getElementById("close-sell-modal");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
@@ -86,8 +90,8 @@
             alert("Login successful!");
           })
           .catch((error) => {
-            console.error("Login error:", error);
-            alert("Login failed: " + error.message + ". Please ensure Google Sign-In is enabled in Firebase console and the domain is authorized.");
+            console.error("Login error:", error.code, error.message);
+            alert("Login failed: " + error.message);
           });
       });
       profilePic.addEventListener("click", () => {
@@ -100,7 +104,14 @@
             alert("Logged out successfully!");
             dropdownMenu.style.display = "none";
           })
-          .catch((error) => console.error("Logout error:", error));
+          .catch((error) => {
+            console.error("Logout error:", error.code, error.message);
+            alert("Logout failed: " + error.message);
+          });
+      });
+      sellNowOption.addEventListener("click", () => {
+        dropdownMenu.style.display = "none";
+        sellModal.style.display = "block";
       });
       chatBtn.addEventListener("click", () => {
         window.location.href = "sjchat.html";
@@ -109,31 +120,58 @@
         if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
           dropdownMenu.style.display = "none";
         }
+        if (e.target === sellModal) {
+          sellModal.style.display = "none";
+        }
       });
+      closeSellModal.addEventListener("click", () => {
+        sellModal.style.display = "none";
+      });
+      // Load products from Realtime Database
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
+        console.log("Fetching products from Realtime Database...");
         products = [];
         snapshot.forEach((childSnapshot) => {
-          products.push({ id: childSnapshot.key, ...childSnapshot.val() });
+          const data = childSnapshot.val();
+          console.log("Product fetched:", childSnapshot.key, data);
+          products.push({
+            id: childSnapshot.key, // Use pId as the product ID
+            title: data.title,
+            price: data.price,
+            des: data.des,
+            photo: data.photo,
+            userId: data.id // Map 'id' from JSON to userId
+          });
         });
+        console.log("Total products fetched:", products.length);
         renderProducts(searchInput.value);
+      }, (error) => {
+        console.error("Error fetching products:", error.code, error.message, error);
+        alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
       function renderProducts(filter = "") {
+        console.log("Rendering products with filter:", filter);
         container.innerHTML = "";
-        const filteredProducts = products.filter(p => p.title.toLowerCase().includes(filter.toLowerCase()));
+        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        console.log("Filtered products:", filteredProducts.length);
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
           div.classList.add("product");
           div.innerHTML = `
-            <img src="${product.photo}" alt="${product.title}">
-            <h3>${product.title}</h3>
-            <p class="price">${product.price} DH</p>
+            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <h3>${product.title || 'Untitled'}</h3>
+            <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
             <button class="add-to-cart-btn">Add to Cart</button>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
-            const phone = product.des.replace(/\D/g, "");
-            window.open(`https://wa.me/${phone}`, "_blank");
+            const phone = product.des ? product.des.replace(/\D/g, "") : "";
+            if (phone) {
+              window.open(`https://wa.me/${phone}`, "_blank");
+            } else {
+              alert("No WhatsApp number provided for this product.");
+            }
           });
           div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
             cart.push(product);
@@ -156,102 +194,243 @@
           }
           container.appendChild(div);
         });
+        if (filteredProducts.length === 0) {
+          container.innerHTML = "<p>No products found.</p>";
+        }
       }
-      searchInput.addEventListener("input", (e) => renderProducts(e.target.value));
+      searchInput.addEventListener("input", (e) => {
+        console.log("Search input changed:", e.target.value);
+        renderProducts(e.target.value);
+      });
       const sliderRef = ref(db, "Sliders");
       onValue(sliderRef, (snapshot) => {
+        console.log("Fetching sliders from Realtime Database...");
         sliderContainer.innerHTML = "";
         let slides = [];
         snapshot.forEach((childSnapshot) => {
-          slides.push(childSnapshot.val().imageUrl);
+          const slideData = { id: childSnapshot.key, ...childSnapshot.val() };
+          console.log("Slider fetched:", slideData);
+          slides.push(slideData);
         });
         if (slides.length > 0) {
-          slides.forEach((url) => {
-            const img = document.createElement("img");
-            img.src = url;
-            img.classList.add("slide");
-            sliderContainer.appendChild(img);
+          slides.forEach((slide) => {
+            const element = slide.imageUrl.endsWith('.mp4') 
+              ? document.createElement("video") 
+              : document.createElement("img");
+            element.src = slide.imageUrl;
+            element.classList.add("slide");
+            if (element.tagName === "VIDEO") {
+              element.muted = true;
+              element.loop = true;
+              element.autoplay = true;
+            }
+            sliderContainer.appendChild(element);
           });
           startSlider(slides.length);
         }
+      }, (error) => {
+        console.error("Error fetching sliders:", error.code, error.message, error);
+        alert("Failed to load sliders: " + error.message);
       });
       let slideIndex = 0;
       function startSlider(numSlides) {
         const slides = document.querySelectorAll(".slide");
-        if (slides.length === 0) return;
-        slides.forEach(slide => slide.style.opacity = 0);
+        if (slides.length === 0) {
+          console.log("No slides to display.");
+          return;
+        }
+        slides.forEach(slide => {
+          slide.style.opacity = 0;
+          if (slide.tagName === "VIDEO") slide.pause();
+        });
         slides[0].style.opacity = 1;
+        if (slides[0].tagName === "VIDEO") slides[0].play();
         setInterval(() => {
           slides[slideIndex].style.opacity = 0;
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
           slideIndex = (slideIndex + 1) % numSlides;
           slides[slideIndex].style.opacity = 1;
-        }, 3000);
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].play();
+        }, 5000);
       }
       function loadAdminSliders() {
         onValue(sliderRef, (snapshot) => {
           sliderList.innerHTML = "";
           snapshot.forEach((childSnapshot) => {
             const sliderId = childSnapshot.key;
-            const url = childSnapshot.val().imageUrl;
+            const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            div.innerHTML = `<img src="${url}" alt="Slider Image"><button>Delete</button>`;
+            const element = slide.imageUrl.endsWith('.mp4') 
+              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
+              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
-              if (confirm("Delete this slider image?")) {
-                remove(ref(db, `Sliders/${sliderId}`));
+              if (confirm("Delete this slider item?")) {
+                remove(ref(db, `Sliders/${sliderId}`))
+                  .then(() => alert("Slider item deleted!"))
+                  .catch((error) => {
+                    console.error("Error deleting slider:", error.code, error.message);
+                    alert("Failed to delete slider item: " + error.message);
+                  });
               }
             });
             sliderList.appendChild(div);
           });
+        }, (error) => {
+          console.error("Error loading admin sliders:", error.code, error.message);
+          alert("Failed to load sliders: " + error.message);
         });
+      }
+      async function uploadFile(file, path) {
+        try {
+          // Validate file size (e.g., max 5MB)
+          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          if (file.size > maxSize) {
+            throw new Error("File size exceeds 5MB limit.");
+          }
+          // Validate file type
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
+          }
+          console.log(`Uploading file: ${file.name} (${file.size} bytes) to ${path}`);
+          const fileRef = storageRef(storage, path);
+          const snapshot = await uploadBytes(fileRef, file);
+          const url = await getDownloadURL(snapshot.ref);
+          console.log("File uploaded successfully:", url);
+          return url;
+        } catch (error) {
+          console.error("File upload error:", error.code, error.message, error);
+          if (error.code === "storage/unauthorized") {
+            throw new Error("Permission denied. Check Firebase Storage security rules.");
+          } else if (error.code === "storage/canceled") {
+            throw new Error("Upload was canceled.");
+          } else if (error.code === "storage/unknown") {
+            throw new Error("An unknown error occurred during upload. Check network or Firebase configuration.");
+          }
+          throw error;
+        }
       }
       addProductForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
         const photoFile = document.getElementById("product-photo").files[0];
-        if (photoFile) {
-          const photoRef = storageRef(storage, `products/${photoFile.name}`);
-          await uploadBytes(photoRef, photoFile);
-          const photoUrl = await getDownloadURL(photoRef);
-          const newProductRef = push(ref(db, "Product"));
-          set(newProductRef, { title, price, des, photo: photoUrl });
+        if (!photoFile) {
+          alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
+          });
           addProductForm.reset();
-          alert("Product added!");
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
+        }
+      });
+      sellProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
+        const title = document.getElementById("sell-product-title").value;
+        const price = document.getElementById("sell-product-price").value;
+        const des = document.getElementById("sell-product-des").value;
+        const photoFile = document.getElementById("sell-product-photo").files[0];
+        if (!photoFile) {
+          alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
+          });
+          sellProductForm.reset();
+          sellModal.style.display = "none";
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
       function editProduct(productId, product) {
         const newTitle = prompt("Edit Title:", product.title);
         const newPrice = prompt("Edit Price:", product.price);
-        const newDes = prompt("Edit Description (Phone):", product.des);
+        const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         if (newTitle && newPrice && newDes) {
           set(ref(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
-            photo: product.photo
+            photo: product.photo,
+            id: product.userId, // Preserve userId as 'id'
+            pId: productId // Preserve pId
+          }).then(() => {
+            alert("Product updated!");
+          }).catch((error) => {
+            console.error("Error updating product:", error.code, error.message);
+            alert("Failed to update product: " + error.message);
           });
-          alert("Product updated!");
         }
       }
       function deleteProduct(productId) {
         if (confirm("Delete this product?")) {
-          remove(ref(db, `Product/${productId}`));
-          alert("Product deleted!");
+          remove(ref(db, `Product/${productId}`))
+            .then(() => {
+              alert("Product deleted!");
+            })
+            .catch((error) => {
+              console.error("Error deleting product:", error.code, error.message);
+              alert("Failed to delete product: " + error.message);
+            });
         }
       }
       addSliderForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!currentUser || !isAdmin) {
+          alert("Only admins can add slider items.");
+          return;
+        }
         const sliderFile = document.getElementById("slider-image").files[0];
-        if (sliderFile) {
-          const sliderStorageRef = storageRef(storage, `sliders/${sliderFile.name}`);
-          await uploadBytes(sliderStorageRef, sliderFile);
-          const imageUrl = await getDownloadURL(sliderStorageRef);
+        if (!sliderFile) {
+          alert("Please select an image or video.");
+          return;
+        }
+        try {
+          const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
           const newSliderRef = push(ref(db, "Sliders"));
-          set(newSliderRef, { imageUrl });
+          await set(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
-          alert("Slider image added!");
+          alert("Slider item added successfully!");
+        } catch (error) {
+          console.error("Error adding slider item:", error.code, error.message);
+          alert(`Failed to add slider item: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
       cartIcon.addEventListener("click", () => {
@@ -272,9 +451,9 @@
           const div = document.createElement("div");
           div.classList.add("cart-item");
           div.innerHTML = `
-            <img src="${product.photo}" alt="${product.title}">
-            <h4>${product.title}</h4>
-            <p>${product.price} DH</p>
+            <img src="${product.photo || 'https://via.placeholder.com/80'}" alt="${product.title || 'No title'}">
+            <h4>${product.title || 'Untitled'}</h4>
+            <p>${product.price || 'N/A'} DH</p>
             <button class="remove-from-cart">Remove</button>
           `;
           div.querySelector(".remove-from-cart").addEventListener("click", () => {
@@ -313,12 +492,29 @@
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
       closeBtn.addEventListener("click", () => popup.style.display = "none");
+      // Service Worker Registration with Enhanced Error Handling
+      if ("serviceWorker" in navigator) {
+        console.log("Attempting to register service worker...");
+        navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
+          .then(reg => {
+            console.log("Service Worker registered successfully:", reg.scope);
+          })
+          .catch(err => {
+            console.error("Service Worker registration failed:", err.name, err.message);
+            if (err.name === "TypeError") {
+              console.error("Possible cause: service-worker.js file not found or inaccessible.");
+              alert("Service Worker failed to register: File not found. Offline functionality may be limited.");
+            } else if (err.name === "SecurityError") {
+              console.error("Possible cause: Service worker scope mismatch or HTTPS required.");
+              alert("Service Worker failed to register: Security issue (e.g., not served over HTTPS or scope mismatch). Offline functionality may be limited.");
+            } else {
+              alert("Service Worker failed to register: " + err.message);
+            }
+          });
+      } else {
+        console.log("Service Worker not supported in this browser.");
+      }
     });
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js")
-        .then(reg => console.log("Service Worker registered", reg))
-        .catch(err => console.error("Service Worker error", err));
-    }
   </script>
   <style>
     /* Mimic X Shop Design: Dark theme, Helvetica font, clean layout */
@@ -366,8 +562,8 @@
       gap: 1rem;
     }
     .logo {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       border-radius: 0;
     }
     #login-btn, #chat-btn {
@@ -380,10 +576,11 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, background-color 0.3s;
     }
     #login-btn:hover, #chat-btn:hover {
       border-color: #ccc;
+      background-color: #222;
     }
     #profile-pic {
       width: 40px;
@@ -404,37 +601,39 @@
       background: #111;
       border: 1px solid #333;
       border-radius: 0;
-      min-width: 120px;
+      min-width: 150px;
       z-index: 1001;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
     }
     .dropdown-menu button {
       width: 100%;
       background: transparent;
       color: #fff;
       border: none;
-      padding: 0.5rem 1rem;
+      padding: 0.75rem 1rem;
       text-align: left;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
     }
     .dropdown-menu button:hover {
       background: #333;
     }
     /* Title */
     h1 {
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 700;
       text-align: center;
-      margin: 1rem 0;
+      margin: 1.5rem 0;
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
     /* Search */
     #search-input {
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       padding: 0.75rem 1rem;
       border: 1px solid #333;
       background: #000;
@@ -443,18 +642,24 @@
       margin: 0 auto 2rem;
       display: block;
       border-radius: 0;
+      transition: border-color 0.3s;
     }
     #search-input::placeholder {
       color: #666;
+    }
+    #search-input:focus {
+      border-color: #fff;
+      outline: none;
     }
     /* Slider */
     #slider-container {
       position: relative;
       max-width: 100%;
-      height: 400px;
+      height: 600px;
       margin: 0 auto 2rem;
       overflow: hidden;
       border-radius: 0;
+      border: 1px solid #333;
     }
     .slide {
       position: absolute;
@@ -464,12 +669,12 @@
       height: 100%;
       object-fit: cover;
       opacity: 0;
-      transition: opacity 0.5s;
+      transition: opacity 0.5s ease-in-out;
     }
     /* Product List */
     .product-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 2rem;
       max-width: 1200px;
       margin: 0 auto;
@@ -477,29 +682,30 @@
     .product {
       background: #111;
       border-radius: 0;
-      padding: 1rem;
-      transition: transform 0.3s;
+      padding: 1.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
       border: 1px solid #333;
     }
     .product:hover {
       transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     .product img {
       max-width: 100%;
       border-radius: 0;
       margin-bottom: 1rem;
-      height: 250px;
+      height: 280px;
       object-fit: cover;
     }
     .product h3 {
-      font-size: 1.125rem;
+      font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
     .price {
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: #fff;
       margin-bottom: 1rem;
@@ -521,9 +727,15 @@
       background: #25D366;
       color: #fff;
     }
+    .whatsapp-btn:hover {
+      background: #1ebe56;
+    }
     .add-to-cart-btn {
       background: #fff;
       color: #000;
+    }
+    .add-to-cart-btn:hover {
+      background: #e0e0e0;
     }
     /* Admin Panel */
     #admin-panel {
@@ -533,18 +745,25 @@
       background: #111;
       padding: 2rem;
       border: 1px solid #333;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     #admin-panel h2, #admin-panel h3 {
       color: #fff;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
+      font-size: 1.5rem;
     }
     form {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.5rem;
+      background: #222;
+      padding: 1.5rem;
+      border: 1px solid #333;
+      border-radius: 0;
     }
     input {
       padding: 0.75rem;
@@ -552,6 +771,12 @@
       background: #000;
       color: #fff;
       border-radius: 0;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      border-color: #fff;
+      outline: none;
     }
     button[type="submit"] {
       background: #fff;
@@ -562,21 +787,31 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    button[type="submit"]:hover {
+      background: #e0e0e0;
     }
     /* Slider List */
     #slider-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
     }
     .slider-item {
       background: #222;
       padding: 1rem;
       border: 1px solid #333;
+      border-radius: 0;
+      transition: transform 0.3s;
     }
-    .slider-item img {
+    .slider-item:hover {
+      transform: scale(1.02);
+    }
+    .slider-item img, .slider-item video {
       max-width: 100%;
+      border-radius: 0;
     }
     .slider-item button {
       width: 100%;
@@ -589,23 +824,12 @@
       letter-spacing: 0.18em;
       cursor: pointer;
       margin-top: 0.5rem;
+      transition: background 0.3s;
     }
-    /* Cart */
-    .cart-icon {
-      cursor: pointer;
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .slider-item button:hover {
+      background: #e0e0e0;
     }
-    #cart-count {
-      background: #fff;
-      color: #000;
-      border-radius: 50%;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 700;
-    }
+    /* Cart and Sell Modals */
     .modal {
       position: fixed;
       z-index: 1001;
@@ -624,11 +848,12 @@
       width: 90%;
       max-width: 600px;
       border: 1px solid #333;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    #cart-list {
+    #cart-list, #sell-product-form {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.5rem;
     }
     .cart-item {
       background: #222;
@@ -640,8 +865,8 @@
       border: 1px solid #333;
     }
     .cart-item img {
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
       border-radius: 0;
       object-fit: cover;
     }
@@ -664,8 +889,12 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
     }
-    #close-modal {
+    .remove-from-cart:hover {
+      background: #e0e0e0;
+    }
+    #close-modal, #close-sell-modal {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -676,6 +905,10 @@
       letter-spacing: 0.18em;
       cursor: pointer;
       margin-top: 1rem;
+      transition: border-color 0.3s;
+    }
+    #close-modal:hover, #close-sell-modal:hover {
+      border-color: #ccc;
     }
     /* Admin Actions */
     .admin-actions {
@@ -693,11 +926,18 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
     }
     .admin-actions button:nth-child(2) {
       border-color: #fff;
       background: #fff;
       color: #000;
+    }
+    .admin-actions button:hover {
+      background: #333;
+    }
+    .admin-actions button:nth-child(2):hover {
+      background: #e0e0e0;
     }
     /* Android Popup */
     #android-popup {
@@ -732,11 +972,18 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    #android-popup button:hover {
+      background: #e0e0e0;
     }
     #android-popup #close-popup {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
+    }
+    #android-popup #close-popup:hover {
+      border-color: #ccc;
     }
     /* Responsive */
     @media (max-width: 768px) {
@@ -750,16 +997,19 @@
       .product img {
         height: 200px;
       }
+      #slider-container {
+        height: 400px;
+      }
       .header-right {
         gap: 0.5rem;
       }
     }
     @media (max-width: 480px) {
       h1 {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
       }
       #slider-container {
-        height: 250px;
+        height: 300px;
       }
       .product {
         padding: 1rem;
@@ -781,6 +1031,13 @@
         flex-direction: column;
         text-align: center;
       }
+      .logo {
+        width: 50px;
+        height: 50px;
+      }
+      .modal-content {
+        padding: 1.5rem;
+      }
     }
   </style>
 </head>
@@ -796,6 +1053,7 @@
       <div class="dropdown">
         <img id="profile-pic" alt="Profile Pic">
         <div id="dropdown-menu" class="dropdown-menu">
+          <button id="sell-now-option">Sell Now</button>
           <button id="logout-option">Logout</button>
         </div>
       </div>
@@ -806,18 +1064,18 @@
   <div id="slider-container"></div>
   <div class="product-list" id="product-list"></div>
   <div id="admin-panel">
-    <h2>Admin Panel</h2>
+    <h2>Admin Control Panel</h2>
     <h3>Add Product</h3>
     <form id="add-product-form">
       <input type="text" id="product-title" placeholder="Product Title" required>
       <input type="text" id="product-price" placeholder="Price (DH)" required>
-      <input type="text" id="product-des" placeholder="Phone Number" required>
+      <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
-    <h3>Add Slider Image</h3>
+    <h3>Add Slider Item</h3>
     <form id="add-slider-form">
-      <input type="file" id="slider-image" accept="image/*" required>
+      <input type="file" id="slider-image" accept="image/*,video/mp4" required>
       <button type="submit">Add to Slider</button>
     </form>
     <h3>Current Sliders</h3>
@@ -828,6 +1086,19 @@
       <h2>My Cart</h2>
       <div id="cart-list"></div>
       <button id="close-modal">Close</button>
+    </div>
+  </div>
+  <div id="sell-modal" class="modal">
+    <div class="modal-content">
+      <h2>Sell a Product</h2>
+      <form id="sell-product-form">
+        <input type="text" id="sell-product-title" placeholder="Product Title" required>
+        <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
+        <input type="text" id="sell-product-des" placeholder="WhatsApp Phone Number" required>
+        <input type="file" id="sell-product-photo" accept="image/*" required>
+        <button type="submit">Add Product</button>
+        <button id="close-sell-modal">Close</button>
+      </form>
     </div>
   </div>
   <div id="android-popup">
