@@ -103,6 +103,29 @@
       font-weight: 700;
       color: #fff;
     }
+    .post-form {
+      background: var(--card);
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .post-form label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .post-form input, .post-form textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #333;
+      color: #fff;
+    }
+    .post-form input[type="file"] {
+      padding: 4px;
+    }
     @media (max-width: 600px) {
       .grid {
         grid-template-columns: repeat(3, 1fr);
@@ -140,8 +163,25 @@
           <p id="productCount" class="meta">0 products</p>
           <div class="actions">
             <button id="btnShare" class="btn">Share Link</button>
+            <button id="btnPost" class="btn">Post Product</button>
           </div>
         </div>
+      </div>
+      <div id="postForm" class="post-form hidden">
+        <h3>Post a Product</h3>
+        <label>Title</label>
+        <input id="productTitle" type="text" placeholder="Product Title">
+        <label>Price ($)</label>
+        <input id="productPrice" type="number" placeholder="Price in USD">
+        <label>Description</label>
+        <textarea id="productDesc" placeholder="Product Description"></textarea>
+        <label>Product Photo</label>
+        <input id="productPhoto" type="file" accept="image/*">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button id="saveProduct" class="btn">Post</button>
+          <button id="cancelPost" class="btn" style="background:#777">Cancel</button>
+        </div>
+        <p id="postMsg" class="small"></p>
       </div>
       <div id="productsGrid" class="grid"></div>
     </section>
@@ -164,7 +204,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -181,6 +222,7 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     const btnSign = document.getElementById('btnSign');
     const profileSection = document.getElementById('profileSection');
@@ -189,6 +231,15 @@
     const productCount = document.getElementById('productCount');
     const productsGrid = document.getElementById('productsGrid');
     const btnShare = document.getElementById('btnShare');
+    const btnPost = document.getElementById('btnPost');
+    const postForm = document.getElementById('postForm');
+    const productTitle = document.getElementById('productTitle');
+    const productPrice = document.getElementById('productPrice');
+    const productDesc = document.getElementById('productDesc');
+    const productPhoto = document.getElementById('productPhoto');
+    const saveProduct = document.getElementById('saveProduct');
+    const cancelPost = document.getElementById('cancelPost');
+    const postMsg = document.getElementById('postMsg');
     const status = document.getElementById('status');
     const publicProfile = document.getElementById('publicProfile');
     const publicPic = document.getElementById('publicPic');
@@ -205,28 +256,33 @@
         try {
           const result = await signInWithPopup(auth, provider);
           const user = result.user;
-          // Immediately update UI with Google data
           profilePic.src = user.photoURL || 'https://via.placeholder.com/150';
           displayName.textContent = user.displayName || user.email.split('@')[0];
-          // Create or update Firestore document with Google data
           const usersRef = doc(db, 'Users', user.uid);
-          await setDoc(usersRef, {
-            id: user.uid,
-            username: user.displayName || user.email.split('@')[0],
-            email: user.email || '',
-            imageURL: user.photoURL || '',
-            createdAt: new Date().toISOString(),
-            signup_type: 'Google',
-            active: true,
-            isOnline: 1,
-            lastSeen: new Date().toISOString()
-          }, { merge: true });
+          try {
+            await setDoc(usersRef, {
+              id: user.uid,
+              username: user.displayName || user.email.split('@')[0],
+              email: user.email || '',
+              imageURL: user.photoURL || '',
+              createdAt: new Date().toISOString(),
+              signup_type: 'Google',
+              active: true,
+              isOnline: 1,
+              lastSeen: new Date().toISOString()
+            }, { merge: true });
+            console.log('User doc created/updated');
+          } catch (firestoreError) {
+            console.error('Firestore write error:', firestoreError);
+            status.textContent = `Signed in, but profile save failed: ${firestoreError.message}. Check Firestore rules.`;
+            status.classList.add('error');
+          }
           currentUser = user;
           currentUserDoc = (await getDoc(usersRef)).data();
           showOwnProfile(user.uid);
-        } catch (e) {
-          console.error('Sign-in error:', e);
-          status.textContent = `Sign-in failed: ${e.message}. Please check Firebase Authentication settings or Firestore permissions.`;
+        } catch (authError) {
+          console.error('Auth error:', authError);
+          status.textContent = `Sign-in failed: ${authError.message}. Check Firebase Authentication settings.`;
           status.classList.add('error');
         }
       } else {
@@ -243,6 +299,7 @@
     onAuthStateChanged(auth, async user => {
       if (user) {
         btnSign.textContent = 'Sign Out';
+        postForm.classList.remove('hidden');
         currentUser = user;
         const usersRef = doc(db, 'Users', user.uid);
         try {
@@ -260,21 +317,87 @@
               lastSeen: new Date().toISOString()
             });
           }
-          currentUserDoc = (await getDoc(usersRef)).data();
+          currentUserDoc = uSnap.data();
           showOwnProfile(user.uid);
         } catch (e) {
-          console.error('Firestore error:', e);
-          status.textContent = `Failed to load profile: ${e.message}. Check Firestore security rules.`;
+          console.error('Firestore access error:', e);
+          status.textContent = `Profile load failed: ${e.message}. Using Google data. Check Firestore rules.`;
           status.classList.add('error');
+          profilePic.src = user.photoURL || 'https://via.placeholder.com/150';
+          displayName.textContent = user.displayName || user.email.split('@')[0];
+          showOwnProfile(user.uid);
         }
       } else {
         btnSign.textContent = 'Sign In';
+        postForm.classList.add('hidden');
         currentUser = null;
         currentUserDoc = null;
         profileSection.classList.add('hidden');
         publicProfile.classList.add('hidden');
-        status.textContent = 'Click "Sign In" to view your profile, or open a public profile link /u/username';
+        status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/username';
         status.classList.remove('error');
+      }
+    });
+
+    btnPost.addEventListener('click', () => {
+      postMsg.textContent = '';
+      postForm.classList.toggle('hidden');
+    });
+
+    cancelPost.addEventListener('click', () => {
+      postForm.classList.add('hidden');
+      productTitle.value = '';
+      productPrice.value = '';
+      productDesc.value = '';
+      productPhoto.value = '';
+      postMsg.textContent = '';
+    });
+
+    saveProduct.addEventListener('click', async () => {
+      if (!currentUser) {
+        postMsg.textContent = 'Please sign in to post a product';
+        postMsg.classList.add('error');
+        return;
+      }
+      const title = productTitle.value.trim();
+      const price = productPrice.value.trim();
+      const desc = productDesc.value.trim();
+      const file = productPhoto.files[0];
+      if (!title || !price || !desc || !file) {
+        postMsg.textContent = 'Please fill all fields and select a photo';
+        postMsg.classList.add('error');
+        return;
+      }
+      postMsg.textContent = 'Posting product...';
+      try {
+        const pId = Date.now().toString();
+        let photoURL = '';
+        if (file) {
+          const path = `product_photos/${currentUser.uid}-${pId}`;
+          const sRef = storageRef(storage, path);
+          const uploadRes = await uploadBytes(sRef, file);
+          photoURL = await getDownloadURL(uploadRes.ref);
+        }
+        await addDoc(collection(db, 'Product'), {
+          id: currentUser.uid,
+          pId: pId,
+          title: title,
+          price: price,
+          des: desc,
+          photo: photoURL
+        });
+        postMsg.textContent = 'Product posted successfully';
+        postMsg.classList.remove('error');
+        productTitle.value = '';
+        productPrice.value = '';
+        productDesc.value = '';
+        productPhoto.value = '';
+        postForm.classList.add('hidden');
+        showOwnProfile(currentUser.uid); // Refresh product grid
+      } catch (e) {
+        console.error('Product post error:', e);
+        postMsg.textContent = `Failed to post product: ${e.message}. Check Firestore/Storage rules.`;
+        postMsg.classList.add('error');
       }
     });
 
@@ -297,7 +420,7 @@
         }
       } catch (e) {
         console.error('Profile load error:', e);
-        status.textContent = `Failed to load profile: ${e.message}. Check Firestore security rules.`;
+        status.textContent = `Failed to load profile: ${e.message}. Check Firestore rules.`;
         status.classList.add('error');
       }
     }
@@ -328,7 +451,7 @@
         }
       } catch (e) {
         console.error('Product load error:', e);
-        countEl.textContent = 'Error loading products';
+        countEl.textContent = `Error loading products: ${e.message}`;
         countEl.classList.add('error');
       }
     }
@@ -372,7 +495,7 @@
           } else {
             profileSection.classList.add('hidden');
             publicProfile.classList.add('hidden');
-            status.textContent = 'Click "Sign In" to view your profile, or open a public profile link /u/username';
+            status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/username';
             status.classList.remove('error');
           }
         }
@@ -395,7 +518,7 @@
         displayPublicProfile(u);
       } catch (e) {
         console.error('Public profile load error:', e);
-        status.textContent = `Error loading profile: ${e.message}. Check Firestore security rules.`;
+        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules.`;
         status.classList.add('error');
       }
     }
@@ -414,7 +537,7 @@
         displayPublicProfile(u);
       } catch (e) {
         console.error('Public profile load error:', e);
-        status.textContent = `Error loading profile: ${e.message}. Check Firestore security rules.`;
+        status.textContent = `Error loading profile: ${e.message}. Check Firestore rules.`;
         status.classList.add('error');
       }
     }
