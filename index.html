@@ -18,7 +18,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -32,7 +31,6 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const firestore = getFirestore(app);
     const auth = getAuth(app);
     const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
@@ -92,7 +90,7 @@
             alert("Login successful!");
           })
           .catch((error) => {
-            console.error("Login error:", error);
+            console.error("Login error:", error.code, error.message);
             alert("Login failed: " + error.message);
           });
       });
@@ -107,7 +105,7 @@
             dropdownMenu.style.display = "none";
           })
           .catch((error) => {
-            console.error("Logout error:", error);
+            console.error("Logout error:", error.code, error.message);
             alert("Logout failed: " + error.message);
           });
       });
@@ -129,33 +127,51 @@
       closeSellModal.addEventListener("click", () => {
         sellModal.style.display = "none";
       });
-      // Load products from Firestore
-      onSnapshot(collection(firestore, "Products"), (snapshot) => {
+      // Load products from Realtime Database
+      const productRef = ref(db, "Product");
+      onValue(productRef, (snapshot) => {
+        console.log("Fetching products from Realtime Database...");
         products = [];
-        snapshot.forEach((doc) => {
-          products.push({ id: doc.id, ...doc.data() });
+        snapshot.forEach((childSnapshot) => {
+          const data = childSnapshot.val();
+          console.log("Product fetched:", childSnapshot.key, data);
+          products.push({
+            id: childSnapshot.key, // Use pId as the product ID
+            title: data.title,
+            price: data.price,
+            des: data.des,
+            photo: data.photo,
+            userId: data.id // Map 'id' from JSON to userId
+          });
         });
+        console.log("Total products fetched:", products.length);
         renderProducts(searchInput.value);
       }, (error) => {
-        console.error("Error fetching products:", error);
-        alert("Failed to load products: " + error.message);
+        console.error("Error fetching products:", error.code, error.message, error);
+        alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
       function renderProducts(filter = "") {
+        console.log("Rendering products with filter:", filter);
         container.innerHTML = "";
-        const filteredProducts = products.filter(p => p.title.toLowerCase().includes(filter.toLowerCase()));
+        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        console.log("Filtered products:", filteredProducts.length);
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
           div.classList.add("product");
           div.innerHTML = `
-            <img src="${product.photo}" alt="${product.title}">
-            <h3>${product.title}</h3>
-            <p class="price">${product.price} DH</p>
+            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <h3>${product.title || 'Untitled'}</h3>
+            <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
             <button class="add-to-cart-btn">Add to Cart</button>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
-            const phone = product.des.replace(/\D/g, "");
-            window.open(`https://wa.me/${phone}`, "_blank");
+            const phone = product.des ? product.des.replace(/\D/g, "") : "";
+            if (phone) {
+              window.open(`https://wa.me/${phone}`, "_blank");
+            } else {
+              alert("No WhatsApp number provided for this product.");
+            }
           });
           div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
             cart.push(product);
@@ -182,13 +198,19 @@
           container.innerHTML = "<p>No products found.</p>";
         }
       }
-      searchInput.addEventListener("input", (e) => renderProducts(e.target.value));
+      searchInput.addEventListener("input", (e) => {
+        console.log("Search input changed:", e.target.value);
+        renderProducts(e.target.value);
+      });
       const sliderRef = ref(db, "Sliders");
       onValue(sliderRef, (snapshot) => {
+        console.log("Fetching sliders from Realtime Database...");
         sliderContainer.innerHTML = "";
         let slides = [];
         snapshot.forEach((childSnapshot) => {
-          slides.push({ id: childSnapshot.key, ...childSnapshot.val() });
+          const slideData = { id: childSnapshot.key, ...childSnapshot.val() };
+          console.log("Slider fetched:", slideData);
+          slides.push(slideData);
         });
         if (slides.length > 0) {
           slides.forEach((slide) => {
@@ -207,13 +229,16 @@
           startSlider(slides.length);
         }
       }, (error) => {
-        console.error("Error fetching sliders:", error);
+        console.error("Error fetching sliders:", error.code, error.message, error);
         alert("Failed to load sliders: " + error.message);
       });
       let slideIndex = 0;
       function startSlider(numSlides) {
         const slides = document.querySelectorAll(".slide");
-        if (slides.length === 0) return;
+        if (slides.length === 0) {
+          console.log("No slides to display.");
+          return;
+        }
         slides.forEach(slide => {
           slide.style.opacity = 0;
           if (slide.tagName === "VIDEO") slide.pause();
@@ -245,7 +270,7 @@
                 remove(ref(db, `Sliders/${sliderId}`))
                   .then(() => alert("Slider item deleted!"))
                   .catch((error) => {
-                    console.error("Error deleting slider:", error);
+                    console.error("Error deleting slider:", error.code, error.message);
                     alert("Failed to delete slider item: " + error.message);
                   });
               }
@@ -253,19 +278,38 @@
             sliderList.appendChild(div);
           });
         }, (error) => {
-          console.error("Error loading admin sliders:", error);
+          console.error("Error loading admin sliders:", error.code, error.message);
           alert("Failed to load sliders: " + error.message);
         });
       }
       async function uploadFile(file, path) {
         try {
+          // Validate file size (e.g., max 5MB)
+          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          if (file.size > maxSize) {
+            throw new Error("File size exceeds 5MB limit.");
+          }
+          // Validate file type
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
+          }
+          console.log(`Uploading file: ${file.name} (${file.size} bytes) to ${path}`);
           const fileRef = storageRef(storage, path);
           const snapshot = await uploadBytes(fileRef, file);
           const url = await getDownloadURL(snapshot.ref);
+          console.log("File uploaded successfully:", url);
           return url;
         } catch (error) {
-          console.error("File upload error:", error);
-          throw new Error("Failed to upload file: " + error.message);
+          console.error("File upload error:", error.code, error.message, error);
+          if (error.code === "storage/unauthorized") {
+            throw new Error("Permission denied. Check Firebase Storage security rules.");
+          } else if (error.code === "storage/canceled") {
+            throw new Error("Upload was canceled.");
+          } else if (error.code === "storage/unknown") {
+            throw new Error("An unknown error occurred during upload. Check network or Firebase configuration.");
+          }
+          throw error;
         }
       }
       addProductForm.addEventListener("submit", async (e) => {
@@ -283,20 +327,22 @@
           return;
         }
         try {
-          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${photoFile.name}`);
-          await addDoc(collection(firestore, "Products"), {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            userId: currentUser.uid,
-            createdAt: new Date()
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
           });
           addProductForm.reset();
           alert("Product added successfully!");
         } catch (error) {
-          console.error("Error adding product:", error);
-          alert("Failed to add product: " + error.message);
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
       sellProductForm.addEventListener("submit", async (e) => {
@@ -314,21 +360,23 @@
           return;
         }
         try {
-          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${photoFile.name}`);
-          await addDoc(collection(firestore, "Products"), {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            userId: currentUser.uid,
-            createdAt: new Date()
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
           alert("Product added successfully!");
         } catch (error) {
-          console.error("Error adding product:", error);
-          alert("Failed to add product: " + error.message);
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
       function editProduct(productId, product) {
@@ -336,29 +384,29 @@
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         if (newTitle && newPrice && newDes) {
-          updateDoc(doc(firestore, "Products", productId), {
+          set(ref(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
             photo: product.photo,
-            userId: product.userId,
-            createdAt: product.createdAt
+            id: product.userId, // Preserve userId as 'id'
+            pId: productId // Preserve pId
           }).then(() => {
             alert("Product updated!");
           }).catch((error) => {
-            console.error("Error updating product:", error);
+            console.error("Error updating product:", error.code, error.message);
             alert("Failed to update product: " + error.message);
           });
         }
       }
       function deleteProduct(productId) {
         if (confirm("Delete this product?")) {
-          deleteDoc(doc(firestore, "Products", productId))
+          remove(ref(db, `Product/${productId}`))
             .then(() => {
               alert("Product deleted!");
             })
             .catch((error) => {
-              console.error("Error deleting product:", error);
+              console.error("Error deleting product:", error.code, error.message);
               alert("Failed to delete product: " + error.message);
             });
         }
@@ -375,14 +423,14 @@
           return;
         }
         try {
-          const sliderUrl = await uploadFile(sliderFile, `sliders/${sliderFile.name}`);
+          const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
           const newSliderRef = push(ref(db, "Sliders"));
           await set(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
           alert("Slider item added successfully!");
         } catch (error) {
-          console.error("Error adding slider item:", error);
-          alert("Failed to add slider item: " + error.message);
+          console.error("Error adding slider item:", error.code, error.message);
+          alert(`Failed to add slider item: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
       cartIcon.addEventListener("click", () => {
@@ -403,9 +451,9 @@
           const div = document.createElement("div");
           div.classList.add("cart-item");
           div.innerHTML = `
-            <img src="${product.photo}" alt="${product.title}">
-            <h4>${product.title}</h4>
-            <p>${product.price} DH</p>
+            <img src="${product.photo || 'https://via.placeholder.com/80'}" alt="${product.title || 'No title'}">
+            <h4>${product.title || 'Untitled'}</h4>
+            <p>${product.price || 'N/A'} DH</p>
             <button class="remove-from-cart">Remove</button>
           `;
           div.querySelector(".remove-from-cart").addEventListener("click", () => {
@@ -444,12 +492,29 @@
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
       closeBtn.addEventListener("click", () => popup.style.display = "none");
+      // Service Worker Registration with Enhanced Error Handling
+      if ("serviceWorker" in navigator) {
+        console.log("Attempting to register service worker...");
+        navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
+          .then(reg => {
+            console.log("Service Worker registered successfully:", reg.scope);
+          })
+          .catch(err => {
+            console.error("Service Worker registration failed:", err.name, err.message);
+            if (err.name === "TypeError") {
+              console.error("Possible cause: service-worker.js file not found or inaccessible.");
+              alert("Service Worker failed to register: File not found. Offline functionality may be limited.");
+            } else if (err.name === "SecurityError") {
+              console.error("Possible cause: Service worker scope mismatch or HTTPS required.");
+              alert("Service Worker failed to register: Security issue (e.g., not served over HTTPS or scope mismatch). Offline functionality may be limited.");
+            } else {
+              alert("Service Worker failed to register: " + err.message);
+            }
+          });
+      } else {
+        console.log("Service Worker not supported in this browser.");
+      }
     });
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js")
-        .then(reg => console.log("Service Worker registered", reg))
-        .catch(err => console.error("Service Worker error", err));
-    }
   </script>
   <style>
     /* Mimic X Shop Design: Dark theme, Helvetica font, clean layout */
