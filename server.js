@@ -4,8 +4,8 @@ const fetch = require('node-fetch');
 const app = express();
 
 app.get('/affiliate-data', async (req, res) => {
-  const apiKey = 'YOUR_API_KEY';
-  const apiSecret = 'YOUR_API_SECRET';
+  const apiKey = 'noY0AxxNXNzlrJLsnp';
+  const apiSecret = 'frLnT94oj8KJjRZVMr3RDoCrDX8Bb8Sli5dR';
   const timestamp = Date.now();
   const queryString = `api_key=${apiKey}&timestamp=${timestamp}`;
   const crypto = require('crypto');
