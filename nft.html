@@ -1,103 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit Affiliate Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <style>
-        .error-message { display: none; }
-        .error-message.show { display: block; }
-        img { max-width: 100px; height: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { background-color: #f9fafb; font-weight: 600; }
-        tr:hover { background-color: #f3f4f6; }
-        @media (max-width: 640px) {
-            img { max-width: 80px; }
-            th, td { padding: 8px; font-size: 0.875rem; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bybit Affiliate Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+.error-message { display: none; }
+.error-message.show { display: block; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+th { background-color: #f9fafb; font-weight: bold; }
+tr:hover { background-color: #f3f4f6; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-    <div class="max-w-5xl w-full mx-auto bg-white rounded-lg shadow-lg p-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Bybit Affiliate Dashboard</h1>
-        <div id="error" class="error-message text-red-600 font-semibold text-center mb-6 p-4 bg-red-50 rounded-lg"></div>
-        <table id="affiliate-table" class="hidden">
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Offer Name</th>
-                    <th>Commission</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody id="affiliate-list"></tbody>
-        </table>
-    </div>
-    <script>
-        async function fetchAffiliateData() {
-            const apiKey = 'noY0AxxNXNzlrJLsnp';
-            const apiSecret = 'frLnT94oj8KJjRZVMr3RDoCrDX8Bb8Sli5dR';
-            const apiUrl = 'https://api.bybit.com/v5/affiliate/referral-stats'; // Replace with actual Bybit Affiliate API endpoint
-            const timestamp = Date.now();
-            const queryString = `api_key=${apiKey}&timestamp=${timestamp}`;
-            const signature = CryptoJS.HmacSHA256(queryString, apiSecret).toString(CryptoJS.enc.Hex);
+<body class="bg-gray-100 p-6">
+<div class="max-w-5xl mx-auto bg-white p-8 rounded shadow">
+<h1 class="text-2xl font-bold mb-4 text-center">Bybit Affiliate Dashboard</h1>
+<div id="error" class="error-message text-red-600 p-4 rounded bg-red-50 text-center"></div>
+<table id="affiliate-table" class="hidden">
+<thead>
+<tr>
+<th>User ID</th>
+<th>Referral Code</th>
+<th>Commission</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="affiliate-list"></tbody>
+</table>
+</div>
 
-            const affiliateTable = document.getElementById('affiliate-table');
-            const affiliateList = document.getElementById('affiliate-list');
-            const errorContainer = document.getElementById('error');
+<script>
+async function fetchAffiliateData() {
+    const apiKey = 'noY0AxxNXNzlrJLsnp';
+    const apiSecret = 'frLnT94oj8KJjRZVMr3RDoCrDX8Bb8Sli5dR';
+    const apiUrl = 'https://api.bybit.com/v5/affiliate/aff-user-list'; // Correct endpoint
+    const timestamp = Date.now();
 
-            try {
-                const response = await fetch(`${apiUrl}?${queryString}&sign=${signature}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-BAPI-API-KEY': apiKey,
-                        'X-BAPI-TIMESTAMP': timestamp.toString(),
-                        'X-BAPI-SIGN': signature
-                    }
-                });
+    const queryString = `api_key=${apiKey}&timestamp=${timestamp}`;
+    const signature = CryptoJS.HmacSHA256(queryString, apiSecret).toString(CryptoJS.enc.Hex);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
+    const errorContainer = document.getElementById('error');
+    const affiliateTable = document.getElementById('affiliate-table');
+    const affiliateList = document.getElementById('affiliate-list');
 
-                const data = await response.json();
-                if (data.ret_code !== 0) {
-                    throw new Error(data.ret_msg || 'API returned an error');
-                }
+    try {
+        // Direct browser fetch may fail due to CORS; use server-side proxy for production
+        const response = await fetch(`${apiUrl}?${queryString}&sign=${signature}`, {
+            method: 'GET',
+        });
 
-                const results = data.result?.list || []; // Adjust based on actual response structure
-                if (results.length === 0) {
-                    throw new Error('No affiliate data available');
-                }
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        if (data.ret_code !== 0) throw new Error(data.ret_msg || 'API error');
 
-                affiliateTable.classList.remove('hidden');
-                errorContainer.classList.remove('show');
-                affiliateList.innerHTML = ''; // Clear previous content
+        const results = data.result?.list || [];
+        if (results.length === 0) throw new Error('No affiliate data available');
 
-                results.slice(0, 10).forEach(item => { // Limit to 10 items
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><img src="${item.image || 'https://via.placeholder.com/100?text=Bybit'}" alt="${item.name || 'Offer Image'}" class="rounded"></td>
-                        <td class="font-medium">${item.name || item.referralCode || 'Unnamed Offer'}</td>
-                        <td>$${parseFloat(item.commission || item.value || 0).toFixed(2)}</td>
-                        <td>${item.description || item.campaignDescription || 'No description available'}</td>
-                    `;
-                    affiliateList.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Fetch Error:', error);
-                errorContainer.textContent = `Failed to load affiliate data: ${error.message}. Please check the API endpoint or try again later.`;
-                errorContainer.classList.add('show');
-                affiliateTable.classList.add('hidden');
-            }
-        }
+        affiliateTable.classList.remove('hidden');
+        errorContainer.classList.remove('show');
+        affiliateList.innerHTML = '';
 
-        // Fetch data when the page loads
-        document.addEventListener('DOMContentLoaded', fetchAffiliateData);
-    </script>
+        results.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.userId || 'N/A'}</td>
+                <td>${item.referralCode || 'N/A'}</td>
+                <td>${item.commission || 0}</td>
+                <td>${item.status || 'N/A'}</td>
+            `;
+            affiliateList.appendChild(row);
+        });
+    } catch (error) {
+        console.error(error);
+        errorContainer.textContent = `Failed to load affiliate data: ${error.message}`;
+        errorContainer.classList.add('show');
+        affiliateTable.classList.add('hidden');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', fetchAffiliateData);
+</script>
 </body>
 </html>
