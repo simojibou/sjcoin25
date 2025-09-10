@@ -14,6 +14,11 @@
         .nft-card button { margin-top: 10px; padding: 5px 10px; background: #28a745; color: white; border: none; cursor: pointer; }
         #status { margin: 10px 0; color: red; }
     </style>
+    <!-- Firebase SDK (Modular, v10.12.2, compatibility mode) -->
+    <script async src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script async src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+    <!-- Ethers.js for wallet interaction -->
+    <script async src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
     <h1>NFT Buy/Sell Platform</h1>
@@ -22,149 +27,202 @@
     <h2>Available NFTs on OpenSea</h2>
     <div id="nftGrid"></div>
 
-    <!-- Firebase SDK v9 (without defer for synchronous loading) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"
-            onerror="document.getElementById('status').textContent = 'Failed to load Firebase App SDK. Check your internet or CDN.';"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js"
-            onerror="document.getElementById('status').textContent = 'Failed to load Firebase Analytics SDK. Check your internet or CDN.';"></script>
-
-    <!-- Ethers.js for wallet interaction -->
-    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"
-            onerror="document.getElementById('status').textContent = 'Failed to load Ethers.js. Check your internet or CDN.';"></script>
-
     <script>
-        // Wait for the page to fully load to ensure all scripts are available
-        window.addEventListener('load', function() {
-            // Firebase configuration
-            const firebaseConfig = {
-                apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-                authDomain: "sj-one.firebaseapp.com",
-                databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-                projectId: "sj-one",
-                storageBucket: "sj-one.appspot.com",
-                messagingSenderId: "426335553508",
-                appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-                measurementId: "G-YQTVZQWXGB"
-            };
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
 
-            // Initialize Firebase
-            let app, analytics;
+        // Initialize Firebase with error handling
+        let app, analytics;
+        try {
+            if (typeof firebase === 'undefined') {
+                throw new Error('Firebase SDK not loaded. Check network or CDN.');
+            }
+            app = firebase.initializeApp(firebaseConfig);
+            analytics = firebase.analytics(app);
+            console.log("Firebase initialized successfully");
+            document.getElementById('status').textContent = 'Firebase initialized';
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            document.getElementById('status').textContent = `Firebase error: ${error.message}. NFT platform will still function.`;
+        }
+
+        // Check ethers.js availability
+        if (typeof ethers === 'undefined') {
+            console.error("Ethers.js not loaded. Check CDN or network.");
+            document.getElementById('status').textContent = 'Ethers.js failed to load. Wallet connection unavailable.';
+        }
+
+        const openseaApiKey = 'edbeeb4f8e164fe09dba4058b03ed458';
+        let userAddress = null;
+        let provider = null;
+        let signer = null;
+
+        const connectButton = document.getElementById('connectButton');
+        const status = document.getElementById('status');
+        const nftGrid = document.getElementById('nftGrid');
+
+        // Detect script load errors
+        window.addEventListener('error', (event) => {
+            if (event.target.tagName === 'SCRIPT') {
+                console.error(`Failed to load script: ${event.target.src}`);
+                status.textContent = `Error loading script: ${event.target.src}. Try refreshing or check network.`;
+            }
+        });
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                status.textContent = 'MetaMask not detected. Please install MetaMask.';
+                console.error("MetaMask not detected");
+                return false;
+            }
+            if (!ethers) {
+                status.textContent = 'Ethers.js not loaded. Wallet connection unavailable.';
+                console.error("Ethers.js not available");
+                return false;
+            }
             try {
-                if (typeof firebase === 'undefined') {
-                    throw new Error('Firebase SDK not loaded. Check console for errors.');
-                }
-                app = firebase.initializeApp(firebaseConfig);
-                analytics = firebase.analytics(app);
-                console.log("Firebase initialized successfully");
-                document.getElementById('status').textContent = 'Firebase initialized';
+                connectButton.disabled = true;
+                connectButton.textContent = 'Connecting...';
+                provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                status.textContent = `Connected: ${userAddress}`;
+                connectButton.textContent = 'Wallet Connected';
+                console.log("Wallet connected:", userAddress);
+                return true;
             } catch (error) {
-                console.error("Firebase initialization error:", error);
-                document.getElementById('status').textContent = `Firebase error: ${error.message}. Platform will still function for NFT display if possible.`;
+                console.error("Wallet connection error:", error);
+                status.textContent = `Error connecting wallet: ${error.message}`;
+                connectButton.textContent = 'Connect Wallet';
+                connectButton.disabled = false;
+                return false;
             }
+        }
 
-            const openseaApiKey = 'edbeeb4f8e164fe09dba4058b03ed458';
-            let userAddress = null;
-            let provider = null;
-            let signer = null;
-
-            const connectButton = document.getElementById('connectButton');
-            const status = document.getElementById('status');
-            const nftGrid = document.getElementById('nftGrid');
-
-            async function connectWallet() {
-                if (!window.ethereum) {
-                    status.textContent = 'MetaMask not detected. Please install MetaMask.';
-                    console.error("MetaMask not detected");
-                    return false;
-                }
-                try {
-                    connectButton.disabled = true;
-                    connectButton.textContent = 'Connecting...';
-                    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-                    await provider.send("eth_requestAccounts", []);
-                    signer = provider.getSigner();
-                    userAddress = await signer.getAddress();
-                    status.textContent = `Connected: ${userAddress}`;
-                    connectButton.textContent = 'Wallet Connected';
-                    console.log("Wallet connected:", userAddress);
-                    return true;
-                } catch (error) {
-                    console.error("Wallet connection error:", error);
-                    status.textContent = `Error connecting wallet: ${error.message}`;
-                    connectButton.textContent = 'Connect Wallet';
-                    connectButton.disabled = false;
-                    return false;
-                }
+        connectButton.addEventListener('click', async () => {
+            const connected = await connectWallet();
+            if (connected) {
+                fetchUserNFTs();
+                fetchAllNFTs();
             }
+        });
 
-            connectButton.addEventListener('click', async () => {
-                const connected = await connectWallet();
-                if (connected) {
-                    fetchUserNFTs();
-                    fetchAllNFTs();
+        // Handle account changes
+        window.ethereum?.on('accountsChanged', async (accounts) => {
+            if (accounts.length === 0) {
+                status.textContent = 'Wallet disconnected. Please reconnect.';
+                userAddress = null;
+                connectButton.textContent = 'Connect Wallet';
+                connectButton.disabled = false;
+                nftGrid.innerHTML = '';
+                console.log("Wallet disconnected");
+            } else {
+                userAddress = accounts[0];
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                status.textContent = `Connected: ${userAddress}`;
+                connectButton.textContent = 'Wallet Connected';
+                connectButton.disabled = true;
+                console.log("Account changed:", userAddress);
+                fetchUserNFTs();
+                fetchAllNFTs();
+            }
+        });
+
+        // Handle network changes
+        window.ethereum?.on('chainChanged', () => {
+            console.log("Network changed, reloading page");
+            window.location.reload();
+        });
+
+        async function fetchUserNFTs() {
+            if (!userAddress) {
+                console.log("No user address, skipping fetchUserNFTs");
+                return;
+            }
+            try {
+                const response = await fetch(`https://apisheep.eth/api/v2/assets?owner=${userAddress}&limit=10`, {
+                    headers: {
+                        'X-API-KEY': openseaApiKey
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
+                const data = await response.json();
+                console.log("User NFTs fetched:", data.assets);
+                displayNFTs(data.assets, true);
+            } catch (error) {
+                console.error("Error fetching user NFTs:", error);
+                status.textContent = `Error fetching your NFTs: ${error.message}. Possible CORS or API key issue.`;
+            }
+        }
 
-            // Handle account changes
-            window.ethereum?.on('accountsChanged', async (accounts) => {
-                if (accounts.length === 0) {
-                    status.textContent = 'Wallet disconnected. Please reconnect.';
-                    userAddress = null;
-                    connectButton.textContent = 'Connect Wallet';
-                    connectButton.disabled = false;
-                    nftGrid.innerHTML = '';
-                    console.log("Wallet disconnected");
-                } else {
-                    userAddress = accounts[0];
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
-                    status.textContent = `Connected: ${userAddress}`;
-                    connectButton.textContent = 'Wallet Connected';
-                    connectButton.disabled = true;
-                    console.log("Account changed:", userAddress);
-                    fetchUserNFTs();
-                    fetchAllNFTs();
+        async function fetchAllNFTs(cursor = '') {
+            try {
+                const response = await fetch(`https://api.opensea.io/v2/assets?limit=10${cursor ? `&cursor=${cursor}` : ''}`, {
+                    headers: {
+                        'X-API-KEY': openseaApiKey
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
+                const data = await response.json();
+                console.log("All NFTs fetched:", data.assets);
+                displayNFTs(data.assets, false);
+                // Limit pagination to one additional page to avoid rate limits
+                if (data.next && !cursor) {
+                    await fetchAllNFTs(data.next);
+                }
+            } catch (error) {
+                console.error("Error fetching all NFTs:", error);
+                status.textContent = `Error fetching all NFTs: ${error.message}. Try hosting on a server or check API key.`;
+            }
+        }
 
-            // Handle network changes
-            window.ethereum?.on('chainChanged', () => {
-                console.log("Network changed, reloading page");
-                window.location.reload();
-            });
-
-            async function fetchUserNFTs() {
-                if (!userAddress) {
-                    console.log("No user address, skipping fetchUserNFTs");
+        function displayNFTs(assets, isUserOwned = false) {
+            assets.forEach(asset => {
+                if (!asset.image_url || !asset.asset_contract || !asset.token_id) {
+                    console.log("Skipping NFT with missing data:", asset);
                     return;
                 }
-                try {
-                    const response = await fetch(`https://api.opensea.io/v2/assets?owner=${userAddress}&limit=20`, {
-                        headers: {
-                            'X-API-KEY': openseaApiKey
-                        }
+                const card = document.createElement('div');
+                card.className = 'nft-card';
+                card.innerHTML = `
+                    <img src="${asset.image_url}" alt="${asset.name || 'Unnamed NFT'}">
+                    <h3>${asset.name || 'Unnamed NFT'}</h3>
+                    <p>${asset.description ? asset.description.substring(0, 50) + '...' : 'No description'}</p>
+                    <p>Collection: ${asset.collection?.name || 'Unknown'}</p>
+                `;
+                if (isUserOwned) {
+                    const sellButton = document.createElement('button');
+                    sellButton.textContent = 'Sell on OpenSea';
+                    sellButton.addEventListener('click', () => {
+                        window.open(`https://opensea.io/assets/ethereum/${asset.asset_contract.address}/${asset.token_id}/sell`, '_blank');
                     });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    console.log("User NFTs fetched:", data.assets.length + ' items');
-                    displayNFTs(data.assets, true);
-                } catch (error) {
-                    console.error("Error fetching user NFTs:", error);
-                    status.textContent = `Error fetching your NFTs: ${error.message}`;
+                    card.appendChild(sellButton);
+                } else {
+                    const buyButton = document.createElement('button');
+                    buyButton.textContent = 'View/Buy on OpenSea';
+                    buyButton.addEventListener('click', () => {
+                        window.open(asset.permalink || `https://opensea.io/assets/ethereum/${asset.asset_contract.address}/${asset.token_id}`, '_blank');
+                    });
+                    card.appendChild(buyButton);
                 }
-            }
-
-            async function fetchAllNFTs(cursor = '') {
-                try {
-                    const response = await fetch(`https://api.opensea.io/v2/assets?limit=20${cursor ? `&cursor=${cursor}` : ''}`, {
-                        headers: {
-                            'X-API-KEY': openseaApiKey
-                        }
-                    });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    console.log("All NFTs
+                nftGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
