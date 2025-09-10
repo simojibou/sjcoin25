@@ -1,136 +1,94 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJ NFT Marketplace Full Fix</title>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-<!-- Ethers.js -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.min.js"></script>
-
+<title>Bybit Affiliate Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
-body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-#nft-container { display: flex; flex-wrap: wrap; gap: 20px; }
-.nft-card { background: #fff; border-radius: 10px; padding: 10px; width: 220px; text-align: center; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-.nft-card img { width: 100%; border-radius: 10px; }
-button { padding: 5px 10px; margin-top: 5px; cursor: pointer; }
+    .error-message { display: none; }
+    .error-message.show { display: block; }
+    img { max-width: 100px; height: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background-color: #f9fafb; font-weight: 600; }
+    tr:hover { background-color: #f3f4f6; }
+    @media (max-width: 640px) {
+        img { max-width: 80px; }
+        th, td { padding: 8px; font-size: 0.875rem; }
+    }
 </style>
 </head>
-
-<body>
-<h1>SJ NFT Marketplace Full Fix</h1>
-<div id="user-auth">
-  <button onclick="login()">تسجيل الدخول بمحفظة جوجل</button>
-  <button onclick="logout()">تسجيل الخروج</button>
-  <div id="user-info"></div>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+<div class="max-w-5xl w-full mx-auto bg-white rounded-lg shadow-lg p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Bybit Affiliate Dashboard</h1>
+    <div id="error" class="error-message text-red-600 font-semibold text-center mb-6 p-4 bg-red-50 rounded-lg"></div>
+    <table id="affiliate-table" class="hidden">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Offer Name</th>
+                <th>Commission</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody id="affiliate-list"></tbody>
+    </table>
 </div>
 
-<h2>NFTs من OpenSea</h2>
-<div id="nft-container">جارٍ التحميل...</div>
+<script>
+async function fetchAffiliateData() {
+    const apiKey = 'noY0AxxNXNzlrJLsnp';
+    const apiSecret = 'frLnT94oj8KJjRZVMr3RDoCrDX8Bb8Sli5dR';
+    const apiUrl = 'https://api.bybit.com/v5/affiliate/referral-stats'; // Use actual endpoint
+    const timestamp = Date.now();
 
-<script type="module">
-// === Firebase Setup ===
-const firebaseConfig = {
-  apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-  authDomain: "sj-one.firebaseapp.com",
-  databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-  projectId: "sj-one",
-  storageBucket: "sj-one.appspot.com",
-  messagingSenderId: "426335553508",
-  appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-  measurementId: "G-YQTVZQWXGB"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+    // Construct query and signature according to Bybit rules
+    const queryString = `api_key=${apiKey}&timestamp=${timestamp}`;
+    const signature = CryptoJS.HmacSHA256(queryString, apiSecret).toString(CryptoJS.enc.Hex);
 
-// === Login / Logout ===
-function login() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(result => {
-    document.getElementById('user-info').innerHTML = `مرحبًا ${result.user.displayName}`;
-  });
+    const affiliateTable = document.getElementById('affiliate-table');
+    const affiliateList = document.getElementById('affiliate-list');
+    const errorContainer = document.getElementById('error');
+
+    try {
+        const response = await fetch(`${apiUrl}?${queryString}&sign=${signature}`, {
+            method: 'GET'
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+        if (data.ret_code !== 0) throw new Error(data.ret_msg || 'API returned an error');
+
+        const results = data.result?.list || [];
+        if (results.length === 0) throw new Error('No affiliate data available');
+
+        affiliateTable.classList.remove('hidden');
+        errorContainer.classList.remove('show');
+        affiliateList.innerHTML = '';
+
+        results.slice(0, 10).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${item.image || 'https://via.placeholder.com/100?text=Bybit'}" alt="${item.name || 'Offer Image'}" class="rounded"></td>
+                <td class="font-medium">${item.name || item.referralCode || 'Unnamed Offer'}</td>
+                <td>$${parseFloat(item.commission || item.value || 0).toFixed(2)}</td>
+                <td>${item.description || item.campaignDescription || 'No description available'}</td>
+            `;
+            affiliateList.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error('Fetch Error:', error);
+        errorContainer.textContent = `Failed to load affiliate data: ${error.message}. Please check the API endpoint or try again later.`;
+        errorContainer.classList.add('show');
+        affiliateTable.classList.add('hidden');
+    }
 }
 
-function logout() {
-  auth.signOut();
-  document.getElementById('user-info').innerHTML = '';
-}
-
-// === Fetch NFTs from OpenSea (fixed) ===
-const apiKey = "edbeeb4f8e164fe09dba4058b03ed458";
-
-// مثال: استخدام collection_slug لعرض NFTs من مجموعة محددة
-const collectionSlug = "cryptopunks"; // ضع هنا Collection slug من OpenSea
-
-async function fetchNFTs() {
-  const res = await fetch(`https://api.opensea.io/api/v1/assets?order_direction=desc&limit=12&collection=${collectionSlug}`, {
-    headers: { "X-API-KEY": apiKey }
-  });
-  const data = await res.json();
-  if (!data.assets || data.assets.length === 0) {
-    document.getElementById('nft-container').innerHTML = 'لا توجد NFTs لعرضها';
-    return;
-  }
-  displayNFTs(data.assets);
-}
-
-function displayNFTs(nfts) {
-  const container = document.getElementById('nft-container');
-  container.innerHTML = '';
-  nfts.forEach(nft => {
-    const card = document.createElement('div');
-    card.className = 'nft-card';
-    const priceETH = nft.last_sale ? (nft.last_sale.total_price / 1e18).toFixed(4) : "غير متوفر";
-    card.innerHTML = `
-      <img src="${nft.image_url || 'https://via.placeholder.com/200'}" alt="${nft.name}">
-      <h3>${nft.name || 'بدون اسم'}</h3>
-      <p>Collection: ${nft.collection.name}</p>
-      <p>Price: ${priceETH} ETH</p>
-      <button onclick="buyNFT('${nft.token_id}', '${nft.asset_contract.address}', '${nft.name}', ${nft.last_sale ? nft.last_sale.total_price/1e18 : 0})">شراء + عمولة 5%</button>
-    `;
-    container.appendChild(card);
-  });
-}
-
-// === Buy NFT with MetaMask + commission simulation ===
-async function buyNFT(tokenId, contractAddress, name, price) {
-  if (!window.ethereum) return alert("يرجى تثبيت MetaMask أولاً!");
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  const signer = await provider.getSigner();
-  const userAddress = await signer.getAddress();
-
-  const commissionRate = 0.05; // 5%
-  const totalPrice = (price * (1 + commissionRate)).toFixed(4);
-
-  alert(`NFT: ${name}\nالسعر الأصلي: ${price} ETH\nالعمولة: 5%\nالسعر النهائي: ${totalPrice} ETH`);
-
-  // تسجيل العملية في Firebase
-  const user = auth.currentUser;
-  if (!user) return alert('يجب تسجيل الدخول أولاً');
-  db.ref('sales').push({
-    user: user.displayName,
-    uid: user.uid,
-    nft: name,
-    tokenId: tokenId,
-    contract: contractAddress,
-    price: price,
-    total: totalPrice,
-    buyerAddress: userAddress,
-    timestamp: Date.now()
-  });
-
-  // === هنا يمكن إضافة كود Smart Contract / Seaport للشراء الحقيقي ===
-  console.log(`شراء NFT: ${name} (${tokenId}) بمبلغ ${totalPrice} ETH`);
-}
-
-fetchNFTs();
+document.addEventListener('DOMContentLoaded', fetchAffiliateData);
 </script>
 </body>
 </html>
