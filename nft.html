@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ NFT Marketplace</title>
+    <title>SJ NFT Marketplace Advanced</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
         #nft-container { display: flex; flex-wrap: wrap; gap: 20px; }
@@ -16,17 +17,18 @@
     </style>
 </head>
 <body>
-    <h1>SJ NFT Marketplace</h1>
+    <h1>SJ NFT Marketplace Advanced</h1>
     <div id="user-auth">
         <button onclick="login()">تسجيل الدخول بمحفظة جوجل</button>
         <button onclick="logout()">تسجيل الخروج</button>
         <div id="user-info"></div>
     </div>
+
     <h2>NFTs من OpenSea</h2>
     <div id="nft-container"></div>
 
     <script>
-        // 1. إعداد Firebase
+        // === 1. إعداد Firebase ===
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -41,7 +43,7 @@
         const auth = firebase.auth();
         const db = firebase.database();
 
-        // 2. تسجيل الدخول / الخروج
+        // === 2. تسجيل الدخول / الخروج ===
         function login() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).then(result => {
@@ -55,13 +57,11 @@
             document.getElementById('user-info').innerHTML = '';
         }
 
-        // 3. جلب NFTs من OpenSea
-        const apiKey = "edbeeb4f8e164fe09dba4058b03ed458"; // OpenSea API Key
+        // === 3. جلب NFTs من OpenSea ===
+        const apiKey = "edbeeb4f8e164fe09dba4058b03ed458";
         async function fetchNFTs() {
-            const url = `https://api.opensea.io/api/v1/assets?order_direction=desc&limit=10&include_orders=false`;
-            const res = await fetch(url, {
-                headers: { "X-API-KEY": apiKey }
-            });
+            const url = `https://api.opensea.io/api/v1/assets?order_direction=desc&limit=10&include_orders=true`;
+            const res = await fetch(url, { headers: { "X-API-KEY": apiKey } });
             const data = await res.json();
             displayNFTs(data.assets);
         }
@@ -77,19 +77,28 @@
                     <h3>${nft.name || 'بدون اسم'}</h3>
                     <p>Collection: ${nft.collection.name}</p>
                     <p>Price: ${nft.last_sale ? nft.last_sale.total_price/1e18 + ' ETH' : 'غير متوفر'}</p>
-                    <button onclick="buyNFT('${nft.token_id}', '${nft.asset_contract.address}', '${nft.name}')">شراء + عمولة</button>
+                    <button onclick="buyNFT('${nft.token_id}', '${nft.asset_contract.address}', '${nft.name}', ${nft.last_sale ? nft.last_sale.total_price/1e18 : 0})">شراء + عمولة</button>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // 4. محاكاة شراء NFT مع احتساب العمولة
-        function buyNFT(tokenId, contractAddress, name) {
-            const commission = 0.05; // 5% عمولة
-            const salePrice = prompt(`أدخل سعر الشراء (ETH) لـ ${name}:`);
-            if (!salePrice) return;
-            const total = parseFloat(salePrice) * (1 + commission);
-            alert(`تم احتساب العمولة، السعر النهائي: ${total} ETH`);
+        // === 4. شراء NFT عبر MetaMask مع عمولة ===
+        async function buyNFT(tokenId, contractAddress, name, price) {
+            if (!window.ethereum) return alert("يرجى تثبيت MetaMask أولاً!");
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            const signer = await provider.getSigner();
+            const userAddress = await signer.getAddress();
+
+            // احتساب العمولة
+            const commissionRate = 0.05; // 5%
+            const totalPrice = price * (1 + commissionRate);
+            alert(`السعر الأصلي: ${price} ETH\nالعمولة: 5%\nالسعر النهائي: ${totalPrice} ETH`);
+
+            // === هنا تضع الكود الخاص بعقد الشراء الفعلي (Smart Contract) ===
+            // مثال محاكاة: إرسال المعاملة مباشرة إلى العقد أو استخدام Seaport
+            console.log(`شراء NFT: ${name} (${tokenId}) من العقد ${contractAddress} بمبلغ ${totalPrice} ETH`);
 
             // تسجيل العملية في Firebase
             const user = auth.currentUser;
@@ -100,13 +109,13 @@
                 nft: name,
                 tokenId: tokenId,
                 contract: contractAddress,
-                price: salePrice,
-                total: total,
+                price: price,
+                total: totalPrice,
+                buyerAddress: userAddress,
                 timestamp: Date.now()
             });
         }
 
-        // تحميل NFTs عند فتح الصفحة
         fetchNFTs();
     </script>
 </body>
