@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto p-4">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-center">Marketplace</h1>
+            <div id="auth-section" class="mt-4 text-center">
+                <button id="signInBtn" class="bg-blue-500 text-white px-4 py-2 rounded hidden">Sign In</button>
+                <button id="signOutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Sign Out</button>
+                <p id="userInfo" class="mt-2"></p>
+            </div>
+        </header>
+        <main>
+            <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </main>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Envato API configuration
+        const envatoApiKey = 'grPmAjJjzDAK00K5B0F5AMj6XS6sMjuE';
+        const envatoClientId = 'sj-store-dktd6arn';
+        const envatoApiUrl = 'https://api.envato.com/v3/market/catalog/collection';
+
+        // DOM elements
+        const productsDiv = document.getElementById('products');
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const userInfo = document.getElementById('userInfo');
+
+        // Firebase Authentication with Google
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        signInBtn.addEventListener('click', () => {
+            auth.signInWithPopup(provider).catch(error => {
+                console.error('Sign-in error:', error);
+                userInfo.textContent = 'Error signing in: ' + error.message;
+            });
+        });
+
+        signOutBtn.addEventListener('click', () => {
+            auth.signOut().catch(error => {
+                console.error('Sign-out error:', error);
+                userInfo.textContent = 'Error signing out: ' + error.message;
+            });
+        });
+
+        // Authentication state listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                signInBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
+                userInfo.textContent = `Welcome, ${user.displayName}`;
+                fetchProducts(user.uid);
+            } else {
+                signInBtn.classList.remove('hidden');
+                signOutBtn.classList.add('hidden');
+                userInfo.textContent = 'Please sign in to view products.';
+                productsDiv.innerHTML = '';
+            }
+        });
+
+        // Fetch products from Envato API
+        async function fetchProducts(userId) {
+            try {
+                const response = await axios.get(envatoApiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${envatoApiKey}`,
+                        'User-Agent': 'Marketplace-App'
+                    },
+                    params: {
+                        'site': 'themeforest.net'
+                    }
+                });
+
+                const products = response.data.results;
+                displayProducts(products);
+                saveProductsToFirebase(userId, products);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                productsDiv.innerHTML = '<p class="text-red-500">Error loading products. Please try again later.</p>';
+            }
+        }
+
+        // Display products
+        function displayProducts(products) {
+            productsDiv.innerHTML = '';
+            products.forEach(product => {
+                const productCard = `
+                    <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
+                        <img src="${product.thumbnail_url || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                        <h2 class="text-xl font-semibold mt-2">${product.name}</h2>
+                        <p class="text-gray-600">${product.description || 'No description available'}</p>
+                        <p class="text-green-500 font-bold mt-2">$${product.price_cents / 100}</p>
+                        <a href="${product.url}" target="_blank" class="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">View on Envato</a>
+                    </div>
+                `;
+                productsDiv.innerHTML += productCard;
+            });
+        }
+
+        // Save products to Firebase
+        function saveProductsToFirebase(userId, products) {
+            const productsRef = database.ref(`users/${userId}/products`);
+            products.forEach(product => {
+                productsRef.child(product.id).set({
+                    name: product.name,
+                    price: product.price_cents / 100,
+                    url: product.url,
+                    thumbnail: product.thumbnail_url || ''
+                });
+            });
+        }
+    </script>
+</body>
+</html>
