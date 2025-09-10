@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJ NFT Marketplace Full</title>
+<title>SJ NFT Marketplace Full Fix</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -12,12 +12,6 @@
 
 <!-- Ethers.js -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.min.js"></script>
-
-<!-- Seaport SDK -->
-<script type="module">
-  import { Seaport } from "https://cdn.jsdelivr.net/npm/@opensea/seaport-js@1.3.0/dist/seaport.js";
-  window.Seaport = Seaport;
-</script>
 
 <style>
 body { font-family: Arial; background: #f0f0f0; padding: 20px; }
@@ -29,7 +23,7 @@ button { padding: 5px 10px; margin-top: 5px; cursor: pointer; }
 </head>
 
 <body>
-<h1>SJ NFT Marketplace Full</h1>
+<h1>SJ NFT Marketplace Full Fix</h1>
 <div id="user-auth">
   <button onclick="login()">تسجيل الدخول بمحفظة جوجل</button>
   <button onclick="logout()">تسجيل الخروج</button>
@@ -37,7 +31,7 @@ button { padding: 5px 10px; margin-top: 5px; cursor: pointer; }
 </div>
 
 <h2>NFTs من OpenSea</h2>
-<div id="nft-container"></div>
+<div id="nft-container">جارٍ التحميل...</div>
 
 <script type="module">
 // === Firebase Setup ===
@@ -68,14 +62,21 @@ function logout() {
   document.getElementById('user-info').innerHTML = '';
 }
 
-// === Fetch NFTs from OpenSea ===
+// === Fetch NFTs from OpenSea (fixed) ===
 const apiKey = "edbeeb4f8e164fe09dba4058b03ed458";
 
+// مثال: استخدام collection_slug لعرض NFTs من مجموعة محددة
+const collectionSlug = "cryptopunks"; // ضع هنا Collection slug من OpenSea
+
 async function fetchNFTs() {
-  const res = await fetch(`https://api.opensea.io/api/v1/assets?order_direction=desc&limit=10&include_orders=true`, {
+  const res = await fetch(`https://api.opensea.io/api/v1/assets?order_direction=desc&limit=12&collection=${collectionSlug}`, {
     headers: { "X-API-KEY": apiKey }
   });
   const data = await res.json();
+  if (!data.assets || data.assets.length === 0) {
+    document.getElementById('nft-container').innerHTML = 'لا توجد NFTs لعرضها';
+    return;
+  }
   displayNFTs(data.assets);
 }
 
@@ -85,18 +86,19 @@ function displayNFTs(nfts) {
   nfts.forEach(nft => {
     const card = document.createElement('div');
     card.className = 'nft-card';
+    const priceETH = nft.last_sale ? (nft.last_sale.total_price / 1e18).toFixed(4) : "غير متوفر";
     card.innerHTML = `
       <img src="${nft.image_url || 'https://via.placeholder.com/200'}" alt="${nft.name}">
       <h3>${nft.name || 'بدون اسم'}</h3>
       <p>Collection: ${nft.collection.name}</p>
-      <p>Price: ${nft.last_sale ? nft.last_sale.total_price/1e18 + ' ETH' : 'غير متوفر'}</p>
+      <p>Price: ${priceETH} ETH</p>
       <button onclick="buyNFT('${nft.token_id}', '${nft.asset_contract.address}', '${nft.name}', ${nft.last_sale ? nft.last_sale.total_price/1e18 : 0})">شراء + عمولة 5%</button>
     `;
     container.appendChild(card);
   });
 }
 
-// === Buy NFT using Seaport ===
+// === Buy NFT with MetaMask + commission simulation ===
 async function buyNFT(tokenId, contractAddress, name, price) {
   if (!window.ethereum) return alert("يرجى تثبيت MetaMask أولاً!");
   const provider = new ethers.BrowserProvider(window.ethereum);
@@ -104,17 +106,10 @@ async function buyNFT(tokenId, contractAddress, name, price) {
   const signer = await provider.getSigner();
   const userAddress = await signer.getAddress();
 
-  const seaport = new Seaport(signer);
-
-  // احتساب العمولة
   const commissionRate = 0.05; // 5%
-  const totalPrice = price * (1 + commissionRate);
+  const totalPrice = (price * (1 + commissionRate)).toFixed(4);
 
-  alert(`السعر الأصلي: ${price} ETH\nالعمولة: 5%\nالسعر النهائي: ${totalPrice} ETH`);
-
-  // === Create a simple Seaport order (محاكاة) ===
-  // ملاحظة: لشراء فعلي تحتاج عقد Seaport Marketplace ونقل NFT
-  console.log(`شراء NFT: ${name} (${tokenId}) من العقد ${contractAddress} بمبلغ ${totalPrice} ETH`);
+  alert(`NFT: ${name}\nالسعر الأصلي: ${price} ETH\nالعمولة: 5%\nالسعر النهائي: ${totalPrice} ETH`);
 
   // تسجيل العملية في Firebase
   const user = auth.currentUser;
@@ -130,6 +125,9 @@ async function buyNFT(tokenId, contractAddress, name, price) {
     buyerAddress: userAddress,
     timestamp: Date.now()
   });
+
+  // === هنا يمكن إضافة كود Smart Contract / Seaport للشراء الحقيقي ===
+  console.log(`شراء NFT: ${name} (${tokenId}) بمبلغ ${totalPrice} ETH`);
 }
 
 fetchNFTs();
