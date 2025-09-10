@@ -5,27 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.unpkg.com/axios/dist/axios.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-</head>
-<body class="bg-gray-100">
-    <div id="app" class="container mx-auto p-4">
-        <header class="mb-6">
-            <h1 class="text-3xl font-bold text-center">Marketplace</h1>
-            <div id="auth-section" class="mt-4 text-center">
-                <button id="signInBtn" class="bg-blue-500 text-white px-4 py-2 rounded hidden">Sign In</button>
-                <button id="signOutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Sign Out</button>
-                <p id="userInfo" class="mt-2"></p>
-            </div>
-        </header>
-        <main>
-            <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </main>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-    <script>
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -39,104 +25,173 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const database = getDatabase(app);
+            console.log('Firebase initialized successfully');
 
-        // Envato API configuration
-        const envatoApiKey = 'grPmAjJjzDAK00K5B0F5AMj6XS6sMjuE';
-        const envatoClientId = 'sj-store-dktd6arn';
-        const envatoApiUrl = 'https://api.envato.com/v3/market/catalog/collection';
+            // Envato API configuration
+            const envatoApiKey = 'grPmAjJjzDAK00K5B0F5AMj6XS6sMjuE';
+            const envatoClientId = 'sj-store-dktd6arn';
+            const envatoApiUrl = 'https://api.envato.com/v3/market/catalog/search';
 
-        // DOM elements
-        const productsDiv = document.getElementById('products');
-        const signInBtn = document.getElementById('signInBtn');
-        const signOutBtn = document.getElementById('signOutBtn');
-        const userInfo = document.getElementById('userInfo');
+            // DOM elements
+            const productsDiv = document.getElementById('products');
+            const errorMessageDiv = document.getElementById('errorMessage');
+            const signInBtn = document.getElementById('signInBtn');
+            const signOutBtn = document.getElementById('signOutBtn');
+            const userInfo = document.getElementById('userInfo');
 
-        // Firebase Authentication with Google
-        const provider = new firebase.auth.GoogleAuthProvider();
+            // Firebase Authentication with Google
+            const provider = new GoogleAuthProvider();
 
-        signInBtn.addEventListener('click', () => {
-            auth.signInWithPopup(provider).catch(error => {
-                console.error('Sign-in error:', error);
-                userInfo.textContent = 'Error signing in: ' + error.message;
+            signInBtn.addEventListener('click', async () => {
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error('Sign-in error:', error);
+                    userInfo.textContent = 'Error signing in: ' + error.message;
+                }
             });
-        });
 
-        signOutBtn.addEventListener('click', () => {
-            auth.signOut().catch(error => {
-                console.error('Sign-out error:', error);
-                userInfo.textContent = 'Error signing out: ' + error.message;
+            signOutBtn.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    console.error('Sign-out error:', error);
+                    userInfo.textContent = 'Error signing out: ' + error.message;
+                }
             });
-        });
 
-        // Authentication state listener
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                signInBtn.classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
-                userInfo.textContent = `Welcome, ${user.displayName}`;
-                fetchProducts(user.uid);
-            } else {
-                signInBtn.classList.remove('hidden');
-                signOutBtn.classList.add('hidden');
-                userInfo.textContent = 'Please sign in to view products.';
-                productsDiv.innerHTML = '';
-            }
-        });
-
-        // Fetch products from Envato API
-        async function fetchProducts(userId) {
-            try {
-                const response = await axios.get(envatoApiUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${envatoApiKey}`,
-                        'User-Agent': 'Marketplace-App'
-                    },
-                    params: {
-                        'site': 'themeforest.net'
+            // Authentication state listener
+            onAuthStateChanged(auth, user => {
+                try {
+                    if (user) {
+                        signInBtn.classList.add('hidden');
+                        signOutBtn.classList.remove('hidden');
+                        userInfo.textContent = `Welcome, ${user.displayName}`;
+                        fetchProducts(user.uid);
+                    } else {
+                        signInBtn.classList.remove('hidden');
+                        signOutBtn.classList.add('hidden');
+                        userInfo.textContent = 'Please sign in to view products.';
+                        productsDiv.innerHTML = '';
+                        errorMessageDiv.textContent = '';
                     }
-                });
+                } catch (error) {
+                    console.error('Auth state change error:', error);
+                    errorMessageDiv.textContent = 'Error handling authentication state.';
+                }
+            });
 
-                const products = response.data.results;
-                displayProducts(products);
-                saveProductsToFirebase(userId, products);
-            } catch (error) {
-                console.error('Error fetching products:', error);
-                productsDiv.innerHTML = '<p class="text-red-500">Error loading products. Please try again later.</p>';
+            // Fetch products from Envato API
+            async function fetchProducts(userId) {
+                try {
+                    console.log('Fetching products from Envato API...');
+                    const response = await axios.get(envatoApiUrl, {
+                        headers: {
+                            'Authorization': `Bearer ${envatoApiKey}`,
+                            'User-Agent': 'Marketplace-App'
+                        },
+                        params: {
+                            site: 'themeforest.net',
+                            term: '*',
+                            page_size: 20
+                        }
+                    });
+
+                    console.log('Envato API Response:', response.data);
+
+                    const products = response.data.results || response.data.items || [];
+                    if (products.length === 0) {
+                        errorMessageDiv.textContent = 'No products found.';
+                        console.warn('No products returned from API.');
+                        return;
+                    }
+
+                    displayProducts(products);
+                    saveProductsToFirebase(userId, products);
+                } catch (error) {
+                    console.error('Error fetching products:', error);
+                    errorMessageDiv.textContent = `Error loading products: ${error.message}. Note: Envato API may require a server-side proxy due to CORS restrictions.`;
+                }
             }
-        }
 
-        // Display products
-        function displayProducts(products) {
-            productsDiv.innerHTML = '';
-            products.forEach(product => {
-                const productCard = `
-                    <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
-                        <img src="${product.thumbnail_url || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-cover rounded">
-                        <h2 class="text-xl font-semibold mt-2">${product.name}</h2>
-                        <p class="text-gray-600">${product.description || 'No description available'}</p>
-                        <p class="text-green-500 font-bold mt-2">$${product.price_cents / 100}</p>
-                        <a href="${product.url}" target="_blank" class="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">View on Envato</a>
-                    </div>
-                `;
-                productsDiv.innerHTML += productCard;
-            });
-        }
+            // Display products
+            function displayProducts(products) {
+                try {
+                    productsDiv.innerHTML = '';
+                    if (!products || products.length === 0) {
+                        errorMessageDiv.textContent = 'No products available to display.';
+                        console.warn('No products to display.');
+                        return;
+                    }
 
-        // Save products to Firebase
-        function saveProductsToFirebase(userId, products) {
-            const productsRef = database.ref(`users/${userId}/products`);
-            products.forEach(product => {
-                productsRef.child(product.id).set({
-                    name: product.name,
-                    price: product.price_cents / 100,
-                    url: product.url,
-                    thumbnail: product.thumbnail_url || ''
-                });
-            });
+                    products.forEach(product => {
+                        const name = product.name || 'Unnamed Product';
+                        const price = product.price_cents ? (product.price_cents / 100) : product.price || 'N/A';
+                        const thumbnail = product.thumbnail_url || product.previews?.icon_with_landscape_preview?.icon_url || 'https://via.placeholder.com/150';
+                        const url = product.url || product.permalink || '#';
+                        const description = product.description || product.summary || 'No description available';
+
+                        const productCard = `
+                            <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
+                                <img src="${thumbnail}" alt="${name}" class="w-full h-48 object-cover rounded">
+                                <h2 class="text-xl font-semibold mt-2">${name}</h2>
+                                <p class="text-gray-600">${description}</p>
+                                <p class="text-green-500 font-bold mt-2">$${price}</p>
+                                <a href="${url}" target="_blank" class="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">View on Envato</a>
+                            </div>
+                        `;
+                        productsDiv.innerHTML += productCard;
+                    });
+                } catch (error) {
+                    console.error('Error displaying products:', error);
+                    errorMessageDiv.textContent = 'Error rendering products.';
+                }
+            }
+
+            // Save products to Firebase
+            function saveProductsToFirebase(userId, products) {
+                try {
+                    const productsRef = ref(database, `users/${userId}/products`);
+                    products.forEach(product => {
+                        const productId = product.id || Date.now().toString();
+                        set(ref(database, `users/${userId}/products/${productId}`), {
+                            name: product.name || 'Unnamed Product',
+                            price: product.price_cents ? (product.price_cents / 100) : product.price || 'N/A',
+                            url: product.url || product.permalink || '#',
+                            thumbnail: product.thumbnail_url || product.previews?.icon_with_landscape_preview?.icon_url || ''
+                        });
+                    });
+                    console.log('Products saved to Firebase');
+                } catch (error) {
+                    console.error('Error saving products to Firebase:', error);
+                    errorMessageDiv.textContent = 'Error saving products to database.';
+                }
+            }
+
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            document.getElementById('errorMessage').textContent = 'Failed to initialize Firebase. Please check the console for details.';
         }
     </script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto p-4">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-center">Marketplace</h1>
+            <div id="auth-section" class="mt-4 text-center">
+                <button id="signInBtn" class="bg-blue-500 text-white px-4 py-2 rounded hidden">Sign In</button>
+                <button id="signOutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Sign Out</button>
+                <p id="userInfo" class="mt-2"></p>
+            </div>
+        </header>
+        <main>
+            <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            <div id="errorMessage" class="text-red-500 text-center mt-4"></div>
+        </main>
+    </div>
 </body>
 </html>
