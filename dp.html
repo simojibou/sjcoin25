@@ -31,10 +31,8 @@
             const database = getDatabase(app);
             console.log('Firebase initialized successfully');
 
-            // Envato API configuration
-            const envatoApiKey = 'grPmAjJjzDAK00K5B0F5AMj6XS6sMjuE';
-            const envatoClientId = 'sj-store-dktd6arn';
-            const envatoApiUrl = 'https://api.envato.com/v3/market/catalog/search';
+            // Cloud Function URL (replace with your actual deployed URL)
+            const cloudFunctionUrl = 'https://us-central1-sj-one.cloudfunctions.net/fetchEnvatoProducts';
 
             // DOM elements
             const productsDiv = document.getElementById('products');
@@ -85,28 +83,17 @@
                 }
             });
 
-            // Fetch products from Envato API
+            // Fetch products from Cloud Function
             async function fetchProducts(userId) {
                 try {
-                    console.log('Fetching products from Envato API...');
-                    const response = await axios.get(envatoApiUrl, {
-                        headers: {
-                            'Authorization': `Bearer ${envatoApiKey}`,
-                            'User-Agent': 'Marketplace-App'
-                        },
-                        params: {
-                            site: 'themeforest.net',
-                            term: '*',
-                            page_size: 20
-                        }
-                    });
-
-                    console.log('Envato API Response:', response.data);
+                    console.log('Fetching products from Cloud Function...');
+                    const response = await axios.get(cloudFunctionUrl);
+                    console.log('Cloud Function Response:', response.data);
 
                     const products = response.data.results || response.data.items || [];
                     if (products.length === 0) {
                         errorMessageDiv.textContent = 'No products found.';
-                        console.warn('No products returned from API.');
+                        console.warn('No products returned from Cloud Function.');
                         return;
                     }
 
@@ -114,7 +101,7 @@
                     saveProductsToFirebase(userId, products);
                 } catch (error) {
                     console.error('Error fetching products:', error);
-                    errorMessageDiv.textContent = `Error loading products: ${error.message}. Note: Envato API may require a server-side proxy due to CORS restrictions.`;
+                    errorMessageDiv.textContent = `Error loading products: ${error.message}.`;
                 }
             }
 
