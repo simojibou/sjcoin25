@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,7 +128,6 @@
       closeSellModal.addEventListener("click", () => {
         sellModal.style.display = "none";
       });
-      // Load products from Realtime Database
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
         console.log("Fetching products from Realtime Database...");
@@ -1081,6 +1081,87 @@
     #android-popup #close-popup:hover {
       border-color: #ccc;
     }
+    .site-footer-row-container-inner {
+      background: #111;
+      border-top: 1px solid #333;
+      padding: 2rem 0;
+    }
+    .site-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    .site-top-footer-inner-wrap {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2rem;
+    }
+    .site-footer-section {
+      padding: 1rem;
+    }
+    .footer-widget-area-inner {
+      color: #fff;
+    }
+    .widget-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    .menu {
+      list-style: none;
+      padding: 0;
+    }
+    .menu li {
+      margin-bottom: 0.5rem;
+    }
+    .menu a {
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      transition: color 0.3s;
+    }
+    .menu a:hover {
+      color: #fff;
+    }
+    .footer-social-inner-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .social-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #fff;
+      border-radius: 0;
+      background: transparent;
+      color: #fff;
+      transition: background 0.3s, color 0.3s;
+    }
+    .social-button:hover {
+      background: #333;
+      color: #fff;
+    }
+    .kadence-svg-icon {
+      width: 24px;
+      height: 24px;
+    }
+    .site-footer-top-section-5 {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .site-footer-top-section-5 img {
+      max-width: 150px;
+      height: auto;
+    }
     @media (max-width: 768px) {
       .header {
         padding: 1rem;
@@ -1097,6 +1178,12 @@
       }
       .header-right {
         gap: 0.5rem;
+      }
+      .site-top-footer-inner-wrap {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .site-footer-top-section-5 {
+        justify-content: center;
       }
     }
     @media (max-width: 480px) {
@@ -1139,6 +1226,12 @@
       }
       .modal-content {
         padding: 1.5rem;
+      }
+      .site-top-footer-inner-wrap {
+        grid-template-columns: 1fr;
+      }
+      .site-footer-top-section-5 {
+        justify-content: center;
       }
     }
   </style>
@@ -1216,5 +1309,97 @@
       <button id="close-popup">✖ Close</button>
     </div>
   </div>
+  <footer class="site-footer-row-container-inner">
+    <div class="site-container">
+      <div class="site-top-footer-inner-wrap">
+        <div class="site-footer-top-section-1 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget1">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">My Account</h2>
+                <div class="menu-my-account-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/my-account/edit-account/">Account details</a></li>
+                    <li class="menu-item"><a href="/my-account/orders/">Orders</a></li>
+                    <li class="menu-item"><a href="mailto:support@sjstore.com">support@sjstore.com</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-2 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget2">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">Sitemap</h2>
+                <div class="menu-sitemap-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/my-account/">My account</a></li>
+                    <li class="menu-item"><a href="/#shop">Shop</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-3 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget3">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">Legal</h2>
+                <div class="menu-legal-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/terms-and-conditions/">Terms & Conditions</a></li>
+                    <li class="menu-item"><a rel="privacy-policy" href="/privacy-policy/">Privacy Policy</a></li>
+                    <li class="menu-item"><a href="/refund-policy/">Refund policy</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-4 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-social">
+            <div class="footer-widget-area-inner footer-social-inner">
+              <div class="footer-social-wrap">
+                <h2 class="widget-title">Follow Us On</h2>
+                <div class="footer-social-inner-wrap">
+                  <a href="https://x.com/sjstore" aria-label="X" target="_blank" rel="noopener noreferrer" class="social-button footer-social-item social-link-twitter">
+                    <span class="kadence-svg-iconset">
+                      <svg class="kadence-svg-icon kadence-twitter-x-svg" fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" width="23" height="24" viewBox="0 0 23 24">
+                        <title>X</title>
+                        <path d="M13.969 10.157l8.738-10.157h-2.071l-7.587 8.819-6.060-8.819h-6.989l9.164 13.336-9.164 10.651h2.071l8.012-9.313 6.4 9.313h6.989l-9.503-13.831zM11.133 13.454l-8.316-11.895h3.181l14.64 20.941h-3.181l-6.324-9.046z"></path>
+                      </svg>
+                    </span>
+                  </a>
+                  <a href="https://www.instagram.com/sjstore" aria-label="Instagram" target="_blank" rel="noopener noreferrer" class="social-button footer-social-item social-link-instagram">
+                    <span class="kadence-svg-iconset">
+                      <svg class="kadence-svg-icon kadence-instagram-alt-svg" fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <title>Instagram</title>
+                        <path d="M7 1c-1.657 0-3.158 0.673-4.243 1.757s-1.757 2.586-1.757 4.243v10c0 1.657 0.673 3.158 1.757 4.243s2.586 1.757 4.243 1.757h10c1.657 0 3.158-0.673 4.243-1.757s1.757-2.586 1.757-4.243v-10c0-1.657-0.673-3.158-1.757-4.243s-2.586-1.757-4.243-1.757zM7 3h10c1.105 0 2.103 0.447 2.828 1.172s1.172 1.723 1.172 2.828v10c0 1.105-0.447 2.103-1.172 2.828s-1.723 1.172-2.828 1.172h-10c-1.105 0-2.103-0.447-2.828-1.172s-1.172-1.723-1.172-2.828v-10c0-1.105 0.447-2.103 1.172-2.828s1.723-1.172 2.828-1.172zM16.989 11.223c-0.15-0.972-0.571-1.857-1.194-2.567-0.754-0.861-1.804-1.465-3.009-1.644-0.464-0.074-0.97-0.077-1.477-0.002-1.366 0.202-2.521 0.941-3.282 1.967s-1.133 2.347-0.93 3.712 0.941 2.521 1.967 3.282 2.347 1.133 3.712 0.93 2.521-0.941 3.282-1.967 1.133-2.347 0.93-3.712zM15.011 11.517c0.122 0.82-0.1 1.609-0.558 2.227s-1.15 1.059-1.969 1.18-1.609-0.1-2.227-0.558-1.059-1.15-1.18-1.969 0.1-1.609 0.558-2.227 1.15-1.059 1.969-1.18c0.313-0.046 0.615-0.042 0.87-0.002 0.74 0.11 1.366 0.47 1.818 0.986 0.375 0.428 0.63 0.963 0.72 1.543zM17.5 7.5c0.552 0 1-0.448 1-1s-0.448-1-1-1-1 0.448-1 1 0.448 1 1 1z"></path>
+                      </svg>
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-5 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget4">
+            <div class="footer-widget-area-inner site-info-inner">
+              <div class="wp-block-kadence-image">
+                <figure class="alignright">
+                  <img loading="lazy" decoding="async" width="150" height="104" src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ Store Logo" class="kb-img">
+                </figure>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
+```
