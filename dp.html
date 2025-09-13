@@ -237,7 +237,7 @@
             if (element.tagName === "VIDEO") {
               element.muted = true;
               element.loop = true;
-              element.autoplay = true;
+              element.preload = "auto";
             }
             sliderContainer.appendChild(element);
           });
@@ -259,13 +259,17 @@
           if (slide.tagName === "VIDEO") slide.pause();
         });
         slides[0].style.opacity = 1;
-        if (slides[0].tagName === "VIDEO") slides[0].play();
+        if (slides[0].tagName === "VIDEO") {
+          slides[0].play().catch(e => console.error('Video play failed:', e));
+        }
         setInterval(() => {
           slides[slideIndex].style.opacity = 0;
           if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
           slideIndex = (slideIndex + 1) % numSlides;
           slides[slideIndex].style.opacity = 1;
-          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].play();
+          if (slides[slideIndex].tagName === "VIDEO") {
+            slides[slideIndex].play().catch(e => console.error('Video play failed:', e));
+          }
         }, 5000);
       }
       function loadAdminSliders() {
@@ -277,7 +281,7 @@
             const div = document.createElement("div");
             div.classList.add("slider-item");
             const element = slide.imageUrl.endsWith('.mp4')
-              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
+              ? `<video src="${slide.imageUrl}" muted loop autoplay preload="auto" style="max-width: 100%; height: auto;"></video>`
               : `<img src="${slide.imageUrl}" alt="Slider Image">`;
             div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
