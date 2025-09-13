@@ -1,107 +1,1139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJ Printful Store</title>
-<style>
-body {
-    font-family: Arial, sans-serif;
-    max-width: 1200px;
-    margin: auto;
-    padding: 20px;
-    background: #f7f7f7;
-}
-h1 {
-    text-align: center;
-    margin-bottom: 30px;
-}
-#products {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-}
-.product {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    width: 260px;
-    padding: 15px;
-    text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-.product img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 5px;
-}
-.error {
-    color: red;
-    text-align: center;
-    margin-top: 20px;
-}
-.loading {
-    text-align: center;
-    font-size: 18px;
-    color: #333;
-}
-@media(max-width:600px){
-    .product {width: 90%;}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SJ STORE</title>
+  <!-- Google Fonts - Helvetica-like -->
+  <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Firebase v9 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+    import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
+    document.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("product-list");
+      const sliderContainer = document.getElementById("slider-container");
+      const loginBtn = document.getElementById("login-btn");
+      const profilePic = document.getElementById("profile-pic");
+      const dropdownMenu = document.getElementById("dropdown-menu");
+      const logoutOption = document.getElementById("logout-option");
+      const sellNowOption = document.getElementById("sell-now-option");
+      const chatBtn = document.getElementById("chat-btn");
+      const adminPanel = document.getElementById("admin-panel");
+      const addProductForm = document.getElementById("add-product-form");
+      const addSliderForm = document.getElementById("add-slider-form");
+      const sliderList = document.getElementById("slider-list");
+      const searchInput = document.getElementById("search-input");
+      const cartIcon = document.getElementById("cart-icon");
+      const cartCount = document.getElementById("cart-count");
+      const cartModal = document.getElementById("cart-modal");
+      const cartList = document.getElementById("cart-list");
+      const closeModal = document.getElementById("close-modal");
+      const sellModal = document.getElementById("sell-modal");
+      const sellProductForm = document.getElementById("sell-product-form");
+      const closeSellModal = document.getElementById("close-sell-modal");
+      let currentUser = null;
+      let isAdmin = false;
+      let products = [];
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      function updateCartCount() {
+        cartCount.textContent = cart.length;
+      }
+      updateCartCount();
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          loginBtn.style.display = "none";
+          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
+          profilePic.style.display = "block";
+          profilePic.title = user.displayName || "User";
+          isAdmin = user.email === "simo.jibou@gmail.com";
+          adminPanel.style.display = isAdmin ? "block" : "none";
+          if (isAdmin) loadAdminSliders();
+        } else {
+          loginBtn.style.display = "inline-block";
+          profilePic.style.display = "none";
+          dropdownMenu.style.display = "none";
+          adminPanel.style.display = "none";
+          isAdmin = false;
+        }
+        renderProducts();
+      });
+      loginBtn.addEventListener("click", () => {
+        signInWithPopup(auth, provider)
+          .then((result) => {
+            console.log("Logged in as", result.user.displayName);
+            alert("Login successful!");
+          })
+          .catch((error) => {
+            console.error("Login error:", error.code, error.message);
+            alert("Login failed: " + error.message);
+          });
+      });
+      profilePic.addEventListener("click", () => {
+        dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
+      });
+      logoutOption.addEventListener("click", () => {
+        signOut(auth)
+          .then(() => {
+            console.log("Logged out");
+            alert("Logged out successfully!");
+            dropdownMenu.style.display = "none";
+          })
+          .catch((error) => {
+            console.error("Logout error:", error.code, error.message);
+            alert("Logout failed: " + error.message);
+          });
+      });
+      sellNowOption.addEventListener("click", () => {
+        dropdownMenu.style.display = "none";
+        sellModal.style.display = "block";
+      });
+      chatBtn.addEventListener("click", () => {
+        window.location.href = "sjchat.html";
+      });
+      window.addEventListener("click", (e) => {
+        if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target)) {
+          dropdownMenu.style.display = "none";
+        }
+        if (e.target === sellModal) {
+          sellModal.style.display = "none";
+        }
+      });
+      closeSellModal.addEventListener("click", () => {
+        sellModal.style.display = "none";
+      });
+      // Load products from Realtime Database
+      const productRef = ref(db, "Product");
+      onValue(productRef, (snapshot) => {
+        console.log("Fetching products from Realtime Database...");
+        products = [];
+        snapshot.forEach((childSnapshot) => {
+          const data = childSnapshot.val();
+          console.log("Product fetched:", childSnapshot.key, data);
+          products.push({
+            id: childSnapshot.key, // Use pId as the product ID
+            title: data.title,
+            price: data.price,
+            des: data.des,
+            orderUrl: data.orderUrl,
+            photo: data.photo,
+            userId: data.id // Map 'id' from JSON to userId
+          });
+        });
+        console.log("Total products fetched:", products.length);
+        renderProducts(searchInput.value);
+      }, (error) => {
+        console.error("Error fetching products:", error.code, error.message, error);
+        alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
+      });
+      function renderProducts(filter = "") {
+        console.log("Rendering products with filter:", filter);
+        container.innerHTML = "";
+        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        console.log("Filtered products:", filteredProducts.length);
+        filteredProducts.forEach((product) => {
+          const div = document.createElement("div");
+          div.classList.add("product");
+          let orderButton = '';
+          if (product.orderUrl) {
+            orderButton = `
+              <button class="order-btn">Order Now</button>
+            `;
+          }
+          div.innerHTML = `
+            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <h3>${product.title || 'Untitled'}</h3>
+            <p class="price">${product.price || 'N/A'} DH</p>
+            <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
+            ${orderButton}
+            <button class="add-to-cart-btn">Add to Cart</button>
+          `;
+          div.querySelector(".whatsapp-btn").addEventListener("click", () => {
+            const phone = product.des ? product.des.replace(/\D/g, "") : "";
+            if (phone) {
+              window.open(`https://wa.me/${phone}`, "_blank");
+            } else {
+              alert("No WhatsApp number provided for this product.");
+            }
+          });
+          if (product.orderUrl) {
+            div.querySelector(".order-btn").addEventListener("click", () => {
+              window.open(product.orderUrl, "_blank");
+            });
+          }
+          div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
+            cart.push(product);
+            localStorage.setItem("cart", JSON.stringify(cart));
+            updateCartCount();
+            alert("Added to cart!");
+          });
+          if (isAdmin) {
+            const adminActions = document.createElement("div");
+            adminActions.classList.add("admin-actions");
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => editProduct(product.id, product));
+            adminActions.appendChild(editBtn);
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete";
+            deleteBtn.addEventListener("click", () => deleteProduct(product.id));
+            adminActions.appendChild(deleteBtn);
+            div.appendChild(adminActions);
+          }
+          container.appendChild(div);
+        });
+        if (filteredProducts.length === 0) {
+          container.innerHTML = "<p>No products found.</p>";
+        }
+      }
+      searchInput.addEventListener("input", (e) => {
+        console.log("Search input changed:", e.target.value);
+        renderProducts(e.target.value);
+      });
+      const sliderRef = ref(db, "Sliders");
+      onValue(sliderRef, (snapshot) => {
+        console.log("Fetching sliders from Realtime Database...");
+        sliderContainer.innerHTML = "";
+        let slides = [];
+        snapshot.forEach((childSnapshot) => {
+          const slideData = { id: childSnapshot.key, ...childSnapshot.val() };
+          console.log("Slider fetched:", slideData);
+          slides.push(slideData);
+        });
+        if (slides.length > 0) {
+          slides.forEach((slide) => {
+            const element = slide.imageUrl.endsWith('.mp4')
+              ? document.createElement("video")
+              : document.createElement("img");
+            element.src = slide.imageUrl;
+            element.classList.add("slide");
+            if (element.tagName === "VIDEO") {
+              element.muted = true;
+              element.loop = true;
+              element.autoplay = true;
+            }
+            sliderContainer.appendChild(element);
+          });
+          startSlider(slides.length);
+        }
+      }, (error) => {
+        console.error("Error fetching sliders:", error.code, error.message, error);
+        alert("Failed to load sliders: " + error.message);
+      });
+      let slideIndex = 0;
+      function startSlider(numSlides) {
+        const slides = document.querySelectorAll(".slide");
+        if (slides.length === 0) {
+          console.log("No slides to display.");
+          return;
+        }
+        slides.forEach(slide => {
+          slide.style.opacity = 0;
+          if (slide.tagName === "VIDEO") slide.pause();
+        });
+        slides[0].style.opacity = 1;
+        if (slides[0].tagName === "VIDEO") slides[0].play();
+        setInterval(() => {
+          slides[slideIndex].style.opacity = 0;
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
+          slideIndex = (slideIndex + 1) % numSlides;
+          slides[slideIndex].style.opacity = 1;
+          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].play();
+        }, 5000);
+      }
+      function loadAdminSliders() {
+        onValue(sliderRef, (snapshot) => {
+          sliderList.innerHTML = "";
+          snapshot.forEach((childSnapshot) => {
+            const sliderId = childSnapshot.key;
+            const slide = childSnapshot.val();
+            const div = document.createElement("div");
+            div.classList.add("slider-item");
+            const element = slide.imageUrl.endsWith('.mp4')
+              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
+              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            div.innerHTML = `${element}<button>Delete</button>`;
+            div.querySelector("button").addEventListener("click", () => {
+              if (confirm("Delete this slider item?")) {
+                remove(ref(db, `Sliders/${sliderId}`))
+                  .then(() => alert("Slider item deleted!"))
+                  .catch((error) => {
+                    console.error("Error deleting slider:", error.code, error.message);
+                    alert("Failed to delete slider item: " + error.message);
+                  });
+              }
+            });
+            sliderList.appendChild(div);
+          });
+        }, (error) => {
+          console.error("Error loading admin sliders:", error.code, error.message);
+          alert("Failed to load sliders: " + error.message);
+        });
+      }
+      async function uploadFile(file, path) {
+        try {
+          // Validate file size (e.g., max 5MB)
+          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          if (file.size > maxSize) {
+            throw new Error("File size exceeds 5MB limit.");
+          }
+          // Validate file type
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
+          }
+          console.log(`Uploading file: ${file.name} (${file.size} bytes) to ${path}`);
+          const fileRef = storageRef(storage, path);
+          const snapshot = await uploadBytes(fileRef, file);
+          const url = await getDownloadURL(snapshot.ref);
+          console.log("File uploaded successfully:", url);
+          return url;
+        } catch (error) {
+          console.error("File upload error:", error.code, error.message, error);
+          if (error.code === "storage/unauthorized") {
+            throw new Error("Permission denied. Check Firebase Storage security rules.");
+          } else if (error.code === "storage/canceled") {
+            throw new Error("Upload was canceled.");
+          } else if (error.code === "storage/unknown") {
+            throw new Error("An unknown error occurred during upload. Check network or Firebase configuration.");
+          }
+          throw error;
+        }
+      }
+      addProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
+        const title = document.getElementById("product-title").value;
+        const price = document.getElementById("product-price").value;
+        const des = document.getElementById("product-des").value;
+        const orderUrl = document.getElementById("product-order-url").value;
+        const photoFile = document.getElementById("product-photo").files[0];
+        if (!photoFile) {
+          alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
+            title,
+            price,
+            des,
+            orderUrl,
+            photo: photoUrl,
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
+          });
+          addProductForm.reset();
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
+        }
+      });
+      sellProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to add a product.");
+          return;
+        }
+        const title = document.getElementById("sell-product-title").value;
+        const price = document.getElementById("sell-product-price").value;
+        const des = document.getElementById("sell-product-des").value;
+        const photoFile = document.getElementById("sell-product-photo").files[0];
+        if (!photoFile) {
+          alert("Please select an image.");
+          return;
+        }
+        try {
+          const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key; // Use the generated key as pId
+          await set(productRef, {
+            title,
+            price,
+            des,
+            photo: photoUrl,
+            id: currentUser.uid, // Store user ID as 'id'
+            pId // Store product ID as 'pId'
+          });
+          sellProductForm.reset();
+          sellModal.style.display = "none";
+          alert("Product added successfully!");
+        } catch (error) {
+          console.error("Error adding product:", error.code, error.message);
+          alert(`Failed to add product: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
+        }
+      });
+      function editProduct(productId, product) {
+        const newTitle = prompt("Edit Title:", product.title);
+        const newPrice = prompt("Edit Price:", product.price);
+        const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
+        const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
+        if (newTitle && newPrice && newDes) {
+          set(ref(db, `Product/${productId}`), {
+            title: newTitle,
+            price: newPrice,
+            des: newDes,
+            orderUrl: newOrderUrl,
+            photo: product.photo,
+            id: product.userId, // Preserve userId as 'id'
+            pId: productId // Preserve pId
+          }).then(() => {
+            alert("Product updated!");
+          }).catch((error) => {
+            console.error("Error updating product:", error.code, error.message);
+            alert("Failed to update product: " + error.message);
+          });
+        }
+      }
+      function deleteProduct(productId) {
+        if (confirm("Delete this product?")) {
+          remove(ref(db, `Product/${productId}`))
+            .then(() => {
+              alert("Product deleted!");
+            })
+            .catch((error) => {
+              console.error("Error deleting product:", error.code, error.message);
+              alert("Failed to delete product: " + error.message);
+            });
+        }
+      }
+      addSliderForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser || !isAdmin) {
+          alert("Only admins can add slider items.");
+          return;
+        }
+        const sliderFile = document.getElementById("slider-image").files[0];
+        if (!sliderFile) {
+          alert("Please select an image or video.");
+          return;
+        }
+        try {
+          const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
+          const newSliderRef = push(ref(db, "Sliders"));
+          await set(newSliderRef, { imageUrl: sliderUrl });
+          addSliderForm.reset();
+          alert("Slider item added successfully!");
+        } catch (error) {
+          console.error("Error adding slider item:", error.code, error.message);
+          alert(`Failed to add slider item: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
+        }
+      });
+      cartIcon.addEventListener("click", () => {
+        cartModal.style.display = "block";
+        renderCart();
+      });
+      closeModal.addEventListener("click", () => {
+        cartModal.style.display = "none";
+      });
+      window.addEventListener("click", (e) => {
+        if (e.target === cartModal) {
+          cartModal.style.display = "none";
+        }
+      });
+      function renderCart() {
+        cartList.innerHTML = "";
+        cart.forEach((product, index) => {
+          const div = document.createElement("div");
+          div.classList.add("cart-item");
+          div.innerHTML = `
+            <img src="${product.photo || 'https://via.placeholder.com/80'}" alt="${product.title || 'No title'}">
+            <h4>${product.title || 'Untitled'}</h4>
+            <p>${product.price || 'N/A'} DH</p>
+            <button class="remove-from-cart">Remove</button>
+          `;
+          div.querySelector(".remove-from-cart").addEventListener("click", () => {
+            cart.splice(index, 1);
+            localStorage.setItem("cart", JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+          });
+          cartList.appendChild(div);
+        });
+        if (cart.length === 0) {
+          cartList.innerHTML = "<p>Your cart is empty.</p>";
+        }
+      }
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const popup = document.getElementById("android-popup");
+      const pwaBtn = document.getElementById("pwa-install-btn");
+      const playBtn = document.getElementById("google-play-btn");
+      const closeBtn = document.getElementById("close-popup");
+      let deferredPrompt;
+      if (isAndroid) popup.style.display = "flex";
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        pwaBtn.style.display = "inline-block";
+      });
+      pwaBtn.addEventListener("click", async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          pwaBtn.style.display = "none";
+        }
+      });
+      playBtn.addEventListener("click", () => {
+        window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
+      });
+      closeBtn.addEventListener("click", () => popup.style.display = "none");
+      // Service Worker Registration with Enhanced Error Handling
+      if ("serviceWorker" in navigator) {
+        console.log("Attempting to register service worker...");
+        navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
+          .then(reg => {
+            console.log("Service Worker registered successfully:", reg.scope);
+          })
+          .catch(err => {
+            console.error("Service Worker registration failed:", err.name, err.message);
+            if (err.name === "TypeError") {
+              console.error("Possible cause: service-worker.js file not found or inaccessible.");
+              alert("Service Worker failed to register: File not found. Offline functionality may be limited.");
+            } else if (err.name === "SecurityError") {
+              console.error("Possible cause: Service worker scope mismatch or HTTPS required.");
+              alert("Service Worker failed to register: Security issue (e.g., not served over HTTPS or scope mismatch). Offline functionality may be limited.");
+            } else {
+              alert("Service Worker failed to register: " + err.message);
+            }
+          });
+      } else {
+        console.log("Service Worker not supported in this browser.");
+      }
+    });
+  </script>
+  <style>
+    /* Mimic X Shop Design: Dark theme, Helvetica font, clean layout */
+    @font-face {
+      font-family: 'Helvetica';
+      font-weight: 400;
+      src: url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400');
+    }
+    @font-face {
+      font-family: 'Helvetica';
+      font-weight: 700;
+      src: url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@700');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica', sans-serif;
+      background: #000;
+      color: #fff;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #000;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid #333;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 0;
+    }
+    #login-btn, #chat-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+    #login-btn:hover, #chat-btn:hover {
+      border-color: #ccc;
+      background-color: #222;
+    }
+    #profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      display: none;
+    }
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 0;
+      min-width: 150px;
+      z-index: 1001;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+    .dropdown-menu button {
+      width: 100%;
+      background: transparent;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .dropdown-menu button:hover {
+      background: #333;
+    }
+    /* Title */
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 1.5rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    /* Search */
+    #search-input {
+      width: 100%;
+      max-width: 600px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      font-size: 1rem;
+      margin: 0 auto 2rem;
+      display: block;
+      border-radius: 0;
+      transition: border-color 0.3s;
+    }
+    #search-input::placeholder {
+      color: #666;
+    }
+    #search-input:focus {
+      border-color: #fff;
+      outline: none;
+    }
+    /* Slider */
+    #slider-container {
+      position: relative;
+      max-width: 100%;
+      height: 600px;
+      margin: 0 auto 2rem;
+      overflow: hidden;
+      border-radius: 0;
+      border: 1px solid #333;
+    }
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    /* Product List */
+    .product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .product {
+      background: #111;
+      border-radius: 0;
+      padding: 1.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 1px solid #333;
+    }
+    .product:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    .product img {
+      max-width: 100%;
+      border-radius: 0;
+      margin-bottom: 1rem;
+      height: 280px;
+      object-fit: cover;
+    }
+    .product h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .price {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    .whatsapp-btn, .order-btn, .add-to-cart-btn {
+      width: 100%;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .whatsapp-btn {
+      background: #25D366;
+      color: #fff;
+    }
+    .whatsapp-btn:hover {
+      background: #1ebe56;
+    }
+    .order-btn {
+      background: #007BFF;
+      color: #fff;
+    }
+    .order-btn:hover {
+      background: #0056b3;
+    }
+    .add-to-cart-btn {
+      background: #fff;
+      color: #000;
+    }
+    .add-to-cart-btn:hover {
+      background: #e0e0e0;
+    }
+    /* Admin Panel */
+    #admin-panel {
+      display: none;
+      max-width: 1200px;
+      margin: 2rem auto;
+      background: #111;
+      padding: 2rem;
+      border: 1px solid #333;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    #admin-panel h2, #admin-panel h3 {
+      color: #fff;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 1.5rem;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      background: #222;
+      padding: 1.5rem;
+      border: 1px solid #333;
+      border-radius: 0;
+    }
+    input {
+      padding: 0.75rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      border-radius: 0;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      border-color: #fff;
+      outline: none;
+    }
+    button[type="submit"] {
+      background: #fff;
+      color: #000;
+      padding: 0.75rem;
+      border: none;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button[type="submit"]:hover {
+      background: #e0e0e0;
+    }
+    /* Slider List */
+    #slider-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .slider-item {
+      background: #222;
+      padding: 1rem;
+      border: 1px solid #333;
+      border-radius: 0;
+      transition: transform 0.3s;
+    }
+    .slider-item:hover {
+      transform: scale(1.02);
+    }
+    .slider-item img, .slider-item video {
+      max-width: 100%;
+      border-radius: 0;
+    }
+    .slider-item button {
+      width: 100%;
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 0.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.3s;
+    }
+    .slider-item button:hover {
+      background: #e0e0e0;
+    }
+    /* Cart and Sell Modals */
+    .modal {
+      position: fixed;
+      z-index: 1001;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+    }
+    .modal-content {
+      background: #111;
+      margin: 10% auto;
+      padding: 2rem;
+      border-radius: 0;
+      width: 90%;
+      max-width: 600px;
+      border: 1px solid #333;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    #cart-list, #sell-product-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .cart-item {
+      background: #222;
+      padding: 1rem;
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border: 1px solid #333;
+    }
+    .cart-item img {
+      width: 80px;
+      height: 80px;
+      border-radius: 0;
+      object-fit: cover;
+    }
+    .cart-item h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .cart-item p {
+      font-size: 1rem;
+      color: #fff;
+      margin: 0;
+    }
+    .remove-from-cart {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .remove-from-cart:hover {
+      background: #e0e0e0;
+    }
+    #close-modal, #close-sell-modal {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.75rem;
+      width: 100%;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: border-color 0.3s;
+    }
+    #close-modal:hover, #close-sell-modal:hover {
+      border-color: #ccc;
+    }
+    /* Admin Actions */
+    .admin-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .admin-actions button {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #fff;
+      background: transparent;
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .admin-actions button:nth-child(2) {
+      border-color: #fff;
+      background: #fff;
+      color: #000;
+    }
+    .admin-actions button:hover {
+      background: #333;
+    }
+    .admin-actions button:nth-child(2):hover {
+      background: #e0e0e0;
+    }
+    /* Android Popup */
+    #android-popup {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: #111;
+      color: #fff;
+      border-radius: 0;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border: 1px solid #333;
+    }
+    #android-popup img {
+      width: 50px;
+      height: 50px;
+      border-radius: 0;
+    }
+    #android-popup button {
+      background: #fff;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 0;
+      color: #000;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #android-popup button:hover {
+      background: #e0e0e0;
+    }
+    #android-popup #close-popup {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+    #android-popup #close-popup:hover {
+      border-color: #ccc;
+    }
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem;
+      }
+      .product-list {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+      .product img {
+        height: 200px;
+      }
+      #slider-container {
+        height: 400px;
+      }
+      .header-right {
+        gap: 0.5rem;
+      }
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.75rem;
+      }
+      #slider-container {
+        height: 300px;
+      }
+      .product {
+        padding: 1rem;
+      }
+      .product h3 {
+        font-size: 1rem;
+      }
+      .price {
+        font-size: 1.125rem;
+      }
+      .whatsapp-btn, .order-btn, .add-to-cart-btn {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+      }
+      .header-right {
+        gap: 0.5rem;
+      }
+      #android-popup {
+        flex-direction: column;
+        text-align: center;
+      }
+      .logo {
+        width: 50px;
+        height: 50px;
+      }
+      .modal-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
-
-<h1>🛍️ SJ Printful Store</h1>
-<div id="products" class="loading">Loading products...</div>
-
-<script>
-// ✅ أثناء التطوير استعمل رابط المحاكي (Emulator)
-//const API_URL = "http://127.0.0.1:5001/metawarefare-gaming/us-central1/printfulProducts";
-
-// ✅ بعد النشر استعمل رابط الإنتاج (بعد firebase deploy)
-const API_URL = "https://us-central1-metawarefare-gaming.cloudfunctions.net/printfulProducts";
-
-async function loadProducts() {
-    const container = document.getElementById("products");
-    container.textContent = "Loading products...";
-
-    try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        if (!data.result || !Array.isArray(data.result))
-            throw new Error("Invalid data returned from server.");
-
-        container.innerHTML = ""; // مسح النص السابق
-
-        // عرض كل منتج في المتجر
-        data.result.forEach(p => {
-            const div = document.createElement("div");
-            div.className = "product";
-            div.innerHTML = `
-                <img src="${p.thumbnail_url || 'https://via.placeholder.com/250'}" alt="${p.name}">
-                <h3>${p.name}</h3>
-                <p>Product ID: ${p.id}</p>
-            `;
-            container.appendChild(div);
-        });
-
-        if (data.result.length === 0) {
-            container.innerHTML = "<p class='error'>No products found in your Printful store.</p>";
-        }
-
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = `<p class="error">Failed to load products: ${err.message}</p>`;
-    }
-}
-
-// بدء التحميل عند فتح الصفحة
-loadProducts();
-</script>
-
+  <div class="header">
+    <div class="header-left">
+      <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
+    </div>
+    <div class="header-right">
+      <div id="cart-icon">🛒 <span id="cart-count">0</span></div>
+      <button id="chat-btn">Chat</button>
+      <button id="login-btn">Login</button>
+      <div class="dropdown">
+        <img id="profile-pic" alt="Profile Pic">
+        <div id="dropdown-menu" class="dropdown-menu">
+          <button id="sell-now-option">Sell Now</button>
+          <button id="logout-option">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h1>SJ STORE</h1>
+  <input type="text" id="search-input" placeholder="Search products...">
+  <div id="slider-container"></div>
+  <div class="product-list" id="product-list"></div>
+  <div id="admin-panel">
+    <h2>Admin Control Panel</h2>
+    <h3>Add Product</h3>
+    <form id="add-product-form">
+      <input type="text" id="product-title" placeholder="Product Title" required>
+      <input type="text" id="product-price" placeholder="Price (DH)" required>
+      <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
+      <input type="url" id="product-order-url" placeholder="Order URL (optional)">
+      <input type="file" id="product-photo" accept="image/*" required>
+      <button type="submit">Add Product</button>
+    </form>
+    <h3>Add Slider Item</h3>
+    <form id="add-slider-form">
+      <input type="file" id="slider-image" accept="image/*,video/mp4" required>
+      <button type="submit">Add to Slider</button>
+    </form>
+    <h3>Current Sliders</h3>
+    <div id="slider-list"></div>
+  </div>
+  <div id="cart-modal" class="modal">
+    <div class="modal-content">
+      <h2>My Cart</h2>
+      <div id="cart-list"></div>
+      <button id="close-modal">Close</button>
+    </div>
+  </div>
+  <div id="sell-modal" class="modal">
+    <div class="modal-content">
+      <h2>Sell a Product</h2>
+      <form id="sell-product-form">
+        <input type="text" id="sell-product-title" placeholder="Product Title" required>
+        <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
+        <input type="text" id="sell-product-des" placeholder="WhatsApp Phone Number" required>
+        <input type="file" id="sell-product-photo" accept="image/*" required>
+        <button type="submit">Add Product</button>
+        <button id="close-sell-modal">Close</button>
+      </form>
+    </div>
+  </div>
+  <div id="android-popup">
+    <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO">
+    <span>📲 Download the SJ STORE app!</span>
+    <div>
+      <button id="pwa-install-btn" style="display:none;">Install PWA</button>
+      <button id="google-play-btn">Google Play</button>
+      <button id="close-popup">✖ Close</button>
+    </div>
+  </div>
 </body>
 </html>
