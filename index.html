@@ -140,6 +140,7 @@
             title: data.title,
             price: data.price,
             des: data.des,
+            orderUrl: data.orderUrl,
             photo: data.photo,
             userId: data.id // Map 'id' from JSON to userId
           });
@@ -158,11 +159,20 @@
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
           div.classList.add("product");
+          let orderButton = '';
+          if (product.orderUrl) {
+            orderButton = `
+              <button class="order-btn">Order Now</button>
+            `;
+          }
           div.innerHTML = `
-            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <div class="product-image-wrapper">
+              <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
+            </div>
             <h3>${product.title || 'Untitled'}</h3>
             <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
+            ${orderButton}
             <button class="add-to-cart-btn">Add to Cart</button>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
@@ -173,6 +183,11 @@
               alert("No WhatsApp number provided for this product.");
             }
           });
+          if (product.orderUrl) {
+            div.querySelector(".order-btn").addEventListener("click", () => {
+              window.open(product.orderUrl, "_blank");
+            });
+          }
           div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
             cart.push(product);
             localStorage.setItem("cart", JSON.stringify(cart));
@@ -214,8 +229,8 @@
         });
         if (slides.length > 0) {
           slides.forEach((slide) => {
-            const element = slide.imageUrl.endsWith('.mp4') 
-              ? document.createElement("video") 
+            const element = slide.imageUrl.endsWith('.mp4')
+              ? document.createElement("video")
               : document.createElement("img");
             element.src = slide.imageUrl;
             element.classList.add("slide");
@@ -261,7 +276,7 @@
             const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            const element = slide.imageUrl.endsWith('.mp4') 
+            const element = slide.imageUrl.endsWith('.mp4')
               ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
               : `<img src="${slide.imageUrl}" alt="Slider Image">`;
             div.innerHTML = `${element}<button>Delete</button>`;
@@ -321,6 +336,7 @@
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
+        const orderUrl = document.getElementById("product-order-url").value;
         const photoFile = document.getElementById("product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -334,6 +350,7 @@
             title,
             price,
             des,
+            orderUrl,
             photo: photoUrl,
             id: currentUser.uid, // Store user ID as 'id'
             pId // Store product ID as 'pId'
@@ -383,11 +400,13 @@
         const newTitle = prompt("Edit Title:", product.title);
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
+        const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
         if (newTitle && newPrice && newDes) {
           set(ref(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
+            orderUrl: newOrderUrl,
             photo: product.photo,
             id: product.userId, // Preserve userId as 'id'
             pId: productId // Preserve pId
@@ -690,12 +709,18 @@
       transform: translateY(-5px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    .product img {
-      max-width: 100%;
-      border-radius: 0;
-      margin-bottom: 1rem;
+    .product-image-wrapper {
+      width: 100%;
       height: 280px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .product img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
+      object-position: center;
+      display: block;
     }
     .product h3 {
       font-size: 1.25rem;
@@ -710,7 +735,7 @@
       color: #fff;
       margin-bottom: 1rem;
     }
-    .whatsapp-btn, .add-to-cart-btn {
+    .whatsapp-btn, .order-btn, .add-to-cart-btn {
       width: 100%;
       padding: 0.75rem;
       border: none;
@@ -729,6 +754,13 @@
     }
     .whatsapp-btn:hover {
       background: #1ebe56;
+    }
+    .order-btn {
+      background: #007BFF;
+      color: #fff;
+    }
+    .order-btn:hover {
+      background: #0056b3;
     }
     .add-to-cart-btn {
       background: #fff;
@@ -994,7 +1026,7 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
       }
-      .product img {
+      .product-image-wrapper {
         height: 200px;
       }
       #slider-container {
@@ -1014,13 +1046,17 @@
       .product {
         padding: 1rem;
       }
+      .product-image-wrapper {
+        height: auto;
+        aspect-ratio: 1 / 1;
+      }
       .product h3 {
         font-size: 1rem;
       }
       .price {
         font-size: 1.125rem;
       }
-      .whatsapp-btn, .add-to-cart-btn {
+      .whatsapp-btn, .order-btn, .add-to-cart-btn {
         font-size: 0.75rem;
         padding: 0.5rem;
       }
@@ -1070,6 +1106,7 @@
       <input type="text" id="product-title" placeholder="Product Title" required>
       <input type="text" id="product-price" placeholder="Price (DH)" required>
       <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
+      <input type="url" id="product-order-url" placeholder="Order URL (optional)">
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
