@@ -5,64 +5,103 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SJ Printful Store</title>
 <style>
-body {font-family:Arial,sans-serif;max-width:1200px;margin:auto;padding:20px;}
-h1{text-align:center}
-#products{display:flex;flex-wrap:wrap;justify-content:space-around}
-.product{border:1px solid #ccc;padding:10px;margin:10px;width:280px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.1)}
-.product img{max-width:100%;height:auto}
-.error{color:red;text-align:center}
-@media(max-width:600px){.product{width:100%}}
+body {
+    font-family: Arial, sans-serif;
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+    background: #f7f7f7;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+}
+#products {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+.product {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 260px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.product img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+.error {
+    color: red;
+    text-align: center;
+    margin-top: 20px;
+}
+.loading {
+    text-align: center;
+    font-size: 18px;
+    color: #333;
+}
+@media(max-width:600px){
+    .product {width: 90%;}
+}
 </style>
 </head>
 <body>
-<h1>SJ Printful Store</h1>
-<div id="products">Loading...</div>
+
+<h1>🛍️ SJ Printful Store</h1>
+<div id="products" class="loading">Loading products...</div>
 
 <script>
-const API_KEY = "ikq7abJTrAW7hZeMlod0xqaBmoA3mVlAa94YinMs"; // ضع مفتاح Printful الحقيقي هنا
-const API_BASE = "https://api.printful.com";
+// ✅ أثناء التطوير استعمل رابط المحاكي (Emulator)
+//const API_URL = "http://127.0.0.1:5001/metawarefare-gaming/us-central1/printfulProducts";
+
+// ✅ بعد النشر استعمل رابط الإنتاج (بعد firebase deploy)
+const API_URL = "https://us-central1-metawarefare-gaming.cloudfunctions.net/printfulProducts";
 
 async function loadProducts() {
-  const container = document.getElementById("products");
-  container.textContent = "Loading...";
+    const container = document.getElementById("products");
+    container.textContent = "Loading products...";
 
-  try {
-    // ✅ طلب المنتجات من متجرك
-    const res = await fetch(`${API_BASE}/store/products`, {
-      headers: { "Authorization": `Bearer ${API_KEY}` }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data.result || !Array.isArray(data.result)) throw new Error("Invalid data");
+    try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-    container.innerHTML = "";
-    for (const p of data.result) {
-      // جلب تفاصيل كل منتج (للحصول على الصور والأسعار)
-      const detailRes = await fetch(`${API_BASE}/store/products/${p.id}`, {
-        headers: { "Authorization": `Bearer ${API_KEY}` }
-      });
-      const detail = await detailRes.json();
-      const product = detail.result.sync_product;
-      const variants = detail.result.sync_variants;
+        if (!data.result || !Array.isArray(data.result))
+            throw new Error("Invalid data returned from server.");
 
-      const minPrice = Math.min(...variants.map(v => parseFloat(v.retail_price)));
+        container.innerHTML = ""; // مسح النص السابق
 
-      const div = document.createElement("div");
-      div.className = "product";
-      div.innerHTML = `
-        <img src="${product.thumbnail_url || 'https://via.placeholder.com/150'}" alt="${product.name}">
-        <h3>${product.name}</h3>
-        <p>Starting from $${minPrice}</p>
-      `;
-      container.appendChild(div);
+        // عرض كل منتج في المتجر
+        data.result.forEach(p => {
+            const div = document.createElement("div");
+            div.className = "product";
+            div.innerHTML = `
+                <img src="${p.thumbnail_url || 'https://via.placeholder.com/250'}" alt="${p.name}">
+                <h3>${p.name}</h3>
+                <p>Product ID: ${p.id}</p>
+            `;
+            container.appendChild(div);
+        });
+
+        if (data.result.length === 0) {
+            container.innerHTML = "<p class='error'>No products found in your Printful store.</p>";
+        }
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p class="error">Failed to load products: ${err.message}</p>`;
     }
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `<p class="error">Failed to load products: ${err.message}</p>`;
-  }
 }
 
+// بدء التحميل عند فتح الصفحة
 loadProducts();
 </script>
+
 </body>
 </html>
