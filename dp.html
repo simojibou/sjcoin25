@@ -22,7 +22,8 @@
 <div class="products" id="products"></div>
 
 <script>
-const PRINTFUL_API_KEY = "1nSjHow6GSDpNvOCSeOzCN0JKXTt7vahjk63mKInUy2tXixNVUfJbe2OO8M4CVMc";
+const PRINTFUL_API_KEY = "1nSjHow6GSDpNvOCSeOzCN0JKXTt7vahjk63mKInUy2tXixNVUfJbe2OO8CVMc";
+const CLIENT_ID = "app-9955277"; // Client ID للبوابة المالية
 
 async function fetchProducts() {
     try {
@@ -51,15 +52,22 @@ async function fetchProducts() {
             title.textContent = product.name;
             prodDiv.appendChild(title);
 
+            let price = "غير محدد";
             if(product.variants && product.variants.length > 0){
-                const price = document.createElement("p");
-                price.textContent = "السعر: $" + product.variants[0].retail_price;
-                prodDiv.appendChild(price);
+                price = "$" + product.variants[0].retail_price;
             }
+            const priceP = document.createElement("p");
+            priceP.textContent = "السعر: " + price;
+            prodDiv.appendChild(priceP);
 
             const button = document.createElement("button");
             button.textContent = "شراء الآن";
-            button.onclick = () => alert("اضغط على زر الشراء للتكامل مع Printful API للطلب");
+            button.onclick = () => {
+                // مثال فتح بوابة الدفع باستخدام Client ID
+                const amount = product.variants[0]?.retail_price || 1;
+                const paymentUrl = `https://checkout.example.com/?client_id=${CLIENT_ID}&amount=${amount}&currency=USD&product_name=${encodeURIComponent(product.name)}`;
+                window.open(paymentUrl, "_blank");
+            };
             prodDiv.appendChild(button);
 
             container.appendChild(prodDiv);
@@ -70,7 +78,6 @@ async function fetchProducts() {
     }
 }
 
-// استدعاء الدالة
 fetchProducts();
 </script>
 
