@@ -136,13 +136,13 @@
           const data = childSnapshot.val();
           console.log("Product fetched:", childSnapshot.key, data);
           products.push({
-            id: childSnapshot.key, // Use pId as the product ID
+            id: childSnapshot.key,
             title: data.title,
             price: data.price,
             des: data.des,
             orderUrl: data.orderUrl,
             photo: data.photo,
-            userId: data.id // Map 'id' from JSON to userId
+            userId: data.id
           });
         });
         console.log("Total products fetched:", products.length);
@@ -217,6 +217,19 @@
         console.log("Search input changed:", e.target.value);
         renderProducts(e.target.value);
       });
+      function isYouTubeUrl(url) {
+        return url.includes('youtube.com') || url.includes('youtu.be');
+      }
+      function getYouTubeEmbedUrl(url) {
+        let videoId = '';
+        if (url.includes('youtube.com/watch')) {
+          const params = new URLSearchParams(new URL(url).search);
+          videoId = params.get('v');
+        } else if (url.includes('youtu.be')) {
+          videoId = url.split('youtu.be/')[1].split('?')[0];
+        }
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0` : '';
+      }
       const sliderRef = ref(db, "Sliders");
       onValue(sliderRef, (snapshot) => {
         console.log("Fetching sliders from Realtime Database...");
@@ -229,16 +242,24 @@
         });
         if (slides.length > 0) {
           slides.forEach((slide) => {
-            const element = slide.imageUrl.endsWith('.mp4')
-              ? document.createElement("video")
-              : document.createElement("img");
-            element.src = slide.imageUrl;
-            element.classList.add("slide");
-            if (element.tagName === "VIDEO") {
+            let element;
+            if (isYouTubeUrl(slide.imageUrl)) {
+              element = document.createElement("iframe");
+              element.src = getYouTubeEmbedUrl(slide.imageUrl);
+              element.setAttribute("frameborder", "0");
+              element.setAttribute("allow", "autoplay; encrypted-media");
+              element.setAttribute("allowfullscreen", "");
+            } else if (slide.imageUrl.endsWith('.mp4')) {
+              element = document.createElement("video");
+              element.src = slide.imageUrl;
               element.muted = true;
               element.loop = true;
               element.preload = "auto";
+            } else {
+              element = document.createElement("img");
+              element.src = slide.imageUrl;
             }
+            element.classList.add("slide");
             sliderContainer.appendChild(element);
           });
           startSlider(slides.length);
@@ -257,18 +278,26 @@
         slides.forEach(slide => {
           slide.style.opacity = 0;
           if (slide.tagName === "VIDEO") slide.pause();
+          if (slide.tagName === "IFRAME") slide.src = slide.src.replace('autoplay=1', 'autoplay=0');
         });
         slides[0].style.opacity = 1;
         if (slides[0].tagName === "VIDEO") {
           slides[0].play().catch(e => console.error('Video play failed:', e));
         }
+        if (slides[0].tagName === "IFRAME") {
+          slides[0].src = slides[0].src.replace('autoplay=0', 'autoplay=1');
+        }
         setInterval(() => {
           slides[slideIndex].style.opacity = 0;
           if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
+          if (slides[slideIndex].tagName === "IFRAME") slides[slideIndex].src = slides[slideIndex].src.replace('autoplay=1', 'autoplay=0');
           slideIndex = (slideIndex + 1) % numSlides;
           slides[slideIndex].style.opacity = 1;
           if (slides[slideIndex].tagName === "VIDEO") {
             slides[slideIndex].play().catch(e => console.error('Video play failed:', e));
+          }
+          if (slides[slideIndex].tagName === "IFRAME") {
+            slides[slideIndex].src = slides[slideIndex].src.replace('autoplay=0', 'autoplay=1');
           }
         }, 5000);
       }
@@ -280,9 +309,14 @@
             const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            const element = slide.imageUrl.endsWith('.mp4')
-              ? `<video src="${slide.imageUrl}" muted loop autoplay preload="auto" style="max-width: 100%; height: auto;"></video>`
-              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            let element;
+            if (isYouTubeUrl(slide.imageUrl)) {
+              element = `<iframe src="${getYouTubeEmbedUrl(slide.imageUrl)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="max-width: 100%; height: 100px;"></iframe>`;
+            } else if (slide.imageUrl.endsWith('.mp4')) {
+              element = `<video src="${slide.imageUrl}" muted loop autoplay preload="auto" style="max-width: 100%; height: 100px;"></video>`;
+            } else {
+              element = `<img src="${slide.imageUrl}" alt="Slider Image" style="max-width: 100%; height: 100px;">`;
+            }
             div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
               if (confirm("Delete this slider item?")) {
@@ -303,12 +337,10 @@
       }
       async function uploadFile(file, path) {
         try {
-          // Validate file size (e.g., max 5MB)
-          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          const maxSize = 5 * 1024 * 1024;
           if (file.size > maxSize) {
             throw new Error("File size exceeds 5MB limit.");
           }
-          // Validate file type
           const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
           if (!allowedTypes.includes(file.type)) {
             throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
@@ -349,15 +381,15 @@
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
           const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
+          const pId = productRef.key;
           await set(productRef, {
             title,
             price,
             des,
             orderUrl,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           addProductForm.reset();
           alert("Product added successfully!");
@@ -383,14 +415,14 @@
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
           const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
+          const pId = productRef.key;
           await set(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
@@ -412,8 +444,8 @@
             des: newDes,
             orderUrl: newOrderUrl,
             photo: product.photo,
-            id: product.userId, // Preserve userId as 'id'
-            pId: productId // Preserve pId
+            id: product.userId,
+            pId: productId
           }).then(() => {
             alert("Product updated!");
           }).catch((error) => {
@@ -441,12 +473,22 @@
           return;
         }
         const sliderFile = document.getElementById("slider-image").files[0];
-        if (!sliderFile) {
-          alert("Please select an image or video.");
+        const sliderUrlInput = document.getElementById("slider-url").value;
+        if (!sliderFile && !sliderUrlInput) {
+          alert("Please select an image/video or provide a YouTube URL.");
           return;
         }
         try {
-          const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
+          let sliderUrl;
+          if (sliderFile) {
+            sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
+          } else if (sliderUrlInput) {
+            if (!isYouTubeUrl(sliderUrlInput)) {
+              alert("Invalid YouTube URL. Please provide a valid YouTube link.");
+              return;
+            }
+            sliderUrl = sliderUrlInput;
+          }
           const newSliderRef = push(ref(db, "Sliders"));
           await set(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
@@ -515,7 +557,6 @@
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
       closeBtn.addEventListener("click", () => popup.style.display = "none");
-      // Service Worker Registration with Enhanced Error Handling
       if ("serviceWorker" in navigator) {
         console.log("Attempting to register service worker...");
         navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
@@ -540,7 +581,6 @@
     });
   </script>
   <style>
-    /* Mimic X Shop Design: Dark theme, Helvetica font, clean layout */
     @font-face {
       font-family: 'Helvetica';
       font-weight: 400;
@@ -563,7 +603,6 @@
       line-height: 1.6;
       min-height: 100vh;
     }
-    /* Header */
     .header {
       display: flex;
       justify-content: space-between;
@@ -644,7 +683,6 @@
     .dropdown-menu button:hover {
       background: #333;
     }
-    /* Title */
     h1 {
       font-size: 2.5rem;
       font-weight: 700;
@@ -653,7 +691,6 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
-    /* Search */
     #search-input {
       width: 100%;
       max-width: 600px;
@@ -674,7 +711,6 @@
       border-color: #fff;
       outline: none;
     }
-    /* Slider */
     #slider-container {
       position: relative;
       max-width: 100%;
@@ -694,7 +730,14 @@
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
     }
-    /* Product List */
+    .slide[src$=".mp4"] {
+      object-fit: contain;
+      background: #000;
+    }
+    .slide[src*="youtube.com"] {
+      width: 100%;
+      height: 100%;
+    }
     .product-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -718,13 +761,17 @@
       height: 280px;
       overflow: hidden;
       margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .product img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       display: block;
+      background: #000;
     }
     .product h3 {
       font-size: 1.25rem;
@@ -773,7 +820,6 @@
     .add-to-cart-btn:hover {
       background: #e0e0e0;
     }
-    /* Admin Panel */
     #admin-panel {
       display: none;
       max-width: 1200px;
@@ -828,7 +874,6 @@
     button[type="submit"]:hover {
       background: #e0e0e0;
     }
-    /* Slider List */
     #slider-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -845,7 +890,7 @@
     .slider-item:hover {
       transform: scale(1.02);
     }
-    .slider-item img, .slider-item video {
+    .slider-item img, .slider-item video, .slider-item iframe {
       max-width: 100%;
       border-radius: 0;
     }
@@ -865,7 +910,6 @@
     .slider-item button:hover {
       background: #e0e0e0;
     }
-    /* Cart and Sell Modals */
     .modal {
       position: fixed;
       z-index: 1001;
@@ -946,7 +990,6 @@
     #close-modal:hover, #close-sell-modal:hover {
       border-color: #ccc;
     }
-    /* Admin Actions */
     .admin-actions {
       display: flex;
       gap: 0.5rem;
@@ -975,7 +1018,6 @@
     .admin-actions button:nth-child(2):hover {
       background: #e0e0e0;
     }
-    /* Android Popup */
     #android-popup {
       display: none;
       position: fixed;
@@ -1021,7 +1063,6 @@
     #android-popup #close-popup:hover {
       border-color: #ccc;
     }
-    /* Responsive */
     @media (max-width: 768px) {
       .header {
         padding: 1rem;
@@ -1053,6 +1094,9 @@
       .product-image-wrapper {
         height: auto;
         aspect-ratio: 1 / 1;
+      }
+      .product img {
+        object-fit: contain;
       }
       .product h3 {
         font-size: 1rem;
@@ -1116,7 +1160,8 @@
     </form>
     <h3>Add Slider Item</h3>
     <form id="add-slider-form">
-      <input type="file" id="slider-image" accept="image/*,video/mp4" required>
+      <input type="file" id="slider-image" accept="image/*,video/mp4">
+      <input type="url" id="slider-url" placeholder="YouTube URL (optional)">
       <button type="submit">Add to Slider</button>
     </form>
     <h3>Current Sliders</h3>
