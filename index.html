@@ -522,7 +522,7 @@
             console.error("Service Worker registration failed:", err.name, err.message);
             if (err.name === "TypeError") {
               console.error("Possible cause: service-worker.js file not found or inaccessible.");
-              alert("Service Worker failed to register: File not found. Offline functionality may be limited.");
+             // alert("Service Worker failed to register: File not found. Offline functionality may be limited.");
             } else if (err.name === "SecurityError") {
               console.error("Possible cause: Service worker scope mismatch or HTTPS required.");
               alert("Service Worker failed to register: Security issue (e.g., not served over HTTPS or scope mismatch). Offline functionality may be limited.");
