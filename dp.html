@@ -67,6 +67,11 @@
         button:hover {
             background: #0056b3;
         }
+        /* Error message styling */
+        .error {
+            color: red;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -83,44 +88,92 @@
         const API_BASE = 'https://api.printful.com';
         // Replace with your actual Printful API key (private token)
         const API_KEY = 'ikq7abJTrAW7hZeMlod0xqaBmoA3mVlAa94YinMs';
-        // Example product IDs from Printful catalog (t-shirt and hoodie; add more as needed)
-        const productIds = [71, 438];
+        // Fallback product IDs if catalog fetch fails
+        const FALLBACK_PRODUCT_IDS = [71, 438]; // T-shirt and hoodie IDs (verify in Printful dashboard)
 
-        // Function to load products from Printful API
-        async function loadProducts() {
+        // Function to load individual product details
+        async function loadProduct(id, productsDiv) {
+            try {
+                const res = await fetch(`${API_BASE}/products/${id}`);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                const data = await res.json();
+                console.log(`Product ${id} response:`, data);
+                if (data.code !== 200) {
+                    throw new Error(`API error for product ${id}: ${data.result || 'Unknown error'}`);
+                }
+                
+                const product = data.result.product;
+                const variants = data.result.variants;
+                
+                // Calculate min price for display
+                const prices = variants.map(v => parseFloat(v.price)).filter(p => !isNaN(p));
+                if (prices.length === 0) throw new Error(`No valid prices for product ${id}`);
+                const minPrice = Math.min(...prices);
+                
+                // Create product card HTML
+                const card = document.createElement('div');
+                card.className = 'product';
+                card.innerHTML = `
+                    <img src="${product.thumbnail_url || product.image || 'https://via.placeholder.com/150'}" alt="${product.name}" style="max-width: 100%;">
+                    <h3>${product.name}</h3>
+                    <p>Starting from $${minPrice.toFixed(2)}</p>
+                    <!-- Variant select: shows size/color combos with prices -->
+                    <select id="variant-${id}">
+                        ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">${v.name} - $${v.price}</option>`).join('')}
+                    </select>
+                    <!-- Quantity input -->
+                    <input type="number" id="qty-${id}" value="1" min="1">
+                    <button onclick="addToCart(${id}, '${product.name.replace(/'/g, "\\'")}')">Add to Cart</button>
+                `;
+                productsDiv.appendChild(card);
+            } catch (err) {
+                console.error(`Error loading product ${id}:`, err);
+                productsDiv.innerHTML += `<p class="error">Failed to load product ${id}: ${err.message}</p>`;
+            }
+        }
+
+        // Function to load products from Printful API with retry
+        async function loadProducts(retries = 2, delay = 1000) {
             const productsDiv = document.getElementById('products');
-            for (let id of productIds) {
-                try {
-                    // Fetch product details (unauthenticated endpoint)
-                    const res = await fetch(`${API_BASE}/products/${id}`);
-                    const data = await res.json();
-                    if (data.code !== 200) throw new Error('API error');
-                    
-                    const product = data.result.product;
-                    const variants = data.result.variants;
-                    
-                    // Calculate min price for display
-                    const prices = variants.map(v => parseFloat(v.price));
-                    const minPrice = Math.min(...prices);
-                    
-                    // Create product card HTML
-                    const card = document.createElement('div');
-                    card.className = 'product';
-                    card.innerHTML = `
-                        <img src="${product.image}" alt="${product.name}" style="max-width: 100%;">
-                        <h3>${product.name}</h3>
-                        <p>Starting from $${minPrice.toFixed(2)}</p>
-                        <!-- Variant select: shows size/color combos with prices -->
-                        <select id="variant-${id}">
-                            ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">${v.name} - $${v.price}</option>`).join('')}
-                        </select>
-                        <!-- Quantity input -->
-                        <input type="number" id="qty-${id}" value="1" min="1">
-                        <button onclick="addToCart(${id}, '${product.name}')">Add to Cart</button>
-                    `;
-                    productsDiv.appendChild(card);
-                } catch (err) {
-                    console.error(`Error loading product ${id}:`, err);
+            productsDiv.innerHTML = ''; // Clear existing content
+            try {
+                // Fetch product catalog
+                const catalogRes = await fetch(`${API_BASE}/catalog/products`);
+                if (!catalogRes.ok) {
+                    throw new Error(`HTTP ${catalogRes.status}: ${catalogRes.statusText}`);
+                }
+                const catalogData = await catalogRes.json();
+                console.log('Catalog response:', catalogData);
+                
+                if (catalogData.code !== 200 || !Array.isArray(catalogData.result)) {
+                    throw new Error(`Invalid catalog response: ${catalogData.result || catalogData.error || 'Unknown error'}`);
+                }
+                
+                // Limit to first 2 products for simplicity
+                const productIds = catalogData.result.slice(0, 2).map(p => p.id);
+                console.log('Fetched product IDs:', productIds);
+                
+                if (productIds.length === 0) {
+                    throw new Error('No products available in the catalog');
+                }
+                
+                // Load each product
+                for (let id of productIds) {
+                    await loadProduct(id, productsDiv);
+                }
+            } catch (err) {
+                console.error('Error fetching catalog:', err);
+                if (retries > 0) {
+                    console.log(`Retrying catalog fetch (${retries} attempts left)...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return loadProducts(retries - 1, delay * 2); // Exponential backoff
+                }
+                productsDiv.innerHTML = '<p class="error">Failed to load product catalog: ' + err.message + '. Using fallback products.</p>';
+                // Fallback to hardcoded product IDs
+                for (let id of FALLBACK_PRODUCT_IDS) {
+                    await loadProduct(id, productsDiv);
                 }
             }
         }
@@ -204,16 +257,16 @@
                 zip: document.getElementById('zip').value
             };
             
-            // Prepare items with variant_id, quantity, and placeholder print file (replace URL with your design)
+            // Prepare items with variant_id, quantity, and placeholder print file
             const items = cart.map(item => ({
                 variant_id: item.variantId,
                 quantity: item.qty,
-                files: [{ type: 'default', url: 'https://your-design-url-here.com/design.png' }] // Comment: Replace with actual hosted design file URL (e.g., PNG for front print)
+                files: [{ type: 'default', url: 'https://your-design-url-here.com/design.png' }] // Replace with actual design URL
             }));
             
             // Order body (creates a draft order; no payment integrated)
             const body = {
-                shipping: 'STANDARD', // Comment: Default shipping method; can change to others like 'EXPRESS'
+                shipping: 'STANDARD',
                 recipient,
                 items
             };
@@ -235,7 +288,7 @@
                     updateCart();
                     document.getElementById('checkout-form').style.display = 'none';
                 } else {
-                    alert(`Error: ${data.result || data.error}`);
+                    alert(`Error: ${data.result || data.error || 'Unknown error'}`);
                 }
             } catch (err) {
                 alert(`Error: ${err.message}`);
