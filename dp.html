@@ -847,6 +847,13 @@
       border: 1px solid #333;
       border-radius: 0;
     }
+    label {
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.875rem;
+    }
     input {
       padding: 0.75rem;
       border: 1px solid #333;
@@ -1160,7 +1167,9 @@
     </form>
     <h3>Add Slider Item</h3>
     <form id="add-slider-form">
+      <label for="slider-image">Upload Image or Video (MP4, max 5MB):</label>
       <input type="file" id="slider-image" accept="image/*,video/mp4">
+      <label for="slider-url">Or YouTube URL (optional):</label>
       <input type="url" id="slider-url" placeholder="YouTube URL (optional)">
       <button type="submit">Add to Slider</button>
     </form>
