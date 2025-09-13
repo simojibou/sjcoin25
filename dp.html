@@ -1,184 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketplace</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script type="module">
-        // Import Firebase SDK
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-            authDomain: "sj-one.firebaseapp.com",
-            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-            projectId: "sj-one",
-            storageBucket: "sj-one.appspot.com",
-            messagingSenderId: "426335553508",
-            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-            measurementId: "G-YQTVZQWXGB"
-        };
-
-        // Initialize Firebase
-        try {
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const database = getDatabase(app);
-            console.log('Firebase initialized successfully');
-
-            // Cloud Function URL (replace with your actual deployed URL)
-            const cloudFunctionUrl = 'https://us-central1-sj-one.cloudfunctions.net/fetchEnvatoProducts';
-
-            // DOM elements
-            const productsDiv = document.getElementById('products');
-            const errorMessageDiv = document.getElementById('errorMessage');
-            const signInBtn = document.getElementById('signInBtn');
-            const signOutBtn = document.getElementById('signOutBtn');
-            const userInfo = document.getElementById('userInfo');
-
-            // Firebase Authentication with Google
-            const provider = new GoogleAuthProvider();
-
-            signInBtn.addEventListener('click', async () => {
-                try {
-                    await signInWithPopup(auth, provider);
-                } catch (error) {
-                    console.error('Sign-in error:', error);
-                    userInfo.textContent = 'Error signing in: ' + error.message;
-                }
-            });
-
-            signOutBtn.addEventListener('click', async () => {
-                try {
-                    await signOut(auth);
-                } catch (error) {
-                    console.error('Sign-out error:', error);
-                    userInfo.textContent = 'Error signing out: ' + error.message;
-                }
-            });
-
-            // Authentication state listener
-            onAuthStateChanged(auth, user => {
-                try {
-                    if (user) {
-                        signInBtn.classList.add('hidden');
-                        signOutBtn.classList.remove('hidden');
-                        userInfo.textContent = `Welcome, ${user.displayName}`;
-                        fetchProducts(user.uid);
-                    } else {
-                        signInBtn.classList.remove('hidden');
-                        signOutBtn.classList.add('hidden');
-                        userInfo.textContent = 'Please sign in to view products.';
-                        productsDiv.innerHTML = '';
-                        errorMessageDiv.textContent = '';
-                    }
-                } catch (error) {
-                    console.error('Auth state change error:', error);
-                    errorMessageDiv.textContent = 'Error handling authentication state.';
-                }
-            });
-
-            // Fetch products from Cloud Function
-            async function fetchProducts(userId) {
-                try {
-                    console.log('Fetching products from Cloud Function...');
-                    const response = await axios.get(cloudFunctionUrl);
-                    console.log('Cloud Function Response:', response.data);
-
-                    const products = response.data.results || response.data.items || [];
-                    if (products.length === 0) {
-                        errorMessageDiv.textContent = 'No products found.';
-                        console.warn('No products returned from Cloud Function.');
-                        return;
-                    }
-
-                    displayProducts(products);
-                    saveProductsToFirebase(userId, products);
-                } catch (error) {
-                    console.error('Error fetching products:', error);
-                    errorMessageDiv.textContent = `Error loading products: ${error.message}.`;
-                }
-            }
-
-            // Display products
-            function displayProducts(products) {
-                try {
-                    productsDiv.innerHTML = '';
-                    if (!products || products.length === 0) {
-                        errorMessageDiv.textContent = 'No products available to display.';
-                        console.warn('No products to display.');
-                        return;
-                    }
-
-                    products.forEach(product => {
-                        const name = product.name || 'Unnamed Product';
-                        const price = product.price_cents ? (product.price_cents / 100) : product.price || 'N/A';
-                        const thumbnail = product.thumbnail_url || product.previews?.icon_with_landscape_preview?.icon_url || 'https://via.placeholder.com/150';
-                        const url = product.url || product.permalink || '#';
-                        const description = product.description || product.summary || 'No description available';
-
-                        const productCard = `
-                            <div class="bg-white p-4 rounded shadow hover:shadow-lg transition">
-                                <img src="${thumbnail}" alt="${name}" class="w-full h-48 object-cover rounded">
-                                <h2 class="text-xl font-semibold mt-2">${name}</h2>
-                                <p class="text-gray-600">${description}</p>
-                                <p class="text-green-500 font-bold mt-2">$${price}</p>
-                                <a href="${url}" target="_blank" class="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">View on Envato</a>
-                            </div>
-                        `;
-                        productsDiv.innerHTML += productCard;
-                    });
-                } catch (error) {
-                    console.error('Error displaying products:', error);
-                    errorMessageDiv.textContent = 'Error rendering products.';
-                }
-            }
-
-            // Save products to Firebase
-            function saveProductsToFirebase(userId, products) {
-                try {
-                    const productsRef = ref(database, `users/${userId}/products`);
-                    products.forEach(product => {
-                        const productId = product.id || Date.now().toString();
-                        set(ref(database, `users/${userId}/products/${productId}`), {
-                            name: product.name || 'Unnamed Product',
-                            price: product.price_cents ? (product.price_cents / 100) : product.price || 'N/A',
-                            url: product.url || product.permalink || '#',
-                            thumbnail: product.thumbnail_url || product.previews?.icon_with_landscape_preview?.icon_url || ''
-                        });
-                    });
-                    console.log('Products saved to Firebase');
-                } catch (error) {
-                    console.error('Error saving products to Firebase:', error);
-                    errorMessageDiv.textContent = 'Error saving products to database.';
-                }
-            }
-
-        } catch (error) {
-            console.error('Firebase initialization error:', error);
-            document.getElementById('errorMessage').textContent = 'Failed to initialize Firebase. Please check the console for details.';
-        }
-    </script>
+<meta charset="UTF-8">
+<title>Printful OAuth Demo (HTML Only)</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
-<body class="bg-gray-100">
-    <div id="app" class="container mx-auto p-4">
-        <header class="mb-6">
-            <h1 class="text-3xl font-bold text-center">Marketplace</h1>
-            <div id="auth-section" class="mt-4 text-center">
-                <button id="signInBtn" class="bg-blue-500 text-white px-4 py-2 rounded hidden">Sign In</button>
-                <button id="signOutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Sign Out</button>
-                <p id="userInfo" class="mt-2"></p>
-            </div>
-        </header>
-        <main>
-            <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            <div id="errorMessage" class="text-red-500 text-center mt-4"></div>
-        </main>
-    </div>
+<body>
+<h1>Printful Integration Demo</h1>
+<button id="loginPrintful">Login with Printful</button>
+
+<script>
+// بيانات التطبيق (Client ID فقط، Secret لا يجب وضعه هنا)
+const CLIENT_ID = "app-9955277";
+const REDIRECT_URI = window.location.href;
+
+// 1️⃣ إعادة توجيه المستخدم لتسجيل الدخول
+document.getElementById('loginPrintful').onclick = () => {
+    const oauthUrl = `https://www.printful.com/oauth/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    window.location.href = oauthUrl;
+};
+
+// 2️⃣ بعد العودة من Printful مع ?code=XYZ
+window.onload = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (!code) return;
+
+    alert("Received OAuth code (educational only): " + code);
+
+    // ⚠️ لا يمكن استبدال الكود بالـAccess Token مباشرة في المتصفح بدون Secret
+    // الحل الحقيقي: إرسال هذا الكود إلى Server (Firebase Functions أو Node.js)
+    console.log("OAuth Code:", code);
+};
+
+// ⚠️ تعليمات:
+// - لإنشاء Access Token، يجب إرسال الكود مع Client Secret إلى Backend.
+// - لإنشاء الطلبات (orders) يجب استخدام Access Token في Server فقط.
+</script>
 </body>
 </html>
