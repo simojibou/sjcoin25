@@ -1,41 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Printful OAuth Demo (HTML Only)</title>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>متجري - منتجات Printful</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 20px; }
+  h1 { text-align: center; color: #333; }
+  .products { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 20px; }
+  .product { background: #fff; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 15px; width: 200px; text-align: center; }
+  .product img { max-width: 100%; border-radius: 5px; }
+  .product h3 { font-size: 16px; margin: 10px 0 5px; }
+  .product p { font-size: 14px; color: #555; }
+  .product button { margin-top: 10px; padding: 8px 12px; border: none; background: #ff6600; color: white; border-radius: 5px; cursor: pointer; }
+  .product button:hover { background: #e55b00; }
+</style>
 </head>
 <body>
-<h1>Printful Integration Demo</h1>
-<button id="loginPrintful">Login with Printful</button>
+
+<h1>منتجاتي من Printful</h1>
+<div class="products" id="products"></div>
 
 <script>
-// بيانات التطبيق (Client ID فقط، Secret لا يجب وضعه هنا)
-const CLIENT_ID = "app-9955277";
-const REDIRECT_URI = window.location.href;
+const PRINTFUL_API_KEY = "1nSjHow6GSDpNvOCSeOzCN0JKXTt7vahjk63mKInUy2tXixNVUfJbe2OO8M4CVMc";
 
-// 1️⃣ إعادة توجيه المستخدم لتسجيل الدخول
-document.getElementById('loginPrintful').onclick = () => {
-    const oauthUrl = `https://www.printful.com/oauth/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    window.location.href = oauthUrl;
-};
+async function fetchProducts() {
+    try {
+        const response = await fetch("https://api.printful.com/store/products", {
+            method: "GET",
+            headers: {
+                "Authorization": "Basic " + btoa(PRINTFUL_API_KEY + ":")
+            }
+        });
+        const data = await response.json();
+        if (!data.result) {
+            console.error("Error fetching products:", data);
+            return;
+        }
 
-// 2️⃣ بعد العودة من Printful مع ?code=XYZ
-window.onload = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    if (!code) return;
+        const container = document.getElementById("products");
+        data.result.forEach(product => {
+            const prodDiv = document.createElement("div");
+            prodDiv.className = "product";
 
-    alert("Received OAuth code (educational only): " + code);
+            const img = document.createElement("img");
+            img.src = product.thumbnail_url || "";
+            prodDiv.appendChild(img);
 
-    // ⚠️ لا يمكن استبدال الكود بالـAccess Token مباشرة في المتصفح بدون Secret
-    // الحل الحقيقي: إرسال هذا الكود إلى Server (Firebase Functions أو Node.js)
-    console.log("OAuth Code:", code);
-};
+            const title = document.createElement("h3");
+            title.textContent = product.name;
+            prodDiv.appendChild(title);
 
-// ⚠️ تعليمات:
-// - لإنشاء Access Token، يجب إرسال الكود مع Client Secret إلى Backend.
-// - لإنشاء الطلبات (orders) يجب استخدام Access Token في Server فقط.
+            if(product.variants && product.variants.length > 0){
+                const price = document.createElement("p");
+                price.textContent = "السعر: $" + product.variants[0].retail_price;
+                prodDiv.appendChild(price);
+            }
+
+            const button = document.createElement("button");
+            button.textContent = "شراء الآن";
+            button.onclick = () => alert("اضغط على زر الشراء للتكامل مع Printful API للطلب");
+            prodDiv.appendChild(button);
+
+            container.appendChild(prodDiv);
+        });
+
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+// استدعاء الدالة
+fetchProducts();
 </script>
+
 </body>
 </html>
