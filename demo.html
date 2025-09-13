@@ -13,6 +13,8 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- hCaptcha Script -->
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
   <!-- Firebase v9 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -56,6 +58,7 @@
       const sellModal = document.getElementById("sell-modal");
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
+      const newsletterForm = document.querySelector(".sj-newsletter-form");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
@@ -136,12 +139,13 @@
           const data = childSnapshot.val();
           console.log("Product fetched:", childSnapshot.key, data);
           products.push({
-            id: childSnapshot.key, // Use pId as the product ID
+            id: childSnapshot.key,
             title: data.title,
             price: data.price,
             des: data.des,
+            orderUrl: data.orderUrl,
             photo: data.photo,
-            userId: data.id // Map 'id' from JSON to userId
+            userId: data.id
           });
         });
         console.log("Total products fetched:", products.length);
@@ -158,11 +162,20 @@
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
           div.classList.add("product");
+          let orderButton = '';
+          if (product.orderUrl) {
+            orderButton = `
+              <button class="order-btn">Order Now</button>
+            `;
+          }
           div.innerHTML = `
-            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <div class="product-image-wrapper">
+              <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
+            </div>
             <h3>${product.title || 'Untitled'}</h3>
             <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
+            ${orderButton}
             <button class="add-to-cart-btn">Add to Cart</button>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
@@ -173,6 +186,11 @@
               alert("No WhatsApp number provided for this product.");
             }
           });
+          if (product.orderUrl) {
+            div.querySelector(".order-btn").addEventListener("click", () => {
+              window.open(product.orderUrl, "_blank");
+            });
+          }
           div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
             cart.push(product);
             localStorage.setItem("cart", JSON.stringify(cart));
@@ -202,6 +220,19 @@
         console.log("Search input changed:", e.target.value);
         renderProducts(e.target.value);
       });
+      function isYouTubeUrl(url) {
+        return url.includes('youtube.com') || url.includes('youtu.be');
+      }
+      function getYouTubeEmbedUrl(url) {
+        let videoId = '';
+        if (url.includes('youtube.com/watch')) {
+          const params = new URLSearchParams(new URL(url).search);
+          videoId = params.get('v');
+        } else if (url.includes('youtu.be')) {
+          videoId = url.split('youtu.be/')[1].split('?')[0];
+        }
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0` : '';
+      }
       const sliderRef = ref(db, "Sliders");
       onValue(sliderRef, (snapshot) => {
         console.log("Fetching sliders from Realtime Database...");
@@ -214,16 +245,25 @@
         });
         if (slides.length > 0) {
           slides.forEach((slide) => {
-            const element = slide.imageUrl.endsWith('.mp4') 
-              ? document.createElement("video") 
-              : document.createElement("img");
-            element.src = slide.imageUrl;
-            element.classList.add("slide");
-            if (element.tagName === "VIDEO") {
+            let element;
+            if (isYouTubeUrl(slide.imageUrl)) {
+              element = document.createElement("iframe");
+              element.src = getYouTubeEmbedUrl(slide.imageUrl);
+              element.setAttribute("frameborder", "0");
+              element.setAttribute("allow", "autoplay; encrypted-media");
+              element.setAttribute("allowfullscreen", "");
+            } else if (slide.imageUrl.endsWith('.mp4')) {
+              element = document.createElement("video");
+              element.src = slide.imageUrl;
               element.muted = true;
               element.loop = true;
-              element.autoplay = true;
+              element.preload = "auto";
+              element.playsInline = true;
+            } else {
+              element = document.createElement("img");
+              element.src = slide.imageUrl;
             }
+            element.classList.add("slide");
             sliderContainer.appendChild(element);
           });
           startSlider(slides.length);
@@ -241,16 +281,38 @@
         }
         slides.forEach(slide => {
           slide.style.opacity = 0;
-          if (slide.tagName === "VIDEO") slide.pause();
+          if (slide.tagName === "VIDEO") {
+            slide.pause();
+            slide.currentTime = 0;
+          }
+          if (slide.tagName === "IFRAME") {
+            slide.src = slide.src.replace('autoplay=1', 'autoplay=0');
+          }
         });
         slides[0].style.opacity = 1;
-        if (slides[0].tagName === "VIDEO") slides[0].play();
+        if (slides[0].tagName === "VIDEO") {
+          slides[0].play().catch(e => console.error('Video play failed:', e));
+        }
+        if (slides[0].tagName === "IFRAME") {
+          slides[0].src = slides[0].src.replace('autoplay=0', 'autoplay=1');
+        }
         setInterval(() => {
           slides[slideIndex].style.opacity = 0;
-          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].pause();
+          if (slides[slideIndex].tagName === "VIDEO") {
+            slides[slideIndex].pause();
+            slides[slideIndex].currentTime = 0;
+          }
+          if (slides[slideIndex].tagName === "IFRAME") {
+            slides[slideIndex].src = slides[slideIndex].src.replace('autoplay=1', 'autoplay=0');
+          }
           slideIndex = (slideIndex + 1) % numSlides;
           slides[slideIndex].style.opacity = 1;
-          if (slides[slideIndex].tagName === "VIDEO") slides[slideIndex].play();
+          if (slides[slideIndex].tagName === "VIDEO") {
+            slides[slideIndex].play().catch(e => console.error('Video play failed:', e));
+          }
+          if (slides[slideIndex].tagName === "IFRAME") {
+            slides[slideIndex].src = slides[slideIndex].src.replace('autoplay=0', 'autoplay=1');
+          }
         }, 5000);
       }
       function loadAdminSliders() {
@@ -261,9 +323,14 @@
             const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
-            const element = slide.imageUrl.endsWith('.mp4') 
-              ? `<video src="${slide.imageUrl}" muted loop autoplay style="max-width: 100%;"></video>`
-              : `<img src="${slide.imageUrl}" alt="Slider Image">`;
+            let element;
+            if (isYouTubeUrl(slide.imageUrl)) {
+              element = `<iframe src="${getYouTubeEmbedUrl(slide.imageUrl)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="max-width: 100%; height: 100px;"></iframe>`;
+            } else if (slide.imageUrl.endsWith('.mp4')) {
+              element = `<video src="${slide.imageUrl}" muted loop preload="auto" playsinline style="max-width: 100%; height: 100px;"></video>`;
+            } else {
+              element = `<img src="${slide.imageUrl}" alt="Slider Image" style="max-width: 100%; height: 100px;">`;
+            }
             div.innerHTML = `${element}<button>Delete</button>`;
             div.querySelector("button").addEventListener("click", () => {
               if (confirm("Delete this slider item?")) {
@@ -284,12 +351,10 @@
       }
       async function uploadFile(file, path) {
         try {
-          // Validate file size (e.g., max 5MB)
-          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          const maxSize = 5 * 1024 * 1024;
           if (file.size > maxSize) {
             throw new Error("File size exceeds 5MB limit.");
           }
-          // Validate file type
           const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
           if (!allowedTypes.includes(file.type)) {
             throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
@@ -321,6 +386,7 @@
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
+        const orderUrl = document.getElementById("product-order-url").value;
         const photoFile = document.getElementById("product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -329,14 +395,15 @@
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
           const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
+          const pId = productRef.key;
           await set(productRef, {
             title,
             price,
             des,
+            orderUrl,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           addProductForm.reset();
           alert("Product added successfully!");
@@ -362,14 +429,14 @@
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
           const productRef = push(ref(db, "Product"));
-          const pId = productRef.key; // Use the generated key as pId
+          const pId = productRef.key;
           await set(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            id: currentUser.uid, // Store user ID as 'id'
-            pId // Store product ID as 'pId'
+            id: currentUser.uid,
+            pId
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
@@ -383,14 +450,16 @@
         const newTitle = prompt("Edit Title:", product.title);
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
+        const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
         if (newTitle && newPrice && newDes) {
           set(ref(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
+            orderUrl: newOrderUrl,
             photo: product.photo,
-            id: product.userId, // Preserve userId as 'id'
-            pId: productId // Preserve pId
+            id: product.userId,
+            pId: productId
           }).then(() => {
             alert("Product updated!");
           }).catch((error) => {
@@ -418,12 +487,22 @@
           return;
         }
         const sliderFile = document.getElementById("slider-image").files[0];
-        if (!sliderFile) {
-          alert("Please select an image or video.");
+        const sliderUrlInput = document.getElementById("slider-url").value;
+        if (!sliderFile && !sliderUrlInput) {
+          alert("Please select an image/video or provide a YouTube URL.");
           return;
         }
         try {
-          const sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
+          let sliderUrl;
+          if (sliderFile) {
+            sliderUrl = await uploadFile(sliderFile, `sliders/${Date.now()}_${sliderFile.name}`);
+          } else if (sliderUrlInput) {
+            if (!isYouTubeUrl(sliderUrlInput)) {
+              alert("Invalid YouTube URL. Please provide a valid YouTube link.");
+              return;
+            }
+            sliderUrl = sliderUrlInput;
+          }
           const newSliderRef = push(ref(db, "Sliders"));
           await set(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
@@ -433,6 +512,34 @@
           alert(`Failed to add slider item: ${error.message}. Please check your network, authentication, or Firebase permissions.`);
         }
       });
+      // Newsletter Form Handler
+      if (newsletterForm) {
+        newsletterForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = newsletterForm.querySelector('input[name="email"]').value;
+          if (!email) {
+            alert("Please enter your email address.");
+            return;
+          }
+          // Simple validation
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            alert("Please enter a valid email address.");
+            return;
+          }
+          // For demo, alert success; in production, send to backend or Firebase
+          try {
+            // Example: Push to Firebase newsletter list
+            const newsletterRef = push(ref(db, "Newsletter"));
+            await set(newsletterRef, { email: email, timestamp: Date.now() });
+            alert("Thank you for joining the SJ Matrix! You'll receive updates soon.");
+            newsletterForm.reset();
+          } catch (error) {
+            console.error("Newsletter signup error:", error);
+            alert("Signup failed. Please try again.");
+          }
+        });
+      }
       cartIcon.addEventListener("click", () => {
         cartModal.style.display = "block";
         renderCart();
@@ -492,7 +599,6 @@
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
       closeBtn.addEventListener("click", () => popup.style.display = "none");
-      // Service Worker Registration with Enhanced Error Handling
       if ("serviceWorker" in navigator) {
         console.log("Attempting to register service worker...");
         navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
@@ -514,10 +620,37 @@
       } else {
         console.log("Service Worker not supported in this browser.");
       }
+      // Matrix Digital Rain Effect
+      const canvas = document.getElementById('matrix-bg');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?';
+      const fontSize = 14;
+      const columns = canvas.width / fontSize;
+      const drops = Array(Math.floor(columns)).fill(1);
+      function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0F0';
+        ctx.font = fontSize + 'px monospace';
+        for (let i = 0; i < drops.length; i++) {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+          if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+      setInterval(draw, 35);
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
     });
   </script>
   <style>
-    /* Mimic X Shop Design: Dark theme, Helvetica font, clean layout */
     @font-face {
       font-family: 'Helvetica';
       font-weight: 400;
@@ -539,14 +672,24 @@
       color: #fff;
       line-height: 1.6;
       min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
     }
-    /* Header */
+    #matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.3;
+    }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 1rem 2rem;
-      background: #000;
+      background: rgba(0, 0, 0, 0.8);
       position: sticky;
       top: 0;
       z-index: 1000;
@@ -621,7 +764,6 @@
     .dropdown-menu button:hover {
       background: #333;
     }
-    /* Title */
     h1 {
       font-size: 2.5rem;
       font-weight: 700;
@@ -630,7 +772,6 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
-    /* Search */
     #search-input {
       width: 100%;
       max-width: 600px;
@@ -651,7 +792,6 @@
       border-color: #fff;
       outline: none;
     }
-    /* Slider */
     #slider-container {
       position: relative;
       max-width: 100%;
@@ -671,16 +811,25 @@
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
     }
-    /* Product List */
+    .slide[src$=".mp4"] {
+      object-fit: contain;
+      background: #000;
+    }
+    .slide[src*="youtube.com"] {
+      width: 100%;
+      height: 100%;
+    }
     .product-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 2rem;
       max-width: 1200px;
       margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
     .product {
-      background: #111;
+      background: rgba(17, 17, 17, 0.9);
       border-radius: 0;
       padding: 1.5rem;
       transition: transform 0.3s, box-shadow 0.3s;
@@ -688,14 +837,24 @@
     }
     .product:hover {
       transform: translateY(-5px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 12px rgba(0, 255, 0, 0.2);
+    }
+    .product-image-wrapper {
+      width: 100%;
+      height: 280px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .product img {
-      max-width: 100%;
-      border-radius: 0;
-      margin-bottom: 1rem;
-      height: 280px;
-      object-fit: cover;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      background: #000;
     }
     .product h3 {
       font-size: 1.25rem;
@@ -707,10 +866,10 @@
     .price {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #fff;
+      color: #0F0;
       margin-bottom: 1rem;
     }
-    .whatsapp-btn, .add-to-cart-btn {
+    .whatsapp-btn, .order-btn, .add-to-cart-btn {
       width: 100%;
       padding: 0.75rem;
       border: none;
@@ -730,6 +889,13 @@
     .whatsapp-btn:hover {
       background: #1ebe56;
     }
+    .order-btn {
+      background: #007BFF;
+      color: #fff;
+    }
+    .order-btn:hover {
+      background: #0056b3;
+    }
     .add-to-cart-btn {
       background: #fff;
       color: #000;
@@ -737,16 +903,17 @@
     .add-to-cart-btn:hover {
       background: #e0e0e0;
     }
-    /* Admin Panel */
     #admin-panel {
       display: none;
       max-width: 1200px;
       margin: 2rem auto;
-      background: #111;
+      background: rgba(17, 17, 17, 0.9);
       padding: 2rem;
       border: 1px solid #333;
       border-radius: 0;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 1;
     }
     #admin-panel h2, #admin-panel h3 {
       color: #fff;
@@ -765,6 +932,13 @@
       border: 1px solid #333;
       border-radius: 0;
     }
+    label {
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.875rem;
+    }
     input {
       padding: 0.75rem;
       border: 1px solid #333;
@@ -775,11 +949,11 @@
       transition: border-color 0.3s;
     }
     input:focus {
-      border-color: #fff;
+      border-color: #0F0;
       outline: none;
     }
     button[type="submit"] {
-      background: #fff;
+      background: #0F0;
       color: #000;
       padding: 0.75rem;
       border: none;
@@ -788,11 +962,11 @@
       letter-spacing: 0.18em;
       cursor: pointer;
       transition: background 0.3s;
+      border-radius: 0;
     }
     button[type="submit"]:hover {
-      background: #e0e0e0;
+      background: #0a0;
     }
-    /* Slider List */
     #slider-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -809,13 +983,13 @@
     .slider-item:hover {
       transform: scale(1.02);
     }
-    .slider-item img, .slider-item video {
+    .slider-item img, .slider-item video, .slider-item iframe {
       max-width: 100%;
       border-radius: 0;
     }
     .slider-item button {
       width: 100%;
-      background: #fff;
+      background: #0F0;
       color: #000;
       border: none;
       padding: 0.5rem;
@@ -827,9 +1001,8 @@
       transition: background 0.3s;
     }
     .slider-item button:hover {
-      background: #e0e0e0;
+      background: #0a0;
     }
-    /* Cart and Sell Modals */
     .modal {
       position: fixed;
       z-index: 1001;
@@ -841,7 +1014,7 @@
       display: none;
     }
     .modal-content {
-      background: #111;
+      background: rgba(17, 17, 17, 0.95);
       margin: 10% auto;
       padding: 2rem;
       border-radius: 0;
@@ -881,7 +1054,7 @@
       margin: 0;
     }
     .remove-from-cart {
-      background: #fff;
+      background: #0F0;
       color: #000;
       border: none;
       padding: 0.5rem 1rem;
@@ -892,7 +1065,7 @@
       transition: background 0.3s;
     }
     .remove-from-cart:hover {
-      background: #e0e0e0;
+      background: #0a0;
     }
     #close-modal, #close-sell-modal {
       background: transparent;
@@ -908,9 +1081,8 @@
       transition: border-color 0.3s;
     }
     #close-modal:hover, #close-sell-modal:hover {
-      border-color: #ccc;
+      border-color: #0F0;
     }
-    /* Admin Actions */
     .admin-actions {
       display: flex;
       gap: 0.5rem;
@@ -929,24 +1101,23 @@
       transition: background 0.3s;
     }
     .admin-actions button:nth-child(2) {
-      border-color: #fff;
-      background: #fff;
+      border-color: #0F0;
+      background: #0F0;
       color: #000;
     }
     .admin-actions button:hover {
       background: #333;
     }
     .admin-actions button:nth-child(2):hover {
-      background: #e0e0e0;
+      background: #0a0;
     }
-    /* Android Popup */
     #android-popup {
       display: none;
       position: fixed;
       bottom: 20px;
       left: 20px;
       right: 20px;
-      background: #111;
+      background: rgba(17, 17, 17, 0.95);
       color: #fff;
       border-radius: 0;
       padding: 1rem;
@@ -985,7 +1156,246 @@
     #android-popup #close-popup:hover {
       border-color: #ccc;
     }
-    /* Responsive */
+    /* Newsletter Styles */
+    .sj-newsletter {
+      background: rgba(17, 17, 17, 0.9);
+      padding: 2rem;
+      border: 1px solid #333;
+      border-radius: 0;
+      max-width: 600px;
+      margin: 2rem auto;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .sj-newsletter-title-wrapper {
+      margin-bottom: 1.5rem;
+    }
+    .sj-newsletter-title-small {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #0F0;
+      display: block;
+    }
+    .sj-newsletter-title {
+      font-size: 2rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #fff;
+      margin: 0.5rem 0;
+    }
+    .sj-newsletter-title-sub {
+      font-size: 1rem;
+      color: #ccc;
+      margin-bottom: 1.5rem;
+    }
+    .sj-newsletter-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .sj-newsletter-form-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .sj-newsletter-form-fields-input {
+      padding: 0.75rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      border-radius: 0;
+      font-size: 1rem;
+    }
+    .sj-newsletter-form-fields-input:focus {
+      border-color: #0F0;
+      outline: none;
+    }
+    .sj-newsletter-form-fields-input::placeholder {
+      color: #666;
+    }
+    .sj-newsletter-form-fields-submit-button {
+      background: #0F0;
+      color: #000;
+      padding: 0.75rem;
+      border: none;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+      border-radius: 0;
+    }
+    .sj-newsletter-form-fields-submit-button:hover {
+      background: #0a0;
+    }
+    .sj-newsletter-terms {
+      font-size: 0.875rem;
+      color: #ccc;
+    }
+    .sj-newsletter-terms a {
+      color: #0F0;
+      text-decoration: none;
+    }
+    .sj-newsletter-terms a:hover {
+      text-decoration: underline;
+    }
+    .h-captcha {
+      display: none;
+    }
+    /* Footer Styles */
+    .site-footer-row-container-inner {
+      background: rgba(17, 17, 17, 0.9);
+      border-top: 1px solid #333;
+      padding: 2rem 0;
+      position: relative;
+      z-index: 1;
+    }
+    .site-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    .site-top-footer-inner-wrap {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2rem;
+    }
+    .site-footer-section {
+      padding: 1rem;
+    }
+    .footer-widget-area-inner {
+      color: #fff;
+    }
+    .widget-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    .menu {
+      list-style: none;
+      padding: 0;
+    }
+    .menu li {
+      margin-bottom: 0.5rem;
+    }
+    .menu a {
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      transition: color 0.3s;
+    }
+    .menu a:hover {
+      color: #0F0;
+    }
+    .footer-social-inner-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .social-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #fff;
+      border-radius: 0;
+      background: transparent;
+      color: #fff;
+      transition: background 0.3s, color 0.3s;
+    }
+    .social-button:hover {
+      background: #0F0;
+      color: #000;
+    }
+    .kadence-svg-icon {
+      width: 24px;
+      height: 24px;
+    }
+    .site-footer-top-section-5 {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .site-footer-top-section-5 img {
+      max-width: 150px;
+      height: auto;
+    }
+    /* Additional Styles from Provided Code */
+    .wp-block-kadence-column.kadence-column2_6c9f62-58 > .kt-inside-inner-col > .sj-newsletter {
+      margin-top: var(--global-kb-spacing-xs, 1rem);
+    }
+    @media screen and (min-width: 1200px) {
+      .sj-newsletter {
+        min-height: max(430px, 15vh) !important;
+      }
+    }
+    .kb-row-layout-id2_a5e4a3-2d > .kt-row-column-wrap {
+      padding-top: var(--global-kb-row-default-top, var(--global-kb-spacing-sm, 0.5rem));
+      padding-bottom: var(--global-kb-row-default-bottom, var(--global-kb-spacing-sm, 1.5rem));
+      grid-template-columns: minmax(0, 1fr);
+    }
+    @media screen and (max-width: 765px) {
+      .sj-newsletter {
+        min-height: 0vh !important;
+      }
+    }
+    @media screen and (max-width: 768px) {
+      .kb-splide .splide__pagination, .kb-splide ul.splide__pagination.splide__pagination {
+        bottom: 20px !important;
+      }
+    }
+    @media (max-width: 767px) {
+      .sj-newsletter {
+        display: block;
+        margin-top: 50px;
+        margin-bottom: 50px;
+        height: 95px !important;
+      }
+    }
+    @media (max-width: 767px) {
+      .sj-newsletter .sj-newsletter-title-wrapper {
+        display: block;
+        gap: 10px;
+        grid-template-areas:
+        "description title"
+        "button button";
+        grid-template-columns: 1.75fr 1fr;
+        padding: 25px;
+      }
+    }
+    @media screen and (max-width: 765px) {
+      .sj-newsletter {
+        min-height: 11vh !important;
+        position: relative !important;
+        top: -280px;
+      }
+    }
+    @media (min-width: 767px) {
+      .fireblood-sec .sj-newsletter .sj-newsletter-title-wrapper > .sj-newsletter-right {
+        order: 1;
+      }
+      .fireblood-sec .sj-newsletter .sj-newsletter-title-wrapper > .sj-newsletter-left {
+        order: 2;
+      }
+      .fireblood-sec .sj-newsletter-left {
+        text-align: right !important;
+      }
+    }
+    .fireblood-sec .button:not(.no-arrows) {
+      padding-right: calc(1.75em + 32px) !important;
+      margin-right: 0px !important;
+      margin-left: auto;
+    }
     @media (max-width: 768px) {
       .header {
         padding: 1rem;
@@ -994,7 +1404,7 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
       }
-      .product img {
+      .product-image-wrapper {
         height: 200px;
       }
       #slider-container {
@@ -1002,6 +1412,15 @@
       }
       .header-right {
         gap: 0.5rem;
+      }
+      .site-top-footer-inner-wrap {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .site-footer-top-section-5 {
+        justify-content: center;
+      }
+      .sj-newsletter {
+        padding: 1rem;
       }
     }
     @media (max-width: 480px) {
@@ -1014,13 +1433,20 @@
       .product {
         padding: 1rem;
       }
+      .product-image-wrapper {
+        height: auto;
+        aspect-ratio: 1 / 1;
+      }
+      .product img {
+        object-fit: contain;
+      }
       .product h3 {
         font-size: 1rem;
       }
       .price {
         font-size: 1.125rem;
       }
-      .whatsapp-btn, .add-to-cart-btn {
+      .whatsapp-btn, .order-btn, .add-to-cart-btn {
         font-size: 0.75rem;
         padding: 0.5rem;
       }
@@ -1038,10 +1464,20 @@
       .modal-content {
         padding: 1.5rem;
       }
+      .site-top-footer-inner-wrap {
+        grid-template-columns: 1fr;
+      }
+      .site-footer-top-section-5 {
+        justify-content: center;
+      }
+      .sj-newsletter-title {
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
 <body>
+  <canvas id="matrix-bg"></canvas>
   <div class="header">
     <div class="header-left">
       <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
@@ -1063,6 +1499,34 @@
   <input type="text" id="search-input" placeholder="Search products...">
   <div id="slider-container"></div>
   <div class="product-list" id="product-list"></div>
+  <div class="wp-block-kadence-column kadence-column2_6c9f62-58">
+    <div class="kt-inside-inner-col">
+      <div class="sj-newsletter">
+        <div class="sj-newsletter-title-wrapper">
+          <span class="sj-newsletter-title-small">Matrix</span>
+          <h2 class="sj-newsletter-title">Style Move 1.0</h2>
+          <p class="sj-newsletter-title-sub">with SJ And keep yourself in the know with the latest news and updates from SJ STORE.</p>
+        </div>
+        <form method="post" class="sj-newsletter-form">
+          <div class="sj-newsletter-form-fields">
+            <input type="hidden" name="newsletter_nonce" value="77b086083e">
+            <input type="hidden" name="_wp_http_referer" value="/">
+            <input class="sj-newsletter-form-fields-input" type="email" name="email" required="" placeholder="Your email address">
+            <input type="hidden" name="list_id" value="2">
+            <div class="sj-newsletter-form-fields-submit">
+              <input type="submit" value="Join" class="sj-newsletter-form-fields-submit-button button no-arrows">
+            </div>
+            <div class="h-captcha" data-theme="dark" data-sitekey="36990b99-75dc-44c6-a052-6d6f392a834f" data-size="invisible" data-callback="sjNewsletterSubmit">
+              <iframe aria-hidden="true" data-hcaptcha-widget-id="0plbg8slphqc" data-hcaptcha-response="" src="https://newassets.hcaptcha.com/captcha/v1/f124e3c66ae3c2a6f0bed7cb32e160b7987ac6cc/static/hcaptcha.html#frame=checkbox-invisible" style="display: none;"></iframe>
+              <textarea id="g-recaptcha-response-0plbg8slphqc" name="g-recaptcha-response" style="display: none;"></textarea>
+              <textarea id="h-captcha-response-0plbg8slphqc" name="h-captcha-response" style="display: none;"></textarea>
+            </div>
+          </div>
+        </form>
+        <span class="sj-newsletter-terms">By signing up you agree to your <a href="/terms-and-conditions/">Terms & Conditions</a></span>
+      </div>
+    </div>
+  </div>
   <div id="admin-panel">
     <h2>Admin Control Panel</h2>
     <h3>Add Product</h3>
@@ -1070,12 +1534,16 @@
       <input type="text" id="product-title" placeholder="Product Title" required>
       <input type="text" id="product-price" placeholder="Price (DH)" required>
       <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
+      <input type="url" id="product-order-url" placeholder="Order URL (optional)">
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
     <h3>Add Slider Item</h3>
     <form id="add-slider-form">
-      <input type="file" id="slider-image" accept="image/*,video/mp4" required>
+      <label for="slider-image">Upload Image or Video (MP4, max 5MB):</label>
+      <input type="file" id="slider-image" accept="image/*,video/mp4">
+      <label for="slider-url">Or YouTube URL (optional):</label>
+      <input type="url" id="slider-url" placeholder="YouTube URL (optional)">
       <button type="submit">Add to Slider</button>
     </form>
     <h3>Current Sliders</h3>
@@ -1110,5 +1578,72 @@
       <button id="close-popup">✖ Close</button>
     </div>
   </div>
-</body>
-</html>
+  <footer class="site-footer-row-container-inner">
+    <div class="site-container">
+      <div class="site-top-footer-inner-wrap">
+        <div class="site-footer-top-section-1 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget1">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">My Account</h2>
+                <div class="menu-my-account-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/my-account/edit-account/">Account details</a></li>
+                    <li class="menu-item"><a href="/my-account/orders/">Orders</a></li>
+                    <li class="menu-item"><a href="mailto:support@sjstore.com">support@sjstore.com</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-2 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget2">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">Sitemap</h2>
+                <div class="menu-sitemap-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/my-account/">My account</a></li>
+                    <li class="menu-item"><a href="/#shop">Shop</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-3 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-widget3">
+            <div class="footer-widget-area-inner site-info-inner">
+              <section class="widget widget_nav_menu">
+                <h2 class="widget-title">Legal</h2>
+                <div class="menu-legal-container">
+                  <ul class="menu">
+                    <li class="menu-item"><a href="/terms-and-conditions/">Terms & Conditions</a></li>
+                    <li class="menu-item"><a rel="privacy-policy" href="/privacy-policy/">Privacy Policy</a></li>
+                    <li class="menu-item"><a href="/refund-policy/">Refund policy</a></li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="site-footer-top-section-4 site-footer-section">
+          <div class="footer-widget-area widget-area site-footer-focus-item footer-social">
+            <div class="footer-widget-area-inner footer-social-inner">
+              <div class="footer-social-wrap">
+                <h2 class="widget-title">Follow Us On</h2>
+                <div class="footer-social-inner-wrap">
+                  <a href="https://x.com/sjstore" aria-label="X" target="_blank" rel="noopener noreferrer" class="social-button footer-social-item social-link-twitter">
+                    <span class="kadence-svg-iconset">
+                      <svg class="kadence-svg-icon kadence-twitter-x-svg" fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" width="23" height="24" viewBox="0 0 23 24">
+                        <title>X</title>
+                        <path d="M13.969 10.157l8.738-10.157h-2.071l-7.587 8.819-6.060-8.819h-6.989l9.164 13.336-9.164 10.651h2.071l8.012-9.313 6.4 9.313h6.989l-9.503-13.831zM11.133 13.454l-8.316-11.895h3.181l14.64 20.941h-3.181l-6.324-9.046z"></path>
+                      </svg>
+                    </span>
+                  </a>
+                  <a href="https://www.instagram.com/sjstore" aria-label="Instagram" target="_blank" rel="noopener noreferrer" class="social-button footer-social-item social-link-instagram">
+                    <span class="kadence-svg-iconset">
+                      <svg class="kadence-svg-icon kadence-instagram-alt-svg" fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <title>Instagram</title>
+                        <path d="M7 1c-1.657
