@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,7 +166,9 @@
             `;
           }
           div.innerHTML = `
-            <img src="${product.photo || 'https://via.placeholder.com/150'}" alt="${product.title || 'No title'}">
+            <div class="product-image-wrapper">
+              <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
+            </div>
             <h3>${product.title || 'Untitled'}</h3>
             <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
@@ -708,12 +709,18 @@
       transform: translateY(-5px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    .product img {
+    .product-image-wrapper {
       width: 100%;
       height: 280px;
-      object-fit: cover;
-      display: block;
+      overflow: hidden;
       margin-bottom: 1rem;
+    }
+    .product img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
     }
     .product h3 {
       font-size: 1.25rem;
@@ -1019,7 +1026,7 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
       }
-      .product img {
+      .product-image-wrapper {
         height: 200px;
       }
       #slider-container {
@@ -1039,8 +1046,9 @@
       .product {
         padding: 1rem;
       }
-      .product img {
-        height: 180px;
+      .product-image-wrapper {
+        height: auto;
+        aspect-ratio: 1 / 1;
       }
       .product h3 {
         font-size: 1rem;
