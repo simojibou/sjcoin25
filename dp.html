@@ -1,107 +1,250 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SJ Printful Store</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f9f9f9; }
-    .container { max-width: 1200px; margin: auto; padding: 20px; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    .products { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-    .product { background: #fff; padding: 15px; border-radius: 10px; width: 250px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); text-align: center; }
-    .product img { width: 100%; border-radius: 10px; object-fit: cover; }
-    .product h3 { margin: 10px 0 5px; font-size: 18px; }
-    .product p { font-size: 14px; color: #444; }
-    .cart { position: fixed; right: 20px; top: 20px; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); width: 300px; max-height: 90vh; overflow-y: auto; }
-    .cart h3 { margin-top: 0; }
-    .cart ul { list-style: none; padding: 0; }
-    .cart li { margin-bottom: 10px; }
-    button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 5px; background: #4caf50; color: #fff; transition: 0.3s; }
-    button:hover { background: #43a047; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Printful Store</title>
+    <style>
+        /* Basic styling for the page */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        /* Product grid using flexbox for responsiveness */
+        #products {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .product {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        /* Make products stack on mobile */
+        @media (max-width: 600px) {
+            .product {
+                width: 100%;
+            }
+        }
+        /* Cart styling */
+        #cart-items {
+            list-style: none;
+            padding: 0;
+        }
+        #cart-items li {
+            border-bottom: 1px solid #eee;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        /* Checkout form styling */
+        #checkout-form {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+        #checkout-form label {
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
 </head>
 <body>
+    <h1>My Print-on-Demand Store</h1>
+    <div id="products"></div>
+    <h2>Shopping Cart</h2>
+    <ul id="cart-items"></ul>
+    <p>Total: $<span id="total">0.00</span></p>
+    <button id="checkout-btn">Checkout</button>
+    <div id="checkout-form" style="display: none;"></div>
 
-<div class="container">
-  <h1>متجر SJ Printful</h1>
-  <div class="products" id="products"></div>
-</div>
+    <script>
+        // Base URL for Printful API
+        const API_BASE = 'https://api.printful.com';
+        // Replace with your actual Printful API key (private token)
+        const API_KEY = 'ikq7abJTrAW7hZeMlod0xqaBmoA3mVlAa94YinMs';
+        // Example product IDs from Printful catalog (t-shirt and hoodie; add more as needed)
+        const productIds = [71, 438];
 
-<div class="cart">
-  <h3>السلة</h3>
-  <ul id="cartItems"></ul>
-  <p>المجموع: $<span id="total">0</span></p>
-  <button onclick="checkout()">إتمام الشراء</button>
-</div>
+        // Function to load products from Printful API
+        async function loadProducts() {
+            const productsDiv = document.getElementById('products');
+            for (let id of productIds) {
+                try {
+                    // Fetch product details (unauthenticated endpoint)
+                    const res = await fetch(`${API_BASE}/products/${id}`);
+                    const data = await res.json();
+                    if (data.code !== 200) throw new Error('API error');
+                    
+                    const product = data.result.product;
+                    const variants = data.result.variants;
+                    
+                    // Calculate min price for display
+                    const prices = variants.map(v => parseFloat(v.price));
+                    const minPrice = Math.min(...prices);
+                    
+                    // Create product card HTML
+                    const card = document.createElement('div');
+                    card.className = 'product';
+                    card.innerHTML = `
+                        <img src="${product.image}" alt="${product.name}" style="max-width: 100%;">
+                        <h3>${product.name}</h3>
+                        <p>Starting from $${minPrice.toFixed(2)}</p>
+                        <!-- Variant select: shows size/color combos with prices -->
+                        <select id="variant-${id}">
+                            ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">${v.name} - $${v.price}</option>`).join('')}
+                        </select>
+                        <!-- Quantity input -->
+                        <input type="number" id="qty-${id}" value="1" min="1">
+                        <button onclick="addToCart(${id}, '${product.name}')">Add to Cart</button>
+                    `;
+                    productsDiv.appendChild(card);
+                } catch (err) {
+                    console.error(`Error loading product ${id}:`, err);
+                }
+            }
+        }
 
-<script>
-  // ⚠️ ضع مفتاح Printful Store API هنا (للتجربة فقط)
-  const API_KEY = 'ikq7abJTrAW7hZeMlod0xqaBmoA3mVlAa94YinMs';
-  const productsContainer = document.getElementById('products');
-  const cartItems = document.getElementById('cartItems');
-  const totalEl = document.getElementById('total');
-  let cart = [];
+        // Function to add item to cart (uses localStorage for persistence)
+        function addToCart(productId, productName) {
+            const variantSelect = document.getElementById(`variant-${productId}`);
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const variantId = variantSelect.value;
+            const price = parseFloat(variantSelect.selectedOptions[0].dataset.price);
+            const variantName = variantSelect.selectedOptions[0].text.split(' - ')[0]; // Extract name without price
+            const qty = parseInt(qtyInput.value);
+            
+            // Load cart from localStorage or initialize empty array
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            // Add new item
+            cart.push({ variantId, qty, price, name: `${productName} - ${variantName}` });
+            // Save back to localStorage
+            localStorage.setItem('cart', JSON.stringify(cart));
+            // Update cart display
+            updateCart();
+        }
 
-  // جلب المنتجات من متجر Printful
-  async function fetchProducts() {
-    try {
-      const res = await fetch('https://api.printful.com/store/products', {
-        headers: { 'Authorization': 'Bearer ' + API_KEY }
-      });
-      const data = await res.json();
-      console.log(data); // لمراقبة البيانات في الـ Console
-      displayProducts(data.result);
-    } catch (err) {
-      console.error('خطأ في جلب المنتجات:', err);
-      productsContainer.innerHTML = '<p>تعذر تحميل المنتجات. تحقق من مفتاح API.</p>';
-    }
-  }
+        // Function to update cart display and total
+        function updateCart() {
+            const cartItems = document.getElementById('cart-items');
+            cartItems.innerHTML = '';
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            let total = 0;
+            
+            cart.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${item.name} x ${item.qty} - $${(item.price * item.qty).toFixed(2)}`;
+                // Remove button
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = 'Remove';
+                removeBtn.onclick = () => {
+                    cart.splice(index, 1);
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    updateCart();
+                };
+                li.appendChild(removeBtn);
+                cartItems.appendChild(li);
+                total += item.price * item.qty;
+            });
+            
+            document.getElementById('total').textContent = total.toFixed(2);
+        }
 
-  // عرض المنتجات
-  function displayProducts(products) {
-    products.forEach(item => {
-      const product = item.sync_product;
-      const variant = item.sync_variants[0]; // أول متغير
-      const price = variant?.retail_price || 'غير متوفر';
-      const div = document.createElement('div');
-      div.className = 'product';
-      div.innerHTML = `
-        <img src="${product.thumbnail_url}" alt="${product.name}">
-        <h3>${product.name}</h3>
-        <p>السعر: $${price}</p>
-        <button onclick="addToCart('${product.name}', ${parseFloat(price) || 0})">أضف للسلة</button>
-      `;
-      productsContainer.appendChild(div);
-    });
-  }
+        // Show checkout form on button click
+        document.getElementById('checkout-btn').onclick = () => {
+            document.getElementById('checkout-form').style.display = 'block';
+        };
 
-  // إضافة للسلة
-  function addToCart(name, price) {
-    cart.push({ name, price });
-    renderCart();
-  }
+        // Dynamically add checkout form HTML
+        document.getElementById('checkout-form').innerHTML = `
+            <form id="checkout-form-inner">
+                <label>Name: <input type="text" id="name" required></label>
+                <label>Address: <input type="text" id="address1" required></label>
+                <label>City: <input type="text" id="city" required></label>
+                <label>State Code (e.g., CA): <input type="text" id="state_code"></label>
+                <label>Zip: <input type="text" id="zip" required></label>
+                <label>Country Code (e.g., US): <input type="text" id="country_code" value="US" required></label>
+                <button type="submit">Place Order</button>
+            </form>
+        `;
 
-  function renderCart() {
-    cartItems.innerHTML = '';
-    let total = 0;
-    cart.forEach(item => {
-      const li = document.createElement('li');
-      li.textContent = `${item.name} - $${item.price}`;
-      cartItems.appendChild(li);
-      total += item.price;
-    });
-    totalEl.textContent = total.toFixed(2);
-  }
+        // Handle form submission to create order via Printful API
+        document.getElementById('checkout-form-inner').onsubmit = async (e) => {
+            e.preventDefault();
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            if (cart.length === 0) return alert('Cart is empty');
+            
+            // Collect recipient info from form
+            const recipient = {
+                name: document.getElementById('name').value,
+                address1: document.getElementById('address1').value,
+                city: document.getElementById('city').value,
+                state_code: document.getElementById('state_code').value,
+                country_code: document.getElementById('country_code').value,
+                zip: document.getElementById('zip').value
+            };
+            
+            // Prepare items with variant_id, quantity, and placeholder print file (replace URL with your design)
+            const items = cart.map(item => ({
+                variant_id: item.variantId,
+                quantity: item.qty,
+                files: [{ type: 'default', url: 'https://your-design-url-here.com/design.png' }] // Comment: Replace with actual hosted design file URL (e.g., PNG for front print)
+            }));
+            
+            // Order body (creates a draft order; no payment integrated)
+            const body = {
+                shipping: 'STANDARD', // Comment: Default shipping method; can change to others like 'EXPRESS'
+                recipient,
+                items
+            };
+            
+            try {
+                // Authenticated POST to create order
+                const res = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert(`Order created successfully! ID: ${data.result.id}`);
+                    localStorage.removeItem('cart'); // Clear cart
+                    updateCart();
+                    document.getElementById('checkout-form').style.display = 'none';
+                } else {
+                    alert(`Error: ${data.result || data.error}`);
+                }
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            }
+        };
 
-  // مثال على إتمام الشراء
-  function checkout() {
-    alert('سيتم إرسال الطلب إلى Printful (مثال فقط). المجموع: $' + totalEl.textContent);
-    // هنا يمكنك ربط API لإنشاء Order حقيقي في Printful
-  }
-
-  fetchProducts();
-</script>
-
+        // Initialize: Load products and update cart on page load
+        loadProducts();
+        updateCart();
+    </script>
 </body>
 </html>
