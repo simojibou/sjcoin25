@@ -38,9 +38,22 @@
       background:white;
       color:#333;
     }
-    .btn-logout {
-      background:#d9534f;
+    .btn-profile {
+      background:#128C7E;
       color:white;
+      padding:0;
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn-profile img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
     }
     .btn-toggle-sidebar {
       background:#128C7E;
@@ -475,6 +488,10 @@
         height: 12px;
         margin-left: 2px;
       }
+      .btn-profile {
+        width:28px;
+        height:28px;
+      }
     }
     @media (max-width:480px) {
       header {
@@ -521,6 +538,10 @@
         height: 10px;
         margin-left: 2px;
       }
+      .btn-profile {
+        width:24px;
+        height:24px;
+      }
     }
   </style>
 </head>
@@ -530,7 +551,7 @@
     <h1>SJ Chat</h1>
     <div>
       <button id="btnSignIn" class="btn-google">Login with Google</button>
-      <button id="btnSignOut" class="btn-logout" style="display:none;">Logout</button>
+      <button id="btnProfile" class="btn-profile" style="display:none;"><img id="profileImage" src="" alt="Profile"></button>
     </div>
   </header>
   <div class="container">
@@ -592,7 +613,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { getDatabase, ref, set, update, onValue, push, get, remove, onChildAdded, onChildChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
     const firebaseConfig = {
@@ -616,7 +637,8 @@
     const inboxData = {};
     const ADMIN_EMAIL = "simo.jibou@gmail.com";
     const btnSignIn = document.getElementById("btnSignIn");
-    const btnSignOut = document.getElementById("btnSignOut");
+    const btnProfile = document.getElementById("btnProfile");
+    const profileImage = document.getElementById("profileImage");
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
     const sidebar = document.getElementById("sidebar");
     const inboxList = document.getElementById("inboxList");
@@ -683,11 +705,8 @@
     btnSignIn.onclick = async () => {
       await signInWithPopup(auth, provider);
     };
-    btnSignOut.onclick = async () => {
-      if (currentUser) {
-        await update(ref(db, "Users/" + currentUser.id), { isOnline: 0, lastSeen: new Date().toISOString() });
-      }
-      await signOut(auth);
+    btnProfile.onclick = () => {
+      window.location.href = "profile.html";
     };
     onAuthStateChanged(auth, async user => {
       storiesSection.innerHTML = ''; // Clear stories section
@@ -714,7 +733,8 @@
           update(userRef, { isOnline: 1, lastSeen: new Date().toISOString() });
         }
         btnSignIn.style.display = "none";
-        btnSignOut.style.display = "inline-block";
+        btnProfile.style.display = "inline-block";
+        profileImage.src = decodeURIComponent(currentUser.imageURL);
         // Add "Add Story" button dynamically
         const addStoryDiv = document.createElement("div");
         addStoryDiv.className = "story-item";
@@ -732,7 +752,7 @@
       } else {
         currentUser = null;
         btnSignIn.style.display = "inline-block";
-        btnSignOut.style.display = "none";
+        btnProfile.style.display = "none";
         inboxList.innerHTML = "";
         usersList.innerHTML = "";
         chatBody.innerHTML = "";
