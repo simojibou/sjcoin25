@@ -166,6 +166,9 @@
       height: 14px;
       vertical-align: middle;
       margin-left: 4px;
+      padding: 0;
+      display: inline-block;
+      line-height: normal;
     }
     .chat {
       flex:1;
@@ -1080,7 +1083,7 @@
         const call = snap.val();
         const callId = snap.key;
         if (call.calleeId === currentUser.id && call.status === "ringing") {
-          currentCallId = callId;
+          currentCallId = snap.key;
           callStatus.textContent = `Incoming ${call.isVideo ? "Video" : "Voice"} Call from ${call.callerId}`;
           callModal.style.display = "flex";
           acceptCallBtn.style.display = "inline-block";
