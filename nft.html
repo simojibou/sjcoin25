@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,167 +10,538 @@
   <link rel="icon" href="/icons/icon-192x192.png" />
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background: #000;
+      margin:0;
+      padding:0;
+      font-family:Arial, sans-serif;
+      background:#000;
       color: #fff;
-      display: flex;
-      height: 100vh;
     }
     header {
-      background: #075E54;
-      color: white;
-      padding: 8px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      position: fixed;
-      top: 0;
-      z-index: 10;
+      background:#075E54;
+      color:white;
+      padding:8px 12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
     }
     header h1 {
-      margin: 0;
-      font-size: 16px;
+      margin:0;
+      font-size:16px;
     }
     button {
-      border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
+      border:none;
+      padding:6px 10px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:14px;
     }
     .btn-google {
-      background: white;
-      color: #333;
+      background:white;
+      color:#333;
+    }
+    .btn-profile {
+      background:#128C7E;
+      color:white;
+      padding:0;
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn-profile img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
     }
     .btn-toggle-sidebar {
-      background: #128C7E;
-      color: white;
-      display: none;
+      background:#128C7E;
+      color:white;
+      display:none;
+    }
+    .btn-verify {
+      background:#007bff;
+      color:white;
+      margin-left:8px;
+    }
+    .btn-unverify {
+      background:#6c757d;
+      color:white;
+      margin-left:8px;
+    }
+    .btn-call {
+      background:#075E54;
+      color:white;
+      margin-left:8px;
+    }
+    .btn-video-call {
+      background:#075E54;
+      color:white;
+      margin-left:8px;
     }
     .container {
-      display: flex;
-      flex: 1;
-      margin-top: 48px;
+      display:flex;
+      height:calc(100vh - 48px);
     }
     .sidebar {
-      width: 320px;
-      border-right: 1px solid #333;
+      width:100%;
+      max-width:320px;
+      border-right:1px solid #333;
+      display:flex;
+      flex-direction:column;
+      transition:transform 0.3s ease;
       background: #111;
-      overflow-y: auto;
-      padding-top: 10px;
     }
     .search-box {
-      padding: 8px;
-      background: #222;
+      padding:8px;
+      background:#222;
     }
     .search-box input {
-      width: 100%;
-      padding: 6px;
-      border: 1px solid #444;
-      border-radius: 6px;
-      font-size: 14px;
+      width:100%;
+      padding:6px;
+      border:1px solid #444;
+      border-radius:6px;
+      font-size:14px;
       background: #333;
       color: #fff;
     }
     .search-box input::placeholder {
       color: #aaa;
     }
-    .chat-list {
-      padding: 0;
-      margin: 0;
-    }
-    .chat-item {
-      display: flex;
-      align-items: center;
+    .stories-section {
       padding: 8px;
+      background: #222;
       border-bottom: 1px solid #333;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .story-item {
+      display: inline-block;
+      margin-right: 8px;
+      text-align: center;
       cursor: pointer;
     }
-    .chat-item:hover {
-      background: #222;
+    .story-item img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #e91e63;
+      object-fit: cover;
     }
-    .chat-item img {
-      width: 36px;
-      height: 36px;
+    .story-item p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: #fff;
+    }
+    .add-story-btn {
+      background: #075E54;
+      color: white;
+      padding: 6px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .list {
+      flex:1;
+      overflow-y:auto;
+    }
+    .list-item {
+      display:flex;
+      align-items:center;
+      padding:8px;
+      border-bottom:1px solid #333;
+      cursor:pointer;
+      background:#111;
+    }
+    .list-item:hover {
+      background:#222;
+    }
+    .list-item img {
+      width:36px;
+      height:36px;
+      border-radius:50%;
+      margin-right:8px;
+    }
+    .list-item .info {
+      flex:1;
+    }
+    .list-item .last-msg {
+      font-size:11px;
+      color:#aaa;
+    }
+    .verified {
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+      margin-left: 2px;
+      padding: 0;
+      display: inline-block;
+      line-height: normal;
+      object-fit: contain;
+    }
+    .chat {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+    }
+    .chat-header {
+      background:#075E54;
+      color:white;
+      padding:8px;
+      display:flex;
+      align-items:center;
+    }
+    .chat-header img {
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      margin-right:8px;
+    }
+    .chat-body {
+      flex:1;
+      padding:8px;
+      overflow-y:auto;
+      background:#000;
+    }
+    .msg {
+      max-width:80%;
+      margin-bottom:6px;
+      padding:6px 10px;
+      border-radius:10px;
+      clear:both;
+      display:inline-block;
+      font-size:14px;
+      word-break: break-word;
+    }
+    .msg.sent {
+      background:#dcf8c6;
+      color: #000;
+      float:right;
+    }
+    .msg.received {
+      background:#333;
+      color: #fff;
+      float:left;
+    }
+    .msg a {
+      color: #00af9c;
+      text-decoration: none;
+    }
+    .msg a:hover {
+      text-decoration: underline;
+    }
+    .chat-input {
+      display:flex;
+      padding:6px;
+      background:#111;
+      border-top:1px solid #333;
+    }
+    .chat-input input {
+      flex:1;
+      padding:6px;
+      border:1px solid #444;
+      border-radius:6px;
+      font-size:14px;
+      background: #333;
+      color: #fff;
+    }
+    .chat-input input::placeholder {
+      color: #aaa;
+    }
+    .chat-input button {
+      margin-left:6px;
+      background:#075E54;
+      color:white;
+      padding:6px 10px;
+    }
+    .story-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .story-content img,
+    .story-content video {
+      max-width: 90%;
+      max-height: 70vh;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .story-content audio {
+      max-width: 90%;
+      margin: 10px 0;
+    }
+    .story-content p {
+      font-size: 18px;
+      color: white;
+      text-align: center;
+      margin: 10px 0;
+    }
+    .story-header {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      align-items: center;
+      color: white;
+    }
+    .story-header img {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       margin-right: 8px;
     }
-    .chat-item .info {
-      flex: 1;
-    }
-    .chat-item .info strong {
+    .story-footer {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: white;
       font-size: 14px;
     }
-    .chat-item .info span {
-      font-size: 12px;
-      color: #aaa;
-    }
-    .chat-area {
-      flex: 1;
+    .delete-story-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: #d9534f;
+      color: white;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
-      background: #000;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .close-story-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #d9534f;
+      color: white;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .add-story-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .add-story-form {
+      background: #222;
       padding: 20px;
+      border-radius: 8px;
+      width: 300px;
       text-align: center;
     }
-    .chat-area .message-box {
-      margin-top: 20px;
-    }
-    .chat-area button {
-      background: #009688;
-      color: white;
-      border: none;
-      padding: 10px 20px;
+    .add-story-form input[type="text"],
+    .add-story-form input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid #444;
       border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
+      background: #333;
+      color: #fff;
     }
-    .chat-area button:hover {
-      background: #00796b;
+    .add-story-form button {
+      background: #075E54;
+      color: white;
+      padding: 8px 16px;
+      margin: 8px 4px;
     }
-    @media (max-width: 768px) {
+    .call-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .call-content {
+      text-align: center;
+      color: white;
+    }
+    .call-content video {
+      width: 100%;
+      max-width: 640px;
+      height: auto;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .call-buttons button {
+      margin: 5px;
+      padding: 8px 16px;
+    }
+    .btn-accept {
+      background: #075E54;
+      color: white;
+    }
+    .btn-decline {
+      background: #d9534f;
+      color: white;
+    }
+    .btn-end-call {
+      background: #d9534f;
+      color: white;
+    }
+    .btn-toggle-video {
+      background: #007bff;
+      color: white;
+    }
+    .btn-toggle-mic {
+      background: #007bff;
+      color: white;
+    }
+    @media (max-width:768px) {
+      .container {
+        flex-direction:column;
+      }
       .sidebar {
-        width: 100%;
-        position: absolute;
-        top: 48px;
-        left: -100%;
-        transition: left 0.3s ease;
+        max-width:100%;
+        height:100%;
+        position:absolute;
+        top:48px;
+        left:0;
+        transform:translateX(-100%);
+        z-index:10;
+        background:#111;
       }
       .sidebar.active {
-        left: 0;
+        transform:translateX(0);
       }
-      .chat-area {
-        margin-left: 0;
-      }
-      header {
-        padding: 6px 10px;
+      .chat {
+        height:calc(100vh - 48px);
       }
       .btn-toggle-sidebar {
-        display: inline-block;
+        display:inline-block;
+      }
+      header h1 {
+        font-size:14px;
+      }
+      button {
+        padding:5px 8px;
+        font-size:12px;
+      }
+      .chat-input input {
+        font-size:13px;
+      }
+      .chat-input button {
+        padding:5px 8px;
+      }
+      .chat-header {
+        font-size:14px;
+      }
+      .msg {
+        font-size:13px;
+        max-width:85%;
+      }
+      .story-item img {
+        width: 40px;
+        height: 40px;
+      }
+      .story-item p {
+        font-size: 10px;
+      }
+      .add-story-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+      .call-content video {
+        max-width: 90%;
+      }
+      .story-content video,
+      .story-content audio {
+        max-width: 90%;
+      }
+      .verified {
+        width: 12px;
+        height: 12px;
+        margin-left: 2px;
+      }
+      .btn-profile {
+        width:28px;
+        height:28px;
       }
     }
-    @media (max-width: 480px) {
+    @media (max-width:480px) {
       header {
-        padding: 6px 10px;
+        padding:6px 10px;
       }
-      .chat-item img {
-        width: 32px;
-        height: 32px;
+      .sidebar {
+        top:44px;
       }
-      .chat-item .info strong {
-        font-size: 13px;
+      .chat {
+        height:calc(100vh - 44px);
       }
-      .chat-item .info span {
-        font-size: 11px;
+      .search-box input {
+        font-size:13px;
       }
-      .chat-area button {
-        padding: 8px 16px;
-        font-size: 13px;
+      .list-item img {
+        width:32px;
+        height:32px;
+      }
+      .list-item .last-msg {
+        font-size:10px;
+      }
+      .chat-header img {
+        width:28px;
+        height:28px;
+      }
+      .story-content img,
+      .story-content video {
+        max-height: 60vh;
+      }
+      .story-content audio {
+        max-width: 85%;
+      }
+      .story-content p {
+        font-size: 16px;
+      }
+      .add-story-form {
+        width: 90%;
+      }
+      .call-content video {
+        max-width: 85%;
+      }
+      .verified {
+        width: 10px;
+        height: 10px;
+        margin-left: 2px;
+      }
+      .btn-profile {
+        width:24px;
+        height:24px;
       }
     }
   </style>
@@ -180,51 +552,71 @@
     <h1>SJ Chat</h1>
     <div>
       <button id="btnSignIn" class="btn-google">Login with Google</button>
+      <button id="btnProfile" class="btn-profile" style="display:none;"><img id="profileImage" src="" alt="Profile"></button>
     </div>
   </header>
   <div class="container">
+    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
+      <div class="stories-section" id="storiesSection">
+        <!-- Add Story button will be added dynamically -->
+      </div>
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="Search for user...">
       </div>
-      <div class="chat-list" id="chatList">
-        <div class="chat-item">
-          <img src="https://via.placeholder.com/36" alt="User">
-          <div class="info">
-            <strong>Kenny Jay 高岩</strong><br>
-            <span>Sichuan province - 12 min</span>
-          </div>
-        </div>
-        <div class="chat-item">
-          <img src="https://via.placeholder.com/36" alt="User">
-          <div class="info">
-            <strong>CAPPUCHINA Китай</strong><br>
-            <span>Vous: I was in Guangzhou - 2 h</span>
-          </div>
-        </div>
-        <div class="chat-item">
-          <img src="https://via.placeholder.com/36" alt="User">
-          <div class="info">
-            <strong>TOP_DJ</strong><br>
-            <span>Vous: ? - 3 h</span>
-          </div>
-        </div>
-        <!-- Add more chat items dynamically via JavaScript -->
+      <div class="list" id="inboxList"></div>
+      <div class="list" id="usersList" style="display:none;"></div>
+    </div>
+    <!-- Chat -->
+    <div class="chat">
+      <div class="chat-header" id="chatHeader">
+        <span>Select a conversation</span>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+      <div class="chat-input" style="display:none;" id="chatInputRow">
+        <input type="text" id="msgInput" placeholder="Type a message...">
+        <button id="sendBtn">Send</button>
       </div>
     </div>
-    <div class="chat-area">
-      <img src="https://via.placeholder.com/100" alt="Chat Icon">
-      <p>Vos messages</p>
-      <p class="message-box">Envoyez des photos et des messages privés à un(e) ami(e) ou à un groupe</p>
-      <button id="sendMessageBtn">Envoyer un message</button>
+  </div>
+  <!-- Story Viewer Modal -->
+  <div class="story-modal" id="storyModal">
+    <div class="story-header" id="storyHeader"></div>
+    <div class="story-content" id="storyContent"></div>
+    <div class="story-footer" id="storyFooter"></div>
+    <button class="close-story-btn" id="closeStoryBtn">×</button>
+  </div>
+  <!-- Add Story Modal -->
+  <div class="add-story-modal" id="addStoryModal">
+    <div class="add-story-form">
+      <h3>Add a Story</h3>
+      <input type="text" id="storyTextInput" placeholder="Enter text (optional)">
+      <input type="file" id="storyMediaInput" accept="image/*,video/mp4,audio/mp3">
+      <button id="submitStoryBtn">Post Story</button>
+      <button id="cancelStoryBtn">Cancel</button>
     </div>
   </div>
-
+  <!-- Call Modal -->
+  <div class="call-modal" id="callModal">
+    <div class="call-content">
+      <h3 id="callStatus">Incoming Call...</h3>
+      <video id="localVideo" autoplay muted playsinline></video>
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="call-buttons">
+        <button id="acceptCallBtn" class="btn-accept" style="display:none;">Accept</button>
+        <button id="declineCallBtn" class="btn-decline" style="display:none;">Decline</button>
+        <button id="endCallBtn" class="btn-end-call" style="display:none;">End Call</button>
+        <button id="toggleVideoBtn" class="btn-toggle-video" style="display:none;">Toggle Video</button>
+        <button id="toggleMicBtn" class="btn-toggle-mic" style="display:none;">Toggle Mic</button>
+      </div>
+    </div>
+  </div>
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { getDatabase, ref, set, update, onValue, push, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-
+    import { getDatabase, ref, set, update, onValue, push, get, remove, onChildAdded, onChildChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -237,24 +629,88 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const db = getDatabase(app);
+    const storage = getStorage(app);
     let currentUser = null;
-
+    let currentChatUser = null;
+    let localStream = null;
+    let peerConnection = null;
+    let currentCallId = null;
+    const inboxData = {};
+    const ADMIN_EMAIL = "simo.jibou@gmail.com";
     const btnSignIn = document.getElementById("btnSignIn");
+    const btnProfile = document.getElementById("btnProfile");
+    const profileImage = document.getElementById("profileImage");
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
     const sidebar = document.getElementById("sidebar");
+    const inboxList = document.getElementById("inboxList");
+    const usersList = document.getElementById("usersList");
     const searchInput = document.getElementById("searchInput");
-    const chatList = document.getElementById("chatList");
-    const sendMessageBtn = document.getElementById("sendMessageBtn");
-
+    const chatHeader = document.getElementById("chatHeader");
+    const chatBody = document.getElementById("chatBody");
+    const chatInputRow = document.getElementById("chatInputRow");
+    const msgInput = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const storiesSection = document.getElementById("storiesSection");
+    const storyModal = document.getElementById("storyModal");
+    const storyHeader = document.getElementById("storyHeader");
+    const storyContent = document.getElementById("storyContent");
+    const storyFooter = document.getElementById("storyFooter");
+    const closeStoryBtn = document.getElementById("closeStoryBtn");
+    const addStoryModal = document.getElementById("addStoryModal");
+    const storyTextInput = document.getElementById("storyTextInput");
+    const storyMediaInput = document.getElementById("storyMediaInput");
+    const submitStoryBtn = document.getElementById("submitStoryBtn");
+    const cancelStoryBtn = document.getElementById("cancelStoryBtn");
+    const callModal = document.getElementById("callModal");
+    const callStatus = document.getElementById("callStatus");
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const acceptCallBtn = document.getElementById("acceptCallBtn");
+    const declineCallBtn = document.getElementById("declineCallBtn");
+    const endCallBtn = document.getElementById("endCallBtn");
+    const toggleVideoBtn = document.getElementById("toggleVideoBtn");
+    const toggleMicBtn = document.getElementById("toggleMicBtn");
+    // WebRTC Configuration
+    const configuration = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+      ]
+    };
+    // URL Detection Function
+    function linkify(text) {
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
+      return text.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+    }
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('Service Worker registered with scope:', registration.scope);
+          })
+          .catch(error => {
+            console.error('Service Worker registration failed:', error);
+          });
+      });
+    }
+    // Toggle sidebar on mobile
     btnToggleSidebar.onclick = () => {
       sidebar.classList.toggle("active");
     };
-
+    function closeSidebar() {
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove("active");
+      }
+    }
     btnSignIn.onclick = async () => {
       await signInWithPopup(auth, provider);
     };
-
-    onAuthStateChanged(auth, async (user) => {
+    btnProfile.onclick = () => {
+      window.location.href = "profile.html";
+    };
+    onAuthStateChanged(auth, async user => {
+      storiesSection.innerHTML = ''; // Clear stories section
       if (user) {
         currentUser = {
           id: user.uid,
@@ -278,20 +734,41 @@
           update(userRef, { isOnline: 1, lastSeen: new Date().toISOString() });
         }
         btnSignIn.style.display = "none";
+        btnProfile.style.display = "inline-block";
+        profileImage.src = decodeURIComponent(currentUser.imageURL);
+        // Add "Add Story" button dynamically
+        const addStoryDiv = document.createElement("div");
+        addStoryDiv.className = "story-item";
+        addStoryDiv.innerHTML = `
+          <button class="add-story-btn" id="addStoryBtn">+</button>
+          <p>Add Story</p>
+        `;
+        storiesSection.appendChild(addStoryDiv);
+        document.getElementById("addStoryBtn").onclick = () => {
+          addStoryModal.style.display = "flex";
+        };
         loadInbox();
+        loadStories();
+        listenForIncomingCalls();
       } else {
         currentUser = null;
         btnSignIn.style.display = "inline-block";
-        chatList.innerHTML = "";
+        btnProfile.style.display = "none";
+        inboxList.innerHTML = "";
+        usersList.innerHTML = "";
+        chatBody.innerHTML = "";
+        chatHeader.innerHTML = "<span>Select a conversation</span>";
+        chatInputRow.style.display = "none";
+        storiesSection.innerHTML = ''; // Empty stories section when logged out
+        callModal.style.display = "none";
       }
     });
-
     function loadInbox() {
-      onValue(ref(db, "Chats_v2"), async (snap) => {
-        chatList.innerHTML = "";
+      onValue(ref(db, "Chats_v2"), async snap => {
+        inboxData.clear;
+        inboxList.innerHTML = "";
         if (!snap.exists()) return;
         const chats = snap.val();
-        const inboxData = {};
         for (let chatId in chats) {
           if (chatId.includes(currentUser.id)) {
             const msgs = Object.values(chats[chatId]);
@@ -300,54 +777,42 @@
             inboxData[partnerId] = { lastMsg, time: lastMsg.datetime };
           }
         }
-        const entries = Object.entries(inboxData).sort((a, b) => new Date(b[1].time) - new Date(a[1].time));
-        for (let [partnerId, data] of entries) {
-          const userSnap = await get(ref(db, "Users/" + partnerId));
-          if (userSnap.exists()) {
-            const u = userSnap.val();
-            const div = document.createElement("div");
-            div.className = "chat-item";
-            div.innerHTML = `
-              <img src="${decodeURIComponent(u.imageURL)}" alt="">
-              <div class="info">
-                <strong>${u.username}</strong><br>
-                <span>${data.lastMsg.message} - ${timeAgo(new Date(data.lastMsg.datetime))}</span>
-              </div>
-            `;
-            div.onclick = () => openChat(u);
-            chatList.appendChild(div);
-          }
-        }
+        renderInbox();
       });
     }
-
-    function timeAgo(date) {
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);
-      const diffDays = Math.floor(diffHours / 24);
-      if (diffMins < 60) return `${diffMins} min`;
-      if (diffHours < 24) return `${diffHours} h`;
-      return `${diffDays} d`;
+    async function renderInbox() {
+      inboxList.innerHTML = "";
+      const entries = Object.entries(inboxData).sort((a,b) => new Date(b[1].time) - new Date(a[1].time));
+      for (let [partnerId, data] of entries) {
+        const userSnap = await get(ref(db, "Users/" + partnerId));
+        if (!userSnap.exists()) continue;
+        const u = userSnap.val();
+        const div = document.createElement("div");
+        div.className = "list-item";
+        div.innerHTML = `
+          <img src="${decodeURIComponent(u.imageURL)}" alt="">
+          <div class="info">
+            <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
+            <span class="last-msg">${data.lastMsg.message}</span>
+          </div>
+        `;
+        div.onclick = () => {
+          openChat(u);
+          closeSidebar();
+        };
+        inboxList.appendChild(div);
+      }
     }
-
-    function openChat(user) {
-      alert(`Opening chat with ${user.username}`);
-      // Add chat logic here (e.g., show chat window)
-    }
-
-    sendMessageBtn.onclick = () => {
-      alert("Send message functionality to be implemented.");
-    };
-
     searchInput.addEventListener("input", async () => {
       const query = searchInput.value.toLowerCase();
       if (!query) {
-        chatList.style.display = "block";
+        usersList.style.display = "none";
+        inboxList.style.display = "block";
         return;
       }
-      chatList.innerHTML = "";
+      inboxList.style.display = "none";
+      usersList.style.display = "block";
+      usersList.innerHTML = "";
       const usersSnap = await get(ref(db, "Users"));
       if (usersSnap.exists()) {
         const users = usersSnap.val();
@@ -356,32 +821,411 @@
           const u = users[id];
           if (u.username && u.username.toLowerCase().includes(query)) {
             const div = document.createElement("div");
-            div.className = "chat-item";
+            div.className = "list-item";
             div.innerHTML = `
               <img src="${decodeURIComponent(u.imageURL)}" alt="">
               <div class="info">
-                <strong>${u.username}</strong><br>
-                <span>${u.email}</span>
+                <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
+                <small>${u.email}</small>
               </div>
             `;
-            div.onclick = () => openChat(u);
-            chatList.appendChild(div);
+            div.onclick = () => {
+              openChat(u);
+              closeSidebar();
+            };
+            usersList.appendChild(div);
           }
         }
       }
     });
-
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-          });
+    async function toggleVerification(userId, currentStatus) {
+      if (currentUser.email !== ADMIN_EMAIL) return;
+      await update(ref(db, "Users/" + userId), { isVerified: !currentStatus });
+    }
+    function openChat(user) {
+      currentChatUser = user;
+      const userRef = ref(db, "Users/" + user.id);
+      onValue(userRef, snap => {
+        if (snap.exists()) {
+          const data = snap.val();
+          const status = data.isOnline ? "Online now" : "Last seen: " + (data.lastSeen || "");
+          let headerContent = `<img src="${decodeURIComponent(user.imageURL)}"><div><div>${user.username}${data.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</div><small>${status}</small></div>`;
+          headerContent += `<button id="voiceCallBtn" class="btn-call">Voice Call</button>`;
+          headerContent += `<button id="videoCallBtn" class="btn-video-call">Video Call</button>`;
+          if (currentUser.email === ADMIN_EMAIL && user.id !== currentUser.id) {
+            headerContent += `<button id="verifyBtn" class="btn-${data.isVerified ? 'unverify' : 'verify'}">${data.isVerified ? 'Unverify' : 'Verify'}</button>`;
+          }
+          chatHeader.innerHTML = headerContent;
+          const verifyBtn = document.getElementById("verifyBtn");
+          if (verifyBtn) {
+            verifyBtn.onclick = () => toggleVerification(user.id, data.isVerified);
+          }
+          const voiceCallBtn = document.getElementById("voiceCallBtn");
+          const videoCallBtn = document.getElementById("videoCallBtn");
+          if (voiceCallBtn) {
+            voiceCallBtn.onclick = () => startCall(user.id, false);
+          }
+          if (videoCallBtn) {
+            videoCallBtn.onclick = () => startCall(user.id, true);
+          }
+        }
       });
+      chatBody.innerHTML = "";
+      chatInputRow.style.display = "flex";
+      const chatId = getChatId(currentUser.id, user.id);
+      onValue(ref(db, "Chats_v2/" + chatId), snap => {
+        chatBody.innerHTML = "";
+        if (!snap.exists()) return;
+        const msgs = snap.val();
+        for (let k in msgs) {
+          const m = msgs[k];
+          const div = document.createElement("div");
+          div.className = "msg " + (m.sender === currentUser.id ? "sent" : "received");
+          div.innerHTML = linkify(m.message);
+          chatBody.appendChild(div);
+        }
+        chatBody.scrollTop = chatBody.scrollHeight;
+      });
+    }
+    sendBtn.onclick = () => {
+      const text = msgInput.value.trim();
+      if (!text || !currentChatUser) return;
+      const chatId = getChatId(currentUser.id, currentChatUser.id);
+      const msgRef = push(ref(db, "Chats_v2/" + chatId));
+      set(msgRef, {
+        sender: currentUser.id,
+        receiver: currentChatUser.id,
+        message: text,
+        datetime: new Date().toISOString(),
+        type: "TEXT"
+      });
+      msgInput.value = "";
+    };
+    function getChatId(a,b){ return a<b ? a+"_"+b : b+"_"+a; }
+    // Story Functionality
+    cancelStoryBtn.onclick = () => {
+      addStoryModal.style.display = "none";
+      storyTextInput.value = "";
+      storyMediaInput.value = "";
+    };
+    submitStoryBtn.onclick = async () => {
+      if (!currentUser) return;
+      const text = storyTextInput.value.trim();
+      const file = storyMediaInput.files[0];
+      if (!text && !file) {
+        alert("Please provide text or a media file (image, video, or audio) for the story.");
+        return;
+      }
+      const storyData = {
+        userId: currentUser.id,
+        username: currentUser.username,
+        imageURL: currentUser.imageURL,
+        timestamp: new Date().toISOString(),
+        viewers: []
+      };
+      if (file) {
+        const fileType = file.type;
+        if (fileType.startsWith("image/")) {
+          storyData.type = "IMAGE";
+        } else if (fileType === "video/mp4") {
+          storyData.type = "VIDEO";
+        } else if (fileType === "audio/mp3" || fileType === "audio/mpeg") {
+          storyData.type = "AUDIO";
+        } else {
+          alert("Unsupported file type. Please upload an image, MP4 video, or MP3 audio.");
+          return;
+        }
+        const fileRef = storageRef(storage, `stories/${currentUser.id}/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        storyData.content = await getDownloadURL(fileRef);
+      } else {
+        storyData.type = "TEXT";
+        storyData.content = text;
+      }
+      const storyRef = push(ref(db, "Stories"));
+      await set(storyRef, storyData);
+      addStoryModal.style.display = "none";
+      storyTextInput.value = "";
+      storyMediaInput.value = "";
+    };
+    function loadStories() {
+      onValue(ref(db, "Stories"), async snap => {
+        storiesSection.innerHTML = currentUser ? '<div class="story-item"><button class="add-story-btn" id="addStoryBtn">+</button><p>Add Story</p></div>' : '';
+        if (!snap.exists()) return;
+        const stories = snap.val();
+        const now = new Date();
+        const storyGroups = {};
+        for (let storyId in stories) {
+          const story = stories[storyId];
+          const storyTime = new Date(story.timestamp);
+          if (now - storyTime > 24 * 60 * 60 * 1000) { // 24 hours
+            await remove(ref(db, `Stories/${storyId}`));
+            continue;
+          }
+          if (!storyGroups[story.userId]) {
+            storyGroups[story.userId] = [];
+          }
+          storyGroups[story.userId].push({ id: storyId, ...story });
+        }
+        for (let userId in storyGroups) {
+          const userSnap = await get(ref(db, `Users/${userId}`));
+          if (!userSnap.exists()) continue;
+          const user = userSnap.val();
+          const div = document.createElement("div");
+          div.className = "story-item";
+          div.innerHTML = `
+            <img src="${decodeURIComponent(user.imageURL)}" alt="">
+            <p>${user.username}</p>
+          `;
+          div.onclick = () => showStories(storyGroups[userId], user);
+          storiesSection.appendChild(div);
+        }
+        if (currentUser) {
+          document.getElementById("addStoryBtn").onclick = () => {
+            addStoryModal.style.display = "flex";
+          };
+        }
+      });
+    }
+    function showStories(stories, user) {
+      let currentIndex = 0;
+      let storyTimer = null;
+      storyModal.style.display = "flex";
+      async function displayStory(index) {
+        const existingDeleteBtn = storyModal.querySelector('.delete-story-btn');
+        if (existingDeleteBtn) existingDeleteBtn.remove();
+        const story = stories[index];
+        storyHeader.innerHTML = `
+          <img src="${decodeURIComponent(user.imageURL)}" alt="">
+          <div>${user.username}${user.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</div>
+        `;
+        if (story.type === "IMAGE") {
+          storyContent.innerHTML = `<img src="${story.content}" alt="Story">`;
+        } else if (story.type === "VIDEO") {
+          storyContent.innerHTML = `<video src="${story.content}" controls autoplay></video>`;
+        } else if (story.type === "AUDIO") {
+          storyContent.innerHTML = `<audio src="${story.content}" controls autoplay></audio>`;
+        } else {
+          storyContent.innerHTML = `<p>${story.content}</p>`;
+        }
+        storyFooter.innerHTML = `Viewed by ${story.viewers ? story.viewers.length : 0} people`;
+        if (currentUser && story.userId === currentUser.id) {
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "delete-story-btn";
+          deleteBtn.innerHTML = "🗑";
+          deleteBtn.onclick = async () => {
+            await remove(ref(db, `Stories/${story.id}`));
+            storyModal.style.display = "none";
+            clearTimeout(storyTimer);
+          };
+          storyModal.appendChild(deleteBtn);
+        }
+        if (currentUser && story.userId !== currentUser.id && !story.viewers?.includes(currentUser.id)) {
+          const updatedViewers = story.viewers ? [...story.viewers, currentUser.id] : [currentUser.id];
+          await update(ref(db, `Stories/${story.id}`), { viewers: updatedViewers });
+        }
+        clearTimeout(storyTimer);
+        const mediaElement = storyContent.querySelector('video, audio');
+        let duration = 15000; // Default 15 seconds
+        if (mediaElement) {
+          mediaElement.onloadedmetadata = () => {
+            duration = Math.min(mediaElement.duration * 1000, 15000); // Use media duration if < 15s
+            startStoryTimer(duration);
+          };
+          mediaElement.onerror = () => {
+            console.error("Error loading media");
+            startStoryTimer(15000); // Fallback to 15s if media fails
+          };
+        } else {
+          startStoryTimer(duration);
+        }
+        function startStoryTimer(duration) {
+          storyTimer = setTimeout(() => {
+            if (index < stories.length - 1) {
+              currentIndex++;
+              displayStory(currentIndex);
+            } else {
+              storyModal.style.display = "none";
+            }
+          }, duration);
+        }
+      }
+      displayStory(currentIndex);
+      storyModal.onclick = (e) => {
+        if (e.target === storyModal) {
+          clearTimeout(storyTimer);
+          if (currentIndex < stories.length - 1) {
+            currentIndex++;
+            displayStory(currentIndex);
+          } else {
+            storyModal.style.display = "none";
+          }
+        }
+      };
+      closeStoryBtn.onclick = () => {
+        storyModal.style.display = "none";
+        clearTimeout(storyTimer);
+        const mediaElement = storyContent.querySelector('video, audio');
+        if (mediaElement) mediaElement.pause();
+      };
+    }
+    // WebRTC Call Functions
+    async function startCall(calleeId, isVideo) {
+      if (!currentUser || !calleeId) return;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: isVideo,
+          audio: true
+        });
+        localVideo.srcObject = localStream;
+        peerConnection = new RTCPeerConnection(configuration);
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        peerConnection.ontrack = event => {
+          remoteVideo.srcObject = event.streams[0];
+        };
+        peerConnection.onicecandidate = event => {
+          if (event.candidate) {
+            set(ref(db, `Calls/${currentCallId}/candidates/${currentUser.id}/${Date.now()}`), event.candidate.toJSON());
+          }
+        };
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        currentCallId = getChatId(currentUser.id, calleeId);
+        await set(ref(db, `Calls/${currentCallId}`), {
+          callerId: currentUser.id,
+          calleeId: calleeId,
+          offer: offer,
+          status: "ringing",
+          isVideo: isVideo
+        });
+        callStatus.textContent = "Calling...";
+        callModal.style.display = "flex";
+        endCallBtn.style.display = "inline-block";
+        toggleVideoBtn.style.display = isVideo ? "inline-block" : "none";
+        toggleMicBtn.style.display = "inline-block";
+      } catch (error) {
+        console.error("Error starting call:", error);
+        alert("Failed to start call. Please check your camera and microphone permissions.");
+        endCall();
+      }
+    }
+    function listenForIncomingCalls() {
+      if (!currentUser) return;
+      onChildAdded(ref(db, "Calls"), async snap => {
+        const call = snap.val();
+        const callId = snap.key;
+        if (call.calleeId === currentUser.id && call.status === "ringing") {
+          currentCallId = callId;
+          callStatus.textContent = `Incoming ${call.isVideo ? "Video" : "Voice"} Call from ${call.callerId}`;
+          callModal.style.display = "flex";
+          acceptCallBtn.style.display = "inline-block";
+          declineCallBtn.style.display = "inline-block";
+        }
+      });
+      onChildChanged(ref(db, "Calls"), async snap => {
+        const call = snap.val();
+        const callId = snap.key;
+        if (call.calleeId === currentUser.id && call.status === "accepted") {
+          callStatus.textContent = "Call Connected";
+          acceptCallBtn.style.display = "none";
+          declineCallBtn.style.display = "none";
+          endCallBtn.style.display = "inline-block";
+          toggleVideoBtn.style.display = call.isVideo ? "inline-block" : "none";
+          toggleMicBtn.style.display = "inline-block";
+        } else if (call.status === "ended") {
+          endCall();
+        }
+      });
+      onChildAdded(ref(db, `Calls/${getChatId(currentUser.id, currentChatUser?.id || "unknown")}/candidates/${currentChatUser?.id || "unknown"}`), snap => {
+        if (peerConnection) {
+          const candidate = new RTCIceCandidate(snap.val());
+          peerConnection.addIceCandidate(candidate).catch(error => console.error("Error adding ICE candidate:", error));
+        }
+      });
+    }
+    acceptCallBtn.onclick = async () => {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: currentCallId && (await get(ref(db, `Calls/${currentCallId}`))).val().isVideo,
+          audio: true
+        });
+        localVideo.srcObject = localStream;
+        peerConnection = new RTCPeerConnection(configuration);
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        peerConnection.ontrack = event => {
+          remoteVideo.srcObject = event.streams[0];
+        };
+        peerConnection.onicecandidate = event => {
+          if (event.candidate) {
+            set(ref(db, `Calls/${currentCallId}/candidates/${currentUser.id}/${Date.now()}`), event.candidate.toJSON());
+          }
+        };
+        const callSnap = await get(ref(db, `Calls/${currentCallId}`));
+        const call = callSnap.val();
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(call.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        await update(ref(db, `Calls/${currentCallId}`), {
+          answer: answer,
+          status: "accepted"
+        });
+        callStatus.textContent = "Call Connected";
+        acceptCallBtn.style.display = "none";
+        declineCallBtn.style.display = "none";
+        endCallBtn.style.display = "inline-block";
+        toggleVideoBtn.style.display = call.isVideo ? "inline-block" : "none";
+        toggleMicBtn.style.display = "inline-block";
+      } catch (error) {
+        console.error("Error accepting call:", error);
+        alert("Failed to accept call. Please check your camera and microphone permissions.");
+        endCall();
+      }
+    };
+    declineCallBtn.onclick = async () => {
+      await update(ref(db, `Calls/${currentCallId}`), { status: "ended" });
+      endCall();
+    };
+    endCallBtn.onclick = async () => {
+      await update(ref(db, `Calls/${currentCallId}`), { status: "ended" });
+      endCall();
+    };
+    toggleVideoBtn.onclick = () => {
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = !videoTrack.enabled;
+          toggleVideoBtn.textContent = videoTrack.enabled ? "Turn Off Video" : "Turn On Video";
+        }
+      }
+    };
+    toggleMicBtn.onclick = () => {
+      if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !audioTrack.enabled;
+          toggleMicBtn.textContent = audioTrack.enabled ? "Mute Mic" : "Unmute Mic";
+        }
+      }
+    };
+    function endCall() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      callModal.style.display = "none";
+      callStatus.textContent = "Call Ended";
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+      acceptCallBtn.style.display = "none";
+      declineCallBtn.style.display = "none";
+      endCallBtn.style.display = "none";
+      toggleVideoBtn.style.display = "none";
+      toggleMicBtn.style.display = "none";
+      currentCallId = null;
     }
   </script>
 </body>
