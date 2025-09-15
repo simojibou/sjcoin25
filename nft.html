@@ -165,10 +165,11 @@
       width: 14px;
       height: 14px;
       vertical-align: middle;
-      margin-left: 4px;
+      margin-left: 2px;
       padding: 0;
       display: inline-block;
       line-height: normal;
+      object-fit: contain;
     }
     .chat {
       flex:1;
@@ -469,6 +470,11 @@
       .story-content audio {
         max-width: 90%;
       }
+      .verified {
+        width: 12px;
+        height: 12px;
+        margin-left: 2px;
+      }
     }
     @media (max-width:480px) {
       header {
@@ -509,6 +515,11 @@
       }
       .call-content video {
         max-width: 85%;
+      }
+      .verified {
+        width: 10px;
+        height: 10px;
+        margin-left: 2px;
       }
     }
   </style>
@@ -1083,7 +1094,7 @@
         const call = snap.val();
         const callId = snap.key;
         if (call.calleeId === currentUser.id && call.status === "ringing") {
-          currentCallId = snap.key;
+          currentCallId = callId;
           callStatus.textContent = `Incoming ${call.isVideo ? "Video" : "Voice"} Call from ${call.callerId}`;
           callModal.style.display = "flex";
           acceptCallBtn.style.display = "inline-block";
