@@ -757,7 +757,7 @@
         div.innerHTML = `
           <img src="${decodeURIComponent(u.imageURL)}" alt="">
           <div class="info">
-            <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="verified" alt="verified">' : ''}</strong><br>
+            <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
             <span class="last-msg">${data.lastMsg.message}</span>
           </div>
         `;
@@ -790,7 +790,7 @@
             div.innerHTML = `
               <img src="${decodeURIComponent(u.imageURL)}" alt="">
               <div class="info">
-                <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="verified" alt="verified">' : ''}</strong><br>
+                <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
                 <small>${u.email}</small>
               </div>
             `;
@@ -814,7 +814,7 @@
         if (snap.exists()) {
           const data = snap.val();
           const status = data.isOnline ? "Online now" : "Last seen: " + (data.lastSeen || "");
-          let headerContent = `<img src="${decodeURIComponent(user.imageURL)}"><div><div>${user.username}${data.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="verified" alt="verified">' : ''}</div><small>${status}</small></div>`;
+          let headerContent = `<img src="${decodeURIComponent(user.imageURL)}"><div><div>${user.username}${data.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</div><small>${status}</small></div>`;
           headerContent += `<button id="voiceCallBtn" class="btn-call">Voice Call</button>`;
           headerContent += `<button id="videoCallBtn" class="btn-video-call">Video Call</button>`;
           if (currentUser.email === ADMIN_EMAIL && user.id !== currentUser.id) {
@@ -962,7 +962,7 @@
         const story = stories[index];
         storyHeader.innerHTML = `
           <img src="${decodeURIComponent(user.imageURL)}" alt="">
-          <div>${user.username}${user.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/logo.PNG?raw=true" class="verified" alt="verified">' : ''}</div>
+          <div>${user.username}${user.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</div>
         `;
         if (story.type === "IMAGE") {
           storyContent.innerHTML = `<img src="${story.content}" alt="Story">`;
