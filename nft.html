@@ -91,59 +91,92 @@
       display:flex;
       flex-direction:column;
       transition:transform 0.3s ease;
-      background: #111;
+      background: #000;
     }
-    .sidebar-header {
-      padding: 10px;
-      border-bottom: 1px solid #333;
+    .sidebar-top {
+      padding: 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid #333;
     }
-    .sj-logo {
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+    .user-pic {
       width: 40px;
       height: 40px;
-      border-radius: 8px;
+      border-radius: 50%;
+      margin-right: 12px;
       object-fit: cover;
     }
-    .sj-store {
-      background: #075E54;
-      color: white;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
+    .user-details {
+      display: flex;
+      flex-direction: column;
     }
-    .profile-sidebar {
+    .username {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .status {
+      font-size: 12px;
+      color: #00ff00;
+    }
+    .new-message {
+      background: none;
+      color: #fff;
+      font-size: 20px;
+      padding: 4px;
+      border-radius: 50%;
       width: 32px;
       height: 32px;
-      border-radius: 50%;
-      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .profile-sidebar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .new-message:hover {
+      background: #333;
+    }
+    .tabs {
+      display: flex;
+      padding: 8px 12px;
+      border-bottom: 1px solid #333;
+      overflow-x: auto;
+    }
+    .tab {
+      background: none;
+      color: #aaa;
+      border: none;
+      padding: 8px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active {
+      color: #fff;
+      border-bottom: 2px solid #075E54;
     }
     .search-box {
-      padding:8px;
-      background:#222;
+      padding:12px;
+      background:#000;
+      border-bottom: 1px solid #333;
     }
     .search-box input {
       width:100%;
-      padding:6px;
-      border:1px solid #444;
-      border-radius:6px;
+      padding:8px 12px;
+      border:1px solid #333;
+      border-radius:20px;
       font-size:14px;
-      background: #333;
+      background: #111;
       color: #fff;
     }
     .search-box input::placeholder {
       color: #aaa;
     }
     .stories-section {
-      padding: 8px;
-      background: #222;
+      padding: 8px 12px;
+      background: #000;
       border-bottom: 1px solid #333;
       overflow-x: auto;
       white-space: nowrap;
@@ -181,30 +214,49 @@
     .list {
       flex:1;
       overflow-y:auto;
+      background: #000;
     }
     .list-item {
       display:flex;
       align-items:center;
-      padding:8px;
+      padding:12px;
       border-bottom:1px solid #333;
       cursor:pointer;
-      background:#111;
+      background:#000;
     }
     .list-item:hover {
-      background:#222;
+      background:#111;
     }
     .list-item img {
-      width:36px;
-      height:36px;
+      width:48px;
+      height:48px;
       border-radius:50%;
-      margin-right:8px;
+      margin-right:12px;
     }
     .list-item .info {
       flex:1;
+      min-width: 0;
+    }
+    .list-item .name {
+      font-weight: bold;
+      font-size: 14px;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .list-item .last-msg {
-      font-size:11px;
+      font-size:12px;
       color:#aaa;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-item .time {
+      font-size: 12px;
+      color: #aaa;
+      margin-left: 8px;
     }
     .verified {
       width: 14px;
@@ -220,6 +272,7 @@
       flex:1;
       display:flex;
       flex-direction:column;
+      background: #000;
     }
     .chat-header {
       background:#075E54;
@@ -465,13 +518,14 @@
         left:0;
         transform:translateX(-100%);
         z-index:10;
-        background:#111;
+        background:#000;
       }
       .sidebar.active {
         transform:translateX(0);
       }
       .chat {
         height:calc(100vh - 48px);
+        background: #000;
       }
       .btn-toggle-sidebar {
         display:inline-block;
@@ -524,20 +578,56 @@
         width:28px;
         height:28px;
       }
-      .sidebar-header {
+      .sidebar-top {
         padding: 8px;
       }
-      .sj-logo {
+      .user-pic {
         width: 32px;
         height: 32px;
       }
-      .sj-store {
-        padding: 4px 8px;
+      .username {
+        font-size: 13px;
+      }
+      .status {
         font-size: 11px;
       }
-      .profile-sidebar {
+      .new-message {
         width: 28px;
         height: 28px;
+        font-size: 18px;
+      }
+      .tabs {
+        padding: 6px 8px;
+      }
+      .tab {
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+      .search-box {
+        padding: 8px;
+      }
+      .search-box input {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      .stories-section {
+        padding: 6px 8px;
+      }
+      .list-item {
+        padding: 8px;
+      }
+      .list-item img {
+        width: 40px;
+        height: 40px;
+      }
+      .list-item .name {
+        font-size: 13px;
+      }
+      .list-item .last-msg {
+        font-size: 11px;
+      }
+      .list-item .time {
+        font-size: 11px;
       }
     }
     @media (max-width:480px) {
@@ -552,13 +642,6 @@
       }
       .search-box input {
         font-size:13px;
-      }
-      .list-item img {
-        width:32px;
-        height:32px;
-      }
-      .list-item .last-msg {
-        font-size:10px;
       }
       .chat-header img {
         width:28px;
@@ -589,20 +672,56 @@
         width:24px;
         height:24px;
       }
-      .sidebar-header {
+      .sidebar-top {
         padding: 6px;
       }
-      .sj-logo {
+      .user-pic {
         width: 28px;
         height: 28px;
       }
-      .sj-store {
-        padding: 3px 6px;
+      .username {
+        font-size: 12px;
+      }
+      .status {
         font-size: 10px;
       }
-      .profile-sidebar {
+      .new-message {
         width: 24px;
         height: 24px;
+        font-size: 16px;
+      }
+      .tabs {
+        padding: 4px 6px;
+      }
+      .tab {
+        padding: 4px 6px;
+        font-size: 10px;
+      }
+      .search-box {
+        padding: 6px;
+      }
+      .search-box input {
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+      .stories-section {
+        padding: 4px 6px;
+      }
+      .list-item {
+        padding: 6px;
+      }
+      .list-item img {
+        width: 36px;
+        height: 36px;
+      }
+      .list-item .name {
+        font-size: 12px;
+      }
+      .list-item .last-msg {
+        font-size: 10px;
+      }
+      .list-item .time {
+        font-size: 10px;
       }
     }
   </style>
@@ -619,16 +738,20 @@
   <div class="container">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-      <div class="sidebar-header" id="sidebarHeader">
-        <img class="sj-logo" src="https://github.com/simojibou/logo/blob/main/1000222268-removebg-preview.png?raw=true" alt="SJ Logo">
-        <div class="sj-store">SJ Store</div>
-        <div class="profile-sidebar" id="sidebarProfile" style="display:none;"><img id="sidebarProfileImage" src="" alt="Profile"></div>
+      <div class="sidebar-top" id="sidebarTop">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="primary">Primary</button>
+        <button class="tab" data-tab="general">General</button>
+        <button class="tab" data-tab="channels">Channels</button>
+        <button class="tab" data-tab="requests">Requests (1)</button>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search">
       </div>
       <div class="stories-section" id="storiesSection">
         <!-- Add Story button will be added dynamically -->
-      </div>
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search for user...">
       </div>
       <div class="list" id="inboxList"></div>
       <div class="list" id="usersList" style="display:none;"></div>
@@ -706,8 +829,7 @@
     const btnSignIn = document.getElementById("btnSignIn");
     const btnProfile = document.getElementById("btnProfile");
     const profileImage = document.getElementById("profileImage");
-    const sidebarProfile = document.getElementById("sidebarProfile");
-    const sidebarProfileImage = document.getElementById("sidebarProfileImage");
+    const sidebarTop = document.getElementById("sidebarTop");
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
     const sidebar = document.getElementById("sidebar");
     const inboxList = document.getElementById("inboxList");
@@ -804,8 +926,21 @@
         btnSignIn.style.display = "none";
         btnProfile.style.display = "inline-block";
         profileImage.src = decodeURIComponent(currentUser.imageURL);
-        sidebarProfile.style.display = "block";
-        sidebarProfileImage.src = decodeURIComponent(currentUser.imageURL);
+        // Update sidebar top
+        sidebarTop.innerHTML = `
+          <div class="user-info">
+            <img src="${decodeURIComponent(currentUser.imageURL)}" alt="Profile" class="user-pic">
+            <div class="user-details">
+              <span class="username">${currentUser.username}</span>
+              <span class="status">Online</span>
+            </div>
+          </div>
+          <button class="new-message" id="newMessageBtn">✎</button>
+        `;
+        document.getElementById("newMessageBtn").onclick = () => {
+          // Open new message, perhaps focus search
+          searchInput.focus();
+        };
         // Add "Add Story" button dynamically
         const addStoryDiv = document.createElement("div");
         addStoryDiv.className = "story-item";
@@ -824,7 +959,7 @@
         currentUser = null;
         btnSignIn.style.display = "inline-block";
         btnProfile.style.display = "none";
-        sidebarProfile.style.display = "none";
+        sidebarTop.innerHTML = '';
         inboxList.innerHTML = "";
         usersList.innerHTML = "";
         chatBody.innerHTML = "";
@@ -834,9 +969,27 @@
         callModal.style.display = "none";
       }
     });
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        // Switch lists based on tab
+        const tabType = tab.dataset.tab;
+        if (tabType === 'requests') {
+          // Load requests
+          inboxList.style.display = 'none';
+          usersList.style.display = 'block';
+          // Assume usersList is for requests or search
+        } else {
+          inboxList.style.display = 'block';
+          usersList.style.display = 'none';
+        }
+      };
+    });
     function loadInbox() {
       onValue(ref(db, "Chats_v2"), async snap => {
-        inboxData.clear;
+        inboxData = {}; // Fix: was .clear, now assign empty object
         inboxList.innerHTML = "";
         if (!snap.exists()) return;
         const chats = snap.val();
@@ -858,14 +1011,16 @@
         const userSnap = await get(ref(db, "Users/" + partnerId));
         if (!userSnap.exists()) continue;
         const u = userSnap.val();
+        const time = new Date(data.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         const div = document.createElement("div");
         div.className = "list-item";
         div.innerHTML = `
           <img src="${decodeURIComponent(u.imageURL)}" alt="">
           <div class="info">
-            <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
+            <span class="name">${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</span>
             <span class="last-msg">${data.lastMsg.message}</span>
           </div>
+          <span class="time">${time}</span>
         `;
         div.onclick = () => {
           openChat(u);
@@ -896,8 +1051,8 @@
             div.innerHTML = `
               <img src="${decodeURIComponent(u.imageURL)}" alt="">
               <div class="info">
-                <strong>${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</strong><br>
-                <small>${u.email}</small>
+                <span class="name">${u.username}${u.isVerified ? '<img src="https://github.com/simojibou/logo/blob/main/Twitter_Verified_Badge.svg-removebg-preview.png?raw=true" class="verified" alt="verified">' : ''}</span>
+                <span class="last-msg">${u.email}</span>
               </div>
             `;
             div.onclick = () => {
