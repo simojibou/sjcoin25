@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,6 +92,36 @@
       flex-direction:column;
       transition:transform 0.3s ease;
       background: #111;
+    }
+    .sidebar-header {
+      padding: 10px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sj-logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #075E54;
+    }
+    .sj-store {
+      background: #075E54;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .profile-sidebar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .profile-sidebar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .search-box {
       padding:8px;
@@ -493,6 +522,20 @@
         width:28px;
         height:28px;
       }
+      .sidebar-header {
+        padding: 8px;
+      }
+      .sj-logo {
+        font-size: 20px;
+      }
+      .sj-store {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      .profile-sidebar {
+        width: 28px;
+        height: 28px;
+      }
     }
     @media (max-width:480px) {
       header {
@@ -543,6 +586,20 @@
         width:24px;
         height:24px;
       }
+      .sidebar-header {
+        padding: 6px;
+      }
+      .sj-logo {
+        font-size: 18px;
+      }
+      .sj-store {
+        padding: 3px 6px;
+        font-size: 11px;
+      }
+      .profile-sidebar {
+        width: 24px;
+        height: 24px;
+      }
     }
   </style>
 </head>
@@ -558,6 +615,11 @@
   <div class="container">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
+      <div class="sidebar-header" id="sidebarHeader">
+        <div class="sj-logo">SJ</div>
+        <div class="sj-store">SJ Store</div>
+        <div class="profile-sidebar" id="sidebarProfile" style="display:none;"><img id="sidebarProfileImage" src="" alt="Profile"></div>
+      </div>
       <div class="stories-section" id="storiesSection">
         <!-- Add Story button will be added dynamically -->
       </div>
@@ -640,6 +702,8 @@
     const btnSignIn = document.getElementById("btnSignIn");
     const btnProfile = document.getElementById("btnProfile");
     const profileImage = document.getElementById("profileImage");
+    const sidebarProfile = document.getElementById("sidebarProfile");
+    const sidebarProfileImage = document.getElementById("sidebarProfileImage");
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
     const sidebar = document.getElementById("sidebar");
     const inboxList = document.getElementById("inboxList");
@@ -736,6 +800,8 @@
         btnSignIn.style.display = "none";
         btnProfile.style.display = "inline-block";
         profileImage.src = decodeURIComponent(currentUser.imageURL);
+        sidebarProfile.style.display = "block";
+        sidebarProfileImage.src = decodeURIComponent(currentUser.imageURL);
         // Add "Add Story" button dynamically
         const addStoryDiv = document.createElement("div");
         addStoryDiv.className = "story-item";
@@ -754,6 +820,7 @@
         currentUser = null;
         btnSignIn.style.display = "inline-block";
         btnProfile.style.display = "none";
+        sidebarProfile.style.display = "none";
         inboxList.innerHTML = "";
         usersList.innerHTML = "";
         chatBody.innerHTML = "";
