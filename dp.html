@@ -57,10 +57,12 @@
       const sellModal = document.getElementById("sell-modal");
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
+      const categoryCards = document.querySelectorAll(".category-card");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let currentCategory = ""; // Track selected category
       function updateCartCount() {
         cartCount.textContent = cart.length;
       }
@@ -142,19 +144,24 @@
             des: data.des,
             orderUrl: data.orderUrl,
             photo: data.photo,
-            userId: data.id
+            userId: data.id,
+            category: data.category || "Uncategorized" // Default if no category
           });
         });
         console.log("Total products fetched:", products.length);
-        renderProducts(searchInput.value);
+        renderProducts(searchInput.value, currentCategory);
       }, (error) => {
         console.error("Error fetching products:", error.code, error.message, error);
         alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
-      function renderProducts(filter = "") {
-        console.log("Rendering products with filter:", filter);
+      function renderProducts(filter = "", category = "") {
+        console.log("Rendering products with filter:", filter, "and category:", category);
         container.innerHTML = "";
-        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        let filteredProducts = products;
+        if (category) {
+          filteredProducts = filteredProducts.filter(p => p.category === category);
+        }
+        filteredProducts = filteredProducts.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
         console.log("Filtered products:", filteredProducts.length);
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
@@ -215,7 +222,16 @@
       }
       searchInput.addEventListener("input", (e) => {
         console.log("Search input changed:", e.target.value);
-        renderProducts(e.target.value);
+        renderProducts(e.target.value, currentCategory);
+      });
+      // Add event listeners to category cards
+      categoryCards.forEach(card => {
+        card.addEventListener("click", () => {
+          currentCategory = card.querySelector("span").textContent;
+          renderProducts(searchInput.value, currentCategory);
+          // Optional: Scroll to product list
+          container.scrollIntoView({ behavior: "smooth" });
+        });
       });
       function isYouTubeUrl(url) {
         return url.includes('youtube.com') || url.includes('youtu.be');
@@ -384,6 +400,7 @@
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
         const orderUrl = document.getElementById("product-order-url").value;
+        const category = document.getElementById("product-category").value;
         const photoFile = document.getElementById("product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -400,7 +417,8 @@
             orderUrl,
             photo: photoUrl,
             id: currentUser.uid,
-            pId
+            pId,
+            category
           });
           addProductForm.reset();
           alert("Product added successfully!");
@@ -418,6 +436,7 @@
         const title = document.getElementById("sell-product-title").value;
         const price = document.getElementById("sell-product-price").value;
         const des = document.getElementById("sell-product-des").value;
+        const category = document.getElementById("sell-product-category").value;
         const photoFile = document.getElementById("sell-product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -433,7 +452,8 @@
             des,
             photo: photoUrl,
             id: currentUser.uid,
-            pId
+            pId,
+            category
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
@@ -448,6 +468,7 @@
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
+        const newCategory = prompt("Edit Category:", product.category);
         if (newTitle && newPrice && newDes) {
           set(ref(db, `Product/${productId}`), {
             title: newTitle,
@@ -456,7 +477,8 @@
             orderUrl: newOrderUrl,
             photo: product.photo,
             id: product.userId,
-            pId: productId
+            pId: productId,
+            category: newCategory
           }).then(() => {
             alert("Product updated!");
           }).catch((error) => {
@@ -865,7 +887,7 @@
       letter-spacing: 0.18em;
       font-size: 0.875rem;
     }
-    input {
+    input, select {
       padding: 0.75rem;
       border: 1px solid #333;
       background: #000;
@@ -874,7 +896,7 @@
       font-size: 1rem;
       transition: border-color 0.3s;
     }
-    input:focus {
+    input:focus, select:focus {
       border-color: #fff;
       outline: none;
     }
@@ -1162,6 +1184,56 @@
       max-width: 150px;
       height: auto;
     }
+
+    /* New Category Section Styles */
+    #category-section {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    #category-section h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+    }
+    .category-card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 0;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+      cursor: pointer;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 128, 255, 0.1), 0 0 10px rgba(128, 0, 255, 0.1);
+    }
+    .category-card:hover {
+      box-shadow: 0 0 20px rgba(0, 128, 255, 0.3), 0 0 20px rgba(128, 0, 255, 0.3);
+      transform: translateY(-5px);
+    }
+    .category-card svg {
+      width: 60%;
+      height: 60%;
+      margin-bottom: 1rem;
+    }
+    .category-card span {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #fff;
+    }
     @media (max-width: 768px) {
       .header {
         padding: 1rem;
@@ -1184,6 +1256,17 @@
       }
       .site-footer-top-section-5 {
         justify-content: center;
+      }
+      .category-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+      }
+      .category-card svg {
+        width: 50%;
+        height: 50%;
+      }
+      .category-card span {
+        font-size: 0.875rem;
       }
     }
     @media (max-width: 480px) {
@@ -1233,6 +1316,17 @@
       .site-footer-top-section-5 {
         justify-content: center;
       }
+      .category-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.75rem;
+      }
+      .category-card svg {
+        width: 40%;
+        height: 40%;
+      }
+      .category-card span {
+        font-size: 0.75rem;
+      }
     }
   </style>
 </head>
@@ -1257,6 +1351,89 @@
   <h1>SJ STORE</h1>
   <input type="text" id="search-input" placeholder="Search products...">
   <div id="slider-container"></div>
+  <div id="category-section">
+    <div class="category-grid">
+      <!-- Clothes Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path fill="none" stroke="url(#grad1)" stroke-width="2" d="M3 6h18M5 6l-2 4v10a2 2 0 002 2h14a2 2 0 002-2V10l-2-4M5 10h14"/>
+        </svg>
+        <span>Clothes</span>
+      </div>
+      <!-- Phones Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect fill="none" stroke="url(#grad2)" stroke-width="2" x="5" y="2" width="14" height="20" rx="2"/>
+          <line stroke="url(#grad2)" stroke-width="2" x1="12" y1="18" x2="12" y2="18"/>
+        </svg>
+        <span>Phones</span>
+      </div>
+      <!-- Beauty Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#grad3)" d="M12 2a2 2 0 00-2 2v2H8v2h8V6h-2V4a2 2 0 00-2-2zm-2 6v12a2 2 0 002 2h0a2 2 0 002-2V8h-4z"/>
+        </svg>
+        <span>Beauty</span>
+      </div>
+      <!-- Cars Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#grad4)" d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8a1 1 0 001 1h1a1 1 0 001-1v-1h12v1a1 1 0 001 1h1a1 1 0 001-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+        </svg>
+        <span>Cars</span>
+      </div>
+      <!-- Services Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#grad5)" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7zm0-12c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"/>
+        </svg>
+        <span>Services</span>
+      </div>
+      <!-- Tickets Category -->
+      <div class="category-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <defs>
+            <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#00f;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#grad6)" d="M15 5v-2c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v2h-2v4c0 1.1.9 2 2 2v2c-1.1 0-2 .9-2 2v4h2v2c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-2h2v-4c0-1.1-.9-2-2-2v-2c1.1 0 2-.9 2-2v-4h-2zm-4-2h2v2h-2v-2zm2 16h-2v-2h2v2zm0-4h-2v-2c-1.1 0-2-.9-2-2h4c0 1.1-.9 2-2 2v2zm0-4h-4c0-1.1.9-2 2-2s2 .9 2 2v2z"/>
+        </svg>
+        <span>Tickets</span>
+      </div>
+    </div>
+  </div>
   <div class="product-list" id="product-list"></div>
   <div id="admin-panel">
     <h2>Admin Control Panel</h2>
@@ -1266,6 +1443,15 @@
       <input type="text" id="product-price" placeholder="Price (DH)" required>
       <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
       <input type="url" id="product-order-url" placeholder="Order URL (optional)">
+      <select id="product-category" required>
+        <option value="" disabled selected>Select Category</option>
+        <option value="Clothes">Clothes</option>
+        <option value="Phones">Phones</option>
+        <option value="Beauty">Beauty</option>
+        <option value="Cars">Cars</option>
+        <option value="Services">Services</option>
+        <option value="Tickets">Tickets</option>
+      </select>
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
@@ -1294,6 +1480,15 @@
         <input type="text" id="sell-product-title" placeholder="Product Title" required>
         <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
         <input type="text" id="sell-product-des" placeholder="WhatsApp Phone Number" required>
+        <select id="sell-product-category" required>
+          <option value="" disabled selected>Select Category</option>
+          <option value="Clothes">Clothes</option>
+          <option value="Phones">Phones</option>
+          <option value="Beauty">Beauty</option>
+          <option value="Cars">Cars</option>
+          <option value="Services">Services</option>
+          <option value="Tickets">Tickets</option>
+        </select>
         <input type="file" id="sell-product-photo" accept="image/*" required>
         <button type="submit">Add Product</button>
         <button id="close-sell-modal">Close</button>
@@ -1402,4 +1597,3 @@
   </footer>
 </body>
 </html>
-
