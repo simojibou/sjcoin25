@@ -1,4 +1,4 @@
-
+  ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,10 +57,12 @@
       const sellModal = document.getElementById("sell-modal");
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
+      const categoryCards = document.querySelectorAll(".category-card");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let currentCategory = ""; // Track selected category
       function updateCartCount() {
         cartCount.textContent = cart.length;
       }
@@ -142,19 +144,26 @@
             des: data.des,
             orderUrl: data.orderUrl,
             photo: data.photo,
-            userId: data.id
+            userId: data.id,
+            category: data.category || "Uncategorized", // Default if no category
+            sellerName: data.sellerName,
+            sellerPhoto: data.sellerPhoto
           });
         });
         console.log("Total products fetched:", products.length);
-        renderProducts(searchInput.value);
+        renderProducts(searchInput.value, currentCategory);
       }, (error) => {
         console.error("Error fetching products:", error.code, error.message, error);
         alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
-      function renderProducts(filter = "") {
-        console.log("Rendering products with filter:", filter);
+      function renderProducts(filter = "", category = "") {
+        console.log("Rendering products with filter:", filter, "and category:", category);
         container.innerHTML = "";
-        const filteredProducts = products.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
+        let filteredProducts = products;
+        if (category) {
+          filteredProducts = filteredProducts.filter(p => p.category === category);
+        }
+        filteredProducts = filteredProducts.filter(p => p.title && p.title.toLowerCase().includes(filter.toLowerCase()));
         console.log("Filtered products:", filteredProducts.length);
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
@@ -170,6 +179,10 @@
               <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
             </div>
             <h3>${product.title || 'Untitled'}</h3>
+            <div class="seller-info">
+              <img src="${product.sellerPhoto || 'https://via.placeholder.com/30'}" alt="Seller Profile" class="seller-pic">
+              <span>${product.sellerName || 'Anonymous'}</span>
+            </div>
             <p class="price">${product.price || 'N/A'} DH</p>
             <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
             ${orderButton}
@@ -215,7 +228,16 @@
       }
       searchInput.addEventListener("input", (e) => {
         console.log("Search input changed:", e.target.value);
-        renderProducts(e.target.value);
+        renderProducts(e.target.value, currentCategory);
+      });
+      // Add event listeners to category cards
+      categoryCards.forEach(card => {
+        card.addEventListener("click", () => {
+          currentCategory = card.querySelector("span").textContent;
+          renderProducts(searchInput.value, currentCategory);
+          // Optional: Scroll to product list
+          container.scrollIntoView({ behavior: "smooth" });
+        });
       });
       function isYouTubeUrl(url) {
         return url.includes('youtube.com') || url.includes('youtu.be');
@@ -384,6 +406,7 @@
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
         const orderUrl = document.getElementById("product-order-url").value;
+        const category = document.getElementById("product-category").value;
         const photoFile = document.getElementById("product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -400,7 +423,10 @@
             orderUrl,
             photo: photoUrl,
             id: currentUser.uid,
-            pId
+            pId,
+            category,
+            sellerName: currentUser.displayName,
+            sellerPhoto: currentUser.photoURL
           });
           addProductForm.reset();
           alert("Product added successfully!");
@@ -418,6 +444,7 @@
         const title = document.getElementById("sell-product-title").value;
         const price = document.getElementById("sell-product-price").value;
         const des = document.getElementById("sell-product-des").value;
+        const category = document.getElementById("sell-product-category").value;
         const photoFile = document.getElementById("sell-product-photo").files[0];
         if (!photoFile) {
           alert("Please select an image.");
@@ -433,7 +460,10 @@
             des,
             photo: photoUrl,
             id: currentUser.uid,
-            pId
+            pId,
+            category,
+            sellerName: currentUser.displayName,
+            sellerPhoto: currentUser.photoURL
           });
           sellProductForm.reset();
           sellModal.style.display = "none";
@@ -448,6 +478,7 @@
         const newPrice = prompt("Edit Price:", product.price);
         const newDes = prompt("Edit WhatsApp Phone Number:", product.des);
         const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
+        const newCategory = prompt("Edit Category:", product.category);
         if (newTitle && newPrice && newDes) {
           set(ref(db, `Product/${productId}`), {
             title: newTitle,
@@ -456,7 +487,10 @@
             orderUrl: newOrderUrl,
             photo: product.photo,
             id: product.userId,
-            pId: productId
+            pId: productId,
+            category: newCategory,
+            sellerName: product.sellerName,
+            sellerPhoto: product.sellerPhoto
           }).then(() => {
             alert("Product updated!");
           }).catch((error) => {
@@ -791,6 +825,19 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
     }
+    .seller-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: #ccc;
+    }
+    .seller-pic {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
     .price {
       font-size: 1.5rem;
       font-weight: 700;
@@ -865,7 +912,7 @@
       letter-spacing: 0.18em;
       font-size: 0.875rem;
     }
-    input {
+    input, select {
       padding: 0.75rem;
       border: 1px solid #333;
       background: #000;
@@ -874,7 +921,7 @@
       font-size: 1rem;
       transition: border-color 0.3s;
     }
-    input:focus {
+    input:focus, select:focus {
       border-color: #fff;
       outline: none;
     }
@@ -1421,6 +1468,15 @@
       <input type="text" id="product-price" placeholder="Price (DH)" required>
       <input type="text" id="product-des" placeholder="WhatsApp Phone Number" required>
       <input type="url" id="product-order-url" placeholder="Order URL (optional)">
+      <select id="product-category" required>
+        <option value="" disabled selected>Select Category</option>
+        <option value="Clothes">Clothes</option>
+        <option value="Phones">Phones</option>
+        <option value="Beauty">Beauty</option>
+        <option value="Cars">Cars</option>
+        <option value="Services">Services</option>
+        <option value="Tickets">Tickets</option>
+      </select>
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
@@ -1449,6 +1505,15 @@
         <input type="text" id="sell-product-title" placeholder="Product Title" required>
         <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
         <input type="text" id="sell-product-des" placeholder="WhatsApp Phone Number" required>
+        <select id="sell-product-category" required>
+          <option value="" disabled selected>Select Category</option>
+          <option value="Clothes">Clothes</option>
+          <option value="Phones">Phones</option>
+          <option value="Beauty">Beauty</option>
+          <option value="Cars">Cars</option>
+          <option value="Services">Services</option>
+          <option value="Tickets">Tickets</option>
+        </select>
         <input type="file" id="sell-product-photo" accept="image/*" required>
         <button type="submit">Add Product</button>
         <button id="close-sell-modal">Close</button>
@@ -1557,3 +1622,4 @@
   </footer>
 </body>
 </html>
+```
