@@ -158,6 +158,19 @@
             background-color: var(--card-bg-dark);
         }
 
+        #total-portfolio {
+            background-color: var(--success-green);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+
+        body.dark #total-portfolio {
+            background-color: #1e7e34;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 10px;
@@ -213,9 +226,13 @@
                 <button id="dark-mode-toggle">🌙</button>
                 <button id="logout">Logout</button>
             </header>
+            <div id="total-portfolio">
+                <h2>Total Portfolio Value: $<span id="total-value">0.00</span></h2>
+            </div>
             <div class="wallet-actions">
                 <button id="add-wallet">+ Add Wallet</button>
                 <button id="scan-qr">📷 Scan QR</button>
+                <button id="refresh-all">Refresh All</button>
             </div>
             <div id="wallet-list"></div>
             <div id="tx-history" style="display: none;">
@@ -289,6 +306,9 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // Global totals
+        let totalValue = 0;
+
         // DOM Elements
         const authSection = document.getElementById('auth-section');
         const dashboardSection = document.getElementById('dashboard-section');
@@ -298,6 +318,7 @@
         const googleLogin = document.getElementById('google-login');
         const walletList = document.getElementById('wallet-list');
         const txList = document.getElementById('tx-list');
+        const totalValueEl = document.getElementById('total-value');
         const addWalletBtn = document.getElementById('add-wallet');
         const addWalletModal = document.getElementById('add-wallet-modal');
         const walletForm = document.getElementById('wallet-form');
@@ -310,6 +331,7 @@
         const stopScan = document.getElementById('stop-scan');
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         const logoutBtn = document.getElementById('logout');
+        const refreshAllBtn = document.getElementById('refresh-all');
         const authError = document.getElementById('auth-error');
         const errorDiv = document.getElementById('error');
         const generateModal = document.getElementById('generate-modal');
@@ -372,6 +394,18 @@
         });
 
         logoutBtn.addEventListener('click', () => auth.signOut());
+
+        // Refresh All Balances
+        refreshAllBtn.addEventListener('click', () => {
+            totalValue = 0;
+            updateTotalDisplay();
+            document.querySelectorAll('.wallet-card').forEach(card => {
+                const id = card.id.split('-')[1]; // Assuming card id is wallet-id
+                const coin = card.querySelector('h3').textContent;
+                const address = card.querySelector('p').textContent.split(': ')[1];
+                fetchBalance(id, coin, address);
+            });
+        });
 
         // Wallet Management
         addWalletBtn.addEventListener('click', () => addWalletModal.style.display = 'block');
@@ -445,9 +479,14 @@
             const userId = auth.currentUser.uid;
             db.collection('users').doc(userId).collection('wallets').get().then((snapshot) => {
                 walletList.innerHTML = '';
+                totalValue = 0;
+                updateTotalDisplay();
+                let pendingFetches = snapshot.size;
+                if (pendingFetches === 0) return;
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     const card = createWalletCard(doc.id, data);
+                    card.id = `wallet-${doc.id}`;
                     walletList.appendChild(card);
                 });
             }).catch(showError(errorDiv));
@@ -467,15 +506,17 @@
                 <canvas id="qr-${id}" style="display:none;"></canvas>
             `;
             fetchBalance(id, data.coin, data.address);
-            fetchPrice(data.coin).then(price => {
-                document.getElementById(`value-${id}`).textContent = `Value: $${(0 * price).toFixed(2)}`; // Update after balance
-            });
             return card;
+        }
+
+        function updateTotalDisplay() {
+            totalValueEl.textContent = totalValue.toFixed(2);
         }
 
         // Balance Fetching
         async function fetchBalance(walletId, coin, address) {
             let balance = 0;
+            let walletValue = 0;
             try {
                 if (coin === 'BTC') {
                     const res = await fetch(`https://blockstream.info/api/address/${address}`);
@@ -485,10 +526,13 @@
                     const res = await fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest`);
                     const data = await res.json();
                     balance = parseInt(data.result) / 1e18; // ETH
-                } // Others manual - set to 0 or prompt user
-                document.getElementById(`balance-${walletId}`).textContent = `Balance: ${balance} ${coin}`;
+                } // Others manual - set to 0
+                document.getElementById(`balance-${walletId}`).textContent = `Balance: ${balance.toFixed(6)} ${coin}`;
                 const price = await fetchPrice(coin);
-                document.getElementById(`value-${walletId}`).textContent = `Value: $${(balance * price).toFixed(2)}`;
+                walletValue = balance * price;
+                document.getElementById(`value-${walletId}`).textContent = `Value: $${walletValue.toFixed(2)}`;
+                totalValue += walletValue;
+                updateTotalDisplay();
             } catch (err) {
                 document.getElementById(`balance-${walletId}`).textContent = `Balance: Error fetching`;
                 showError(errorDiv)(err.message);
@@ -502,7 +546,7 @@
             try {
                 const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${idMap[coin]}&vs_currencies=usd`);
                 const data = await res.json();
-                return data[idMap[coin]].usd;
+                return data[idMap[coin]].usd || 0;
             } catch (err) {
                 console.error(err);
                 return 0;
@@ -611,11 +655,7 @@
 
         // Auto-refresh prices every 30s
         setInterval(() => {
-            document.querySelectorAll('.wallet-card').forEach(card => {
-                const id = card.querySelector('h3').nextElementSibling.textContent.split(': ')[1]; // Hacky, improve if needed
-                // Fetch prices for all
-                loadWallets(); // Reload to update
-            });
+            refreshAllBtn.click();
         }, 30000);
     </script>
 </body>
