@@ -201,6 +201,20 @@
     </section>
     <p id="status" class="small" style="margin-top:12px"></p>
   </div>
+  <script>
+    // Single Page Apps for GitHub Pages
+    // MIT License
+    // https://github.com/rafgraph/spa-github-pages
+    // This script checks to see if a redirect is present in the query string
+    // and converts it back into the correct url and adds it to the
+    // browser's history using window.history.replaceState(...),
+    // which won't cause the browser to attempt to load the new url.
+    (function(l) {
+      if (l.search[0] === '?') {
+        l.replace(l.protocol + '//' + l.host + l.pathname + l.search.slice(1) + l.hash);
+      }
+    })(window.location)
+  </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
