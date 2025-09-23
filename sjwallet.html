@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -179,6 +178,8 @@
     <!-- QR Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- BitcoinJS -->
+    <script src="https://cdn.jsdelivr.net/npm/bitcoinjs-lib@6.1.7/index.js"></script>
 </head>
 <body>
     <div class="container">
@@ -231,6 +232,7 @@
                 <form id="wallet-form">
                     <select id="coin-type" required>
                         <option value="">Select Coin</option>
+                        <option value="generate-btc">Generate New BTC</option>
                         <option value="BTC">BTC</option>
                         <option value="ETH">ETH</option>
                         <option value="USDT">USDT (Manual)</option>
@@ -240,6 +242,21 @@
                     <input type="text" id="wallet-address" placeholder="Wallet Address" required>
                     <button type="submit">Add</button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Generate Wallet Modal -->
+        <div id="generate-modal" class="modal">
+            <div class="modal-content">
+                <h2>New BTC Wallet Generated</h2>
+                <p><strong>Address:</strong> <span id="gen-address"></span></p>
+                <p><strong>Private Key (WIF):</strong> <span id="gen-privkey"></span></p>
+                <p><em>Backup your private key securely! It is not stored anywhere.</em></p>
+                <button onclick="copyToClipboard('gen-address')">Copy Address</button>
+                <button onclick="copyToClipboard('gen-privkey')">Copy Private Key</button>
+                <canvas id="gen-qr" style="display: block; margin: 10px auto;"></canvas>
+                <button id="confirm-gen">Add to Wallet</button>
+                <button onclick="closeGenModal()">Cancel</button>
             </div>
         </div>
 
@@ -284,6 +301,8 @@
         const addWalletBtn = document.getElementById('add-wallet');
         const addWalletModal = document.getElementById('add-wallet-modal');
         const walletForm = document.getElementById('wallet-form');
+        const coinType = document.getElementById('coin-type');
+        const addressInput = document.getElementById('wallet-address');
         const scanQrBtn = document.getElementById('scan-qr');
         const qrScannerModal = document.getElementById('qr-scanner-modal');
         const qrVideo = document.getElementById('qr-video');
@@ -293,6 +312,21 @@
         const logoutBtn = document.getElementById('logout');
         const authError = document.getElementById('auth-error');
         const errorDiv = document.getElementById('error');
+        const generateModal = document.getElementById('generate-modal');
+        const confirmGen = document.getElementById('confirm-gen');
+
+        let currentGenAddress, currentGenPrivkey;
+
+        // Coin type change listener
+        coinType.addEventListener('change', (e) => {
+            if (e.target.value === 'generate-btc') {
+                addressInput.style.display = 'none';
+                addressInput.removeAttribute('required');
+            } else {
+                addressInput.style.display = 'block';
+                addressInput.setAttribute('required', 'required');
+            }
+        });
 
         // Auth Listeners
         auth.onAuthStateChanged((user) => {
@@ -344,19 +378,68 @@
 
         walletForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const coin = document.getElementById('coin-type').value;
-            const address = document.getElementById('wallet-address').value;
+            const coin = coinType.value;
+            const address = addressInput.value;
+            if (coin === 'generate-btc') {
+                generateBTC();
+                return;
+            }
+            if (!address) return;
             const userId = auth.currentUser.uid;
+            const coinToStore = coin === 'generate-btc' ? 'BTC' : coin;
             db.collection('users').doc(userId).collection('wallets').add({
-                coin,
+                coin: coinToStore,
                 address,
                 created: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 addWalletModal.style.display = 'none';
                 walletForm.reset();
+                addressInput.style.display = 'block';
+                addressInput.setAttribute('required', 'required');
                 loadWallets();
             }).catch(showError(errorDiv));
         });
+
+        confirmGen.addEventListener('click', () => {
+            const userId = auth.currentUser.uid;
+            db.collection('users').doc(userId).collection('wallets').add({
+                coin: 'BTC',
+                address: currentGenAddress,
+                created: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                closeGenModal();
+                addWalletModal.style.display = 'none';
+                walletForm.reset();
+                addressInput.style.display = 'block';
+                addressInput.setAttribute('required', 'required');
+                loadWallets();
+            }).catch(showError(errorDiv));
+        });
+
+        function generateBTC() {
+            const keyPair = bitcoin.ECPair.makeRandom();
+            const { address } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey });
+            const privateKeyWIF = keyPair.toWIF();
+            currentGenAddress = address;
+            currentGenPrivkey = privateKeyWIF;
+            document.getElementById('gen-address').textContent = address;
+            document.getElementById('gen-privkey').textContent = privateKeyWIF;
+            QRCode.toCanvas(document.getElementById('gen-qr'), address, { width: 150 });
+            generateModal.style.display = 'block';
+        }
+
+        function closeGenModal() {
+            generateModal.style.display = 'none';
+        }
+
+        function copyToClipboard(id) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
 
         function loadWallets() {
             const userId = auth.currentUser.uid;
@@ -537,4 +620,3 @@
     </script>
 </body>
 </html>
-```
