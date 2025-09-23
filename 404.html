@@ -1,24 +1,540 @@
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Redirect</title>
-  <script type="text/javascript">
-    // Single Page Apps for GitHub Pages
-    // MIT License
-    // https://github.com/rafgraph/spa-github-pages
-    // This script takes the current url and converts the path and query
-    // string into a single query parameter. The path segments are needed
-    // when working with GitHub Pages and a custom domain, and the query
-    // and hash parameters are forwarded to the index.html.
-    (function(l) {
-      var pathSegmentsToKeep = 0; // Change to 1 if deploying as Project Pages (https://username.github.io/repo)
-      var newPath = l.protocol + '//' + l.host + '/' + l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/') + l.search + l.hash;
-      l.replace(newPath);
-    })(window.location);
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJ Wallet</title>
+    <style>
+        :root {
+            --primary-blue: #007BFF;
+            --success-green: #28A745;
+            --bg-light: #ffffff;
+            --bg-dark: #121212;
+            --text-light: #333333;
+            --text-dark: #ffffff;
+            --card-bg-light: #f8f9fa;
+            --card-bg-dark: #1e1e1e;
+            --error-red: #dc3545;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-blue);
+        }
+
+        button {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .success {
+            background-color: var(--success-green);
+        }
+
+        .error {
+            color: var(--error-red);
+            margin: 10px 0;
+        }
+
+        input, select {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .wallet-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-card {
+            background-color: var(--card-bg-light);
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px;
+            display: inline-block;
+            width: 200px;
+            transition: background-color 0.3s;
+        }
+
+        body.dark .wallet-card {
+            background-color: var(--card-bg-dark);
+        }
+
+        .wallet-card h3 {
+            margin: 0 0 10px;
+            color: var(--primary-blue);
+        }
+
+        #qr-canvas {
+            display: block;
+            margin: 10px auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: var(--bg-light);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: background-color 0.3s;
+        }
+
+        body.dark .modal-content {
+            background-color: var(--bg-dark);
+        }
+
+        .tx-item {
+            background-color: var(--card-bg-light);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        body.dark .tx-item {
+            background-color: var(--card-bg-dark);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            header, .wallet-actions {
+                flex-direction: column;
+            }
+            .wallet-card {
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+    <!-- QR Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
+    <div class="container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="section">
+            <h1>SJ Wallet</h1>
+            <p>Secure your crypto journey with SJ.</p>
+            <div id="auth-forms">
+                <!-- Login Form -->
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                </form>
+                <!-- Signup Form -->
+                <form id="signup-form" style="display: none;">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                    <button type="submit">Sign Up</button>
+                </form>
+                <button id="google-login">Login with Google</button>
+                <button id="toggle-auth">Switch to Sign Up</button>
+            </div>
+            <div id="auth-error" class="error"></div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section" style="display: none;">
+            <header>
+                <h1>SJ Wallet Dashboard</h1>
+                <button id="dark-mode-toggle">🌙</button>
+                <button id="logout">Logout</button>
+            </header>
+            <div class="wallet-actions">
+                <button id="add-wallet">+ Add Wallet</button>
+                <button id="scan-qr">📷 Scan QR</button>
+            </div>
+            <div id="wallet-list"></div>
+            <div id="tx-history" style="display: none;">
+                <h2>Transaction History</h2>
+                <div id="tx-list"></div>
+            </div>
+            <div id="error" class="error"></div>
+        </div>
+
+        <!-- Add Wallet Modal -->
+        <div id="add-wallet-modal" class="modal">
+            <div class="modal-content">
+                <h2>Add Wallet</h2>
+                <form id="wallet-form">
+                    <select id="coin-type" required>
+                        <option value="">Select Coin</option>
+                        <option value="BTC">BTC</option>
+                        <option value="ETH">ETH</option>
+                        <option value="USDT">USDT (Manual)</option>
+                        <option value="TON">TON (Manual)</option>
+                        <option value="SJ">SJ COIN (Manual)</option>
+                    </select>
+                    <input type="text" id="wallet-address" placeholder="Wallet Address" required>
+                    <button type="submit">Add</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- QR Scanner Modal -->
+        <div id="qr-scanner-modal" class="modal">
+            <div class="modal-content">
+                <h2>Scan QR Code</h2>
+                <video id="qr-video" width="300" height="300"></video>
+                <p id="qr-result"></p>
+                <button id="stop-scan">Stop Scan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const authSection = document.getElementById('auth-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const toggleAuth = document.getElementById('toggle-auth');
+        const googleLogin = document.getElementById('google-login');
+        const walletList = document.getElementById('wallet-list');
+        const txList = document.getElementById('tx-list');
+        const addWalletBtn = document.getElementById('add-wallet');
+        const addWalletModal = document.getElementById('add-wallet-modal');
+        const walletForm = document.getElementById('wallet-form');
+        const scanQrBtn = document.getElementById('scan-qr');
+        const qrScannerModal = document.getElementById('qr-scanner-modal');
+        const qrVideo = document.getElementById('qr-video');
+        const qrResult = document.getElementById('qr-result');
+        const stopScan = document.getElementById('stop-scan');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const logoutBtn = document.getElementById('logout');
+        const authError = document.getElementById('auth-error');
+        const errorDiv = document.getElementById('error');
+
+        // Auth Listeners
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                authSection.style.display = 'none';
+                dashboardSection.style.display = 'block';
+                loadWallets();
+            } else {
+                authSection.style.display = 'block';
+                dashboardSection.style.display = 'none';
+            }
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            auth.signInWithEmailAndPassword(email, password).catch(showError(authError));
+        });
+
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            auth.createUserWithEmailAndPassword(email, password).catch(showError(authError));
+        });
+
+        googleLogin.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(showError(authError));
+        });
+
+        toggleAuth.addEventListener('click', () => {
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+                toggleAuth.textContent = 'Switch to Sign Up';
+            } else {
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+                toggleAuth.textContent = 'Switch to Login';
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => auth.signOut());
+
+        // Wallet Management
+        addWalletBtn.addEventListener('click', () => addWalletModal.style.display = 'block');
+
+        walletForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const coin = document.getElementById('coin-type').value;
+            const address = document.getElementById('wallet-address').value;
+            const userId = auth.currentUser.uid;
+            db.collection('users').doc(userId).collection('wallets').add({
+                coin,
+                address,
+                created: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                addWalletModal.style.display = 'none';
+                walletForm.reset();
+                loadWallets();
+            }).catch(showError(errorDiv));
+        });
+
+        function loadWallets() {
+            const userId = auth.currentUser.uid;
+            db.collection('users').doc(userId).collection('wallets').get().then((snapshot) => {
+                walletList.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const card = createWalletCard(doc.id, data);
+                    walletList.appendChild(card);
+                });
+            }).catch(showError(errorDiv));
+        }
+
+        function createWalletCard(id, data) {
+            const card = document.createElement('div');
+            card.className = 'wallet-card';
+            card.innerHTML = `
+                <h3>${data.coin}</h3>
+                <p>Address: ${data.address}</p>
+                <p id="balance-${id}">Balance: Loading...</p>
+                <p id="value-${id}">Value: $0</p>
+                <button onclick="generateQR('${data.address}', this)">Generate QR</button>
+                <button onclick="fetchBalance('${id}', '${data.coin}', '${data.address}')">Refresh Balance</button>
+                <button onclick="showTxHistory('${id}')">View History</button>
+                <canvas id="qr-${id}" style="display:none;"></canvas>
+            `;
+            fetchBalance(id, data.coin, data.address);
+            fetchPrice(data.coin).then(price => {
+                document.getElementById(`value-${id}`).textContent = `Value: $${(0 * price).toFixed(2)}`; // Update after balance
+            });
+            return card;
+        }
+
+        // Balance Fetching
+        async function fetchBalance(walletId, coin, address) {
+            let balance = 0;
+            try {
+                if (coin === 'BTC') {
+                    const res = await fetch(`https://blockstream.info/api/address/${address}`);
+                    const data = await res.json();
+                    balance = data.chain_stats.funded_txo_sum / 1e8; // BTC
+                } else if (coin === 'ETH') {
+                    const res = await fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest`);
+                    const data = await res.json();
+                    balance = parseInt(data.result) / 1e18; // ETH
+                } // Others manual - set to 0 or prompt user
+                document.getElementById(`balance-${walletId}`).textContent = `Balance: ${balance} ${coin}`;
+                const price = await fetchPrice(coin);
+                document.getElementById(`value-${walletId}`).textContent = `Value: $${(balance * price).toFixed(2)}`;
+            } catch (err) {
+                document.getElementById(`balance-${walletId}`).textContent = `Balance: Error fetching`;
+                showError(errorDiv)(err.message);
+            }
+        }
+
+        // Price Fetching (CoinGecko)
+        async function fetchPrice(coin) {
+            const idMap = { BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', TON: 'the-open-network', SJ: 0 }; // SJ manual $0
+            if (idMap[coin] === 0) return 0;
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${idMap[coin]}&vs_currencies=usd`);
+                const data = await res.json();
+                return data[idMap[coin]].usd;
+            } catch (err) {
+                console.error(err);
+                return 0;
+            }
+        }
+
+        // QR Generate
+        function generateQR(address, btn) {
+            const canvas = btn.nextElementSibling;
+            canvas.style.display = 'block';
+            QRCode.toCanvas(canvas, address, { width: 100 });
+        }
+
+        // QR Scanner
+        scanQrBtn.addEventListener('click', startQrScan);
+        stopScan.addEventListener('click', stopQrScan);
+
+        let stream;
+        async function startQrScan() {
+            qrScannerModal.style.display = 'block';
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            qrVideo.srcObject = stream;
+            qrVideo.play();
+            scanLoop();
+        }
+
+        function scanLoop() {
+            if (qrVideo.readyState === qrVideo.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = qrVideo.videoWidth;
+                canvas.height = qrVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(qrVideo, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+                    qrResult.textContent = `Scanned: ${code.data}`;
+                    document.getElementById('wallet-address').value = code.data;
+                    stopQrScan();
+                    return;
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        }
+
+        function stopQrScan() {
+            qrScannerModal.style.display = 'none';
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            qrResult.textContent = '';
+        }
+
+        // Transaction History (Simple logging - add send/receive manually)
+        function showTxHistory(walletId) {
+            const userId = auth.currentUser.uid;
+            db.collection('users').doc(userId).collection('transactions')
+                .where('walletId', '==', walletId).orderBy('date', 'desc').get().then((snapshot) => {
+                txList.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const txItem = document.createElement('div');
+                    txItem.className = 'tx-item';
+                    txItem.innerHTML = `
+                        <span>${data.type}: ${data.amount} ${data.coin || ''}</span>
+                        <span><a href="https://etherscan.io/tx/${data.txHash}" target="_blank">View</a></span>
+                    `;
+                    txList.appendChild(txItem);
+                });
+                document.getElementById('tx-history').style.display = 'block';
+            }).catch(showError(errorDiv));
+        }
+
+        // To add a tx: Call from UI (e.g., add button per wallet for send/receive form)
+        function logTransaction(walletId, type, amount, txHash, coin) {
+            const userId = auth.currentUser.uid;
+            db.collection('users').doc(userId).collection('transactions').add({
+                walletId,
+                type,
+                amount,
+                txHash,
+                coin,
+                date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        // Dark Mode
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            darkModeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+            localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+        });
+
+        // Load Dark Mode
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark');
+            darkModeToggle.textContent = '☀️';
+        }
+
+        function showError(el) {
+            return (err) => {
+                el.textContent = err.message;
+                setTimeout(() => el.textContent = '', 5000);
+            };
+        }
+
+        // Auto-refresh prices every 30s
+        setInterval(() => {
+            document.querySelectorAll('.wallet-card').forEach(card => {
+                const id = card.querySelector('h3').nextElementSibling.textContent.split(': ')[1]; // Hacky, improve if needed
+                // Fetch prices for all
+                loadWallets(); // Reload to update
+            });
+        }, 30000);
+    </script>
 </body>
 </html>
+```
