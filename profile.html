@@ -266,14 +266,15 @@
             console.log('Attempting to set user doc for UID:', user.uid);
             await setDoc(usersRef, {
               id: user.uid,
-              username: user.displayName || user.email.split('@')[0],
+              display_name: user.displayName || user.email.split('@')[0],
               email: user.email || '',
               imageURL: user.photoURL || '',
               createdAt: new Date().toISOString(),
               signup_type: 'Google',
               active: true,
               isOnline: 1,
-              lastSeen: new Date().toISOString()
+              lastSeen: new Date().toISOString(),
+              handle: ''
             }, { merge: true });
             console.log('User doc created/updated for UID:', user.uid);
           } catch (firestoreError) {
@@ -321,14 +322,15 @@
             console.log('Creating new user doc for UID:', user.uid);
             await setDoc(usersRef, {
               id: user.uid,
-              username: user.displayName || user.email.split('@')[0],
+              display_name: user.displayName || user.email.split('@')[0],
               email: user.email || '',
               imageURL: user.photoURL || '',
               createdAt: new Date().toISOString(),
               signup_type: 'Google',
               active: true,
               isOnline: 1,
-              lastSeen: new Date().toISOString()
+              lastSeen: new Date().toISOString(),
+              handle: ''
             });
           }
           currentUserDoc = uSnap.data();
@@ -348,7 +350,7 @@
         currentUserDoc = null;
         profileSection.classList.add('hidden');
         publicProfile.classList.add('hidden');
-        status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/username';
+        status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/handle';
         status.classList.remove('error');
       }
     });
@@ -428,8 +430,8 @@
         const uSnap = await getDoc(uRef);
         if (uSnap.exists()) {
           const data = uSnap.data();
-          profilePic.src = decodeURIComponent(currentUser.photoURL || data.imageURL || 'https://via.placeholder.com/150');
-          displayName.textContent = currentUser.displayName || data.username || 'User';
+          profilePic.src = currentUser.photoURL || data.imageURL || 'https://via.placeholder.com/150';
+          displayName.textContent = currentUser.displayName || data.display_name || 'User';
           await loadProductsByUser(uid, productsGrid, productCount);
           status.textContent = '';
         } else {
@@ -477,8 +479,32 @@
 
     btnShare.addEventListener('click', async () => {
       if (!currentUserDoc) return;
-      const username = (currentUser.displayName || currentUserDoc.username || currentUser.uid).replace(/\s+/g, '');
-      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
+      let handle = currentUserDoc.handle;
+      if (!handle) {
+        let proposed = (currentUser.displayName || currentUserDoc.display_name || currentUser.uid).replace(/\s+/g, '').toLowerCase();
+        handle = prompt('Enter a unique handle for your shareable profile link:', proposed);
+        if (!handle) return;
+        handle = handle.replace(/\s+/g, '').toLowerCase();
+        if (!/^[a-z0-9_]+$/.test(handle)) {
+          alert('Handle must be alphanumeric with underscores only.');
+          return;
+        }
+        try {
+          const q = query(collection(db, 'Users'), where('handle', '==', handle));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            alert('Handle already taken, please choose another.');
+            return;
+          }
+          await setDoc(doc(db, 'Users', currentUser.uid), { handle }, { merge: true });
+          currentUserDoc.handle = handle;
+        } catch (e) {
+          console.error('Handle set error:', e);
+          alert(`Failed to set handle: ${e.message}`);
+          return;
+        }
+      }
+      const url = `${location.origin}/u/${encodeURIComponent(handle)}`;
       try {
         await navigator.clipboard.writeText(url);
         alert('Profile link copied: ' + url);
@@ -488,8 +514,12 @@
     });
 
     btnSharePublic.addEventListener('click', async () => {
-      const username = publicName.dataset.username;
-      const url = `${location.origin}/u/${encodeURIComponent(username)}`;
+      const handle = publicName.dataset.handle;
+      if (!handle) {
+        alert('No shareable handle set for this profile.');
+        return;
+      }
+      const url = `${location.origin}/u/${encodeURIComponent(handle)}`;
       try {
         await navigator.clipboard.writeText(url);
         alert('Link copied: ' + url);
@@ -501,8 +531,8 @@
     async function handleRouting() {
       const path = location.pathname || '/';
       if (path.startsWith('/u/')) {
-        const usernameParam = decodeURIComponent(path.replace('/u/', ''));
-        await showPublicByUsername(usernameParam);
+        const handleParam = decodeURIComponent(path.replace('/u/', ''));
+        await showPublicByHandle(handleParam);
       } else {
         const params = new URLSearchParams(location.search);
         if (params.has('uid')) {
@@ -514,22 +544,22 @@
           } else {
             profileSection.classList.add('hidden');
             publicProfile.classList.add('hidden');
-            status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/username';
+            status.textContent = 'Click "Sign In" to view or post products, or open a public profile link /u/handle';
             status.classList.remove('error');
           }
         }
       }
     }
 
-    async function showPublicByUsername(usernameParam) {
+    async function showPublicByHandle(handleParam) {
       status.textContent = 'Loading public profile...';
       try {
         const usersCol = collection(db, 'Users');
-        const q = query(usersCol, where('username', '==', usernameParam));
-        console.log('Fetching public profile for username:', usernameParam);
+        const q = query(usersCol, where('handle', '==', handleParam));
+        console.log('Fetching public profile for handle:', handleParam);
         const snap = await getDocs(q);
         if (snap.empty) {
-          status.textContent = 'User not found: ' + usernameParam;
+          status.textContent = 'User not found: ' + handleParam;
           status.classList.add('error');
           return;
         }
@@ -566,9 +596,9 @@
     async function displayPublicProfile(u) {
       publicProfile.classList.remove('hidden');
       profileSection.classList.add('hidden');
-      publicPic.src = decodeURIComponent(u.imageURL || 'https://via.placeholder.com/150');
-      publicName.textContent = u.username || 'User';
-      publicName.dataset.username = u.username || u.id;
+      publicPic.src = u.imageURL || 'https://via.placeholder.com/150';
+      publicName.textContent = u.display_name || 'User';
+      publicName.dataset.handle = u.handle || '';
       await loadProductsByUser(u.id, publicGrid, publicProductCount);
       status.textContent = '';
     }
