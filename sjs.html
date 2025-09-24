@@ -168,7 +168,12 @@
                 scoutAge: "Age",
                 scoutSkills: "Skills",
                 scoutCost: "Estimated Cost",
-                scoutVideo: "Match Video URL"
+                scoutVideo: "Match Video URL",
+                addWellness: "Add Wellness Entry",
+                wellnessPlayer: "Player Name",
+                wellnessFitness: "Fitness Score (0-100)",
+                wellnessInjury: "Injury Status",
+                wellnessMetrics: "Metrics (e.g., GPS data)"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -202,7 +207,12 @@
                 scoutAge: "العمر",
                 scoutSkills: "المهارات",
                 scoutCost: "التكلفة التقريبية",
-                scoutVideo: "رابط فيديو المباراة"
+                scoutVideo: "رابط فيديو المباراة",
+                addWellness: "إضافة إدخال صحي",
+                wellnessPlayer: "اسم اللاعب",
+                wellnessFitness: "درجة اللياقة (0-100)",
+                wellnessInjury: "حالة الإصابة",
+                wellnessMetrics: "المقاييس (مثل بيانات GPS)"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -293,6 +303,11 @@
             document.getElementById('scout-skills').placeholder = t('scoutSkills');
             document.getElementById('scout-cost').placeholder = t('scoutCost');
             document.getElementById('scout-video').placeholder = t('scoutVideo');
+            document.getElementById('add-wellness-btn').textContent = t('addWellness');
+            document.getElementById('wellness-player').placeholder = t('wellnessPlayer');
+            document.getElementById('wellness-fitness').placeholder = t('wellnessFitness');
+            document.getElementById('wellness-injury').innerHTML = `<option value="">${t('wellnessInjury')}</option><option value="none">None</option><option value="minor">Minor</option><option value="major">Major</option>`;
+            document.getElementById('wellness-metrics').placeholder = t('wellnessMetrics');
             document.getElementById('start-group-call').textContent = t('startCall');
         }
 
@@ -501,6 +516,22 @@
             return model.predict(tf.tensor2d([playerData.metrics || [0,0,0]])).dataSync() > 0.5 ? 'High Risk' : 'Low';
         }
 
+        async function addWellnessEntry(event) {
+            event.preventDefault();
+            const player = document.getElementById('wellness-player').value;
+            const fitness = parseInt(document.getElementById('wellness-fitness').value);
+            const injury = document.getElementById('wellness-injury').value;
+            const metrics = document.getElementById('wellness-metrics').value;
+            try {
+                await addDoc(collection(db, 'wellness'), { player, fitness, injury, metrics, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('wellness-form').reset();
+                renderPlayerWellness();
+            } catch (error) {
+                console.error('Add wellness entry error:', error);
+                alert('Failed to add wellness entry: ' + error.message);
+            }
+        }
+
         function renderPlayerWellness() {
             const chartCanvas = document.getElementById('wellnessChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
@@ -518,6 +549,20 @@
                     plugins: { legend: { display: false } }
                 }
             });
+
+            onSnapshot(collection(db, 'wellness'), (snapshot) => {
+                const entries = snapshot.docs.map(doc => doc.data());
+                document.getElementById('wellness-list').innerHTML = entries.map(e => `
+                    <div class="card">
+                        <p>Player: ${e.player}</p>
+                        <p>Fitness: ${e.fitness}</p>
+                        <p>Injury: ${e.injury}</p>
+                        <p>Metrics: ${e.metrics}</p>
+                    </div>
+                `).join('');
+            });
+
+            document.getElementById('wellness-form').addEventListener('submit', addWellnessEntry);
         }
 
         // Compliance & Welfare
@@ -678,6 +723,14 @@
                 </div>
                 <div id="player-wellness" class="module">
                     <h2 id="wellness-title"></h2>
+                    <form id="wellness-form">
+                        <input id="wellness-player" type="text" placeholder="Player Name" required>
+                        <input id="wellness-fitness" type="number" placeholder="Fitness Score (0-100)" min="0" max="100" required>
+                        <select id="wellness-injury" required></select>
+                        <input id="wellness-metrics" type="text" placeholder="Metrics (e.g., GPS data)">
+                        <button id="add-wellness-btn" type="submit">Add Wellness Entry</button>
+                    </form>
+                    <div id="wellness-list"></div>
                     <canvas id="wellnessChart"></canvas>
                 </div>
                 <div id="compliance-welfare" class="module">
@@ -714,3 +767,4 @@
     </div>
 </body>
 </html>
+```
