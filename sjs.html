@@ -162,7 +162,13 @@
                 revenue: "Revenue",
                 expenses: "Expenses",
                 category: "Category",
-                addFinancial: "Add Financial Entry"
+                addFinancial: "Add Financial Entry",
+                addScouting: "Add Scouting Info",
+                scoutName: "Scouted Player Name",
+                scoutAge: "Age",
+                scoutSkills: "Skills",
+                scoutCost: "Estimated Cost",
+                scoutVideo: "Match Video URL"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -190,7 +196,13 @@
                 revenue: "الإيرادات",
                 expenses: "المصروفات",
                 category: "الفئة",
-                addFinancial: "إضافة إدخال مالي"
+                addFinancial: "إضافة إدخال مالي",
+                addScouting: "إضافة معلومات كشافة",
+                scoutName: "اسم اللاعب المكشوف",
+                scoutAge: "العمر",
+                scoutSkills: "المهارات",
+                scoutCost: "التكلفة التقريبية",
+                scoutVideo: "رابط فيديو المباراة"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -275,6 +287,12 @@
                 <option value="sponsorships">Sponsorships</option>
                 <option value="merchandise">Merchandise</option>
             `;
+            document.getElementById('add-scouting-btn').textContent = t('addScouting');
+            document.getElementById('scout-name').placeholder = t('scoutName');
+            document.getElementById('scout-age').placeholder = t('scoutAge');
+            document.getElementById('scout-skills').placeholder = t('scoutSkills');
+            document.getElementById('scout-cost').placeholder = t('scoutCost');
+            document.getElementById('scout-video').placeholder = t('scoutVideo');
             document.getElementById('start-group-call').textContent = t('startCall');
         }
 
@@ -348,7 +366,6 @@
             try {
                 await addDoc(collection(db, 'financials'), { revenue, expenses, category, addedBy: auth.currentUser.uid, timestamp: new Date() });
                 document.getElementById('financial-form').reset();
-                // Refresh chart
                 renderFinancialHub();
             } catch (error) {
                 console.error('Add financial entry error:', error);
@@ -434,10 +451,42 @@
             return suggestions;
         }
 
+        async function addScoutingInfo(event) {
+            event.preventDefault();
+            const name = document.getElementById('scout-name').value;
+            const age = parseInt(document.getElementById('scout-age').value);
+            const skills = document.getElementById('scout-skills').value.split(',').map(s => s.trim());
+            const cost = parseFloat(document.getElementById('scout-cost').value) || 0;
+            const videoUrl = document.getElementById('scout-video').value;
+            try {
+                await addDoc(collection(db, 'scouting'), { name, age, skills, cost, videoUrl, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('scouting-form').reset();
+                renderScoutingNetwork();
+            } catch (error) {
+                console.error('Add scouting info error:', error);
+                alert('Failed to add scouting info: ' + error.message);
+            }
+        }
+
         function renderScoutingNetwork() {
             matchmakePlayers({age: 20, skills: ['speed'], cost: 1000000}).then(sugs => {
                 document.getElementById('player-suggestions').innerHTML = sugs.map(s => `<div class="card"><p>${s.name || 'Unknown'}</p></div>`).join('');
             }).catch(err => console.error('Scouting error:', err));
+
+            onSnapshot(collection(db, 'scouting'), (snapshot) => {
+                const scouts = snapshot.docs.map(doc => doc.data());
+                document.getElementById('scouting-list').innerHTML = scouts.map(s => `
+                    <div class="card">
+                        <p>Name: ${s.name}</p>
+                        <p>Age: ${s.age}</p>
+                        <p>Skills: ${s.skills.join(', ')}</p>
+                        <p>Cost: $${s.cost}</p>
+                        ${s.videoUrl ? `<a href="${s.videoUrl}" target="_blank">Watch Video</a>` : ''}
+                    </div>
+                `).join('');
+            });
+
+            document.getElementById('scouting-form').addEventListener('submit', addScoutingInfo);
         }
 
         // Player Wellness
@@ -616,6 +665,15 @@
                 </div>
                 <div id="scouting-network" class="module">
                     <h2 id="scouting-title"></h2>
+                    <form id="scouting-form">
+                        <input id="scout-name" type="text" placeholder="Scouted Player Name" required>
+                        <input id="scout-age" type="number" placeholder="Age" required>
+                        <input id="scout-skills" type="text" placeholder="Skills (comma-separated)" required>
+                        <input id="scout-cost" type="number" placeholder="Estimated Cost" required>
+                        <input id="scout-video" type="url" placeholder="Match Video URL">
+                        <button id="add-scouting-btn" type="submit">Add Scouting Info</button>
+                    </form>
+                    <div id="scouting-list"></div>
                     <div id="player-suggestions"></div>
                 </div>
                 <div id="player-wellness" class="module">
@@ -656,4 +714,3 @@
     </div>
 </body>
 </html>
-```
