@@ -68,11 +68,11 @@
             transition: transform 0.2s;
         }
         button:hover { transform: scale(1.05); }
-        input, button { font-size: 1rem; }
+        input, button, select { font-size: 1rem; }
         canvas { max-width: 100%; background: #1c2526; }
         iframe#zoom-meeting { border: none; border-radius: 8px; }
         form { display: flex; flex-direction: column; gap: 0.5rem; }
-        form input { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
+        form input, form select { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
         img.player-pic { max-width: 100px; border-radius: 50%; }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
@@ -158,7 +158,11 @@
                 playerSkills: "Skills (comma-separated)",
                 playerPosition: "Position",
                 playerInstagram: "Instagram Handle",
-                playerPic: "Player Picture"
+                playerPic: "Player Picture",
+                revenue: "Revenue",
+                expenses: "Expenses",
+                category: "Category",
+                addFinancial: "Add Financial Entry"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -182,7 +186,11 @@
                 playerSkills: "المهارات (مفصولة بفاصلة)",
                 playerPosition: "المركز",
                 playerInstagram: "حساب إنستغرام",
-                playerPic: "صورة اللاعب"
+                playerPic: "صورة اللاعب",
+                revenue: "الإيرادات",
+                expenses: "المصروفات",
+                category: "الفئة",
+                addFinancial: "إضافة إدخال مالي"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -251,10 +259,6 @@
             document.getElementById('tactics-title').textContent = t('tacticsAI');
             document.getElementById('club-title').textContent = t('clubManager');
             document.getElementById('fan-title').textContent = t('fanEngagement');
-            document.getElementById('add-financial-entry').textContent = t('addEntry');
-            document.getElementById('export-financial-pdf').textContent = t('exportPDF');
-            document.getElementById('export-financial-excel').textContent = t('exportExcel');
-            document.getElementById('start-group-call').textContent = t('startCall');
             document.getElementById('add-player-btn').textContent = t('addPlayer');
             document.getElementById('player-name').placeholder = t('playerName');
             document.getElementById('player-age').placeholder = t('playerAge');
@@ -262,6 +266,16 @@
             document.getElementById('player-position').placeholder = t('playerPosition');
             document.getElementById('player-instagram').placeholder = t('playerInstagram');
             document.getElementById('player-pic-label').textContent = t('playerPic');
+            document.getElementById('add-financial-btn').textContent = t('addFinancial');
+            document.getElementById('revenue-input').placeholder = t('revenue');
+            document.getElementById('expenses-input').placeholder = t('expenses');
+            document.getElementById('category-select').innerHTML = `
+                <option value="">${t('category')}</option>
+                <option value="tickets">Tickets</option>
+                <option value="sponsorships">Sponsorships</option>
+                <option value="merchandise">Merchandise</option>
+            `;
+            document.getElementById('start-group-call').textContent = t('startCall');
         }
 
         // Event Listeners
@@ -326,6 +340,22 @@
             return prediction.dataSync();
         }
 
+        async function addFinancialEntry(event) {
+            event.preventDefault();
+            const revenue = parseFloat(document.getElementById('revenue-input').value) || 0;
+            const expenses = parseFloat(document.getElementById('expenses-input').value) || 0;
+            const category = document.getElementById('category-select').value;
+            try {
+                await addDoc(collection(db, 'financials'), { revenue, expenses, category, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('financial-form').reset();
+                // Refresh chart
+                renderFinancialHub();
+            } catch (error) {
+                console.error('Add financial entry error:', error);
+                alert('Failed to add financial entry: ' + error.message);
+            }
+        }
+
         function renderFinancialHub() {
             const chartCanvas = document.getElementById('cashChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
@@ -362,9 +392,7 @@
                 });
             });
 
-            document.getElementById('add-financial-entry').addEventListener('click', () => {
-                addDoc(collection(db, 'financials'), { revenue: Math.random() * 20000, expenses: Math.random() * 10000, timestamp: new Date() }).catch(err => console.error('Add doc error:', err));
-            });
+            document.getElementById('financial-form').addEventListener('submit', addFinancialEntry);
 
             document.getElementById('export-financial-pdf').addEventListener('click', () => {
                 if (window.jspdf) {
@@ -576,10 +604,15 @@
                 <div id="ai-insights" class="card">AI Insights Panel (Overall Predictions)</div>
                 <div id="financial-hub" class="module">
                     <h2 id="financial-title"></h2>
+                    <form id="financial-form">
+                        <input id="revenue-input" type="number" placeholder="Revenue" step="0.01" required>
+                        <input id="expenses-input" type="number" placeholder="Expenses" step="0.01" required>
+                        <select id="category-select" required></select>
+                        <button id="add-financial-btn" type="submit">Add Financial Entry</button>
+                    </form>
                     <canvas id="cashChart"></canvas>
-                    <button id="add-financial-entry"></button>
-                    <button id="export-financial-pdf"></button>
-                    <button id="export-financial-excel"></button>
+                    <button id="export-financial-pdf">Export PDF</button>
+                    <button id="export-financial-excel">Export Excel</button>
                 </div>
                 <div id="scouting-network" class="module">
                     <h2 id="scouting-title"></h2>
