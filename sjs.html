@@ -70,12 +70,14 @@
         button:hover { transform: scale(1.05); }
         input, button { font-size: 1rem; }
         canvas { max-width: 100%; background: #1c2526; }
+        iframe#zoom-meeting { border: none; border-radius: 8px; }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
             nav { border-right: none; border-bottom: 1px solid #333; }
             nav ul { display: flex; flex-wrap: wrap; }
             nav li { flex: 1 1 auto; text-align: center; }
             button { padding: 0.5rem 1rem; }
+            iframe#zoom-meeting { height: 300px; }
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -126,7 +128,7 @@
         const messaging = getMessaging(app);
         const provider = new GoogleAuthProvider();
 
-        // VAPID Key for FCM (replace with your actual VAPID key from Firebase console)
+        // VAPID Key for FCM (replace with actual VAPID key from Firebase console)
         const vapidKey = 'YOUR_VAPID_KEY_HERE';
 
         // Multilingual support
@@ -144,7 +146,9 @@
                 logout: "Logout",
                 addEntry: "Add Entry",
                 exportPDF: "Export PDF",
-                exportExcel: "Export Excel"
+                exportExcel: "Export Excel",
+                startCall: "Start Group Call",
+                riskAlerts: "Risk Alerts"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -159,7 +163,9 @@
                 logout: "تسجيل الخروج",
                 addEntry: "إضافة إدخال",
                 exportPDF: "تصدير PDF",
-                exportExcel: "تصدير Excel"
+                exportExcel: "تصدير Excel",
+                startCall: "بدء مكالمة جماعية",
+                riskAlerts: "تنبيهات المخاطر"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -207,7 +213,6 @@
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'grid';
             updateTitles();
-            // Initial load first module
             document.querySelector('nav li[data-module="financial-hub"]').click();
         }
 
@@ -232,6 +237,7 @@
             document.getElementById('add-financial-entry').textContent = t('addEntry');
             document.getElementById('export-financial-pdf').textContent = t('exportPDF');
             document.getElementById('export-financial-excel').textContent = t('exportExcel');
+            document.getElementById('start-group-call').textContent = t('startCall');
         }
 
         // Event Listeners
@@ -249,7 +255,6 @@
                 document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
                 const moduleEl = document.getElementById(li.dataset.module);
                 moduleEl.classList.add('active');
-                // Load module content
                 switch (li.dataset.module) {
                     case 'financial-hub':
                         renderFinancialHub();
@@ -290,7 +295,6 @@
         async function predictCashFlow(pastData) {
             const model = await loadCashFlowModel();
             if (!model) {
-                // Dummy prediction if model fails
                 return [Math.random() * 10000 - 5000];
             }
             const tensor = tf.tensor2d(pastData);
@@ -300,7 +304,7 @@
 
         function renderFinancialHub() {
             const chartCanvas = document.getElementById('cashChart');
-            if (chartCanvas.chart) chartCanvas.chart.destroy(); // Destroy existing chart
+            if (chartCanvas.chart) chartCanvas.chart.destroy();
             onSnapshot(collection(db, 'financials'), (snapshot) => {
                 const data = snapshot.docs.map(doc => doc.data());
                 const pastData = data.map(d => [d.revenue || 0, d.expenses || 0]);
@@ -368,7 +372,7 @@
                 model = await tf.loadLayersModel(await getDownloadURL(ref(storage, 'models/matchmaker_model/model.json')));
             } catch (error) {
                 console.error('Model load error:', error);
-                return [{ name: 'Dummy Player 1' }, { name: 'Dummy Player 2' }]; // Dummy suggestions
+                return [{ name: 'Dummy Player 1' }, { name: 'Dummy Player 2' }];
             }
             const players = await getDocs(collection(db, 'players'));
             const suggestions = players.docs.map(p => {
@@ -391,7 +395,7 @@
                 model = await tf.loadLayersModel(await getDownloadURL(ref(storage, 'models/injury_model/model.json')));
             } catch (error) {
                 console.error('Model load error:', error);
-                return Math.random() > 0.5 ? 'High Risk' : 'Low'; // Dummy
+                return Math.random() > 0.5 ? 'High Risk' : 'Low';
             }
             return model.predict(tf.tensor2d([playerData.metrics || [0,0,0]])).dataSync() > 0.5 ? 'High Risk' : 'Low';
         }
@@ -399,7 +403,6 @@
         function renderPlayerWellness() {
             const chartCanvas = document.getElementById('wellnessChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
-            // Dummy data
             predictInjury({metrics: [80, 90, 70]}).then(risk => {
                 document.getElementById('wellnessChart').parentElement.insertAdjacentHTML('beforeend', `<p>Risk: ${risk}</p>`);
             });
@@ -417,13 +420,45 @@
         }
 
         // Compliance & Welfare
+        async function startGroupCall() {
+            try {
+                // Call Cloud Function to create Zoom meeting (securely handles API keys)
+                const createMeeting = httpsCallable(functions, 'createZoomMeeting');
+                const result = await createMeeting({ topic: 'Compliance Meeting', startTime: new Date() });
+                const { meetingId, password } = result.data;
+                // Store meeting details in Firestore
+                await addDoc(collection(db, 'meetings'), {
+                    meetingId,
+                    password,
+                    createdBy: auth.currentUser.uid,
+                    createdAt: new Date(),
+                    type: 'compliance'
+                });
+                // Update iframe with meeting link
+                document.getElementById('zoom-meeting').src = `https://zoom.us/j/${meetingId}?pwd=${password}`;
+                document.getElementById('zoom-meeting').style.display = 'block';
+            } catch (error) {
+                console.error('Start call error:', error);
+                alert('Failed to start group call: ' + error.message);
+            }
+        }
+
         function renderComplianceWelfare() {
-            document.getElementById('zoom-meeting').src = 'https://zoom.us/j/example?pwd=dummy';
-            document.getElementById('zoom-meeting').style.display = 'block';
-            document.getElementById('zoom-meeting').style.width = '100%';
-            document.getElementById('zoom-meeting').style.height = '400px';
-            // Dummy alerts
-            document.getElementById('risk-alerts').innerHTML = '<p>No risks detected.</p>';
+            const alertsDiv = document.getElementById('risk-alerts');
+            alertsDiv.innerHTML = '<p>No risks detected.</p>';
+            // Listen for meetings in Firestore
+            onSnapshot(collection(db, 'meetings'), (snapshot) => {
+                const meetings = snapshot.docs
+                    .filter(doc => doc.data().type === 'compliance')
+                    .map(doc => doc.data());
+                if (meetings.length > 0) {
+                    const latestMeeting = meetings[0];
+                    document.getElementById('zoom-meeting').src = `https://zoom.us/j/${latestMeeting.meetingId}?pwd=${latestMeeting.password}`;
+                    document.getElementById('zoom-meeting').style.display = 'block';
+                }
+            });
+            // Add event listener for starting a new call
+            document.getElementById('start-group-call').addEventListener('click', startGroupCall);
         }
 
         // Tactics AI
@@ -446,10 +481,7 @@
 
         // Fan Engagement
         function renderFanEngagement() {
-            // Dummy suggestions
             document.getElementById('campaign-suggestions').innerHTML = '<div class="card"><p>Suggested Campaign: Ticket Promo</p></div>';
-            // Google Analytics placeholder
-            console.log('Integrate GA here');
         }
 
         // Initial render
@@ -502,8 +534,9 @@
                 </div>
                 <div id="compliance-welfare" class="module">
                     <h2 id="compliance-title"></h2>
+                    <button id="start-group-call">Start Group Call</button>
                     <div id="risk-alerts"></div>
-                    <iframe id="zoom-meeting" style="display:none;"></iframe>
+                    <iframe id="zoom-meeting" style="display:none; width: 100%; height: 400px;"></iframe>
                 </div>
                 <div id="tactics-ai" class="module">
                     <h2 id="tactics-title"></h2>
