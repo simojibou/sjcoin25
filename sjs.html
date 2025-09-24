@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,6 +71,8 @@
         input, button { font-size: 1rem; }
         canvas { max-width: 100%; background: #1c2526; }
         iframe#zoom-meeting { border: none; border-radius: 8px; }
+        form { display: flex; flex-direction: column; gap: 0.5rem; }
+        form input { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
             nav { border-right: none; border-bottom: 1px solid #333; }
@@ -148,7 +150,12 @@
                 exportPDF: "Export PDF",
                 exportExcel: "Export Excel",
                 startCall: "Start Group Call",
-                riskAlerts: "Risk Alerts"
+                riskAlerts: "Risk Alerts",
+                addPlayer: "Add Player",
+                playerName: "Player Name",
+                playerAge: "Age",
+                playerSkills: "Skills (comma-separated)",
+                playerPosition: "Position"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -165,7 +172,12 @@
                 exportPDF: "تصدير PDF",
                 exportExcel: "تصدير Excel",
                 startCall: "بدء مكالمة جماعية",
-                riskAlerts: "تنبيهات المخاطر"
+                riskAlerts: "تنبيهات المخاطر",
+                addPlayer: "إضافة لاعب",
+                playerName: "اسم اللاعب",
+                playerAge: "العمر",
+                playerSkills: "المهارات (مفصولة بفاصلة)",
+                playerPosition: "المركز"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -238,6 +250,11 @@
             document.getElementById('export-financial-pdf').textContent = t('exportPDF');
             document.getElementById('export-financial-excel').textContent = t('exportExcel');
             document.getElementById('start-group-call').textContent = t('startCall');
+            document.getElementById('add-player-btn').textContent = t('addPlayer');
+            document.getElementById('player-name').placeholder = t('playerName');
+            document.getElementById('player-age').placeholder = t('playerAge');
+            document.getElementById('player-skills').placeholder = t('playerSkills');
+            document.getElementById('player-position').placeholder = t('playerPosition');
         }
 
         // Event Listeners
@@ -422,11 +439,9 @@
         // Compliance & Welfare
         async function startGroupCall() {
             try {
-                // Call Cloud Function to create Zoom meeting (securely handles API keys)
                 const createMeeting = httpsCallable(functions, 'createZoomMeeting');
                 const result = await createMeeting({ topic: 'Compliance Meeting', startTime: new Date() });
                 const { meetingId, password } = result.data;
-                // Store meeting details in Firestore
                 await addDoc(collection(db, 'meetings'), {
                     meetingId,
                     password,
@@ -434,7 +449,6 @@
                     createdAt: new Date(),
                     type: 'compliance'
                 });
-                // Update iframe with meeting link
                 document.getElementById('zoom-meeting').src = `https://zoom.us/j/${meetingId}?pwd=${password}`;
                 document.getElementById('zoom-meeting').style.display = 'block';
             } catch (error) {
@@ -446,7 +460,6 @@
         function renderComplianceWelfare() {
             const alertsDiv = document.getElementById('risk-alerts');
             alertsDiv.innerHTML = '<p>No risks detected.</p>';
-            // Listen for meetings in Firestore
             onSnapshot(collection(db, 'meetings'), (snapshot) => {
                 const meetings = snapshot.docs
                     .filter(doc => doc.data().type === 'compliance')
@@ -457,7 +470,6 @@
                     document.getElementById('zoom-meeting').style.display = 'block';
                 }
             });
-            // Add event listener for starting a new call
             document.getElementById('start-group-call').addEventListener('click', startGroupCall);
         }
 
@@ -472,11 +484,40 @@
         }
 
         // Club Manager
+        async function addPlayer(event) {
+            event.preventDefault();
+            const name = document.getElementById('player-name').value;
+            const age = parseInt(document.getElementById('player-age').value);
+            const skills = document.getElementById('player-skills').value.split(',').map(s => s.trim());
+            const position = document.getElementById('player-position').value;
+            try {
+                await addDoc(collection(db, 'players'), { name, age, skills, position, addedBy: auth.currentUser.uid });
+                document.getElementById('add-player-form').reset();
+                // Refresh roster
+                renderClubManager();
+            } catch (error) {
+                console.error('Add player error:', error);
+                alert('Failed to add player: ' + error.message);
+            }
+        }
+
         function renderClubManager() {
             onSnapshot(collection(db, 'rosters'), (snapshot) => {
                 const rosters = snapshot.docs.map(doc => doc.data());
                 document.getElementById('roster-list').innerHTML = rosters.map(r => `<div class="card"><p>${r.name || 'Unknown'}</p></div>`).join('');
             });
+            onSnapshot(collection(db, 'players'), (snapshot) => {
+                const players = snapshot.docs.map(doc => doc.data());
+                document.getElementById('player-list').innerHTML = players.map(p => `
+                    <div class="card">
+                        <p>Name: ${p.name}</p>
+                        <p>Age: ${p.age}</p>
+                        <p>Skills: ${p.skills.join(', ')}</p>
+                        <p>Position: ${p.position}</p>
+                    </div>
+                `).join('');
+            });
+            document.getElementById('add-player-form').addEventListener('submit', addPlayer);
         }
 
         // Fan Engagement
@@ -544,6 +585,14 @@
                 </div>
                 <div id="club-manager" class="module">
                     <h2 id="club-title"></h2>
+                    <form id="add-player-form">
+                        <input id="player-name" type="text" placeholder="Player Name" required>
+                        <input id="player-age" type="number" placeholder="Age" required>
+                        <input id="player-skills" type="text" placeholder="Skills (comma-separated)" required>
+                        <input id="player-position" type="text" placeholder="Position" required>
+                        <button id="add-player-btn" type="submit">Add Player</button>
+                    </form>
+                    <div id="player-list"></div>
                     <div id="roster-list"></div>
                 </div>
                 <div id="fan-engagement" class="module">
@@ -555,4 +604,3 @@
     </div>
 </body>
 </html>
-```
