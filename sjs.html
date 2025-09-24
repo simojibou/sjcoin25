@@ -1,0 +1,430 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FootballPro Suite</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            direction: ltr;
+        }
+        .rtl { direction: rtl; }
+        .container { display: flex; flex-direction: column; min-height: 100vh; }
+        header {
+            background: linear-gradient(90deg, #1e88e5, #42a5f5);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header img.logo { height: 40px; }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px auto;
+            gap: 1rem;
+            flex-grow: 1;
+        }
+        nav {
+            background: #1c2526;
+            padding: 1rem;
+            border-right: 1px solid #333;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        nav li {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        nav li:hover { background: #37474f; }
+        .module { display: none; padding: 1rem; }
+        .active { display: block; }
+        .card {
+            background: #1c2526;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        button {
+            background: linear-gradient(90deg, #1e88e5, #42a5f5);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        input, button { font-size: 1rem; }
+        canvas { max-width: 100%; }
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+            nav { border-right: none; border-bottom: 1px solid #333; }
+            nav ul { display: flex; flex-wrap: wrap; }
+            nav li { flex: 1 1 auto; text-align: center; }
+            button { padding: 0.5rem 1rem; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Firebase CDNs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
+        import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
+
+        // TensorFlow.js
+        import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest';
+
+        // Chart.js
+        const chartJsScript = document.createElement('script');
+        chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        document.head.appendChild(chartJsScript);
+
+        // jsPDF
+        const jsPDFScript = document.createElement('script');
+        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        document.head.appendChild(jsPDFScript);
+
+        // SheetJS for Excel
+        const sheetJsScript = document.createElement('script');
+        sheetJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(sheetJsScript);
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+        const storage = getStorage(app);
+        const messaging = getMessaging(app);
+        const provider = new GoogleAuthProvider();
+
+        // Multilingual support
+        const translations = {
+            en: {
+                dashboard: "Dashboard",
+                financialHub: "Financial Hub",
+                scoutingNetwork: "Scouting Network",
+                playerWellness: "Player Wellness",
+                complianceWelfare: "Compliance & Welfare",
+                tacticsAI: "Tactics AI",
+                clubManager: "Club Manager",
+                fanEngagement: "Fan Engagement",
+                login: "Login with Google",
+                logout: "Logout",
+                addEntry: "Add Entry",
+                exportPDF: "Export PDF",
+                exportExcel: "Export Excel"
+            },
+            ar: {
+                dashboard: "لوحة التحكم",
+                financialHub: "مركز المالية",
+                scoutingNetwork: "شبكة الكشافة",
+                playerWellness: "صحة اللاعبين",
+                complianceWelfare: "الامتثال والرفاهية",
+                tacticsAI: "ذكاء التكتيكات",
+                clubManager: "مدير النادي",
+                fanEngagement: "تفاعل المعجبين",
+                login: "تسجيل الدخول عبر جوجل",
+                logout: "تسجيل الخروج",
+                addEntry: "إضافة إدخال",
+                exportPDF: "تصدير PDF",
+                exportExcel: "تصدير Excel"
+            }
+        };
+        let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
+        document.body.classList.toggle('rtl', lang === 'ar');
+        function t(key) { return translations[lang][key] || key; }
+
+        // Auth functions
+        async function login() {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                document.getElementById('user-profile').innerHTML = `
+                    <img src="${user.photoURL}" alt="Profile" style="width: 40px; border-radius: 50%;">
+                    <span>${user.displayName}</span>
+                `;
+                renderDashboard();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function logout() {
+            auth.signOut().then(() => renderLogin());
+        }
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js');
+        }
+
+        // Render Login
+        function renderLogin() {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('user-profile').innerHTML = '';
+        }
+
+        // Render Dashboard
+        function renderDashboard() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'grid';
+            updateTitles();
+            renderFinancialHub();
+        }
+
+        function updateTitles() {
+            document.getElementById('login-btn').textContent = t('login');
+            document.getElementById('logout-btn').textContent = t('logout');
+            document.getElementById('lang-switch').textContent = t('langSwitch') || 'Switch Language';
+            document.getElementById('financial-title').textContent = t('financialHub');
+            document.getElementById('scouting-title').textContent = t('scoutingNetwork');
+            document.getElementById('wellness-title').textContent = t('playerWellness');
+            document.getElementById('compliance-title').textContent = t('complianceWelfare');
+            document.getElementById('tactics-title').textContent = t('tacticsAI');
+            document.getElementById('club-title').textContent = t('clubManager');
+            document.getElementById('fan-title').textContent = t('fanEngagement');
+            document.getElementById('add-financial-entry').textContent = t('addEntry');
+            document.getElementById('export-financial-pdf').textContent = t('exportPDF');
+            document.getElementById('export-financial-excel').textContent = t('exportExcel');
+        }
+
+        // Event Listeners
+        document.getElementById('login-btn').addEventListener('click', login);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        document.getElementById('lang-switch').addEventListener('click', () => {
+            lang = lang === 'en' ? 'ar' : 'en';
+            document.body.classList.toggle('rtl', lang === 'ar');
+            updateTitles();
+        });
+
+        // Nav clicks
+        document.querySelectorAll('nav li[data-module]').forEach(li => {
+            li.addEventListener('click', () => {
+                document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+                document.getElementById(li.dataset.module).classList.add('active');
+            });
+        });
+
+        // Financial Hub
+        async function loadCashFlowModel() {
+            try {
+                const modelUrl = await getDownloadURL(ref(storage, 'models/cashflow_model/model.json'));
+                return tf.loadLayersModel(modelUrl);
+            } catch (error) {
+                console.error('Model load error:', error);
+            }
+        }
+
+        async function predictCashFlow(pastData) {
+            const model = await loadCashFlowModel();
+            if (!model) return;
+            const tensor = tf.tensor2d(pastData);
+            const prediction = model.predict(tensor);
+            return prediction.dataSync();
+        }
+
+        function renderFinancialHub() {
+            onSnapshot(collection(db, 'financials'), (snapshot) => {
+                const data = snapshot.docs.map(doc => doc.data());
+                const pastData = data.map(d => [d.revenue || 0, d.expenses || 0]);
+                predictCashFlow(pastData).then(forecast => {
+                    if (forecast) {
+                        new Chart(document.getElementById('cashChart'), {
+                            type: 'line',
+                            data: {
+                                labels: ['Past', 'Forecast'],
+                                datasets: [{
+                                    label: 'Cash Flow',
+                                    data: [...pastData.flat(), ...forecast],
+                                    borderColor: '#42a5f5',
+                                    backgroundColor: 'rgba(66, 165, 245, 0.2)',
+                                    fill: true
+                                }]
+                            },
+                            options: { scales: { y: { beginAtZero: true } } }
+                        });
+                        if (forecast[0] < 0) {
+                            getToken(messaging).then(() => {
+                                const alertFunc = httpsCallable(functions, 'sendAlert');
+                                alertFunc({ message: 'Cash flow crisis predicted!' });
+                            }).catch(err => console.error('FCM error:', err));
+                        }
+                    }
+                });
+            });
+
+            document.getElementById('add-financial-entry').addEventListener('click', () => {
+                addDoc(collection(db, 'financials'), { revenue: 10000, expenses: 5000, timestamp: new Date() });
+            });
+
+            document.getElementById('export-financial-pdf').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF();
+                pdf.text('Financial Report', 10, 10);
+                pdf.save('financial-report.pdf');
+            });
+
+            document.getElementById('export-financial-excel').addEventListener('click', () => {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([['Revenue', 'Expenses'], [10000, 5000]]);
+                XLSX.utils.book_append_sheet(wb, ws, 'Financials');
+                XLSX.writeFile(wb, 'financial-report.xlsx');
+            });
+        }
+
+        // Scouting Network
+        async function matchmakePlayers(teamNeeds) {
+            const model = await tf.loadLayersModel('https://example.com/matchmaker_model.json');
+            const players = await getDocs(collection(db, 'players'));
+            const suggestions = players.docs.map(p => {
+                const score = model.predict(tf.tensor2d([Object.values(p.data()), Object.values(teamNeeds)])).dataSync()[0];
+                return score > 0.7 ? p.data() : null;
+            }).filter(Boolean);
+            return suggestions;
+        }
+
+        function renderScoutingNetwork() {
+            matchmakePlayers({age: 20, skills: ['speed'], cost: 1000000}).then(sugs => {
+                document.getElementById('player-suggestions').innerHTML = sugs.map(s => `<p>${s.name}</p>`).join('');
+            });
+        }
+
+        // Player Wellness
+        async function predictInjury(playerData) {
+            const model = await tf.loadLayersModel('https://example.com/injury_model.json');
+            return model.predict(tf.tensor2d([playerData.metrics])).dataSync() > 0.5 ? 'High Risk' : 'Low';
+        }
+
+        function renderPlayerWellness() {
+            new Chart(document.getElementById('wellnessChart'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{}] }
+            });
+        }
+
+        // Compliance & Welfare
+        function renderComplianceWelfare() {
+            document.getElementById('zoom-meeting').src = 'https://zoom.us/j/example';
+            document.getElementById('zoom-meeting').style.display = 'block';
+        }
+
+        // Tactics AI
+        function renderTacticsAI() {
+            getDownloadURL(ref(storage, 'videos/match.mp4')).then(url => {
+                document.getElementById('tactics-video').src = url;
+            });
+        }
+
+        // Club Manager
+        function renderClubManager() {
+            onSnapshot(collection(db, 'rosters'), (snapshot) => {
+                const rosters = snapshot.docs.map(doc => doc.data());
+                document.getElementById('roster-list').innerHTML = rosters.map(r => `<p>${r.name}</p>`).join('');
+            });
+        }
+
+        // Fan Engagement
+        function renderFanEngagement() {
+            // Google Analytics integration placeholder
+        }
+
+        // Initial render
+        auth.onAuthStateChanged(user => {
+            if (user) renderDashboard();
+            else renderLogin();
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="/logo.png" alt="FootballPro Suite" class="logo">
+            <div id="user-profile"></div>
+            <button id="lang-switch">Switch Language</button>
+        </header>
+        <div id="auth-section">
+            <h1>FootballPro Suite</h1>
+            <button id="login-btn">Login with Google</button>
+        </div>
+        <div id="dashboard" style="display: none;" class="dashboard">
+            <nav>
+                <ul>
+                    <li data-module="financial-hub">Financial Hub</li>
+                    <li data-module="scouting-network">Scouting Network</li>
+                    <li data-module="player-wellness">Player Wellness</li>
+                    <li data-module="compliance-welfare">Compliance & Welfare</li>
+                    <li data-module="tactics-ai">Tactics AI</li>
+                    <li data-module="club-manager">Club Manager</li>
+                    <li data-module="fan-engagement">Fan Engagement</li>
+                    <li id="logout-btn">Logout</li>
+                </ul>
+            </nav>
+            <main>
+                <div id="ai-insights" class="card">AI Insights Panel</div>
+                <div id="financial-hub" class="module">
+                    <h2 id="financial-title"></h2>
+                    <canvas id="cashChart"></canvas>
+                    <button id="add-financial-entry"></button>
+                    <button id="export-financial-pdf"></button>
+                    <button id="export-financial-excel"></button>
+                </div>
+                <div id="scouting-network" class="module">
+                    <h2 id="scouting-title"></h2>
+                    <div id="player-suggestions"></div>
+                </div>
+                <div id="player-wellness" class="module">
+                    <h2 id="wellness-title"></h2>
+                    <canvas id="wellnessChart"></canvas>
+                </div>
+                <div id="compliance-welfare" class="module">
+                    <h2 id="compliance-title"></h2>
+                    <div id="risk-alerts"></div>
+                    <iframe id="zoom-meeting" style="display:none;"></iframe>
+                </div>
+                <div id="tactics-ai" class="module">
+                    <h2 id="tactics-title"></h2>
+                    <video id="tactics-video" controls></video>
+                </div>
+                <div id="club-manager" class="module">
+                    <h2 id="club-title"></h2>
+                    <div id="roster-list"></div>
+                </div>
+                <div id="fan-engagement" class="module">
+                    <h2 id="fan-title"></h2>
+                    <div id="campaign-suggestions"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
