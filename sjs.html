@@ -170,7 +170,7 @@
                 scoutCost: "Estimated Cost",
                 scoutVideo: "Match Video URL",
                 addWellness: "Add Wellness Entry",
-                wellnessPlayer: "Player Name",
+                wellnessPlayer: "Select Player",
                 wellnessFitness: "Fitness Score (0-100)",
                 wellnessInjury: "Injury Status",
                 wellnessMetrics: "Metrics (e.g., GPS data)"
@@ -209,7 +209,7 @@
                 scoutCost: "التكلفة التقريبية",
                 scoutVideo: "رابط فيديو المباراة",
                 addWellness: "إضافة إدخال صحي",
-                wellnessPlayer: "اسم اللاعب",
+                wellnessPlayer: "اختر اللاعب",
                 wellnessFitness: "درجة اللياقة (0-100)",
                 wellnessInjury: "حالة الإصابة",
                 wellnessMetrics: "المقاييس (مثل بيانات GPS)"
@@ -304,7 +304,6 @@
             document.getElementById('scout-cost').placeholder = t('scoutCost');
             document.getElementById('scout-video').placeholder = t('scoutVideo');
             document.getElementById('add-wellness-btn').textContent = t('addWellness');
-            document.getElementById('wellness-player').placeholder = t('wellnessPlayer');
             document.getElementById('wellness-fitness').placeholder = t('wellnessFitness');
             document.getElementById('wellness-injury').innerHTML = `<option value="">${t('wellnessInjury')}</option><option value="none">None</option><option value="minor">Minor</option><option value="major">Major</option>`;
             document.getElementById('wellness-metrics').placeholder = t('wellnessMetrics');
@@ -532,6 +531,19 @@
             }
         }
 
+        function populatePlayerDropdown(selectElement) {
+            getDocs(collection(db, 'players')).then((snapshot) => {
+                selectElement.innerHTML = `<option value="">${t('wellnessPlayer')}</option>`;
+                snapshot.docs.forEach((doc) => {
+                    const player = doc.data();
+                    const option = document.createElement('option');
+                    option.value = player.name;
+                    option.textContent = player.name;
+                    selectElement.appendChild(option);
+                });
+            }).catch(err => console.error('Error fetching players:', err));
+        }
+
         function renderPlayerWellness() {
             const chartCanvas = document.getElementById('wellnessChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
@@ -561,6 +573,11 @@
                     </div>
                 `).join('');
             });
+
+            const playerSelect = document.getElementById('wellness-player');
+            if (playerSelect) {
+                populatePlayerDropdown(playerSelect);
+            }
 
             document.getElementById('wellness-form').addEventListener('submit', addWellnessEntry);
         }
@@ -724,7 +741,7 @@
                 <div id="player-wellness" class="module">
                     <h2 id="wellness-title"></h2>
                     <form id="wellness-form">
-                        <input id="wellness-player" type="text" placeholder="Player Name" required>
+                        <select id="wellness-player" required></select>
                         <input id="wellness-fitness" type="number" placeholder="Fitness Score (0-100)" min="0" max="100" required>
                         <select id="wellness-injury" required></select>
                         <input id="wellness-metrics" type="text" placeholder="Metrics (e.g., GPS data)">
