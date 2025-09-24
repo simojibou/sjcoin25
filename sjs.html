@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,6 +73,7 @@
         iframe#zoom-meeting { border: none; border-radius: 8px; }
         form { display: flex; flex-direction: column; gap: 0.5rem; }
         form input { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
+        img.player-pic { max-width: 100px; border-radius: 50%; }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
             nav { border-right: none; border-bottom: 1px solid #333; }
@@ -89,7 +90,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
-        import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+        import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
 
         // TensorFlow.js
@@ -155,7 +156,9 @@
                 playerName: "Player Name",
                 playerAge: "Age",
                 playerSkills: "Skills (comma-separated)",
-                playerPosition: "Position"
+                playerPosition: "Position",
+                playerInstagram: "Instagram Handle",
+                playerPic: "Player Picture"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -177,7 +180,9 @@
                 playerName: "اسم اللاعب",
                 playerAge: "العمر",
                 playerSkills: "المهارات (مفصولة بفاصلة)",
-                playerPosition: "المركز"
+                playerPosition: "المركز",
+                playerInstagram: "حساب إنستغرام",
+                playerPic: "صورة اللاعب"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -255,6 +260,8 @@
             document.getElementById('player-age').placeholder = t('playerAge');
             document.getElementById('player-skills').placeholder = t('playerSkills');
             document.getElementById('player-position').placeholder = t('playerPosition');
+            document.getElementById('player-instagram').placeholder = t('playerInstagram');
+            document.getElementById('player-pic-label').textContent = t('playerPic');
         }
 
         // Event Listeners
@@ -490,10 +497,17 @@
             const age = parseInt(document.getElementById('player-age').value);
             const skills = document.getElementById('player-skills').value.split(',').map(s => s.trim());
             const position = document.getElementById('player-position').value;
+            const instagram = document.getElementById('player-instagram').value;
+            const picFile = document.getElementById('player-pic').files[0];
+            let picUrl = '';
             try {
-                await addDoc(collection(db, 'players'), { name, age, skills, position, addedBy: auth.currentUser.uid });
+                if (picFile) {
+                    const picRef = ref(storage, `player_pics/${picFile.name}`);
+                    await uploadBytes(picRef, picFile);
+                    picUrl = await getDownloadURL(picRef);
+                }
+                await addDoc(collection(db, 'players'), { name, age, skills, position, instagram, picUrl, addedBy: auth.currentUser.uid });
                 document.getElementById('add-player-form').reset();
-                // Refresh roster
                 renderClubManager();
             } catch (error) {
                 console.error('Add player error:', error);
@@ -510,10 +524,12 @@
                 const players = snapshot.docs.map(doc => doc.data());
                 document.getElementById('player-list').innerHTML = players.map(p => `
                     <div class="card">
+                        ${p.picUrl ? `<img src="${p.picUrl}" alt="${p.name}" class="player-pic">` : ''}
                         <p>Name: ${p.name}</p>
                         <p>Age: ${p.age}</p>
                         <p>Skills: ${p.skills.join(', ')}</p>
                         <p>Position: ${p.position}</p>
+                        <p>Instagram: <a href="https://instagram.com/${p.instagram}" target="_blank">@${p.instagram}</a></p>
                     </div>
                 `).join('');
             });
@@ -590,6 +606,9 @@
                         <input id="player-age" type="number" placeholder="Age" required>
                         <input id="player-skills" type="text" placeholder="Skills (comma-separated)" required>
                         <input id="player-position" type="text" placeholder="Position" required>
+                        <input id="player-instagram" type="text" placeholder="Instagram Handle">
+                        <label id="player-pic-label" for="player-pic">Player Picture</label>
+                        <input id="player-pic" type="file" accept="image/*">
                         <button id="add-player-btn" type="submit">Add Player</button>
                     </form>
                     <div id="player-list"></div>
@@ -604,3 +623,4 @@
     </div>
 </body>
 </html>
+```
