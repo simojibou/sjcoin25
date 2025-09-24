@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FootballPro Suite</title>
     <link rel="manifest" href="/manifest.json">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
     <style>
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -74,6 +75,9 @@
         form { display: flex; flex-direction: column; gap: 0.5rem; }
         form input, form select { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
         img.player-pic { max-width: 100px; border-radius: 50%; }
+        video { max-width: 100%; }
+        #tracking-canvas { border: 1px solid #555; background: #000; }
+        #calendar { max-width: 900px; margin: 40px auto; background: #1c2526; border-radius: 8px; }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
             nav { border-right: none; border-bottom: 1px solid #333; }
@@ -88,7 +92,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
         import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
@@ -173,7 +177,14 @@
                 wellnessPlayer: "Select Player",
                 wellnessFitness: "Fitness Score (0-100)",
                 wellnessInjury: "Injury Status",
-                wellnessMetrics: "Metrics (e.g., GPS data)"
+                wellnessMetrics: "Metrics (e.g., GPS data)",
+                uploadVideo: "Upload Video for AI Tracking",
+                trackPlayers: "Track Players",
+                addEvent: "Add Event",
+                eventDate: "Date",
+                eventTime: "Time",
+                eventType: "Type",
+                eventDescription: "Description"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -212,7 +223,14 @@
                 wellnessPlayer: "اختر اللاعب",
                 wellnessFitness: "درجة اللياقة (0-100)",
                 wellnessInjury: "حالة الإصابة",
-                wellnessMetrics: "المقاييس (مثل بيانات GPS)"
+                wellnessMetrics: "المقاييس (مثل بيانات GPS)",
+                uploadVideo: "رفع فيديو لتتبع اللاعبين بالذكاء الاصطناعي",
+                trackPlayers: "تتبع اللاعبين",
+                addEvent: "إضافة حدث",
+                eventDate: "التاريخ",
+                eventTime: "الوقت",
+                eventType: "النوع",
+                eventDescription: "الوصف"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -307,6 +325,13 @@
             document.getElementById('wellness-fitness').placeholder = t('wellnessFitness');
             document.getElementById('wellness-injury').innerHTML = `<option value="">${t('wellnessInjury')}</option><option value="none">None</option><option value="minor">Minor</option><option value="major">Major</option>`;
             document.getElementById('wellness-metrics').placeholder = t('wellnessMetrics');
+            document.getElementById('upload-video-btn').textContent = t('uploadVideo');
+            document.getElementById('track-btn').textContent = t('trackPlayers');
+            document.getElementById('add-event-btn').textContent = t('addEvent');
+            document.getElementById('event-date').placeholder = t('eventDate');
+            document.getElementById('event-time').placeholder = t('eventTime');
+            document.getElementById('event-type').innerHTML = `<option value="">${t('eventType')}</option><option value="training">Training</option><option value="match">Match</option>`;
+            document.getElementById('event-description').placeholder = t('eventDescription');
             document.getElementById('start-group-call').textContent = t('startCall');
         }
 
@@ -620,6 +645,57 @@
         }
 
         // Tactics AI
+        async function uploadVideo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const videoRef = ref(storage, `tactics_videos/${file.name}`);
+                await uploadBytes(videoRef, file);
+                const videoUrl = await getDownloadURL(videoRef);
+                document.getElementById('tactics-video').src = videoUrl;
+                await addDoc(collection(db, 'tactics_videos'), { url: videoUrl, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                alert('Video uploaded successfully!');
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Failed to upload video: ' + error.message);
+            }
+        }
+
+        async function trackPlayers() {
+            const video = document.getElementById('tactics-video');
+            const canvas = document.getElementById('tracking-canvas');
+            const ctx = canvas.getContext('2d');
+            let model;
+            try {
+                // Load BodyPix model for player tracking (pose detection)
+                model = await tf.loadLayersModel('https://tfhub.dev/tensorflow/tfjs-model/bodypix/pose_max/1/default/1');
+            } catch (error) {
+                console.error('Model load error:', error);
+                alert('Failed to load tracking model');
+                return;
+            }
+            const detectPose = async () => {
+                if (video.paused || video.ended) return;
+                const net = await model.net;
+                const poses = await net.estimatePoses(video);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                poses.forEach(pose => {
+                    if (pose.score > 0.5) {
+                        pose.keypoints.forEach(kpt => {
+                            if (kpt.score > 0.3) {
+                                ctx.beginPath();
+                                ctx.arc(kpt.position.x, kpt.position.y, 5, 0, 2 * Math.PI);
+                                ctx.fillStyle = 'red';
+                                ctx.fill();
+                            }
+                        });
+                    }
+                });
+                requestAnimationFrame(detectPose);
+            };
+            video.play().then(() => detectPose());
+        }
+
         function renderTacticsAI() {
             getDownloadURL(ref(storage, 'videos/match.mp4')).then(url => {
                 document.getElementById('tactics-video').src = url;
@@ -627,6 +703,8 @@
                 console.error('Video load error:', err);
                 document.getElementById('tactics-video').src = 'https://example.com/dummy-video.mp4';
             });
+            document.getElementById('tactics-video-input').addEventListener('change', uploadVideo);
+            document.getElementById('track-btn').addEventListener('click', trackPlayers);
         }
 
         // Club Manager
@@ -654,6 +732,22 @@
             }
         }
 
+        async function addEvent(event) {
+            event.preventDefault();
+            const date = document.getElementById('event-date').value;
+            const time = document.getElementById('event-time').value;
+            const type = document.getElementById('event-type').value;
+            const description = document.getElementById('event-description').value;
+            try {
+                await addDoc(collection(db, 'events'), { title: `${type} - ${description}`, start: `${date}T${time}`, type, description, addedBy: auth.currentUser.uid });
+                document.getElementById('event-form').reset();
+                renderClubManager();
+            } catch (error) {
+                console.error('Add event error:', error);
+                alert('Failed to add event: ' + error.message);
+            }
+        }
+
         function renderClubManager() {
             onSnapshot(collection(db, 'rosters'), (snapshot) => {
                 const rosters = snapshot.docs.map(doc => doc.data());
@@ -673,6 +767,29 @@
                 `).join('');
             });
             document.getElementById('add-player-form').addEventListener('submit', addPlayer);
+
+            // Calendar setup
+            const calendarEl = document.getElementById('calendar');
+            onSnapshot(collection(db, 'events'), (snapshot) => {
+                const events = snapshot.docs.map(doc => doc.data());
+                if (calendarEl.calendar) {
+                    calendarEl.calendar.setOption('events', events);
+                } else {
+                    const calendar = new FullCalendar.Calendar(calendarEl, {
+                        initialView: 'dayGridMonth',
+                        events: events,
+                        eventColor: '#42a5f5',
+                        headerToolbar: {
+                            left: 'prev,next today',
+                            center: 'title',
+                            right: 'dayGridMonth,timeGridWeek'
+                        }
+                    });
+                    calendar.render();
+                    calendarEl.calendar = calendar;
+                }
+            });
+            document.getElementById('event-form').addEventListener('submit', addEvent);
         }
 
         // Fan Engagement
@@ -758,7 +875,13 @@
                 </div>
                 <div id="tactics-ai" class="module">
                     <h2 id="tactics-title"></h2>
+                    <form id="video-upload-form">
+                        <input id="tactics-video-input" type="file" accept="video/*" required>
+                        <button id="upload-video-btn" type="submit">Upload Video for AI Tracking</button>
+                    </form>
                     <video id="tactics-video" controls style="width: 100%;"></video>
+                    <button id="track-btn">Track Players</button>
+                    <canvas id="tracking-canvas" width="640" height="480" style="display: none;"></canvas>
                 </div>
                 <div id="club-manager" class="module">
                     <h2 id="club-title"></h2>
@@ -773,7 +896,15 @@
                         <button id="add-player-btn" type="submit">Add Player</button>
                     </form>
                     <div id="player-list"></div>
+                    <form id="event-form">
+                        <input id="event-date" type="date" required>
+                        <input id="event-time" type="time" required>
+                        <select id="event-type" required></select>
+                        <input id="event-description" type="text" placeholder="Description" required>
+                        <button id="add-event-btn" type="submit">Add Event</button>
+                    </form>
                     <div id="roster-list"></div>
+                    <div id="calendar"></div>
                 </div>
                 <div id="fan-engagement" class="module">
                     <h2 id="fan-title"></h2>
