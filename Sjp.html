@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,9 +135,30 @@
         .history-revenue { color: #4caf50; }
         .history-expenses { color: #f44336; }
         .history-date { font-size: 0.8rem; color: #9e9e9e; }
+        /* Styles for budget planning */
+        #budget-section {
+            margin-top: 2rem;
+        }
+        .budget-card {
+            background: linear-gradient(135deg, #1c2526, #2c3e50);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .variance-positive { color: #4caf50; }
+        .variance-negative { color: #f44336; }
+        #budget-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
         @media (max-width: 768px) {
-            #financial-history {
-                grid-template-columns: 1fr;
+            .financial-summary, #budget-list {
+                flex-direction: column;
             }
         }
     </style>
@@ -249,7 +271,17 @@
                 entryRevenue: "Revenue",
                 entryExpenses: "Expenses",
                 entryCategory: "Category",
-                netProfitLoss: "Net Profit/Loss"
+                netProfitLoss: "Net Profit/Loss",
+                budgetPlanning: "Budget Planning",
+                addBudget: "Add Budget",
+                budgetedRevenue: "Budgeted Revenue",
+                budgetedExpenses: "Budgeted Expenses",
+                period: "Period (YYYY-MM)",
+                budgetedVsActual: "Budgeted vs Actual",
+                actualRevenue: "Actual Revenue",
+                actualExpenses: "Actual Expenses",
+                varianceRevenue: "Variance (Revenue)",
+                varianceExpenses: "Variance (Expenses)"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -307,7 +339,17 @@
                 entryRevenue: "الإيرادات",
                 entryExpenses: "المصروفات",
                 entryCategory: "الفئة",
-                netProfitLoss: "الربح/الخسارة الصافي"
+                netProfitLoss: "الربح/الخسارة الصافي",
+                budgetPlanning: "تخطيط الميزانية",
+                addBudget: "إضافة ميزانية",
+                budgetedRevenue: "الإيرادات المخططة",
+                budgetedExpenses: "المصروفات المخططة",
+                period: "الفترة (YYYY-MM)",
+                budgetedVsActual: "المخطط مقابل الفعلي",
+                actualRevenue: "الإيرادات الفعلية",
+                actualExpenses: "المصروفات الفعلية",
+                varianceRevenue: "الفرق (الإيرادات)",
+                varianceExpenses: "الفرق (المصروفات)"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -410,6 +452,13 @@
             document.getElementById('event-type').innerHTML = `<option value="">${t('eventType')}</option><option value="training">Training</option><option value="match">Match</option>`;
             document.getElementById('event-description').placeholder = t('eventDescription');
             document.getElementById('start-group-call').textContent = t('startCall');
+            // Budget titles
+            document.getElementById('budget-title').textContent = t('budgetPlanning');
+            document.getElementById('budget-category').innerHTML = document.getElementById('category-select').innerHTML;
+            document.getElementById('budget-period').placeholder = t('period');
+            document.getElementById('budget-revenue').placeholder = t('budgetedRevenue');
+            document.getElementById('budget-expenses').placeholder = t('budgetedExpenses');
+            document.getElementById('add-budget-btn').textContent = t('addBudget');
         }
 
         // Event Listeners
@@ -489,11 +538,27 @@
             }
         }
 
+        async function addBudgetEntry(event) {
+            event.preventDefault();
+            const category = document.getElementById('budget-category').value;
+            const period = document.getElementById('budget-period').value;
+            const budgetedRevenue = parseFloat(document.getElementById('budget-revenue').value) || 0;
+            const budgetedExpenses = parseFloat(document.getElementById('budget-expenses').value) || 0;
+            try {
+                await addDoc(collection(db, 'budgets'), { category, period, budgetedRevenue, budgetedExpenses, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('budget-form').reset();
+                renderFinancialHub();
+            } catch (error) {
+                console.error('Add budget entry error:', error);
+                alert('Failed to add budget: ' + error.message);
+            }
+        }
+
         function renderFinancialHub() {
             const chartCanvas = document.getElementById('cashChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
             onSnapshot(collection(db, 'financials'), (snapshot) => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const data = snapshot.docs.map(doc => doc.data());
                 const pastData = data.map(d => [d.revenue || 0, d.expenses || 0]);
                 predictCashFlow(pastData).then(forecast => {
                     if (forecast) {
@@ -568,6 +633,40 @@
                 `).join('');
             });
 
+            // Budget planning
+            document.getElementById('budget-form').addEventListener('submit', addBudgetEntry);
+            onSnapshot(collection(db, 'budgets'), (budgetSnapshot) => {
+                const budgets = budgetSnapshot.docs.map(doc => doc.data());
+                const budgetList = document.getElementById('budget-list');
+                budgetList.innerHTML = '';
+                budgets.forEach(budget => {
+                    // Calculate actual for this period and category
+                    let actualRevenue = 0;
+                    let actualExpenses = 0;
+                    data.forEach(entry => {
+                        const entryMonth = new Date(entry.timestamp.seconds * 1000).toISOString().slice(0, 7);
+                        if (entryMonth === budget.period && entry.category === budget.category) {
+                            actualRevenue += entry.revenue;
+                            actualExpenses += entry.expenses;
+                        }
+                    });
+                    const varianceRevenue = actualRevenue - budget.budgetedRevenue;
+                    const varianceExpenses = budget.budgetedExpenses - actualExpenses;
+                    const varianceRevenueClass = varianceRevenue >= 0 ? 'variance-positive' : 'variance-negative';
+                    const varianceExpensesClass = varianceExpenses >= 0 ? 'variance-positive' : 'variance-negative';
+                    budgetList.innerHTML += `
+                        <div class="budget-card">
+                            <h4>${budget.category} - ${budget.period}</h4>
+                            <p>${t('budgetedRevenue')}: $${budget.budgetedRevenue.toFixed(2)}</p>
+                            <p>${t('actualRevenue')}: $${actualRevenue.toFixed(2)}</p>
+                            <p class="${varianceRevenueClass}">${t('varianceRevenue')}: $${varianceRevenue.toFixed(2)}</p>
+                            <p>${t('budgetedExpenses')}: $${budget.budgetedExpenses.toFixed(2)}</p>
+                            <p>${t('actualExpenses')}: $${actualExpenses.toFixed(2)}</p>
+                            <p class="${varianceExpensesClass}">${t('varianceExpenses')}: $${varianceExpenses.toFixed(2)}</p>
+                        </div>
+                    `;
+                });
+            });
             document.getElementById('financial-form').addEventListener('submit', addFinancialEntry);
 
             document.getElementById('export-financial-pdf').addEventListener('click', () => {
@@ -963,6 +1062,17 @@
                     <div id="financial-tips" class="card"></div>
                     <h3>${t('financialHistory')}</h3>
                     <div id="financial-history"></div>
+                    <div id="budget-section">
+                        <h3 id="budget-title"></h3>
+                        <form id="budget-form">
+                            <select id="budget-category" required></select>
+                            <input id="budget-period" type="text" placeholder="Period (YYYY-MM)" required>
+                            <input id="budget-revenue" type="number" placeholder="Budgeted Revenue" step="0.01" required>
+                            <input id="budget-expenses" type="number" placeholder="Budgeted Expenses" step="0.01" required>
+                            <button id="add-budget-btn" type="submit">Add Budget</button>
+                        </form>
+                        <div id="budget-list"></div>
+                    </div>
                     <button id="export-financial-pdf">Export PDF</button>
                     <button id="export-financial-excel">Export Excel</button>
                 </div>
@@ -1039,3 +1149,4 @@
     </div>
 </body>
 </html>
+```
