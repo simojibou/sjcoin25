@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,7 +166,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
         import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
@@ -260,28 +259,10 @@
                 eventTime: "Time",
                 eventType: "Type",
                 eventDescription: "Description",
-                totalRevenue: "Total Revenue",
-                totalExpenses: "Total Expenses",
-                netStatus: "Net Status",
-                profit: "Profit",
-                loss: "Loss",
-                tips: "Tips to Avoid Loss and Increase Profits",
-                financialHistory: "Financial History",
-                entryDate: "Date",
-                entryRevenue: "Revenue",
-                entryExpenses: "Expenses",
-                entryCategory: "Category",
-                netProfitLoss: "Net Profit/Loss",
-                budgetPlanning: "Budget Planning",
-                addBudget: "Add Budget",
-                budgetedRevenue: "Budgeted Revenue",
-                budgetedExpenses: "Budgeted Expenses",
-                period: "Period (YYYY-MM)",
-                budgetedVsActual: "Budgeted vs Actual",
-                actualRevenue: "Actual Revenue",
-                actualExpenses: "Actual Expenses",
-                varianceRevenue: "Variance (Revenue)",
-                varianceExpenses: "Variance (Expenses)"
+                teamDetails: "Team Details",
+                teamName: "Team Name",
+                teamLogo: "Team Logo",
+                addTeam: "Add/Update Team"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -328,28 +309,10 @@
                 eventTime: "الوقت",
                 eventType: "النوع",
                 eventDescription: "الوصف",
-                totalRevenue: "إجمالي الإيرادات",
-                totalExpenses: "إجمالي المصروفات",
-                netStatus: "الحالة الصافية",
-                profit: "ربح",
-                loss: "خسارة",
-                tips: "نصائح لتجنب الخسارة وزيادة الأرباح",
-                financialHistory: "تاريخ المالية",
-                entryDate: "التاريخ",
-                entryRevenue: "الإيرادات",
-                entryExpenses: "المصروفات",
-                entryCategory: "الفئة",
-                netProfitLoss: "الربح/الخسارة الصافي",
-                budgetPlanning: "تخطيط الميزانية",
-                addBudget: "إضافة ميزانية",
-                budgetedRevenue: "الإيرادات المخططة",
-                budgetedExpenses: "المصروفات المخططة",
-                period: "الفترة (YYYY-MM)",
-                budgetedVsActual: "المخطط مقابل الفعلي",
-                actualRevenue: "الإيرادات الفعلية",
-                actualExpenses: "المصروفات الفعلية",
-                varianceRevenue: "الفرق (الإيرادات)",
-                varianceExpenses: "الفرق (المصروفات)"
+                teamDetails: "تفاصيل الفريق",
+                teamName: "اسم الفريق",
+                teamLogo: "شعار الفريق",
+                addTeam: "إضافة/تحديث الفريق"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -398,6 +361,19 @@
             document.getElementById('dashboard').style.display = 'grid';
             updateTitles();
             document.querySelector('nav li[data-module="financial-hub"]').click();
+            renderTeamHeader();
+        }
+
+        function renderTeamHeader() {
+            getDoc(doc(db, 'teams', auth.currentUser.uid)).then((snap) => {
+                const team = snap.data();
+                if (team) {
+                    document.getElementById('team-header').innerHTML = `
+                        <img src="${team.logoUrl}" alt="${team.name} logo" style="max-width: 100px;">
+                        <p>${team.name}</p>
+                    `;
+                }
+            });
         }
 
         function updateTitles() {
@@ -452,13 +428,11 @@
             document.getElementById('event-type').innerHTML = `<option value="">${t('eventType')}</option><option value="training">Training</option><option value="match">Match</option>`;
             document.getElementById('event-description').placeholder = t('eventDescription');
             document.getElementById('start-group-call').textContent = t('startCall');
-            // Budget titles
-            document.getElementById('budget-title').textContent = t('budgetPlanning');
-            document.getElementById('budget-category').innerHTML = document.getElementById('category-select').innerHTML;
-            document.getElementById('budget-period').placeholder = t('period');
-            document.getElementById('budget-revenue').placeholder = t('budgetedRevenue');
-            document.getElementById('budget-expenses').placeholder = t('budgetedExpenses');
-            document.getElementById('add-budget-btn').textContent = t('addBudget');
+            // Team titles
+            document.getElementById('team-title').textContent = t('teamDetails');
+            document.getElementById('team-name').placeholder = t('teamName');
+            document.getElementById('team-logo-label').textContent = t('teamLogo');
+            document.getElementById('add-team-btn').textContent = t('addTeam');
         }
 
         // Event Listeners
@@ -535,22 +509,6 @@
             } catch (error) {
                 console.error('Add financial entry error:', error);
                 alert('Failed to add financial entry: ' + error.message);
-            }
-        }
-
-        async function addBudgetEntry(event) {
-            event.preventDefault();
-            const category = document.getElementById('budget-category').value;
-            const period = document.getElementById('budget-period').value;
-            const budgetedRevenue = parseFloat(document.getElementById('budget-revenue').value) || 0;
-            const budgetedExpenses = parseFloat(document.getElementById('budget-expenses').value) || 0;
-            try {
-                await addDoc(collection(db, 'budgets'), { category, period, budgetedRevenue, budgetedExpenses, addedBy: auth.currentUser.uid, timestamp: new Date() });
-                document.getElementById('budget-form').reset();
-                renderFinancialHub();
-            } catch (error) {
-                console.error('Add budget entry error:', error);
-                alert('Failed to add budget: ' + error.message);
             }
         }
 
@@ -633,40 +591,6 @@
                 `).join('');
             });
 
-            // Budget planning
-            document.getElementById('budget-form').addEventListener('submit', addBudgetEntry);
-            onSnapshot(collection(db, 'budgets'), (budgetSnapshot) => {
-                const budgets = budgetSnapshot.docs.map(doc => doc.data());
-                const budgetList = document.getElementById('budget-list');
-                budgetList.innerHTML = '';
-                budgets.forEach(budget => {
-                    // Calculate actual for this period and category
-                    let actualRevenue = 0;
-                    let actualExpenses = 0;
-                    data.forEach(entry => {
-                        const entryMonth = new Date(entry.timestamp.seconds * 1000).toISOString().slice(0, 7);
-                        if (entryMonth === budget.period && entry.category === budget.category) {
-                            actualRevenue += entry.revenue;
-                            actualExpenses += entry.expenses;
-                        }
-                    });
-                    const varianceRevenue = actualRevenue - budget.budgetedRevenue;
-                    const varianceExpenses = budget.budgetedExpenses - actualExpenses;
-                    const varianceRevenueClass = varianceRevenue >= 0 ? 'variance-positive' : 'variance-negative';
-                    const varianceExpensesClass = varianceExpenses >= 0 ? 'variance-positive' : 'variance-negative';
-                    budgetList.innerHTML += `
-                        <div class="budget-card">
-                            <h4>${budget.category} - ${budget.period}</h4>
-                            <p>${t('budgetedRevenue')}: $${budget.budgetedRevenue.toFixed(2)}</p>
-                            <p>${t('actualRevenue')}: $${actualRevenue.toFixed(2)}</p>
-                            <p class="${varianceRevenueClass}">${t('varianceRevenue')}: $${varianceRevenue.toFixed(2)}</p>
-                            <p>${t('budgetedExpenses')}: $${budget.budgetedExpenses.toFixed(2)}</p>
-                            <p>${t('actualExpenses')}: $${actualExpenses.toFixed(2)}</p>
-                            <p class="${varianceExpensesClass}">${t('varianceExpenses')}: $${varianceExpenses.toFixed(2)}</p>
-                        </div>
-                    `;
-                });
-            });
             document.getElementById('financial-form').addEventListener('submit', addFinancialEntry);
 
             document.getElementById('export-financial-pdf').addEventListener('click', () => {
@@ -927,6 +851,26 @@
         }
 
         // Club Manager
+        async function addTeam(event) {
+            event.preventDefault();
+            const name = document.getElementById('team-name').value;
+            const logoFile = document.getElementById('team-logo').files[0];
+            let logoUrl = '';
+            try {
+                if (logoFile) {
+                    const logoRef = ref(storage, `team_logos/${logoFile.name}`);
+                    await uploadBytes(logoRef, logoFile);
+                    logoUrl = await getDownloadURL(logoRef);
+                }
+                await setDoc(doc(db, 'teams', auth.currentUser.uid), { name, logoUrl });
+                document.getElementById('team-form').reset();
+                renderClubManager();
+            } catch (error) {
+                console.error('Add team error:', error);
+                alert('Failed to add team: ' + error.message);
+            }
+        }
+
         async function addPlayer(event) {
             event.preventDefault();
             const name = document.getElementById('player-name').value;
@@ -968,22 +912,40 @@
         }
 
         function renderClubManager() {
+            getDoc(doc(db, 'teams', auth.currentUser.uid)).then((teamSnap) => {
+                const team = teamSnap.data();
+                if (team) {
+                    document.getElementById('team-info').innerHTML = `
+                        <div class="card">
+                            ${team.logoUrl ? `<img src="${team.logoUrl}" alt="${team.name}" class="player-pic">` : ''}
+                            <p>Name: ${team.name}</p>
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('team-form').addEventListener('submit', addTeam);
+
             onSnapshot(collection(db, 'rosters'), (snapshot) => {
                 const rosters = snapshot.docs.map(doc => doc.data());
                 document.getElementById('roster-list').innerHTML = rosters.map(r => `<div class="card"><p>${r.name || 'Unknown'}</p></div>`).join('');
             });
-            onSnapshot(collection(db, 'players'), (snapshot) => {
-                const players = snapshot.docs.map(doc => doc.data());
-                document.getElementById('player-list').innerHTML = players.map(p => `
-                    <div class="card">
-                        ${p.picUrl ? `<img src="${p.picUrl}" alt="${p.name}" class="player-pic">` : ''}
-                        <p>Name: ${p.name}</p>
-                        <p>Age: ${p.age}</p>
-                        <p>Skills: ${p.skills.join(', ')}</p>
-                        <p>Position: ${p.position}</p>
-                        <p>Instagram: <a href="https://instagram.com/${p.instagram}" target="_blank">@${p.instagram}</a></p>
-                    </div>
-                `).join('');
+            getDoc(doc(db, 'teams', auth.currentUser.uid)).then(async (teamSnap) => {
+                const team = teamSnap.data();
+                onSnapshot(collection(db, 'players'), (snapshot) => {
+                    const players = snapshot.docs.map(doc => doc.data());
+                    document.getElementById('player-list').innerHTML = players.map(p => `
+                        <div class="card">
+                            ${team && team.logoUrl ? `<img src="${team.logoUrl}" alt="${team.name}" style="max-width: 50px; margin-bottom: 1rem;">` : ''}
+                            ${p.picUrl ? `<img src="${p.picUrl}" alt="${p.name}" class="player-pic">` : ''}
+                            <p>Name: ${p.name}</p>
+                            <p>Age: ${p.age}</p>
+                            <p>Skills: ${p.skills.join(', ')}</p>
+                            <p>Position: ${p.position}</p>
+                            <p>Instagram: <a href="https://instagram.com/${p.instagram}" target="_blank">@${p.instagram}</a></p>
+                        </div>
+                    `).join('');
+                });
             });
             document.getElementById('add-player-form').addEventListener('submit', addPlayer);
 
@@ -1026,7 +988,8 @@
 <body>
     <div class="container">
         <header>
-            <img src="/logo.png" alt="FootballPro Suite" class="logo">
+            <img id="team-logo-img" src="/logo.png" alt="FootballPro Suite" class="logo">
+            <span id="team-name-span"></span>
             <div id="user-profile" style="display: flex; align-items: center; gap: 0.5rem;"></div>
             <button id="lang-switch">Switch Language</button>
         </header>
@@ -1048,6 +1011,7 @@
                 </ul>
             </nav>
             <main>
+                <div id="team-header" class="card"></div>
                 <div id="ai-insights" class="card">AI Insights Panel (Overall Predictions)</div>
                 <div id="financial-hub" class="module">
                     <h2 id="financial-title"></h2>
@@ -1062,17 +1026,6 @@
                     <div id="financial-tips" class="card"></div>
                     <h3>${t('financialHistory')}</h3>
                     <div id="financial-history"></div>
-                    <div id="budget-section">
-                        <h3 id="budget-title"></h3>
-                        <form id="budget-form">
-                            <select id="budget-category" required></select>
-                            <input id="budget-period" type="text" placeholder="Period (YYYY-MM)" required>
-                            <input id="budget-revenue" type="number" placeholder="Budgeted Revenue" step="0.01" required>
-                            <input id="budget-expenses" type="number" placeholder="Budgeted Expenses" step="0.01" required>
-                            <button id="add-budget-btn" type="submit">Add Budget</button>
-                        </form>
-                        <div id="budget-list"></div>
-                    </div>
                     <button id="export-financial-pdf">Export PDF</button>
                     <button id="export-financial-excel">Export Excel</button>
                 </div>
@@ -1119,6 +1072,14 @@
                 </div>
                 <div id="club-manager" class="module">
                     <h2 id="club-title"></h2>
+                    <h3 id="team-title"></h3>
+                    <form id="team-form">
+                        <input id="team-name" type="text" placeholder="Team Name" required>
+                        <label id="team-logo-label" for="team-logo">Team Logo</label>
+                        <input id="team-logo" type="file" accept="image/*">
+                        <button id="add-team-btn" type="submit">Add/Update Team</button>
+                    </form>
+                    <div id="team-info"></div>
                     <form id="add-player-form">
                         <input id="player-name" type="text" placeholder="Player Name" required>
                         <input id="player-age" type="number" placeholder="Age" required>
@@ -1149,4 +1110,3 @@
     </div>
 </body>
 </html>
-```
