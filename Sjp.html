@@ -7,6 +7,7 @@
     <title>FootballPro Suite</title>
     <link rel="manifest" href="/manifest.json">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -58,6 +59,14 @@
             padding: 1rem;
             margin: 1rem 0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: scale(1.02);
         }
         button {
             background: linear-gradient(90deg, #1e88e5, #42a5f5);
@@ -69,15 +78,32 @@
             transition: transform 0.2s;
         }
         button:hover { transform: scale(1.05); }
+        .edit-btn, .delete-btn {
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .edit-btn { background: linear-gradient(90deg, #ff9800, #ffb74d); }
+        .delete-btn { background: linear-gradient(90deg, #f44336, #e57373); }
         input, button, select { font-size: 1rem; }
         canvas { max-width: 100%; background: #1c2526; }
         iframe#zoom-meeting { border: none; border-radius: 8px; }
-        form { display: flex; flex-direction: column; gap: 0.5rem; }
+        form { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 400px; margin: 0 auto; }
         form input, form select { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
-        img.player-pic { max-width: 100px; border-radius: 50%; }
+        img.player-pic { max-width: 100px; border-radius: 50%; margin-bottom: 1rem; }
         video { max-width: 100%; }
         #tracking-canvas { border: 1px solid #555; background: #000; }
         #calendar { max-width: 900px; margin: 40px auto; background: #1c2526; border-radius: 8px; }
+        #player-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .instagram-icon {
+            color: #e4405f;
+            font-size: 1.5rem;
+            margin-top: 0.5rem;
+        }
         @media (max-width: 768px) {
             .dashboard { grid-template-columns: 1fr; }
             nav { border-right: none; border-bottom: 1px solid #333; }
@@ -85,36 +111,8 @@
             nav li { flex: 1 1 auto; text-align: center; }
             button { padding: 0.5rem 1rem; }
             iframe#zoom-meeting { height: 300px; }
-        }
-        /* New styles for financial summary */
-        .financial-summary {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .summary-card {
-            flex: 1;
-            background: linear-gradient(135deg, #1c2526, #2c3e50);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.3s;
-        }
-        .summary-card:hover {
-            transform: translateY(-5px);
-        }
-        .profit { color: #4caf50; }
-        .loss { color: #f44336; }
-        .tips-list {
-            list-style: none;
-            padding: 0;
-        }
-        .tips-list li {
-            background: #37474f;
-            margin: 0.5rem 0;
-            padding: 0.75rem;
-            border-radius: 8px;
+            form { max-width: 100%; padding: 0 1rem; }
+            .card { padding: 1rem; }
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -122,7 +120,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
         import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
@@ -187,6 +185,7 @@
                 startCall: "Start Group Call",
                 riskAlerts: "Risk Alerts",
                 addPlayer: "Add Player",
+                updatePlayer: "Update Player",
                 playerName: "Player Name",
                 playerAge: "Age",
                 playerSkills: "Skills (comma-separated)",
@@ -214,13 +213,7 @@
                 eventDate: "Date",
                 eventTime: "Time",
                 eventType: "Type",
-                eventDescription: "Description",
-                totalRevenue: "Total Revenue",
-                totalExpenses: "Total Expenses",
-                netStatus: "Net Status",
-                profit: "Profit",
-                loss: "Loss",
-                tips: "Tips to Avoid Loss and Increase Profits"
+                eventDescription: "Description"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -239,6 +232,7 @@
                 startCall: "بدء مكالمة جماعية",
                 riskAlerts: "تنبيهات المخاطر",
                 addPlayer: "إضافة لاعب",
+                updatePlayer: "تحديث اللاعب",
                 playerName: "اسم اللاعب",
                 playerAge: "العمر",
                 playerSkills: "المهارات (مفصولة بفاصلة)",
@@ -266,13 +260,7 @@
                 eventDate: "التاريخ",
                 eventTime: "الوقت",
                 eventType: "النوع",
-                eventDescription: "الوصف",
-                totalRevenue: "إجمالي الإيرادات",
-                totalExpenses: "إجمالي المصروفات",
-                netStatus: "الحالة الصافية",
-                profit: "ربح",
-                loss: "خسارة",
-                tips: "نصائح لتجنب الخسارة وزيادة الأرباح"
+                eventDescription: "الوصف"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -488,39 +476,6 @@
                         }
                     }
                 });
-                // Calculate totals
-                let totalRevenue = 0;
-                let totalExpenses = 0;
-                data.forEach(d => {
-                    totalRevenue += d.revenue || 0;
-                    totalExpenses += d.expenses || 0;
-                });
-                const net = totalRevenue - totalExpenses;
-                const status = net >= 0 ? t('profit') : t('loss');
-                const statusClass = net >= 0 ? 'profit' : 'loss';
-                document.getElementById('financial-summary').innerHTML = `
-                    <div class="summary-card">
-                        <h3>${t('totalRevenue')}</h3>
-                        <p class="profit">$${totalRevenue.toFixed(2)}</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>${t('totalExpenses')}</h3>
-                        <p class="loss">$${totalExpenses.toFixed(2)}</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>${t('netStatus')}</h3>
-                        <p class="${statusClass}">$${net.toFixed(2)} (${status})</p>
-                    </div>
-                `;
-                document.getElementById('financial-tips').innerHTML = `
-                    <h3>${t('tips')}</h3>
-                    <ul class="tips-list">
-                        <li>قلل المصروفات غير الضرورية لتجنب الخسائر.</li>
-                        <li>زيادة الإيرادات من خلال الرعايات والتذاكر.</li>
-                        <li>تحليل الفئات لتحديد المجالات ذات العائد العالي.</li>
-                        <li>استخدم التنبؤات للتخطيط المالي المستقبلي.</li>
-                    </ul>
-                `;
             });
 
             document.getElementById('financial-form').addEventListener('submit', addFinancialEntry);
@@ -783,7 +738,9 @@
         }
 
         // Club Manager
-        async function addPlayer(event) {
+        let editingPlayerId = null;
+
+        async function addOrUpdatePlayer(event) {
             event.preventDefault();
             const name = document.getElementById('player-name').value;
             const age = parseInt(document.getElementById('player-age').value);
@@ -791,20 +748,50 @@
             const position = document.getElementById('player-position').value;
             const instagram = document.getElementById('player-instagram').value;
             const picFile = document.getElementById('player-pic').files[0];
-            let picUrl = '';
+            let picUrl = document.getElementById('player-pic').dataset.currentUrl || '';
             try {
                 if (picFile) {
                     const picRef = ref(storage, `player_pics/${picFile.name}`);
                     await uploadBytes(picRef, picFile);
                     picUrl = await getDownloadURL(picRef);
                 }
-                await addDoc(collection(db, 'players'), { name, age, skills, position, instagram, picUrl, addedBy: auth.currentUser.uid });
+                const playerData = { name, age, skills, position, instagram, picUrl, addedBy: auth.currentUser.uid };
+                if (editingPlayerId) {
+                    const playerRef = doc(db, 'players', editingPlayerId);
+                    await updateDoc(playerRef, playerData);
+                    editingPlayerId = null;
+                    document.getElementById('add-player-btn').textContent = t('addPlayer');
+                } else {
+                    await addDoc(collection(db, 'players'), {...playerData, timestamp: new Date() });
+                }
                 document.getElementById('add-player-form').reset();
+                document.getElementById('player-pic').dataset.currentUrl = '';
                 renderClubManager();
             } catch (error) {
-                console.error('Add player error:', error);
-                alert('Failed to add player: ' + error.message);
+                console.error('Player operation error:', error);
+                alert('Failed to add/update player: ' + error.message);
             }
+        }
+
+        async function deletePlayer(id) {
+            try {
+                await deleteDoc(doc(db, 'players', id));
+                renderClubManager();
+            } catch (error) {
+                console.error('Delete player error:', error);
+                alert('Failed to delete player: ' + error.message);
+            }
+        }
+
+        function editPlayer(player, id) {
+            document.getElementById('player-name').value = player.name;
+            document.getElementById('player-age').value = player.age;
+            document.getElementById('player-skills').value = player.skills.join(', ');
+            document.getElementById('player-position').value = player.position;
+            document.getElementById('player-instagram').value = player.instagram;
+            document.getElementById('player-pic').dataset.currentUrl = player.picUrl;
+            document.getElementById('add-player-btn').textContent = t('updatePlayer');
+            editingPlayerId = id;
         }
 
         async function addEvent(event) {
@@ -829,7 +816,7 @@
                 document.getElementById('roster-list').innerHTML = rosters.map(r => `<div class="card"><p>${r.name || 'Unknown'}</p></div>`).join('');
             });
             onSnapshot(collection(db, 'players'), (snapshot) => {
-                const players = snapshot.docs.map(doc => doc.data());
+                const players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 document.getElementById('player-list').innerHTML = players.map(p => `
                     <div class="card">
                         ${p.picUrl ? `<img src="${p.picUrl}" alt="${p.name}" class="player-pic">` : ''}
@@ -837,11 +824,13 @@
                         <p>Age: ${p.age}</p>
                         <p>Skills: ${p.skills.join(', ')}</p>
                         <p>Position: ${p.position}</p>
-                        <p>Instagram: <a href="https://instagram.com/${p.instagram}" target="_blank">@${p.instagram}</a></p>
+                        <p>${p.instagram ? `<a href="https://instagram.com/${p.instagram}" target="_blank"><i class="fab fa-instagram instagram-icon"></i></a>` : ''}</p>
+                        <button class="edit-btn" onclick="editPlayer(${JSON.stringify(p)}, '${p.id}')">Edit</button>
+                        <button class="delete-btn" onclick="deletePlayer('${p.id}')">Delete</button>
                     </div>
                 `).join('');
             });
-            document.getElementById('add-player-form').addEventListener('submit', addPlayer);
+            document.getElementById('add-player-form').addEventListener('submit', addOrUpdatePlayer);
 
             // Calendar setup
             const calendarEl = document.getElementById('calendar');
@@ -913,9 +902,7 @@
                         <select id="category-select" required></select>
                         <button id="add-financial-btn" type="submit">Add Financial Entry</button>
                     </form>
-                    <div id="financial-summary" class="financial-summary"></div>
                     <canvas id="cashChart"></canvas>
-                    <div id="financial-tips" class="card"></div>
                     <button id="export-financial-pdf">Export PDF</button>
                     <button id="export-financial-excel">Export Excel</button>
                 </div>
