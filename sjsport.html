@@ -1,0 +1,1270 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FootballPro Suite</title>
+    <link rel="manifest" href="/manifest.json">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            direction: ltr;
+        }
+        .rtl { direction: rtl; }
+        .container { display: flex; flex-direction: column; min-height: 100vh; }
+        header {
+            background: linear-gradient(90deg, #1e88e5, #42a5f5);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header img.logo { height: 40px; }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px auto;
+            gap: 1rem;
+            flex-grow: 1;
+        }
+        nav {
+            background: #1c2526;
+            padding: 1rem;
+            border-right: 1px solid #333;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        nav li {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        nav li:hover { background: #37474f; }
+        .module { display: none; padding: 1rem; }
+        .active { display: block; }
+        .card {
+            background: #1c2526;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        button {
+            background: linear-gradient(90deg, #1e88e5, #42a5f5);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        input, button, select { font-size: 1rem; }
+        canvas { max-width: 100%; background: #1c2526; }
+        iframe#zoom-meeting { border: none; border-radius: 8px; }
+        form { display: flex; flex-direction: column; gap: 0.5rem; }
+        form input, form select { background: #333; border: 1px solid #555; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; }
+        img.player-pic { max-width: 100px; border-radius: 50%; }
+        video { max-width: 100%; }
+        #tracking-canvas { border: 1px solid #555; background: #000; }
+        #calendar { max-width: 900px; margin: 40px auto; background: #1c2526; border-radius: 8px; }
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+            nav { border-right: none; border-bottom: 1px solid #333; }
+            nav ul { display: flex; flex-wrap: wrap; }
+            nav li { flex: 1 1 auto; text-align: center; }
+            button { padding: 0.5rem 1rem; }
+            iframe#zoom-meeting { height: 300px; }
+        }
+        /* New styles for financial summary */
+        .financial-summary {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .summary-card {
+            flex: 1;
+            background: linear-gradient(135deg, #1c2526, #2c3e50);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        .profit { color: #4caf50; }
+        .loss { color: #f44336; }
+        .tips-list {
+            list-style: none;
+            padding: 0;
+        }
+        .tips-list li {
+            background: #37474f;
+            margin: 0.5rem 0;
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+        /* Styles for financial history */
+        #financial-history {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .history-card {
+            background: linear-gradient(135deg, #1c2526, #2c3e50);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+        }
+        .history-card:hover {
+            transform: translateY(-5px);
+        }
+        .history-revenue { color: #4caf50; }
+        .history-expenses { color: #f44336; }
+        .history-date { font-size: 0.8rem; color: #9e9e9e; }
+        /* Styles for budget planning */
+        #budget-section {
+            margin-top: 2rem;
+        }
+        .budget-card {
+            background: linear-gradient(135deg, #1c2526, #2c3e50);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .variance-positive { color: #4caf50; }
+        .variance-negative { color: #f44336; }
+        #budget-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        @media (max-width: 768px) {
+            .financial-summary, #budget-list {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Firebase CDNs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
+        import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
+
+        // TensorFlow.js
+        import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest';
+
+        // Chart.js
+        const chartJsScript = document.createElement('script');
+        chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        document.head.appendChild(chartJsScript);
+
+        // jsPDF
+        const jsPDFScript = document.createElement('script');
+        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        document.head.appendChild(jsPDFScript);
+
+        // SheetJS for Excel
+        const sheetJsScript = document.createElement('script');
+        sheetJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(sheetJsScript);
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+        const storage = getStorage(app);
+        const messaging = getMessaging(app);
+        const provider = new GoogleAuthProvider();
+
+        // VAPID Key for FCM (replace with actual VAPID key from Firebase console)
+        const vapidKey = 'YOUR_VAPID_KEY_HERE';
+
+        // Global model cache
+        let cashFlowModel = null;
+        let matchmakerModel = null;
+        let injuryModel = null;
+
+        // Unsubscribe array for onSnapshots
+        let unsubscribes = [];
+
+        // Multilingual support
+        const translations = {
+            en: {
+                dashboard: "Dashboard",
+                financialHub: "Financial Hub",
+                scoutingNetwork: "Scouting Network",
+                playerWellness: "Player Wellness",
+                complianceWelfare: "Compliance & Welfare",
+                tacticsAI: "Tactics AI",
+                clubManager: "Club Manager",
+                fanEngagement: "Fan Engagement",
+                login: "Login with Google",
+                logout: "Logout",
+                addEntry: "Add Entry",
+                exportPDF: "Export PDF",
+                exportExcel: "Export Excel",
+                startCall: "Start Group Call",
+                riskAlerts: "Risk Alerts",
+                addPlayer: "Add Player",
+                playerName: "Player Name",
+                playerAge: "Age",
+                playerSkills: "Skills (comma-separated)",
+                playerPosition: "Position",
+                playerInstagram: "Instagram Handle",
+                playerPic: "Player Picture",
+                revenue: "Revenue",
+                expenses: "Expenses",
+                category: "Category",
+                addFinancial: "Add Financial Entry",
+                addScouting: "Add Scouting Info",
+                scoutName: "Scouted Player Name",
+                scoutAge: "Age",
+                scoutSkills: "Skills",
+                scoutCost: "Estimated Cost",
+                scoutVideo: "Match Video URL",
+                addWellness: "Add Wellness Entry",
+                wellnessPlayer: "Select Player",
+                wellnessFitness: "Fitness Score (0-100)",
+                wellnessInjury: "Injury Status",
+                wellnessMetrics: "Metrics (e.g., GPS data)",
+                uploadVideo: "Upload Video for AI Tracking",
+                trackPlayers: "Track Players",
+                addEvent: "Add Event",
+                eventDate: "Date",
+                eventTime: "Time",
+                eventType: "Type",
+                eventDescription: "Description",
+                nutrition: "Nutrition Tracking",
+                mealType: "Meal Type",
+                calories: "Calories",
+                carbs: "Carbs (grams)",
+                proteins: "Proteins (grams)",
+                fats: "Fats (grams)",
+                addNutrition: "Add Meal",
+                totalRevenue: "Total Revenue",
+                totalExpenses: "Total Expenses",
+                netStatus: "Net Status",
+                profit: "Profit",
+                loss: "Loss",
+                tips: "Tips to Avoid Loss and Increase Profits",
+                financialHistory: "Financial History",
+                entryDate: "Date",
+                entryRevenue: "Revenue",
+                entryExpenses: "Expenses",
+                entryCategory: "Category",
+                netProfitLoss: "Net Profit/Loss",
+                budgetPlanning: "Budget Planning",
+                addBudget: "Add Budget",
+                budgetedRevenue: "Budgeted Revenue",
+                budgetedExpenses: "Budgeted Expenses",
+                period: "Period (YYYY-MM)",
+                budgetedVsActual: "Budgeted vs Actual",
+                actualRevenue: "Actual Revenue",
+                actualExpenses: "Actual Expenses",
+                varianceRevenue: "Variance (Revenue)",
+                varianceExpenses: "Variance (Expenses)",
+                teamDetails: "Team Details",
+                teamName: "Team Name",
+                teamLogo: "Team Logo",
+                addTeam: "Add/Update Team"
+            },
+            ar: {
+                dashboard: "لوحة التحكم",
+                financialHub: "مركز المالية",
+                scoutingNetwork: "شبكة الكشافة",
+                playerWellness: "صحة اللاعبين",
+                complianceWelfare: "الامتثال والرفاهية",
+                tacticsAI: "ذكاء التكتيكات",
+                clubManager: "مدير النادي",
+                fanEngagement: "تفاعل المعجبين",
+                login: "تسجيل الدخول عبر جوجل",
+                logout: "تسجيل الخروج",
+                addEntry: "إضافة إدخال",
+                exportPDF: "تصدير PDF",
+                exportExcel: "تصدير Excel",
+                startCall: "بدء مكالمة جماعية",
+                riskAlerts: "تنبيهات المخاطر",
+                addPlayer: "إضافة لاعب",
+                playerName: "اسم اللاعب",
+                playerAge: "العمر",
+                playerSkills: "المهارات (مفصولة بفاصلة)",
+                playerPosition: "المركز",
+                playerInstagram: "حساب إنستغرام",
+                playerPic: "صورة اللاعب",
+                revenue: "الإيرادات",
+                expenses: "المصروفات",
+                category: "الفئة",
+                addFinancial: "إضافة إدخال مالي",
+                addScouting: "إضافة معلومات كشافة",
+                scoutName: "اسم اللاعب المكشوف",
+                scoutAge: "العمر",
+                scoutSkills: "المهارات",
+                scoutCost: "التكلفة التقريبية",
+                scoutVideo: "رابط فيديو المباراة",
+                addWellness: "إضافة إدخال صحي",
+                wellnessPlayer: "اختر اللاعب",
+                wellnessFitness: "درجة اللياقة (0-100)",
+                wellnessInjury: "حالة الإصابة",
+                wellnessMetrics: "المقاييس (مثل بيانات GPS)",
+                uploadVideo: "رفع فيديو لتتبع اللاعبين بالذكاء الاصطناعي",
+                trackPlayers: "تتبع اللاعبين",
+                addEvent: "إضافة حدث",
+                eventDate: "التاريخ",
+                eventTime: "الوقت",
+                eventType: "النوع",
+                eventDescription: "الوصف",
+                nutrition: "تتبع التغذية",
+                mealType: "نوع الوجبة",
+                calories: "السعرات الحرارية",
+                carbs: "الكربوهيدرات (جرام)",
+                proteins: "البروتين (جرام)",
+                fats: "الدهون (جرام)",
+                addNutrition: "إضافة وجبة",
+                totalRevenue: "إجمالي الإيرادات",
+                totalExpenses: "إجمالي المصروفات",
+                netStatus: "الحالة الصافية",
+                profit: "ربح",
+                loss: "خسارة",
+                tips: "نصائح لتجنب الخسارة وزيادة الأرباح",
+                financialHistory: "تاريخ المالية",
+                entryDate: "التاريخ",
+                entryRevenue: "الإيرادات",
+                entryExpenses: "المصروفات",
+                entryCategory: "الفئة",
+                netProfitLoss: "الربح/الخسارة الصافي",
+                budgetPlanning: "تخطيط الميزانية",
+                addBudget: "إضافة ميزانية",
+                budgetedRevenue: "الإيرادات المخططة",
+                budgetedExpenses: "المصروفات المخططة",
+                period: "الفترة (YYYY-MM)",
+                budgetedVsActual: "المخطط مقابل الفعلي",
+                actualRevenue: "الإيرادات الفعلية",
+                actualExpenses: "المصروفات الفعلية",
+                varianceRevenue: "الفرق (الإيرادات)",
+                varianceExpenses: "الفرق (المصروفات)",
+                teamDetails: "تفاصيل الفريق",
+                teamName: "اسم الفريق",
+                teamLogo: "شعار الفريق",
+                addTeam: "إضافة/تحديث الفريق"
+            }
+        };
+        let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
+        document.body.classList.toggle('rtl', lang === 'ar');
+        function t(key) { return translations[lang][key] || key; }
+
+        // Auth functions
+        async function login() {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                document.getElementById('user-profile').innerHTML = `
+                    <img src="${user.photoURL}" alt="Profile" style="width: 40px; border-radius: 50%;">
+                    <span>${user.displayName}</span>
+                `;
+                renderDashboard();
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed: ' + error.message);
+            }
+        }
+
+        function logout() {
+            auth.signOut().then(() => renderLogin()).catch(err => console.error('Logout error:', err));
+        }
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').catch(err => console.error('SW registration failed:', err));
+        }
+
+        // Render Login
+        function renderLogin() {
+            document.getElementById('auth-section').style.display = 'flex';
+            document.getElementById('auth-section').style.justifyContent = 'center';
+            document.getElementById('auth-section').style.alignItems = 'center';
+            document.getElementById('auth-section').style.flexDirection = 'column';
+            document.getElementById('auth-section').style.height = '100vh';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('user-profile').innerHTML = '';
+        }
+
+        // Render Dashboard
+        function renderDashboard() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'grid';
+            updateTitles();
+            document.querySelector('nav li[data-module="financial-hub"]').click();
+        }
+
+        function updateTitles() {
+            document.getElementById('login-btn').textContent = t('login');
+            document.getElementById('logout-btn').textContent = t('logout');
+            document.getElementById('lang-switch').textContent = 'Switch Language';
+            document.querySelector('nav li[data-module="financial-hub"]').textContent = t('financialHub');
+            document.querySelector('nav li[data-module="scouting-network"]').textContent = t('scoutingNetwork');
+            document.querySelector('nav li[data-module="player-wellness"]').textContent = t('playerWellness');
+            document.querySelector('nav li[data-module="compliance-welfare"]').textContent = t('complianceWelfare');
+            document.querySelector('nav li[data-module="tactics-ai"]').textContent = t('tacticsAI');
+            document.querySelector('nav li[data-module="club-manager"]').textContent = t('clubManager');
+            document.querySelector('nav li[data-module="fan-engagement"]').textContent = t('fanEngagement');
+            document.getElementById('financial-title').textContent = t('financialHub');
+            document.getElementById('scouting-title').textContent = t('scoutingNetwork');
+            document.getElementById('wellness-title').textContent = t('playerWellness');
+            document.getElementById('compliance-title').textContent = t('complianceWelfare');
+            document.getElementById('tactics-title').textContent = t('tacticsAI');
+            document.getElementById('club-title').textContent = t('clubManager');
+            document.getElementById('fan-title').textContent = t('fanEngagement');
+            document.getElementById('add-player-btn').textContent = t('addPlayer');
+            document.getElementById('player-name').placeholder = t('playerName');
+            document.getElementById('player-age').placeholder = t('playerAge');
+            document.getElementById('player-skills').placeholder = t('playerSkills');
+            document.getElementById('player-position').placeholder = t('playerPosition');
+            document.getElementById('player-instagram').placeholder = t('playerInstagram');
+            document.getElementById('player-pic-label').textContent = t('playerPic');
+            document.getElementById('add-financial-btn').textContent = t('addFinancial');
+            document.getElementById('revenue-input').placeholder = t('revenue');
+            document.getElementById('expenses-input').placeholder = t('expenses');
+            document.getElementById('category-select').innerHTML = `
+                <option value="">${t('category')}</option>
+                <option value="tickets">Tickets</option>
+                <option value="sponsorships">Sponsorships</option>
+                <option value="merchandise">Merchandise</option>
+            `;
+            document.getElementById('add-scouting-btn').textContent = t('addScouting');
+            document.getElementById('scout-name').placeholder = t('scoutName');
+            document.getElementById('scout-age').placeholder = t('scoutAge');
+            document.getElementById('scout-skills').placeholder = t('scoutSkills');
+            document.getElementById('scout-cost').placeholder = t('scoutCost');
+            document.getElementById('scout-video').placeholder = t('scoutVideo');
+            document.getElementById('add-wellness-btn').textContent = t('addWellness');
+            document.getElementById('wellness-fitness').placeholder = t('wellnessFitness');
+            document.getElementById('wellness-injury').innerHTML = `<option value="">${t('wellnessInjury')}</option><option value="none">None</option><option value="minor">Minor</option><option value="major">Major</option>`;
+            document.getElementById('wellness-metrics').placeholder = t('wellnessMetrics');
+            document.getElementById('upload-video-btn').textContent = t('uploadVideo');
+            document.getElementById('track-btn').textContent = t('trackPlayers');
+            document.getElementById('add-event-btn').textContent = t('addEvent');
+            document.getElementById('event-date').placeholder = t('eventDate');
+            document.getElementById('event-time').placeholder = t('eventTime');
+            document.getElementById('event-type').innerHTML = `<option value="">${t('eventType')}</option><option value="training">Training</option><option value="match">Match</option>`;
+            document.getElementById('event-description').placeholder = t('eventDescription');
+            document.getElementById('start-group-call').textContent = t('startCall');
+            // Nutrition titles
+            document.getElementById('nutrition-title').textContent = t('nutrition');
+            document.getElementById('meal-type').innerHTML = `
+                <option value="">${t('mealType')}</option>
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack">Snack</option>
+            `;
+            document.getElementById('calories').placeholder = t('calories');
+            document.getElementById('carbs').placeholder = t('carbs');
+            document.getElementById('proteins').placeholder = t('proteins');
+            document.getElementById('fats').placeholder = t('fats');
+            document.getElementById('add-nutrition-btn').textContent = t('addNutrition');
+        }
+
+        // Event Listeners
+        document.getElementById('login-btn').addEventListener('click', login);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        document.getElementById('lang-switch').addEventListener('click', () => {
+            lang = lang === 'en' ? 'ar' : 'en';
+            document.body.classList.toggle('rtl', lang === 'ar');
+            updateTitles();
+        });
+
+        // Nav clicks
+        document.querySelectorAll('nav li[data-module]').forEach(li => {
+            li.addEventListener('click', () => {
+                document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+                const moduleEl = document.getElementById(li.dataset.module);
+                moduleEl.classList.add('active');
+                // Clean unsubscribes
+                unsubscribes.forEach(unsub => unsub());
+                unsubscribes = [];
+                switch (li.dataset.module) {
+                    case 'financial-hub':
+                        renderFinancialHub();
+                        break;
+                    case 'scouting-network':
+                        renderScoutingNetwork();
+                        break;
+                    case 'player-wellness':
+                        renderPlayerWellness();
+                        break;
+                    case 'compliance-welfare':
+                        renderComplianceWelfare();
+                        break;
+                    case 'tactics-ai':
+                        renderTacticsAI();
+                        break;
+                    case 'club-manager':
+                        renderClubManager();
+                        break;
+                    case 'fan-engagement':
+                        renderFanEngagement();
+                        break;
+                }
+            });
+        });
+
+        // Financial Hub
+        async function loadCashFlowModel() {
+            if (cashFlowModel) return cashFlowModel;
+            try {
+                const modelUrl = await getDownloadURL(ref(storage, 'models/cashflow_model/model.json'));
+                cashFlowModel = await tf.loadLayersModel(modelUrl);
+            } catch (error) {
+                console.error('Model load error:', error);
+            }
+            return cashFlowModel;
+        }
+
+        async function predictCashFlow(pastData) {
+            const model = await loadCashFlowModel();
+            if (!model) {
+                return [Math.random() * 10000 - 5000];
+            }
+            const tensor = tf.tensor2d(pastData);
+            const prediction = model.predict(tensor);
+            return prediction.dataSync();
+        }
+
+        async function addFinancialEntry(event) {
+            event.preventDefault();
+            const revenue = parseFloat(document.getElementById('revenue-input').value) || 0;
+            const expenses = parseFloat(document.getElementById('expenses-input').value) || 0;
+            const category = document.getElementById('category-select').value;
+            try {
+                await addDoc(collection(db, 'financials'), { revenue, expenses, category, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('financial-form').reset();
+                renderFinancialHub();
+            } catch (error) {
+                console.error('Add financial entry error:', error);
+                alert('Failed to add financial entry: ' + error.message);
+            }
+        }
+
+        async function addBudgetEntry(event) {
+            event.preventDefault();
+            const category = document.getElementById('budget-category').value;
+            const period = document.getElementById('budget-period').value;
+            const budgetedRevenue = parseFloat(document.getElementById('budget-revenue').value) || 0;
+            const budgetedExpenses = parseFloat(document.getElementById('budget-expenses').value) || 0;
+            try {
+                await addDoc(collection(db, 'budgets'), { category, period, budgetedRevenue, budgetedExpenses, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('budget-form').reset();
+                renderFinancialHub();
+            } catch (error) {
+                console.error('Add budget entry error:', error);
+                alert('Failed to add budget: ' + error.message);
+            }
+        }
+
+        function renderFinancialHub() {
+            const chartCanvas = document.getElementById('cashChart');
+            if (chartCanvas.chart) chartCanvas.chart.destroy();
+            const unsub = onSnapshot(collection(db, 'financials'), (snapshot) => {
+                const data = snapshot.docs.map(doc => doc.data());
+                const pastData = data.map(d => [d.revenue || 0, d.expenses || 0]);
+                predictCashFlow(pastData).then(forecast => {
+                    if (forecast) {
+                        chartCanvas.chart = new Chart(chartCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: ['Past', 'Forecast'],
+                                datasets: [{
+                                    label: 'Cash Flow',
+                                    data: [...pastData.flat(), ...forecast],
+                                    borderColor: '#42a5f5',
+                                    backgroundColor: 'rgba(66, 165, 245, 0.2)',
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                scales: { y: { beginAtZero: true, ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } },
+                                plugins: { legend: { labels: { color: '#e0e0e0' } } }
+                            }
+                        });
+                        if (forecast[0] < 0) {
+                            getToken(messaging, { vapidKey }).then(token => {
+                                console.log('FCM Token:', token);
+                                const alertFunc = httpsCallable(functions, 'sendAlert');
+                                alertFunc({ message: 'Cash flow crisis predicted!' });
+                            }).catch(err => console.error('FCM error:', err));
+                        }
+                    }
+                });
+                // Calculate totals
+                let totalRevenue = 0;
+                let totalExpenses = 0;
+                data.forEach(d => {
+                    totalRevenue += d.revenue || 0;
+                    totalExpenses += d.expenses || 0;
+                });
+                const net = totalRevenue - totalExpenses;
+                const status = net >= 0 ? t('profit') : t('loss');
+                const statusClass = net >= 0 ? 'profit' : 'loss';
+                document.getElementById('financial-summary').innerHTML = `
+                    <div class="summary-card">
+                        <h3>${t('totalRevenue')}</h3>
+                        <p class="profit">$${totalRevenue.toFixed(2)}</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>${t('totalExpenses')}</h3>
+                        <p class="loss">$${totalExpenses.toFixed(2)}</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>${t('netStatus')}</h3>
+                        <p class="${statusClass}">$${net.toFixed(2)} (${status})</p>
+                    </div>
+                `;
+                document.getElementById('financial-tips').innerHTML = `
+                    <h3>${t('tips')}</h3>
+                    <ul class="tips-list">
+                        <li>قلل المصروفات غير الضرورية لتجنب الخسائر.</li>
+                        <li>زيادة الإيرادات من خلال الرعايات والتذاكر.</li>
+                        <li>تحليل الفئات لتحديد المجالات ذات العائد العالي.</li>
+                        <li>استخدم التنبؤات للتخطيط المالي المستقبلي.</li>
+                    </ul>
+                `;
+                // Render history
+                document.getElementById('financial-history').innerHTML = data.map(entry => `
+                    <div class="history-card">
+                        <p class="history-date">${t('entryDate')}: ${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()}</p>
+                        <p class="history-revenue">${t('entryRevenue')}: $${entry.revenue.toFixed(2)}</p>
+                        <p class="history-expenses">${t('entryExpenses')}: $${entry.expenses.toFixed(2)}</p>
+                        <p>${t('entryCategory')}: ${entry.category}</p>
+                        <p class="${(entry.revenue - entry.expenses) >= 0 ? 'profit' : 'loss'}">${t('netProfitLoss')}: $${(entry.revenue - entry.expenses).toFixed(2)}</p>
+                    </div>
+                `).join('');
+            });
+            unsubscribes.push(unsub);
+
+            const financialForm = document.getElementById('financial-form');
+            if (!financialForm.dataset.listenerAdded) {
+                financialForm.addEventListener('submit', addFinancialEntry);
+                financialForm.dataset.listenerAdded = 'true';
+            }
+
+            const exportPdfBtn = document.getElementById('export-financial-pdf');
+            if (!exportPdfBtn.dataset.listenerAdded) {
+                exportPdfBtn.addEventListener('click', () => {
+                    if (window.jspdf) {
+                        const { jsPDF } = window.jspdf;
+                        const pdf = new jsPDF();
+                        pdf.text('Financial Report', 10, 10);
+                        pdf.save('financial-report.pdf');
+                    } else {
+                        alert('jsPDF not loaded yet');
+                    }
+                });
+                exportPdfBtn.dataset.listenerAdded = 'true';
+            }
+
+            const exportExcelBtn = document.getElementById('export-financial-excel');
+            if (!exportExcelBtn.dataset.listenerAdded) {
+                exportExcelBtn.addEventListener('click', () => {
+                    if (window.XLSX) {
+                        const wb = XLSX.utils.book_new();
+                        const ws = XLSX.utils.aoa_to_sheet([['Revenue', 'Expenses'], [10000, 5000]]);
+                        XLSX.utils.book_append_sheet(wb, ws, 'Financials');
+                        XLSX.writeFile(wb, 'financial-report.xlsx');
+                    } else {
+                        alert('SheetJS not loaded yet');
+                    }
+                });
+                exportExcelBtn.dataset.listenerAdded = 'true';
+            }
+        }
+
+        // Scouting Network
+        async function loadMatchmakerModel() {
+            if (matchmakerModel) return matchmakerModel;
+            try {
+                const modelUrl = await getDownloadURL(ref(storage, 'models/matchmaker_model/model.json'));
+                matchmakerModel = await tf.loadLayersModel(modelUrl);
+            } catch (error) {
+                console.error('Model load error:', error);
+            }
+            return matchmakerModel;
+        }
+
+        async function matchmakePlayers(teamNeeds) {
+            const model = await loadMatchmakerModel();
+            if (!model) {
+                return [{ name: 'Dummy Player 1' }, { name: 'Dummy Player 2' }];
+            }
+            const players = await getDocs(collection(db, 'players'));
+            const suggestions = players.docs.map(p => {
+                const score = model.predict(tf.tensor2d([Object.values(p.data()), Object.values(teamNeeds)])).dataSync()[0];
+                return score > 0.7 ? p.data() : null;
+            }).filter(Boolean);
+            return suggestions;
+        }
+
+        async function addScoutingInfo(event) {
+            event.preventDefault();
+            const name = document.getElementById('scout-name').value;
+            const age = parseInt(document.getElementById('scout-age').value);
+            const skills = document.getElementById('scout-skills').value.split(',').map(s => s.trim());
+            const cost = parseFloat(document.getElementById('scout-cost').value) || 0;
+            const videoUrl = document.getElementById('scout-video').value;
+            try {
+                await addDoc(collection(db, 'scouting'), { name, age, skills, cost, videoUrl, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('scouting-form').reset();
+                renderScoutingNetwork();
+            } catch (error) {
+                console.error('Add scouting info error:', error);
+                alert('Failed to add scouting info: ' + error.message);
+            }
+        }
+
+        function renderScoutingNetwork() {
+            matchmakePlayers({age: 20, skills: ['speed'], cost: 1000000}).then(sugs => {
+                document.getElementById('player-suggestions').innerHTML = sugs.map(s => `<div class="card"><p>${s.name || 'Unknown'}</p></div>`).join('');
+            }).catch(err => console.error('Scouting error:', err));
+
+            onSnapshot(collection(db, 'scouting'), (snapshot) => {
+                const scouts = snapshot.docs.map(doc => doc.data());
+                document.getElementById('scouting-list').innerHTML = scouts.map(s => `
+                    <div class="card">
+                        <p>Name: ${s.name}</p>
+                        <p>Age: ${s.age}</p>
+                        <p>Skills: ${s.skills.join(', ')}</p>
+                        <p>Cost: $${s.cost}</p>
+                        ${s.videoUrl ? `<a href="${s.videoUrl}" target="_blank">Watch Video</a>` : ''}
+                    </div>
+                `).join('');
+            });
+
+            document.getElementById('scouting-form').addEventListener('submit', addScoutingInfo);
+        }
+
+        // Player Wellness
+        async function loadInjuryModel() {
+            if (injuryModel) return injuryModel;
+            try {
+                const modelUrl = await getDownloadURL(ref(storage, 'models/injury_model/model.json'));
+                injuryModel = await tf.loadLayersModel(modelUrl);
+            } catch (error) {
+                console.error('Model load error:', error);
+            }
+            return injuryModel;
+        }
+
+        async function predictInjury(playerData) {
+            const model = await loadInjuryModel();
+            if (!model) {
+                return Math.random() > 0.5 ? 'High Risk' : 'Low';
+            }
+            return model.predict(tf.tensor2d([playerData.metrics || [0,0,0]])).dataSync() > 0.5 ? 'High Risk' : 'Low';
+        }
+
+        async function addWellnessEntry(event) {
+            event.preventDefault();
+            const player = document.getElementById('wellness-player').value;
+            const fitness = parseInt(document.getElementById('wellness-fitness').value);
+            const injury = document.getElementById('wellness-injury').value;
+            const metrics = document.getElementById('wellness-metrics').value;
+            try {
+                await addDoc(collection(db, 'wellness'), { player, fitness, injury, metrics, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('wellness-form').reset();
+                renderPlayerWellness();
+            } catch (error) {
+                console.error('Add wellness entry error:', error);
+                alert('Failed to add wellness entry: ' + error.message);
+            }
+        }
+
+        async function addNutritionEntry(event) {
+            event.preventDefault();
+            const mealType = document.getElementById('meal-type').value;
+            const calories = parseInt(document.getElementById('calories').value);
+            const carbs = parseInt(document.getElementById('carbs').value);
+            const proteins = parseInt(document.getElementById('proteins').value);
+            const fats = parseInt(document.getElementById('fats').value);
+            try {
+                await addDoc(collection(db, 'nutrition'), { mealType, calories, carbs, proteins, fats, player: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('nutrition-form').reset();
+                renderNutritionChart();
+                showNutritionTips(proteins, carbs);
+            } catch (error) {
+                console.error('Add nutrition entry error:', error);
+                alert('Failed to add nutrition entry: ' + error.message);
+            }
+        }
+
+        function renderNutritionChart() {
+            const chartCanvas = document.getElementById('nutritionChart');
+            if (chartCanvas.chart) chartCanvas.chart.destroy();
+            const unsub = onSnapshot(collection(db, 'nutrition'), (snapshot) => {
+                const entries = snapshot.docs.map(doc => doc.data());
+                // Aggregate daily totals, for simplicity, show last entry
+                const data = entries[entries.length - 1] || { carbs: 0, proteins: 0, fats: 0 };
+                chartCanvas.chart = new Chart(chartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Carbs', 'Proteins', 'Fats'],
+                        datasets: [{ data: [data.carbs, data.proteins, data.fats], backgroundColor: '#42a5f5' }]
+                    },
+                    options: {
+                        scales: { y: { beginAtZero: true, ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            });
+            unsubscribes.push(unsub);
+        }
+
+        function showNutritionTips(proteins, carbs) {
+            const tipsDiv = document.getElementById('nutrition-tips');
+            let tips = '';
+            if (proteins < 50) {
+                tips += '<p>Increase proteins to at least 1.6g/kg body weight for muscle recovery.</p>';
+            }
+            if (carbs < 200) {
+                tips += '<p>Add more carbs for energy, aim for 45-65% of daily calories.</p>';
+            }
+            tipsDiv.innerHTML = tips || '<p>Nutrition looks good!</p>';
+        }
+
+        function renderPlayerWellness() {
+            const chartCanvas = document.getElementById('wellnessChart');
+            if (chartCanvas.chart) chartCanvas.chart.destroy();
+            predictInjury({metrics: [80, 90, 70]}).then(risk => {
+                document.getElementById('wellnessChart').parentElement.insertAdjacentHTML('beforeend', `<p>Risk: ${risk}</p>`);
+            });
+            chartCanvas.chart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: ['Fitness', 'Injury Risk', 'Performance'],
+                    datasets: [{ data: [80, 20, 90], backgroundColor: '#42a5f5' }]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true, ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            const unsubWellness = onSnapshot(collection(db, 'wellness'), (snapshot) => {
+                const entries = snapshot.docs.map(doc => doc.data());
+                document.getElementById('wellness-list').innerHTML = entries.map(e => `
+                    <div class="card">
+                        <p>Player: ${e.player}</p>
+                        <p>Fitness: ${e.fitness}</p>
+                        <p>Injury: ${e.injury}</p>
+                        <p>Metrics: ${e.metrics}</p>
+                    </div>
+                `).join('');
+            });
+            unsubscribes.push(unsubWellness);
+
+            const playerSelect = document.getElementById('wellness-player');
+            if (playerSelect) {
+                populatePlayerDropdown(playerSelect);
+            }
+
+            const wellnessForm = document.getElementById('wellness-form');
+            if (!wellnessForm.dataset.listenerAdded) {
+                wellnessForm.addEventListener('submit', addWellnessEntry);
+                wellnessForm.dataset.listenerAdded = 'true';
+            }
+
+            // Nutrition
+            renderNutritionChart();
+            const nutritionForm = document.getElementById('nutrition-form');
+            if (!nutritionForm.dataset.listenerAdded) {
+                nutritionForm.addEventListener('submit', addNutritionEntry);
+                nutritionForm.dataset.listenerAdded = 'true';
+            }
+        }
+
+        // Compliance & Welfare
+        async function startGroupCall() {
+            try {
+                const createMeeting = httpsCallable(functions, 'createZoomMeeting');
+                const result = await createMeeting({ topic: 'Compliance Meeting', startTime: new Date() });
+                const { meetingId, password } = result.data;
+                await addDoc(collection(db, 'meetings'), {
+                    meetingId,
+                    password,
+                    createdBy: auth.currentUser.uid,
+                    createdAt: new Date(),
+                    type: 'compliance'
+                });
+                document.getElementById('zoom-meeting').src = `https://zoom.us/j/${meetingId}?pwd=${password}`;
+                document.getElementById('zoom-meeting').style.display = 'block';
+            } catch (error) {
+                console.error('Start call error:', error);
+                alert('Failed to start group call: ' + error.message);
+            }
+        }
+
+        function renderComplianceWelfare() {
+            const alertsDiv = document.getElementById('risk-alerts');
+            alertsDiv.innerHTML = '<p>No risks detected.</p>';
+            const unsub = onSnapshot(collection(db, 'meetings'), (snapshot) => {
+                const meetings = snapshot.docs
+                    .filter(doc => doc.data().type === 'compliance')
+                    .map(doc => doc.data());
+                if (meetings.length > 0) {
+                    const latestMeeting = meetings[0];
+                    document.getElementById('zoom-meeting').src = `https://zoom.us/j/${latestMeeting.meetingId}?pwd=${latestMeeting.password}`;
+                    document.getElementById('zoom-meeting').style.display = 'block';
+                }
+            });
+            unsubscribes.push(unsub);
+
+            const startCallBtn = document.getElementById('start-group-call');
+            if (!startCallBtn.dataset.listenerAdded) {
+                startCallBtn.addEventListener('click', startGroupCall);
+                startCallBtn.dataset.listenerAdded = 'true';
+            }
+        }
+
+        // Tactics AI
+        async function uploadVideo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const videoRef = ref(storage, `tactics_videos/${file.name}`);
+                await uploadBytes(videoRef, file);
+                const videoUrl = await getDownloadURL(videoRef);
+                document.getElementById('tactics-video').src = videoUrl;
+                await addDoc(collection(db, 'tactics_videos'), { url: videoUrl, addedBy: auth.currentUser.uid, timestamp: new Date() });
+                alert('Video uploaded successfully!');
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Failed to upload video: ' + error.message);
+            }
+        }
+
+        async function trackPlayers() {
+            const video = document.getElementById('tactics-video');
+            const canvas = document.getElementById('tracking-canvas');
+            canvas.style.display = 'block';
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose);
+            const detectPose = async () => {
+                if (video.paused || video.ended) return;
+                const poses = await detector.estimatePoses(video);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                poses.forEach(pose => {
+                    pose.keypoints.forEach(kpt => {
+                        if (kpt.score > 0.3) {
+                            ctx.beginPath();
+                            ctx.arc(kpt.x, kpt.y, 5, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'red';
+                            ctx.fill();
+                        }
+                    });
+                });
+                requestAnimationFrame(detectPose);
+            };
+            video.addEventListener('loadedmetadata', () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            });
+            video.play().then(() => detectPose());
+        }
+
+        function renderTacticsAI() {
+            getDownloadURL(ref(storage, 'videos/match.mp4')).then(url => {
+                document.getElementById('tactics-video').src = url;
+            }).catch(err => {
+                console.error('Video load error:', err);
+                document.getElementById('tactics-video').src = 'https://example.com/dummy-video.mp4';
+            });
+
+            const videoForm = document.getElementById('video-upload-form');
+            if (!videoForm.dataset.listenerAdded) {
+                videoForm.addEventListener('submit', (e) => { e.preventDefault(); uploadVideo(e); });
+                videoForm.dataset.listenerAdded = 'true';
+            }
+
+            const trackBtn = document.getElementById('track-btn');
+            if (!trackBtn.dataset.listenerAdded) {
+                trackBtn.addEventListener('click', trackPlayers);
+                trackBtn.dataset.listenerAdded = 'true';
+            }
+        }
+
+        // Club Manager
+        async function addPlayer(event) {
+            event.preventDefault();
+            const name = document.getElementById('player-name').value;
+            const age = parseInt(document.getElementById('player-age').value);
+            const skills = document.getElementById('player-skills').value.split(',').map(s => s.trim());
+            const position = document.getElementById('player-position').value;
+            const instagram = document.getElementById('player-instagram').value;
+            const picFile = document.getElementById('player-pic').files[0];
+            let picUrl = '';
+            try {
+                if (picFile) {
+                    const picRef = ref(storage, `player_pics/${picFile.name}`);
+                    await uploadBytes(picRef, picFile);
+                    picUrl = await getDownloadURL(picRef);
+                }
+                await addDoc(collection(db, 'players'), { name, age, skills, position, instagram, picUrl, addedBy: auth.currentUser.uid });
+                document.getElementById('add-player-form').reset();
+                renderClubManager();
+            } catch (error) {
+                console.error('Add player error:', error);
+                alert('Failed to add player: ' + error.message);
+            }
+        }
+
+        async function addEvent(event) {
+            event.preventDefault();
+            const date = document.getElementById('event-date').value;
+            const time = document.getElementById('event-time').value;
+            const type = document.getElementById('event-type').value;
+            const description = document.getElementById('event-description').value;
+            try {
+                await addDoc(collection(db, 'events'), { title: `${type} - ${description}`, start: `${date}T${time}`, type, description, addedBy: auth.currentUser.uid });
+                document.getElementById('event-form').reset();
+                renderClubManager();
+            } catch (error) {
+                console.error('Add event error:', error);
+                alert('Failed to add event: ' + error.message);
+            }
+        }
+
+        let calendarInstance = null;
+
+        function renderClubManager() {
+            onSnapshot(collection(db, 'rosters'), (snapshot) => {
+                const rosters = snapshot.docs.map(doc => doc.data());
+                document.getElementById('roster-list').innerHTML = rosters.map(r => `<div class="card"><p>${r.name || 'Unknown'}</p></div>`).join('');
+            });
+            onSnapshot(collection(db, 'players'), (snapshot) => {
+                const players = snapshot.docs.map(doc => doc.data());
+                document.getElementById('player-list').innerHTML = players.map(p => `
+                    <div class="card">
+                        ${p.picUrl ? `<img src="${p.picUrl}" alt="${p.name}" class="player-pic">` : ''}
+                        <p>Name: ${p.name}</p>
+                        <p>Age: ${p.age}</p>
+                        <p>Skills: ${p.skills.join(', ')}</p>
+                        <p>Position: ${p.position}</p>
+                        <p>Instagram: <a href="https://instagram.com/${p.instagram}" target="_blank">@${p.instagram}</a></p>
+                    </div>
+                `).join('');
+            });
+            document.getElementById('add-player-form').addEventListener('submit', addPlayer);
+
+            // Calendar setup
+            const calendarEl = document.getElementById('calendar');
+            onSnapshot(collection(db, 'events'), (snapshot) => {
+                const events = snapshot.docs.map(doc => doc.data());
+                if (calendarInstance) {
+                    calendarInstance.destroy();
+                }
+                calendarInstance = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    events: events,
+                    eventColor: '#42a5f5',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek'
+                    }
+                });
+                calendarInstance.render();
+            });
+            document.getElementById('event-form').addEventListener('submit', addEvent);
+        }
+
+        // Fan Engagement
+        function renderFanEngagement() {
+            document.getElementById('campaign-suggestions').innerHTML = '<div class="card"><p>Suggested Campaign: Ticket Promo</p></div>';
+        }
+
+        // Initial render
+        auth.onAuthStateChanged(user => {
+            if (user) renderDashboard();
+            else renderLogin();
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="/logo.png" alt="FootballPro Suite" class="logo">
+            <div id="user-profile" style="display: flex; align-items: center; gap: 0.5rem;"></div>
+            <button id="lang-switch">Switch Language</button>
+        </header>
+        <div id="auth-section" style="display: none;">
+            <h1 style="text-align: center;">FootballPro Suite</h1>
+            <button id="login-btn">Login with Google</button>
+        </div>
+        <div id="dashboard" style="display: none;" class="dashboard">
+            <nav>
+                <ul>
+                    <li data-module="financial-hub">Financial Hub</li>
+                    <li data-module="scouting-network">Scouting Network</li>
+                    <li data-module="player-wellness">Player Wellness</li>
+                    <li data-module="compliance-welfare">Compliance & Welfare</li>
+                    <li data-module="tactics-ai">Tactics AI</li>
+                    <li data-module="club-manager">Club Manager</li>
+                    <li data-module="fan-engagement">Fan Engagement</li>
+                    <li id="logout-btn">Logout</li>
+                </ul>
+            </nav>
+            <main>
+                <div id="ai-insights" class="card">AI Insights Panel (Overall Predictions)</div>
+                <div id="financial-hub" class="module">
+                    <h2 id="financial-title"></h2>
+                    <form id="financial-form">
+                        <input id="revenue-input" type="number" placeholder="Revenue" step="0.01" required>
+                        <input id="expenses-input" type="number" placeholder="Expenses" step="0.01" required>
+                        <select id="category-select" required></select>
+                        <button id="add-financial-btn" type="submit">Add Financial Entry</button>
+                    </form>
+                    <div id="financial-summary" class="financial-summary"></div>
+                    <canvas id="cashChart"></canvas>
+                    <div id="financial-tips" class="card"></div>
+                    <h3>${t('financialHistory')}</h3>
+                    <div id="financial-history"></div>
+                    <div id="budget-section">
+                        <h3 id="budget-title"></h3>
+                        <form id="budget-form">
+                            <select id="budget-category" required></select>
+                            <input id="budget-period" type="text" placeholder="Period (YYYY-MM)" required>
+                            <input id="budget-revenue" type="number" placeholder="Budgeted Revenue" step="0.01" required>
+                            <input id="budget-expenses" type="number" placeholder="Budgeted Expenses" step="0.01" required>
+                            <button id="add-budget-btn" type="submit">Add Budget</button>
+                        </form>
+                        <div id="budget-list"></div>
+                    </div>
+                    <button id="export-financial-pdf">Export PDF</button>
+                    <button id="export-financial-excel">Export Excel</button>
+                </div>
+                <div id="scouting-network" class="module">
+                    <h2 id="scouting-title"></h2>
+                    <form id="scouting-form">
+                        <input id="scout-name" type="text" placeholder="Scouted Player Name" required>
+                        <input id="scout-age" type="number" placeholder="Age" required>
+                        <input id="scout-skills" type="text" placeholder="Skills (comma-separated)" required>
+                        <input id="scout-cost" type="number" placeholder="Estimated Cost" required>
+                        <input id="scout-video" type="url" placeholder="Match Video URL">
+                        <button id="add-scouting-btn" type="submit">Add Scouting Info</button>
+                    </form>
+                    <div id="scouting-list"></div>
+                    <div id="player-suggestions"></div>
+                </div>
+                <div id="player-wellness" class="module">
+                    <h2 id="wellness-title"></h2>
+                    <form id="wellness-form">
+                        <select id="wellness-player" required></select>
+                        <input id="wellness-fitness" type="number" placeholder="Fitness Score (0-100)" min="0" max="100" required>
+                        <select id="wellness-injury" required></select>
+                        <input id="wellness-metrics" type="text" placeholder="Metrics (e.g., GPS data)">
+                        <button id="add-wellness-btn" type="submit">Add Wellness Entry</button>
+                    </form>
+                    <div id="wellness-list"></div>
+                    <canvas id="wellnessChart"></canvas>
+                    <h3 id="nutrition-title"></h3>
+                    <form id="nutrition-form">
+                        <select id="meal-type" required></select>
+                        <input id="calories" type="number" placeholder="Calories" required>
+                        <input id="carbs" type="number" placeholder="Carbs (grams)" required>
+                        <input id="proteins" type="number" placeholder="Proteins (grams)" required>
+                        <input id="fats" type="number" placeholder="Fats (grams)" required>
+                        <button id="add-nutrition-btn" type="submit">Add Meal</button>
+                    </form>
+                    <div id="nutrition-list"></div>
+                    <canvas id="nutritionChart"></canvas>
+                    <div id="nutrition-tips"></div>
+                </div>
+                <div id="compliance-welfare" class="module">
+                    <h2 id="compliance-title"></h2>
+                    <button id="start-group-call">Start Group Call</button>
+                    <div id="risk-alerts"></div>
+                    <iframe id="zoom-meeting" style="display:none; width: 100%; height: 400px;"></iframe>
+                </div>
+                <div id="tactics-ai" class="module">
+                    <h2 id="tactics-title"></h2>
+                    <form id="video-upload-form">
+                        <input id="tactics-video-input" type="file" accept="video/*" required>
+                        <button id="upload-video-btn" type="submit">Upload Video for AI Tracking</button>
+                    </form>
+                    <video id="tactics-video" controls style="width: 100%;"></video>
+                    <button id="track-btn">Track Players</button>
+                    <canvas id="tracking-canvas" width="640" height="480" style="display: none;"></canvas>
+                </div>
+                <div id="club-manager" class="module">
+                    <h2 id="club-title"></h2>
+                    <form id="team-form">
+                        <input id="team-name" type="text" placeholder="Team Name" required>
+                        <label id="team-logo-label" for="team-logo">Team Logo</label>
+                        <input id="team-logo" type="file" accept="image/*">
+                        <button id="add-team-btn" type="submit">Add/Update Team</button>
+                    </form>
+                    <form id="add-player-form">
+                        <input id="player-name" type="text" placeholder="Player Name" required>
+                        <input id="player-age" type="number" placeholder="Age" required>
+                        <input id="player-skills" type="text" placeholder="Skills (comma-separated)" required>
+                        <input id="player-position" type="text" placeholder="Position" required>
+                        <input id="player-instagram" type="text" placeholder="Instagram Handle">
+                        <label id="player-pic-label" for="player-pic">Player Picture</label>
+                        <input id="player-pic" type="file" accept="image/*">
+                        <button id="add-player-btn" type="submit">Add Player</button>
+                    </form>
+                    <div id="player-list"></div>
+                    <form id="event-form">
+                        <input id="event-date" type="date" required>
+                        <input id="event-time" type="time" required>
+                        <select id="event-type" required></select>
+                        <input id="event-description" type="text" placeholder="Description" required>
+                        <button id="add-event-btn" type="submit">Add Event</button>
+                    </form>
+                    <div id="roster-list"></div>
+                    <div id="calendar"></div>
+                </div>
+                <div id="fan-engagement" class="module">
+                    <h2 id="fan-title"></h2>
+                    <div id="campaign-suggestions"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
+```
