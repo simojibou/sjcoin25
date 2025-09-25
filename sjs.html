@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FootballPro Suite</title>
     <link rel="manifest" href="/manifest.json">
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
     <style>
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -90,29 +90,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <!-- Firebase CDNs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
-        import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
-        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-functions.js";
+        import { getStorage, ref, getDownloadURL, uploadBytes } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging.js";
 
         // TensorFlow.js
-        import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest';
+        import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0';
+        import * as poseDetection from '@tensorflow-models/pose-detection';
 
         // Chart.js
         const chartJsScript = document.createElement('script');
-        chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        chartJsScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0';
         document.head.appendChild(chartJsScript);
 
         // jsPDF
         const jsPDFScript = document.createElement('script');
-        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js';
         document.head.appendChild(jsPDFScript);
 
         // SheetJS for Excel
         const sheetJsScript = document.createElement('script');
-        sheetJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        sheetJsScript.src = 'https://cdn.sheetjs.com/xlsx-latest/xlsx.full.min.js';
         document.head.appendChild(sheetJsScript);
 
         // Firebase Config
@@ -137,6 +138,14 @@
 
         // VAPID Key for FCM (replace with actual VAPID key from Firebase console)
         const vapidKey = 'YOUR_VAPID_KEY_HERE';
+
+        // Global model cache
+        let cashFlowModel = null;
+        let matchmakerModel = null;
+        let injuryModel = null;
+
+        // Unsubscribe array for onSnapshots
+        let unsubscribes = [];
 
         // Multilingual support
         const translations = {
@@ -184,7 +193,14 @@
                 eventDate: "Date",
                 eventTime: "Time",
                 eventType: "Type",
-                eventDescription: "Description"
+                eventDescription: "Description",
+                nutrition: "Nutrition Tracking",
+                mealType: "Meal Type",
+                calories: "Calories",
+                carbs: "Carbs (grams)",
+                proteins: "Proteins (grams)",
+                fats: "Fats (grams)",
+                addNutrition: "Add Meal"
             },
             ar: {
                 dashboard: "لوحة التحكم",
@@ -230,7 +246,14 @@
                 eventDate: "التاريخ",
                 eventTime: "الوقت",
                 eventType: "النوع",
-                eventDescription: "الوصف"
+                eventDescription: "الوصف",
+                nutrition: "تتبع التغذية",
+                mealType: "نوع الوجبة",
+                calories: "السعرات الحرارية",
+                carbs: "الكربوهيدرات (جرام)",
+                proteins: "البروتين (جرام)",
+                fats: "الدهون (جرام)",
+                addNutrition: "إضافة وجبة"
             }
         };
         let lang = navigator.language.startsWith('ar') ? 'ar' : 'en';
@@ -333,6 +356,20 @@
             document.getElementById('event-type').innerHTML = `<option value="">${t('eventType')}</option><option value="training">Training</option><option value="match">Match</option>`;
             document.getElementById('event-description').placeholder = t('eventDescription');
             document.getElementById('start-group-call').textContent = t('startCall');
+            // Nutrition titles
+            document.getElementById('nutrition-title').textContent = t('nutrition');
+            document.getElementById('meal-type').innerHTML = `
+                <option value="">${t('mealType')}</option>
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack">Snack</option>
+            `;
+            document.getElementById('calories').placeholder = t('calories');
+            document.getElementById('carbs').placeholder = t('carbs');
+            document.getElementById('proteins').placeholder = t('proteins');
+            document.getElementById('fats').placeholder = t('fats');
+            document.getElementById('add-nutrition-btn').textContent = t('addNutrition');
         }
 
         // Event Listeners
@@ -350,6 +387,9 @@
                 document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
                 const moduleEl = document.getElementById(li.dataset.module);
                 moduleEl.classList.add('active');
+                // Clean unsubscribes
+                unsubscribes.forEach(unsub => unsub());
+                unsubscribes = [];
                 switch (li.dataset.module) {
                     case 'financial-hub':
                         renderFinancialHub();
@@ -378,13 +418,14 @@
 
         // Financial Hub
         async function loadCashFlowModel() {
+            if (cashFlowModel) return cashFlowModel;
             try {
                 const modelUrl = await getDownloadURL(ref(storage, 'models/cashflow_model/model.json'));
-                return tf.loadLayersModel(modelUrl);
+                cashFlowModel = await tf.loadLayersModel(modelUrl);
             } catch (error) {
                 console.error('Model load error:', error);
-                return null;
             }
+            return cashFlowModel;
         }
 
         async function predictCashFlow(pastData) {
@@ -415,7 +456,7 @@
         function renderFinancialHub() {
             const chartCanvas = document.getElementById('cashChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
-            onSnapshot(collection(db, 'financials'), (snapshot) => {
+            const unsub = onSnapshot(collection(db, 'financials'), (snapshot) => {
                 const data = snapshot.docs.map(doc => doc.data());
                 const pastData = data.map(d => [d.revenue || 0, d.expenses || 0]);
                 predictCashFlow(pastData).then(forecast => {
@@ -447,39 +488,60 @@
                     }
                 });
             });
+            unsubscribes.push(unsub);
 
-            document.getElementById('financial-form').addEventListener('submit', addFinancialEntry);
+            const financialForm = document.getElementById('financial-form');
+            if (!financialForm.dataset.listenerAdded) {
+                financialForm.addEventListener('submit', addFinancialEntry);
+                financialForm.dataset.listenerAdded = 'true';
+            }
 
-            document.getElementById('export-financial-pdf').addEventListener('click', () => {
-                if (window.jspdf) {
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF();
-                    pdf.text('Financial Report', 10, 10);
-                    pdf.save('financial-report.pdf');
-                } else {
-                    alert('jsPDF not loaded yet');
-                }
-            });
+            const exportPdfBtn = document.getElementById('export-financial-pdf');
+            if (!exportPdfBtn.dataset.listenerAdded) {
+                exportPdfBtn.addEventListener('click', () => {
+                    if (window.jspdf) {
+                        const { jsPDF } = window.jspdf;
+                        const pdf = new jsPDF();
+                        pdf.text('Financial Report', 10, 10);
+                        pdf.save('financial-report.pdf');
+                    } else {
+                        alert('jsPDF not loaded yet');
+                    }
+                });
+                exportPdfBtn.dataset.listenerAdded = 'true';
+            }
 
-            document.getElementById('export-financial-excel').addEventListener('click', () => {
-                if (window.XLSX) {
-                    const wb = XLSX.utils.book_new();
-                    const ws = XLSX.utils.aoa_to_sheet([['Revenue', 'Expenses'], [10000, 5000]]);
-                    XLSX.utils.book_append_sheet(wb, ws, 'Financials');
-                    XLSX.writeFile(wb, 'financial-report.xlsx');
-                } else {
-                    alert('SheetJS not loaded yet');
-                }
-            });
+            const exportExcelBtn = document.getElementById('export-financial-excel');
+            if (!exportExcelBtn.dataset.listenerAdded) {
+                exportExcelBtn.addEventListener('click', () => {
+                    if (window.XLSX) {
+                        const wb = XLSX.utils.book_new();
+                        const ws = XLSX.utils.aoa_to_sheet([['Revenue', 'Expenses'], [10000, 5000]]);
+                        XLSX.utils.book_append_sheet(wb, ws, 'Financials');
+                        XLSX.writeFile(wb, 'financial-report.xlsx');
+                    } else {
+                        alert('SheetJS not loaded yet');
+                    }
+                });
+                exportExcelBtn.dataset.listenerAdded = 'true';
+            }
         }
 
         // Scouting Network
-        async function matchmakePlayers(teamNeeds) {
-            let model;
+        async function loadMatchmakerModel() {
+            if (matchmakerModel) return matchmakerModel;
             try {
-                model = await tf.loadLayersModel(await getDownloadURL(ref(storage, 'models/matchmaker_model/model.json')));
+                const modelUrl = await getDownloadURL(ref(storage, 'models/matchmaker_model/model.json'));
+                matchmakerModel = await tf.loadLayersModel(modelUrl);
             } catch (error) {
                 console.error('Model load error:', error);
+            }
+            return matchmakerModel;
+        }
+
+        async function matchmakePlayers(teamNeeds) {
+            const model = await loadMatchmakerModel();
+            if (!model) {
                 return [{ name: 'Dummy Player 1' }, { name: 'Dummy Player 2' }];
             }
             const players = await getDocs(collection(db, 'players'));
@@ -512,7 +574,7 @@
                 document.getElementById('player-suggestions').innerHTML = sugs.map(s => `<div class="card"><p>${s.name || 'Unknown'}</p></div>`).join('');
             }).catch(err => console.error('Scouting error:', err));
 
-            onSnapshot(collection(db, 'scouting'), (snapshot) => {
+            const unsub = onSnapshot(collection(db, 'scouting'), (snapshot) => {
                 const scouts = snapshot.docs.map(doc => doc.data());
                 document.getElementById('scouting-list').innerHTML = scouts.map(s => `
                     <div class="card">
@@ -524,17 +586,30 @@
                     </div>
                 `).join('');
             });
+            unsubscribes.push(unsub);
 
-            document.getElementById('scouting-form').addEventListener('submit', addScoutingInfo);
+            const scoutingForm = document.getElementById('scouting-form');
+            if (!scoutingForm.dataset.listenerAdded) {
+                scoutingForm.addEventListener('submit', addScoutingInfo);
+                scoutingForm.dataset.listenerAdded = 'true';
+            }
         }
 
         // Player Wellness
-        async function predictInjury(playerData) {
-            let model;
+        async function loadInjuryModel() {
+            if (injuryModel) return injuryModel;
             try {
-                model = await tf.loadLayersModel(await getDownloadURL(ref(storage, 'models/injury_model/model.json')));
+                const modelUrl = await getDownloadURL(ref(storage, 'models/injury_model/model.json'));
+                injuryModel = await tf.loadLayersModel(modelUrl);
             } catch (error) {
                 console.error('Model load error:', error);
+            }
+            return injuryModel;
+        }
+
+        async function predictInjury(playerData) {
+            const model = await loadInjuryModel();
+            if (!model) {
                 return Math.random() > 0.5 ? 'High Risk' : 'Low';
             }
             return model.predict(tf.tensor2d([playerData.metrics || [0,0,0]])).dataSync() > 0.5 ? 'High Risk' : 'Low';
@@ -569,6 +644,58 @@
             }).catch(err => console.error('Error fetching players:', err));
         }
 
+        async function addNutritionEntry(event) {
+            event.preventDefault();
+            const mealType = document.getElementById('meal-type').value;
+            const calories = parseInt(document.getElementById('calories').value);
+            const carbs = parseInt(document.getElementById('carbs').value);
+            const proteins = parseInt(document.getElementById('proteins').value);
+            const fats = parseInt(document.getElementById('fats').value);
+            try {
+                await addDoc(collection(db, 'nutrition'), { mealType, calories, carbs, proteins, fats, player: auth.currentUser.uid, timestamp: new Date() });
+                document.getElementById('nutrition-form').reset();
+                renderNutritionChart();
+                showNutritionTips(proteins, carbs);
+            } catch (error) {
+                console.error('Add nutrition entry error:', error);
+                alert('Failed to add nutrition entry: ' + error.message);
+            }
+        }
+
+        function renderNutritionChart() {
+            const chartCanvas = document.getElementById('nutritionChart');
+            if (chartCanvas.chart) chartCanvas.chart.destroy();
+            const unsub = onSnapshot(collection(db, 'nutrition'), (snapshot) => {
+                const entries = snapshot.docs.map(doc => doc.data());
+                // Aggregate daily totals, for simplicity, show last entry
+                const data = entries[entries.length - 1] || { carbs: 0, proteins: 0, fats: 0 };
+                chartCanvas.chart = new Chart(chartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Carbs', 'Proteins', 'Fats'],
+                        datasets: [{ data: [data.carbs, data.proteins, data.fats], backgroundColor: '#42a5f5' }]
+                    },
+                    options: {
+                        scales: { y: { beginAtZero: true, ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            });
+            unsubscribes.push(unsub);
+        }
+
+        function showNutritionTips(proteins, carbs) {
+            const tipsDiv = document.getElementById('nutrition-tips');
+            let tips = '';
+            if (proteins < 50) {
+                tips += '<p>Increase proteins to at least 1.6g/kg body weight for muscle recovery.</p>';
+            }
+            if (carbs < 200) {
+                tips += '<p>Add more carbs for energy, aim for 45-65% of daily calories.</p>';
+            }
+            tipsDiv.innerHTML = tips || '<p>Nutrition looks good!</p>';
+        }
+
         function renderPlayerWellness() {
             const chartCanvas = document.getElementById('wellnessChart');
             if (chartCanvas.chart) chartCanvas.chart.destroy();
@@ -587,7 +714,7 @@
                 }
             });
 
-            onSnapshot(collection(db, 'wellness'), (snapshot) => {
+            const unsubWellness = onSnapshot(collection(db, 'wellness'), (snapshot) => {
                 const entries = snapshot.docs.map(doc => doc.data());
                 document.getElementById('wellness-list').innerHTML = entries.map(e => `
                     <div class="card">
@@ -598,13 +725,26 @@
                     </div>
                 `).join('');
             });
+            unsubscribes.push(unsubWellness);
 
             const playerSelect = document.getElementById('wellness-player');
             if (playerSelect) {
                 populatePlayerDropdown(playerSelect);
             }
 
-            document.getElementById('wellness-form').addEventListener('submit', addWellnessEntry);
+            const wellnessForm = document.getElementById('wellness-form');
+            if (!wellnessForm.dataset.listenerAdded) {
+                wellnessForm.addEventListener('submit', addWellnessEntry);
+                wellnessForm.dataset.listenerAdded = 'true';
+            }
+
+            // Nutrition
+            renderNutritionChart();
+            const nutritionForm = document.getElementById('nutrition-form');
+            if (!nutritionForm.dataset.listenerAdded) {
+                nutritionForm.addEventListener('submit', addNutritionEntry);
+                nutritionForm.dataset.listenerAdded = 'true';
+            }
         }
 
         // Compliance & Welfare
@@ -631,7 +771,7 @@
         function renderComplianceWelfare() {
             const alertsDiv = document.getElementById('risk-alerts');
             alertsDiv.innerHTML = '<p>No risks detected.</p>';
-            onSnapshot(collection(db, 'meetings'), (snapshot) => {
+            const unsub = onSnapshot(collection(db, 'meetings'), (snapshot) => {
                 const meetings = snapshot.docs
                     .filter(doc => doc.data().type === 'compliance')
                     .map(doc => doc.data());
@@ -641,7 +781,13 @@
                     document.getElementById('zoom-meeting').style.display = 'block';
                 }
             });
-            document.getElementById('start-group-call').addEventListener('click', startGroupCall);
+            unsubscribes.push(unsub);
+
+            const startCallBtn = document.getElementById('start-group-call');
+            if (!startCallBtn.dataset.listenerAdded) {
+                startCallBtn.addEventListener('click', startGroupCall);
+                startCallBtn.dataset.listenerAdded = 'true';
+            }
         }
 
         // Tactics AI
@@ -664,35 +810,31 @@
         async function trackPlayers() {
             const video = document.getElementById('tactics-video');
             const canvas = document.getElementById('tracking-canvas');
+            canvas.style.display = 'block';
             const ctx = canvas.getContext('2d');
-            let model;
-            try {
-                // Load BodyPix model for player tracking (pose detection)
-                model = await tf.loadLayersModel('https://tfhub.dev/tensorflow/tfjs-model/bodypix/pose_max/1/default/1');
-            } catch (error) {
-                console.error('Model load error:', error);
-                alert('Failed to load tracking model');
-                return;
-            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose);
             const detectPose = async () => {
                 if (video.paused || video.ended) return;
-                const net = await model.net;
-                const poses = await net.estimatePoses(video);
+                const poses = await detector.estimatePoses(video);
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 poses.forEach(pose => {
-                    if (pose.score > 0.5) {
-                        pose.keypoints.forEach(kpt => {
-                            if (kpt.score > 0.3) {
-                                ctx.beginPath();
-                                ctx.arc(kpt.position.x, kpt.position.y, 5, 0, 2 * Math.PI);
-                                ctx.fillStyle = 'red';
-                                ctx.fill();
-                            }
-                        });
-                    }
+                    pose.keypoints.forEach(kpt => {
+                        if (kpt.score > 0.3) {
+                            ctx.beginPath();
+                            ctx.arc(kpt.x, kpt.y, 5, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'red';
+                            ctx.fill();
+                        }
+                    });
                 });
                 requestAnimationFrame(detectPose);
             };
+            video.addEventListener('loadedmetadata', () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            });
             video.play().then(() => detectPose());
         }
 
@@ -703,8 +845,18 @@
                 console.error('Video load error:', err);
                 document.getElementById('tactics-video').src = 'https://example.com/dummy-video.mp4';
             });
-            document.getElementById('tactics-video-input').addEventListener('change', uploadVideo);
-            document.getElementById('track-btn').addEventListener('click', trackPlayers);
+
+            const videoForm = document.getElementById('video-upload-form');
+            if (!videoForm.dataset.listenerAdded) {
+                videoForm.addEventListener('submit', (e) => { e.preventDefault(); uploadVideo(e); });
+                videoForm.dataset.listenerAdded = 'true';
+            }
+
+            const trackBtn = document.getElementById('track-btn');
+            if (!trackBtn.dataset.listenerAdded) {
+                trackBtn.addEventListener('click', trackPlayers);
+                trackBtn.dataset.listenerAdded = 'true';
+            }
         }
 
         // Club Manager
@@ -748,12 +900,16 @@
             }
         }
 
+        let calendarInstance = null;
+
         function renderClubManager() {
-            onSnapshot(collection(db, 'rosters'), (snapshot) => {
+            const unsubRosters = onSnapshot(collection(db, 'rosters'), (snapshot) => {
                 const rosters = snapshot.docs.map(doc => doc.data());
                 document.getElementById('roster-list').innerHTML = rosters.map(r => `<div class="card"><p>${r.name || 'Unknown'}</p></div>`).join('');
             });
-            onSnapshot(collection(db, 'players'), (snapshot) => {
+            unsubscribes.push(unsubRosters);
+
+            const unsubPlayers = onSnapshot(collection(db, 'players'), (snapshot) => {
                 const players = snapshot.docs.map(doc => doc.data());
                 document.getElementById('player-list').innerHTML = players.map(p => `
                     <div class="card">
@@ -766,30 +922,40 @@
                     </div>
                 `).join('');
             });
-            document.getElementById('add-player-form').addEventListener('submit', addPlayer);
+            unsubscribes.push(unsubPlayers);
+
+            const addPlayerForm = document.getElementById('add-player-form');
+            if (!addPlayerForm.dataset.listenerAdded) {
+                addPlayerForm.addEventListener('submit', addPlayer);
+                addPlayerForm.dataset.listenerAdded = 'true';
+            }
 
             // Calendar setup
             const calendarEl = document.getElementById('calendar');
-            onSnapshot(collection(db, 'events'), (snapshot) => {
+            const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
                 const events = snapshot.docs.map(doc => doc.data());
-                if (calendarEl.calendar) {
-                    calendarEl.calendar.setOption('events', events);
-                } else {
-                    const calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'dayGridMonth',
-                        events: events,
-                        eventColor: '#42a5f5',
-                        headerToolbar: {
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: 'dayGridMonth,timeGridWeek'
-                        }
-                    });
-                    calendar.render();
-                    calendarEl.calendar = calendar;
+                if (calendarInstance) {
+                    calendarInstance.destroy();
                 }
+                calendarInstance = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    events: events,
+                    eventColor: '#42a5f5',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek'
+                    }
+                });
+                calendarInstance.render();
             });
-            document.getElementById('event-form').addEventListener('submit', addEvent);
+            unsubscribes.push(unsubEvents);
+
+            const eventForm = document.getElementById('event-form');
+            if (!eventForm.dataset.listenerAdded) {
+                eventForm.addEventListener('submit', addEvent);
+                eventForm.dataset.listenerAdded = 'true';
+            }
         }
 
         // Fan Engagement
@@ -866,6 +1032,18 @@
                     </form>
                     <div id="wellness-list"></div>
                     <canvas id="wellnessChart"></canvas>
+                    <h3 id="nutrition-title"></h3>
+                    <form id="nutrition-form">
+                        <select id="meal-type" required></select>
+                        <input id="calories" type="number" placeholder="Calories" required>
+                        <input id="carbs" type="number" placeholder="Carbs (grams)" required>
+                        <input id="proteins" type="number" placeholder="Proteins (grams)" required>
+                        <input id="fats" type="number" placeholder="Fats (grams)" required>
+                        <button id="add-nutrition-btn" type="submit">Add Meal</button>
+                    </form>
+                    <div id="nutrition-list"></div>
+                    <canvas id="nutritionChart"></canvas>
+                    <div id="nutrition-tips"></div>
                 </div>
                 <div id="compliance-welfare" class="module">
                     <h2 id="compliance-title"></h2>
@@ -881,7 +1059,7 @@
                     </form>
                     <video id="tactics-video" controls style="width: 100%;"></video>
                     <button id="track-btn">Track Players</button>
-                    <canvas id="tracking-canvas" width="640" height="480" style="display: none;"></canvas>
+                    <canvas id="tracking-canvas" width="640" height="480"></canvas>
                 </div>
                 <div id="club-manager" class="module">
                     <h2 id="club-title"></h2>
@@ -914,5 +1092,4 @@
         </div>
     </div>
 </body>
-</html>
-```
+                    </html>
