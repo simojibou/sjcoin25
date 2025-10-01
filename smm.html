@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -143,8 +144,8 @@
         const apiUrl = 'https://www.smmraja.com/api/v3';
         const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
 
-        // Use a CORS proxy for development/testing to bypass CORS restrictions
-        const corsProxy = 'https://corsproxy.io/?';
+        // Use a different CORS proxy for development/testing to bypass CORS restrictions
+        const corsProxy = 'https://test.cors.workers.dev/?';
 
         // Handle authentication state
         auth.onAuthStateChanged((user) => {
@@ -188,6 +189,7 @@
 
         // Fetch and populate services
         async function fetchServices() {
+            const confirmationDiv = document.getElementById('confirmation');
             try {
                 const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
                 const response = await fetch(proxyUrl, {
@@ -198,6 +200,22 @@
                         action: 'services'
                     })
                 });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Response text:', text);
+                    confirmationDiv.innerHTML = `HTTP error! Status: ${response.status}<br>Response: ${text}`;
+                    return;
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    confirmationDiv.innerHTML = `Error: Expected JSON but got ${contentType || 'unknown'}<br>Response: ${text}`;
+                    return;
+                }
+
                 const services = await response.json();
                 
                 const select = document.getElementById('service');
@@ -227,11 +245,11 @@
                     });
                 } else {
                     console.error('Unexpected services response:', services);
-                    document.getElementById('confirmation').innerHTML = 'Error loading services. Please try again later.';
+                    confirmationDiv.innerHTML = 'Error loading services. Please try again later.';
                 }
             } catch (err) {
                 console.error('Error fetching services:', err);
-                document.getElementById('confirmation').innerHTML = 'Error loading services: ' + err.message;
+                confirmationDiv.innerHTML = 'Error loading services: ' + err.message;
             }
         }
 
@@ -252,7 +270,6 @@
             
             try {
                 const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
-                // Send order to SMM Raja API
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -264,6 +281,21 @@
                         quantity: quantity
                     })
                 });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Response text:', text);
+                    confirmationDiv.innerHTML = `HTTP error! Status: ${response.status}<br>Response: ${text}`;
+                    return;
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    confirmationDiv.innerHTML = `Error: Expected JSON but got ${contentType || 'unknown'}<br>Response: ${text}`;
+                    return;
+                }
                 
                 const data = await response.json();
                 
@@ -297,3 +329,4 @@
     </script>
 </body>
 </html>
+
