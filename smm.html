@@ -139,9 +139,12 @@
         const provider = new firebase.auth.GoogleAuthProvider();
 
         // SMM Raja API details
-        // NOTE: In production, move API calls to a server-side backend (e.g., Cloud Functions) to avoid exposing the API key in client-side code.
+        // NOTE: In production, move API calls to a server-side backend (e.g., Cloud Functions) to avoid exposing the API key in client-side code and to handle CORS issues.
         const apiUrl = 'https://www.smmraja.com/api/v3';
         const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
+
+        // Use a CORS proxy for development/testing to bypass CORS restrictions
+        const corsProxy = 'https://corsproxy.io/?';
 
         // Handle authentication state
         auth.onAuthStateChanged((user) => {
@@ -186,7 +189,8 @@
         // Fetch and populate services
         async function fetchServices() {
             try {
-                const response = await fetch(apiUrl, {
+                const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
@@ -247,8 +251,9 @@
             const confirmationDiv = document.getElementById('confirmation');
             
             try {
+                const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
                 // Send order to SMM Raja API
-                const response = await fetch(apiUrl, {
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
