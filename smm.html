@@ -87,6 +87,24 @@
             margin-top: 10px;
             font-weight: bold;
         }
+        #coinSection {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 0 auto 20px;
+            text-align: center;
+        }
+        #claimCoins {
+            width: auto;
+            padding: 10px 20px;
+            background-color: #FF9800;
+            margin-top: 10px;
+        }
+        #claimCoins:hover {
+            background-color: #F57C00;
+        }
         optgroup {
             font-weight: bold;
         }
@@ -99,6 +117,12 @@
         <button id="loginBtn">Login with Google</button>
         <button id="logoutBtn" style="display: none;">Logout</button>
         <div id="userInfo"></div>
+    </div>
+
+    <div id="coinSection" style="display: none;">
+        <p id="balance">Balance: 0 SJ Coins</p>
+        <p>Follow our Instagram account (@your_platform_ig) and claim 10 SJ Coins daily!</p>
+        <button id="claimCoins">Claim 10 SJ Coins</button>
     </div>
     
     <form id="orderForm" style="display: none;">
@@ -145,26 +169,57 @@
         const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
 
         // Use a CORS proxy for development/testing to bypass CORS restrictions
-        const corsProxy = 'https://proxy.corsfix.com/?';
+        const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+
+        let currentUser = null;
+        let currentCoins = 0;
+        let lastClaim = 0;
+
+        function updateBalance() {
+            document.getElementById('balance').innerText = `Balance: ${currentCoins} SJ Coins`;
+        }
 
         // Handle authentication state
         auth.onAuthStateChanged((user) => {
             const orderForm = document.getElementById('orderForm');
+            const coinSection = document.getElementById('coinSection');
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const userInfo = document.getElementById('userInfo');
             const confirmationDiv = document.getElementById('confirmation');
 
+            currentUser = user;
+
             if (user) {
                 // User is signed in
                 orderForm.style.display = 'block';
+                coinSection.style.display = 'block';
                 loginBtn.style.display = 'none';
                 logoutBtn.style.display = 'inline-block';
                 userInfo.innerText = `Welcome, ${user.displayName}`;
+
+                // Fetch user data
+                db.ref(`users/${user.uid}`).once('value').then((snapshot) => {
+                    if (!snapshot.exists()) {
+                        db.ref(`users/${user.uid}`).set({
+                            coins: 0,
+                            lastClaim: 0
+                        });
+                        currentCoins = 0;
+                        lastClaim = 0;
+                    } else {
+                        const data = snapshot.val();
+                        currentCoins = data.coins || 0;
+                        lastClaim = data.lastClaim || 0;
+                    }
+                    updateBalance();
+                });
+
                 fetchServices(); // Load services only after login
             } else {
                 // User is signed out
                 orderForm.style.display = 'none';
+                coinSection.style.display = 'none';
                 loginBtn.style.display = 'inline-block';
                 logoutBtn.style.display = 'none';
                 userInfo.innerText = '';
@@ -185,6 +240,29 @@
             auth.signOut().catch((error) => {
                 console.error('Logout error:', error);
             });
+        });
+
+        // Claim coins
+        document.getElementById('claimCoins').addEventListener('click', () => {
+            if (!currentUser) return;
+
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+            if (now - lastClaim < oneDay) {
+                document.getElementById('confirmation').innerHTML = '<p>You can only claim once per day.</p>';
+                return;
+            }
+
+            db.ref(`users/${currentUser.uid}/coins`).transaction((current) => {
+                return (current || 0) + 10;
+            });
+
+            db.ref(`users/${currentUser.uid}/lastClaim`).set(now);
+
+            currentCoins += 10;
+            lastClaim = now;
+            updateBalance();
+            document.getElementById('confirmation').innerHTML = '<p>Claimed 10 SJ Coins successfully!</p>';
         });
 
         // Fetch and populate services
@@ -239,6 +317,9 @@
                             const option = document.createElement('option');
                             option.value = s.service;
                             option.text = `${s.name} (Rate: ${s.rate}, Min: ${s.min}, Max: ${s.max})`;
+                            if (cat === 'Instagram' && s.name.toLowerCase().includes('follower')) {
+                                option.dataset.isFollowers = 'true';
+                            }
                             optgroup.appendChild(option);
                         });
                         select.appendChild(optgroup);
@@ -257,16 +338,32 @@
         document.getElementById('orderForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const user = auth.currentUser;
-            if (!user) {
+            if (!currentUser) {
                 document.getElementById('confirmation').innerHTML = '<p>Please login to place orders.</p>';
                 return;
             }
             
             const link = document.getElementById('link').value;
-            const service = document.getElementById('service').value;
-            const quantity = document.getElementById('quantity').value;
+            const serviceSelect = document.getElementById('service');
+            const service = serviceSelect.value;
+            const quantity = parseInt(document.getElementById('quantity').value);
             const confirmationDiv = document.getElementById('confirmation');
+            const selectedOption = serviceSelect.selectedOptions[0];
+            
+            // Check if it's a followers service and handle coins
+            if (selectedOption.dataset.isFollowers === 'true') {
+                const cost = quantity * 10; // 10 SJ Coins per follower
+                if (currentCoins < cost) {
+                    confirmationDiv.innerHTML = `<p>Insufficient SJ Coins. Need ${cost}, have ${currentCoins}.</p>`;
+                    return;
+                }
+                // Deduct coins
+                db.ref(`users/${currentUser.uid}/coins`).transaction((current) => {
+                    return current - cost;
+                });
+                currentCoins -= cost;
+                updateBalance();
+            }
             
             try {
                 const proxyUrl = corsProxy + apiUrl;
@@ -278,7 +375,7 @@
                         action: 'add',
                         service: service,
                         link: link,
-                        quantity: quantity
+                        quantity: quantity.toString()
                     })
                 });
 
@@ -301,7 +398,7 @@
                 
                 if (data.order) {
                     // Store in Firebase Realtime Database under user's orders
-                    const orderRef = db.ref(`orders/${user.uid}`).push();
+                    const orderRef = db.ref(`orders/${currentUser.uid}`).push();
                     await orderRef.set({
                         link: link,
                         service: service,
@@ -330,4 +427,3 @@
 </body>
 </html>
 ```
-
