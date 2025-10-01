@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -144,8 +144,8 @@
         const apiUrl = 'https://www.smmraja.com/api/v3';
         const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
 
-        // Use a different CORS proxy for development/testing to bypass CORS restrictions
-        const corsProxy = 'https://test.cors.workers.dev/?';
+        // Use a CORS proxy for development/testing to bypass CORS restrictions
+        const corsProxy = 'https://proxy.corsfix.com/?';
 
         // Handle authentication state
         auth.onAuthStateChanged((user) => {
@@ -191,7 +191,7 @@
         async function fetchServices() {
             const confirmationDiv = document.getElementById('confirmation');
             try {
-                const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
+                const proxyUrl = corsProxy + apiUrl;
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -269,7 +269,7 @@
             const confirmationDiv = document.getElementById('confirmation');
             
             try {
-                const proxyUrl = corsProxy + encodeURIComponent(apiUrl);
+                const proxyUrl = corsProxy + apiUrl;
                 const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -329,4 +329,5 @@
     </script>
 </body>
 </html>
+```
 
