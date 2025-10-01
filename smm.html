@@ -6,20 +6,111 @@
     <title>SMM Platform</title>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #confirmation {
+            margin-top: 20px;
+            text-align: center;
+            color: #333;
+        }
+        #authSection {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #loginBtn {
+            background-color: #4285F4;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #loginBtn:hover {
+            background-color: #357ae8;
+        }
+        #logoutBtn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logoutBtn:hover {
+            background-color: #d32f2f;
+        }
+        #userInfo {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        optgroup {
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Social Media Marketing Platform</h1>
-    <form id="orderForm">
+    
+    <div id="authSection">
+        <button id="loginBtn">Login with Google</button>
+        <button id="logoutBtn" style="display: none;">Logout</button>
+        <div id="userInfo"></div>
+    </div>
+    
+    <form id="orderForm" style="display: none;">
         <label for="link">Social Media Profile URL:</label>
-        <input type="text" id="link" placeholder="Enter profile URL" required><br><br>
+        <input type="text" id="link" placeholder="Enter profile URL" required>
         
         <label for="service">Select Service:</label>
         <select id="service" required>
             <!-- Services will be populated dynamically -->
-        </select><br><br>
+        </select>
         
         <label for="quantity">Quantity:</label>
-        <input type="number" id="quantity" placeholder="Enter quantity" min="1" required><br><br>
+        <input type="number" id="quantity" placeholder="Enter quantity" min="1" required>
         
         <button type="submit">Submit Order</button>
     </form>
@@ -42,13 +133,57 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
+
+        // Google Auth Provider
+        const provider = new firebase.auth.GoogleAuthProvider();
 
         // SMM Raja API details
         // NOTE: In production, move API calls to a server-side backend (e.g., Cloud Functions) to avoid exposing the API key in client-side code.
         const apiUrl = 'https://www.smmraja.com/api/v3';
         const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
 
-        // Fetch and populate services on page load
+        // Handle authentication state
+        auth.onAuthStateChanged((user) => {
+            const orderForm = document.getElementById('orderForm');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.getElementById('userInfo');
+            const confirmationDiv = document.getElementById('confirmation');
+
+            if (user) {
+                // User is signed in
+                orderForm.style.display = 'block';
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'inline-block';
+                userInfo.innerText = `Welcome, ${user.displayName}`;
+                fetchServices(); // Load services only after login
+            } else {
+                // User is signed out
+                orderForm.style.display = 'none';
+                loginBtn.style.display = 'inline-block';
+                logoutBtn.style.display = 'none';
+                userInfo.innerText = '';
+                confirmationDiv.innerHTML = '<p>Please login to place orders.</p>';
+            }
+        });
+
+        // Login with Google
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            auth.signInWithPopup(provider).catch((error) => {
+                console.error('Login error:', error);
+                document.getElementById('confirmation').innerHTML = `<p>Login error: ${error.message}</p>`;
+            });
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().catch((error) => {
+                console.error('Logout error:', error);
+            });
+        });
+
+        // Fetch and populate services
         async function fetchServices() {
             try {
                 const response = await fetch(apiUrl, {
@@ -65,16 +200,26 @@
                 select.innerHTML = ''; // Clear any existing options
                 
                 if (Array.isArray(services)) {
+                    // Group services by category (e.g., Instagram, YouTube, etc.)
+                    const categories = {};
                     services.forEach(s => {
-                        // Filter to services related to followers, likes, views as per examples
-                        if (s.name.toLowerCase().includes('followers') || 
-                            s.name.toLowerCase().includes('likes') || 
-                            s.name.toLowerCase().includes('views')) {
+                        const category = s.category || 'Other';
+                        if (!categories[category]) {
+                            categories[category] = [];
+                        }
+                        categories[category].push(s);
+                    });
+                    
+                    Object.keys(categories).sort().forEach(cat => {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = cat;
+                        categories[cat].forEach(s => {
                             const option = document.createElement('option');
                             option.value = s.service;
-                            option.text = `${s.category ? s.category + ' - ' : ''}${s.name} (Rate: ${s.rate}, Min: ${s.min}, Max: ${s.max})`;
-                            select.add(option);
-                        }
+                            option.text = `${s.name} (Rate: ${s.rate}, Min: ${s.min}, Max: ${s.max})`;
+                            optgroup.appendChild(option);
+                        });
+                        select.appendChild(optgroup);
                     });
                 } else {
                     console.error('Unexpected services response:', services);
@@ -86,12 +231,15 @@
             }
         }
 
-        // Load services when the page loads
-        window.addEventListener('load', fetchServices);
-
         // Handle form submission
         document.getElementById('orderForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const user = auth.currentUser;
+            if (!user) {
+                document.getElementById('confirmation').innerHTML = '<p>Please login to place orders.</p>';
+                return;
+            }
             
             const link = document.getElementById('link').value;
             const service = document.getElementById('service').value;
@@ -115,14 +263,14 @@
                 const data = await response.json();
                 
                 if (data.order) {
-                    // Store in Firebase Realtime Database
-                    const orderRef = db.ref('orders').push();
+                    // Store in Firebase Realtime Database under user's orders
+                    const orderRef = db.ref(`orders/${user.uid}`).push();
                     await orderRef.set({
                         link: link,
                         service: service,
                         quantity: quantity,
                         orderId: data.order,
-                        status: 'Placed', // Assuming initial status; can update later if needed
+                        status: 'Placed',
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                     
