@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMM Platform</title>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <h1>Social Media Marketing Platform</h1>
+    <form id="orderForm">
+        <label for="link">Social Media Profile URL:</label>
+        <input type="text" id="link" placeholder="Enter profile URL" required><br><br>
+        
+        <label for="service">Select Service:</label>
+        <select id="service" required>
+            <!-- Services will be populated dynamically -->
+        </select><br><br>
+        
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" placeholder="Enter quantity" min="1" required><br><br>
+        
+        <button type="submit">Submit Order</button>
+    </form>
+    
+    <div id="confirmation"></div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // SMM Raja API details
+        // NOTE: In production, move API calls to a server-side backend (e.g., Cloud Functions) to avoid exposing the API key in client-side code.
+        const apiUrl = 'https://www.smmraja.com/api/v3';
+        const apiKey = 'dJTax9Z)4(hC@8*c)GDe';
+
+        // Fetch and populate services on page load
+        async function fetchServices() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        key: apiKey,
+                        action: 'services'
+                    })
+                });
+                const services = await response.json();
+                
+                const select = document.getElementById('service');
+                select.innerHTML = ''; // Clear any existing options
+                
+                if (Array.isArray(services)) {
+                    services.forEach(s => {
+                        // Filter to services related to followers, likes, views as per examples
+                        if (s.name.toLowerCase().includes('followers') || 
+                            s.name.toLowerCase().includes('likes') || 
+                            s.name.toLowerCase().includes('views')) {
+                            const option = document.createElement('option');
+                            option.value = s.service;
+                            option.text = `${s.category ? s.category + ' - ' : ''}${s.name} (Rate: ${s.rate}, Min: ${s.min}, Max: ${s.max})`;
+                            select.add(option);
+                        }
+                    });
+                } else {
+                    console.error('Unexpected services response:', services);
+                    document.getElementById('confirmation').innerHTML = 'Error loading services. Please try again later.';
+                }
+            } catch (err) {
+                console.error('Error fetching services:', err);
+                document.getElementById('confirmation').innerHTML = 'Error loading services: ' + err.message;
+            }
+        }
+
+        // Load services when the page loads
+        window.addEventListener('load', fetchServices);
+
+        // Handle form submission
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const link = document.getElementById('link').value;
+            const service = document.getElementById('service').value;
+            const quantity = document.getElementById('quantity').value;
+            const confirmationDiv = document.getElementById('confirmation');
+            
+            try {
+                // Send order to SMM Raja API
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        key: apiKey,
+                        action: 'add',
+                        service: service,
+                        link: link,
+                        quantity: quantity
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.order) {
+                    // Store in Firebase Realtime Database
+                    const orderRef = db.ref('orders').push();
+                    await orderRef.set({
+                        link: link,
+                        service: service,
+                        quantity: quantity,
+                        orderId: data.order,
+                        status: 'Placed', // Assuming initial status; can update later if needed
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    
+                    // Display confirmation
+                    confirmationDiv.innerHTML = `
+                        <p>Order placed successfully!</p>
+                        <p>Order ID: ${data.order}</p>
+                        <p>Status: Placed</p>
+                    `;
+                } else if (data.error) {
+                    confirmationDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                } else {
+                    confirmationDiv.innerHTML = `<p>Unexpected response: ${JSON.stringify(data)}</p>`;
+                }
+            } catch (err) {
+                confirmationDiv.innerHTML = `<p>Error: ${err.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
