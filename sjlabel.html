@@ -193,10 +193,14 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: black; color: white; }
     .section { margin-bottom: 20px; }
-    button { padding: 10px; background: #333; color: white; border: 1px solid #555; margin-top: 10px; }
-    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; padding: 5px; background: #222; color: white; border: 1px solid #555; }
+    button { padding: 10px; background: #333; color: white; border: 1px solid #555; margin-top: 10px; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #444; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #ddd; }
+    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 3px; }
     a { color: #1e90ff; }
-    img { max-width: 100%; height: auto; }
+    img { max-width: 100%; height: auto; border-radius: 5px; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin-bottom: 15px; padding: 10px; background: #222; border-radius: 5px; }
     @media (max-width: 600px) {
       body { margin: 10px; }
       input { max-width: none; }
@@ -216,9 +220,13 @@
 
 <div id="admin-section" class="section" style="display: none;">
   <h2>Admin: Add Artist</h2>
+  <label for="artist-name">Artist Name:</label>
   <input type="text" id="artist-name" placeholder="Artist Name">
+  <label for="artist-instagram">Instagram Account:</label>
   <input type="text" id="artist-instagram" placeholder="Instagram Account">
+  <label for="artist-spotify">Spotify Link:</label>
   <input type="text" id="artist-spotify" placeholder="Spotify Link">
+  <label for="artist-pic">Artist Picture:</label>
   <input type="file" id="artist-pic" accept="image/*">
   <button id="add-artist-btn">Add Artist</button>
   <div id="admin-message"></div>
@@ -226,9 +234,13 @@
 
 <div id="submit-track-section" class="section" style="display: none;">
   <h2>Submit Track</h2>
+  <label for="track-name">Track Name:</label>
   <input type="text" id="track-name" placeholder="Track Name">
+  <label for="track-artist-name">Artist Name:</label>
   <input type="text" id="track-artist-name" placeholder="Artist Name">
+  <label for="track-link">SoundCloud Private Link:</label>
   <input type="text" id="track-link" placeholder="SoundCloud Private Link">
+  <label for="track-pic">Track Picture:</label>
   <input type="file" id="track-pic" accept="image/*">
   <button id="submit-track-btn">Submit Track</button>
   <div id="submit-message"></div>
