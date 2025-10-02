@@ -107,12 +107,21 @@
     // Google Auth Provider
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    // Login Button
+    // Handle redirect result on page load
+    auth.getRedirectResult().then((result) => {
+        if (result.user) {
+            console.log('Logged in via redirect:', result.user);
+        }
+    }).catch((error) => {
+        console.error('Redirect login error:', error);
+        alert('Login error: ' + error.message);
+    });
+
+    // Login Button - Use Redirect instead of Popup
     document.getElementById('login-btn').addEventListener('click', () => {
-        auth.signInWithPopup(provider).then((result) => {
-            console.log('Logged in:', result.user);
-        }).catch((error) => {
-            console.error('Login error:', error);
+        auth.signInWithRedirect(provider).catch((error) => {
+            console.error('Login redirect error:', error);
+            alert('Login error: ' + error.message);
         });
     });
 
@@ -239,6 +248,8 @@
                 `;
                 ul.appendChild(li);
             });
+        }).catch((error) => {
+            console.error('Error loading artists:', error);
         });
     }
 
@@ -256,6 +267,8 @@
                 `;
                 ul.appendChild(li);
             });
+        }).catch((error) => {
+            console.error('Error loading tracks:', error);
         });
     }
 </script>
