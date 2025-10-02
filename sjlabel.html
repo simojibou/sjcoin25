@@ -9,10 +9,34 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: black; 
+            color: white; 
+        }
         .section { margin-bottom: 20px; }
-        button { padding: 10px; margin-top: 10px; }
-        input { display: block; margin-bottom: 10px; width: 300px; padding: 5px; }
+        button { padding: 10px; margin-top: 10px; background-color: #333; color: white; border: 1px solid #555; }
+        input { 
+            display: block; 
+            margin-bottom: 10px; 
+            width: 100%; 
+            max-width: 300px; 
+            padding: 5px; 
+            background-color: #222; 
+            color: white; 
+            border: 1px solid #555; 
+        }
+        a { color: #1e90ff; }
+        img { max-width: 100%; height: auto; }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            body { margin: 10px; }
+            input { max-width: none; }
+            button { width: 100%; }
+            .section { padding: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -60,14 +84,16 @@
 </div>
 
 <script>
-    // Replace with your Firebase config
+    // Firebase config
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+        authDomain: "sj-one.firebaseapp.com",
+        databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+        projectId: "sj-one",
+        storageBucket: "sj-one.appspot.com",
+        messagingSenderId: "426335553508",
+        appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+        measurementId: "G-YQTVZQWXGB"
     };
 
     // Initialize Firebase
