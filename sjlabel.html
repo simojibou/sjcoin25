@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Label Platform</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin-bottom: 20px; }
+        button { padding: 10px; margin-top: 10px; }
+        input { display: block; margin-bottom: 10px; width: 300px; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<h1>Artist Label Platform</h1>
+
+<!-- Login Section -->
+<div id="login-section" class="section">
+    <button id="login-btn">Login with Google</button>
+    <button id="logout-btn" style="display: none;">Logout</button>
+</div>
+
+<!-- Admin Section: Add Artist (visible only to admin) -->
+<div id="admin-section" class="section" style="display: none;">
+    <h2>Admin: Add Artist</h2>
+    <input type="text" id="artist-name" placeholder="Artist Name">
+    <input type="text" id="artist-instagram" placeholder="Instagram Account (e.g., @username)">
+    <input type="text" id="artist-spotify" placeholder="Spotify Link">
+    <input type="file" id="artist-pic" accept="image/*">
+    <button id="add-artist-btn">Add Artist</button>
+    <div id="admin-message"></div>
+</div>
+
+<!-- Submit Track Section (visible to anyone logged in, but you can adjust) -->
+<div id="submit-track-section" class="section" style="display: none;">
+    <h2>Submit Track</h2>
+    <input type="text" id="track-name" placeholder="Track Name">
+    <input type="text" id="track-artist-name" placeholder="Artist Name">
+    <input type="text" id="track-link" placeholder="SoundCloud Private Link">
+    <input type="file" id="track-pic" accept="image/*">
+    <button id="submit-track-btn">Submit Track</button>
+    <div id="submit-message"></div>
+</div>
+
+<!-- List of Artists (for display, optional) -->
+<div id="artists-list" class="section">
+    <h2>Artists</h2>
+    <ul id="artists-ul"></ul>
+</div>
+
+<!-- List of Submitted Tracks (for admin, optional) -->
+<div id="tracks-list" class="section" style="display: none;">
+    <h2>Submitted Tracks</h2>
+    <ul id="tracks-ul"></ul>
+</div>
+
+<script>
+    // Replace with your Firebase config
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    const adminEmail = 'simo.jibou@gmail.com'; // Admin email
+
+    // Google Auth Provider
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // Login Button
+    document.getElementById('login-btn').addEventListener('click', () => {
+        auth.signInWithPopup(provider).then((result) => {
+            console.log('Logged in:', result.user);
+        }).catch((error) => {
+            console.error('Login error:', error);
+        });
+    });
+
+    // Logout Button
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log('Logged out');
+        }).catch((error) => {
+            console.error('Logout error:', error);
+        });
+    });
+
+    // Auth State Listener
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'block';
+            document.getElementById('submit-track-section').style.display = 'block';
+
+            // Check if admin
+            if (user.email === adminEmail) {
+                document.getElementById('admin-section').style.display = 'block';
+                document.getElementById('tracks-list').style.display = 'block';
+                loadTracks(); // Load tracks for admin
+            } else {
+                document.getElementById('admin-section').style.display = 'none';
+                document.getElementById('tracks-list').style.display = 'none';
+            }
+
+            loadArtists();
+        } else {
+            document.getElementById('login-btn').style.display = 'block';
+            document.getElementById('logout-btn').style.display = 'none';
+            document.getElementById('admin-section').style.display = 'none';
+            document.getElementById('submit-track-section').style.display = 'none';
+            document.getElementById('tracks-list').style.display = 'none';
+            document.getElementById('artists-ul').innerHTML = '';
+            document.getElementById('tracks-ul').innerHTML = '';
+        }
+    });
+
+    // Add Artist Button (Admin only)
+    document.getElementById('add-artist-btn').addEventListener('click', async () => {
+        const name = document.getElementById('artist-name').value;
+        const instagram = document.getElementById('artist-instagram').value;
+        const spotify = document.getElementById('artist-spotify').value;
+        const picFile = document.getElementById('artist-pic').files[0];
+
+        if (!name || !picFile) {
+            alert('Name and picture are required');
+            return;
+        }
+
+        try {
+            // Upload pic to storage
+            const storageRef = storage.ref(`artists/${picFile.name}`);
+            await storageRef.put(picFile);
+            const picUrl = await storageRef.getDownloadURL();
+
+            // Add to Firestore
+            await db.collection('artists').add({
+                name,
+                instagram,
+                spotify,
+                picUrl
+            });
+
+            document.getElementById('admin-message').innerText = 'Artist added!';
+            loadArtists();
+        } catch (error) {
+            console.error('Error adding artist:', error);
+            document.getElementById('admin-message').innerText = 'Error adding artist.';
+        }
+    });
+
+    // Submit Track Button
+    document.getElementById('submit-track-btn').addEventListener('click', async () => {
+        const trackName = document.getElementById('track-name').value;
+        const artistName = document.getElementById('track-artist-name').value;
+        const trackLink = document.getElementById('track-link').value;
+        const picFile = document.getElementById('track-pic').files[0];
+
+        if (!trackName || !artistName || !trackLink || !picFile) {
+            alert('All fields are required');
+            return;
+        }
+
+        try {
+            // Upload pic to storage
+            const storageRef = storage.ref(`tracks/${picFile.name}`);
+            await storageRef.put(picFile);
+            const picUrl = await storageRef.getDownloadURL();
+
+            // Add to Firestore
+            await db.collection('tracks').add({
+                trackName,
+                artistName,
+                trackLink,
+                picUrl,
+                submittedBy: auth.currentUser.email
+            });
+
+            document.getElementById('submit-message').innerText = 'Track submitted!';
+            if (auth.currentUser.email === adminEmail) {
+                loadTracks();
+            }
+        } catch (error) {
+            console.error('Error submitting track:', error);
+            document.getElementById('submit-message').innerText = 'Error submitting track.';
+        }
+    });
+
+    // Load Artists
+    function loadArtists() {
+        db.collection('artists').get().then((querySnapshot) => {
+            const ul = document.getElementById('artists-ul');
+            ul.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <img src="${data.picUrl}" alt="${data.name}" width="100">
+                    <strong>${data.name}</strong> - Instagram: ${data.instagram || 'N/A'}, Spotify: ${data.spotify || 'N/A'}
+                `;
+                ul.appendChild(li);
+            });
+        });
+    }
+
+    // Load Tracks (for admin)
+    function loadTracks() {
+        db.collection('tracks').get().then((querySnapshot) => {
+            const ul = document.getElementById('tracks-ul');
+            ul.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <img src="${data.picUrl}" alt="${data.trackName}" width="100">
+                    <strong>${data.trackName}</strong> by ${data.artistName} - Link: <a href="${data.trackLink}">${data.trackLink}</a> (Submitted by: ${data.submittedBy})
+                `;
+                ul.appendChild(li);
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
