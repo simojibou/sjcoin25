@@ -58,11 +58,153 @@
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
       const categoryCards = document.querySelectorAll(".category-card");
+      const titleH1 = document.querySelector("h1");
       let currentUser = null;
       let isAdmin = false;
       let products = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
       let currentCategory = ""; // Track selected category
+      let userData = { currency: 'DH', language: 'English' };
+      const exchangeRates = {
+        DH: 1,
+        USD: 0.102,
+        EUR: 0.093
+      };
+      const translations = {
+        English: {
+          title: 'SJ STORE',
+          searchPlaceholder: 'Search products...',
+          orderNow: 'Order Now',
+          contactWhatsApp: '📞 Contact via WhatsApp',
+          addToCart: 'Add to Cart',
+          noProducts: 'No products found.',
+          cartTitle: 'My Cart',
+          cartEmpty: 'Your cart is empty.',
+          close: 'Close',
+          sellTitle: 'Sell a Product',
+          productTitle: 'Product Title',
+          productPrice: 'Price (DH)',
+          productDes: 'WhatsApp Phone Number',
+          productOrderUrl: 'Order URL (optional)',
+          selectCategory: 'Select Category',
+          addProduct: 'Add Product',
+          adminPanel: 'Admin Control Panel',
+          addProductHeader: 'Add Product',
+          addSliderHeader: 'Add Slider Item',
+          currentSliders: 'Current Sliders',
+          delete: 'Delete',
+          edit: 'Edit',
+          chat: 'Chat',
+          login: 'Login',
+          sellNow: 'Sell Now',
+          settings: 'Settings',
+          logout: 'Logout'
+        },
+        French: {
+          title: 'SJ STORE',
+          searchPlaceholder: 'Rechercher des produits...',
+          orderNow: 'Commander maintenant',
+          contactWhatsApp: '📞 Contacter via WhatsApp',
+          addToCart: 'Ajouter au panier',
+          noProducts: 'Aucun produit trouvé.',
+          cartTitle: 'Mon panier',
+          cartEmpty: 'Votre panier est vide.',
+          close: 'Fermer',
+          sellTitle: 'Vendre un produit',
+          productTitle: 'Titre du produit',
+          productPrice: 'Prix (DH)',
+          productDes: 'Numéro de téléphone WhatsApp',
+          productOrderUrl: 'URL de commande (optionnel)',
+          selectCategory: 'Sélectionner la catégorie',
+          addProduct: 'Ajouter un produit',
+          adminPanel: 'Panneau de contrôle admin',
+          addProductHeader: 'Ajouter un produit',
+          addSliderHeader: 'Ajouter un élément au slider',
+          currentSliders: 'Sliders actuels',
+          delete: 'Supprimer',
+          edit: 'Modifier',
+          chat: 'Chat',
+          login: 'Connexion',
+          sellNow: 'Vendre maintenant',
+          settings: 'Paramètres',
+          logout: 'Déconnexion'
+        },
+        Arabic: {
+          title: 'SJ STORE',
+          searchPlaceholder: 'ابحث عن المنتجات...',
+          orderNow: 'اطلب الآن',
+          contactWhatsApp: '📞 الاتصال عبر واتساب',
+          addToCart: 'أضف إلى السلة',
+          noProducts: 'لم يتم العثور على منتجات.',
+          cartTitle: 'سلتي',
+          cartEmpty: 'سلتك فارغة.',
+          close: 'إغلاق',
+          sellTitle: 'بيع منتج',
+          productTitle: 'عنوان المنتج',
+          productPrice: 'السعر (درهم)',
+          productDes: 'رقم هاتف واتساب',
+          productOrderUrl: 'رابط الطلب (اختياري)',
+          selectCategory: 'اختر الفئة',
+          addProduct: 'إضافة منتج',
+          adminPanel: 'لوحة تحكم المشرف',
+          addProductHeader: 'إضافة منتج',
+          addSliderHeader: 'إضافة عنصر إلى الشريحة',
+          currentSliders: 'الشرائح الحالية',
+          delete: 'حذف',
+          edit: 'تعديل',
+          chat: 'دردشة',
+          login: 'تسجيل الدخول',
+          sellNow: 'بيع الآن',
+          settings: 'الإعدادات',
+          logout: 'تسجيل الخروج'
+        }
+      };
+      function applyLanguage(lang) {
+        const t = translations[lang] || translations.English;
+        titleH1.textContent = t.title;
+        searchInput.placeholder = t.searchPlaceholder;
+        loginBtn.textContent = t.login;
+        chatBtn.textContent = t.chat;
+        sellNowOption.textContent = t.sellNow;
+        settingsOption.textContent = t.settings;
+        logoutOption.textContent = t.logout;
+        document.getElementById("sell-title").textContent = t.sellTitle;
+        document.getElementById("sell-product-title").placeholder = t.productTitle;
+        document.getElementById("sell-product-price").placeholder = t.productPrice;
+        document.getElementById("sell-product-des").placeholder = t.productDes;
+        document.getElementById("product-title").placeholder = t.productTitle;
+        document.getElementById("product-price").placeholder = t.productPrice;
+        document.getElementById("product-des").placeholder = t.productDes;
+        document.getElementById("product-order-url").placeholder = t.productOrderUrl;
+        document.getElementById("sell-product-category").firstChild.textContent = t.selectCategory;
+        document.getElementById("product-category").firstChild.textContent = t.selectCategory;
+        document.getElementById("admin-panel-title").textContent = t.adminPanel;
+        document.getElementById("add-product-header").textContent = t.addProductHeader;
+        document.getElementById("add-slider-header").textContent = t.addSliderHeader;
+        document.getElementById("current-sliders").textContent = t.currentSliders;
+        document.getElementById("cart-title").textContent = t.cartTitle;
+        closeModal.textContent = t.close;
+        closeSellModal.textContent = t.close;
+        if (lang === 'Arabic') {
+          document.body.dir = 'rtl';
+        } else {
+          document.body.dir = 'ltr';
+        }
+        renderProducts(searchInput.value, currentCategory);
+        renderCart();
+      }
+      function getConvertedPrice(price, currency) {
+        const rate = exchangeRates[currency] || 1;
+        const numPrice = parseFloat(price) || 0;
+        return (numPrice * rate).toFixed(2);
+      }
+      function getCurrencySymbol(currency) {
+        switch (currency) {
+          case 'USD': return '$';
+          case 'EUR': return '€';
+          default: return 'DH';
+        }
+      }
       function updateCartCount() {
         cartCount.textContent = cart.length;
       }
@@ -77,12 +219,20 @@
           isAdmin = user.email === "simo.jibou@gmail.com";
           adminPanel.style.display = isAdmin ? "block" : "none";
           if (isAdmin) loadAdminSliders();
+          const userRef = ref(db, `users/${user.uid}`);
+          onValue(userRef, (snapshot) => {
+            userData = snapshot.val() || { currency: 'DH', language: 'English' };
+            applyLanguage(userData.language);
+            renderProducts(searchInput.value, currentCategory);
+          });
         } else {
           loginBtn.style.display = "inline-block";
           profilePic.style.display = "none";
           dropdownMenu.style.display = "none";
           adminPanel.style.display = "none";
           isAdmin = false;
+          userData = { currency: 'DH', language: 'English' };
+          applyLanguage('English');
         }
         renderProducts();
       });
@@ -151,6 +301,7 @@
         alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
       function renderProducts(filter = "", category = "") {
+        const t = translations[userData.language] || translations.English;
         container.innerHTML = "";
         let filteredProducts = products;
         if (category) {
@@ -163,18 +314,20 @@
           let orderButton = '';
           if (product.orderUrl) {
             orderButton = `
-              <button class="order-btn">Order Now</button>
+              <button class="order-btn">${t.orderNow}</button>
             `;
           }
+          const convertedPrice = getConvertedPrice(product.price, userData.currency);
+          const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
             <div class="product-image-wrapper">
               <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
             </div>
             <h3>${product.title || 'Untitled'}</h3>
-            <p class="price">${product.price || 'N/A'} DH</p>
-            <button class="whatsapp-btn">📞 Contact via WhatsApp</button>
+            <p class="price">${convertedPrice} ${symbol}</p>
+            <button class="whatsapp-btn">${t.contactWhatsApp}</button>
             ${orderButton}
-            <button class="add-to-cart-btn">Add to Cart</button>
+            <button class="add-to-cart-btn">${t.addToCart}</button>
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
             const phone = product.des ? product.des.replace(/\D/g, "") : "";
@@ -199,11 +352,11 @@
             const adminActions = document.createElement("div");
             adminActions.classList.add("admin-actions");
             const editBtn = document.createElement("button");
-            editBtn.textContent = "Edit";
+            editBtn.textContent = t.edit;
             editBtn.addEventListener("click", () => editProduct(product.id, product));
             adminActions.appendChild(editBtn);
             const deleteBtn = document.createElement("button");
-            deleteBtn.textContent = "Delete";
+            deleteBtn.textContent = t.delete;
             deleteBtn.addEventListener("click", () => deleteProduct(product.id));
             adminActions.appendChild(deleteBtn);
             div.appendChild(adminActions);
@@ -211,7 +364,7 @@
           container.appendChild(div);
         });
         if (filteredProducts.length === 0) {
-          container.innerHTML = "<p>No products found.</p>";
+          container.innerHTML = `<p>${t.noProducts}</p>`;
         }
       }
       searchInput.addEventListener("input", (e) => {
@@ -333,7 +486,7 @@
             } else {
               element = `<img src="${slide.imageUrl}" alt="Slider Image" style="max-width: 100%; height: 100px;">`;
             }
-            div.innerHTML = `${element}<button>Delete</button>`;
+            div.innerHTML = `${element}<button>${translations[userData.language].delete || 'Delete'}</button>`;
             div.querySelector("button").addEventListener("click", () => {
               if (confirm("Delete this slider item?")) {
                 remove(ref(db, `Sliders/${sliderId}`))
@@ -559,14 +712,17 @@
         }
       });
       function renderCart() {
+        const t = translations[userData.language] || translations.English;
         cartList.innerHTML = "";
         cart.forEach((product, index) => {
           const div = document.createElement("div");
           div.classList.add("cart-item");
+          const convertedPrice = getConvertedPrice(product.price, userData.currency);
+          const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
             <img src="${product.photo || 'https://via.placeholder.com/80'}" alt="${product.title || 'No title'}">
             <h4>${product.title || 'Untitled'}</h4>
-            <p>${product.price || 'N/A'} DH</p>
+            <p>${convertedPrice} ${symbol}</p>
             <button class="remove-from-cart">Remove</button>
           `;
           div.querySelector(".remove-from-cart").addEventListener("click", () => {
@@ -578,7 +734,7 @@
           cartList.appendChild(div);
         });
         if (cart.length === 0) {
-          cartList.innerHTML = "<p>Your cart is empty.</p>";
+          cartList.innerHTML = `<p>${t.cartEmpty}</p>`;
         }
       }
       const isAndroid = /Android/i.test(navigator.userAgent);
@@ -604,7 +760,7 @@
       playBtn.addEventListener("click", () => {
         window.open("https://play.google.com/store/apps/details?id=com.sj.store", "_blank");
       });
-      closeBtn.addEventListener("click", () => popup.style.display = "none");
+      closeBtn.addEventListener("click", () => popup.style.display = "none";
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
           .then(reg => {
@@ -1329,7 +1485,7 @@
       </div>
     </div>
   </div>
-  <h1>SJ STORE</h1>
+  <h1 id="title">SJ STORE</h1>
   <input type="text" id="search-input" placeholder="Search products...">
   <div id="slider-container"></div>
   <div id="category-section">
@@ -1417,8 +1573,8 @@
   </div>
   <div class="product-list" id="product-list"></div>
   <div id="admin-panel">
-    <h2>Admin Control Panel</h2>
-    <h3>Add Product</h3>
+    <h2 id="admin-panel-title">Admin Control Panel</h2>
+    <h3 id="add-product-header">Add Product</h3>
     <form id="add-product-form">
       <input type="text" id="product-title" placeholder="Product Title" required>
       <input type="text" id="product-price" placeholder="Price (DH)" required>
@@ -1436,7 +1592,7 @@
       <input type="file" id="product-photo" accept="image/*" required>
       <button type="submit">Add Product</button>
     </form>
-    <h3>Add Slider Item</h3>
+    <h3 id="add-slider-header">Add Slider Item</h3>
     <form id="add-slider-form">
       <label for="slider-image">Upload Image or Video (MP4, max 5MB):</label>
       <input type="file" id="slider-image" accept="image/*,video/mp4">
@@ -1444,19 +1600,19 @@
       <input type="url" id="slider-url" placeholder="YouTube URL (optional)">
       <button type="submit">Add to Slider</button>
     </form>
-    <h3>Current Sliders</h3>
+    <h3 id="current-sliders">Current Sliders</h3>
     <div id="slider-list"></div>
   </div>
   <div id="cart-modal" class="modal">
     <div class="modal-content">
-      <h2>My Cart</h2>
+      <h2 id="cart-title">My Cart</h2>
       <div id="cart-list"></div>
       <button id="close-modal">Close</button>
     </div>
   </div>
   <div id="sell-modal" class="modal">
     <div class="modal-content">
-      <h2>Sell a Product</h2>
+      <h2 id="sell-title">Sell a Product</h2>
       <form id="sell-product-form">
         <input type="text" id="sell-product-title" placeholder="Product Title" required>
         <input type="text" id="sell-product-price" placeholder="Price (DH)" required>
@@ -1577,4 +1733,4 @@
     </div>
   </footer>
 </body>
-</html>
+ </html>
