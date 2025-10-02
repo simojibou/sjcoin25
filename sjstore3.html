@@ -374,13 +374,13 @@
           if (file.size > maxSize) {
             throw new Error("File size exceeds 5MB limit.");
           }
-          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
           if (!allowedTypes.includes(file.type)) {
-            throw new Error("Invalid file type. Only JPEG, PNG, GIF, or MP4 files are allowed.");
+            throw new Error("Invalid file type. Only JPEG, PNG, GIF, WebP, or MP4 files are allowed.");
           }
           let uploadBlob = file;
           let finalPath = path;
-          if (file.type.startsWith('image/') && file.type !== 'image/gif') { // Convert images except GIF to preserve potential animation
+          if (file.type.startsWith('image/') && file.type !== 'image/gif' && file.type !== 'image/webp') { // Convert non-GIF, non-WebP images
             uploadBlob = await convertToWebP(file);
             finalPath = path.replace(/\.[^/.]+$/, ".webp");
           }
@@ -1579,4 +1579,4 @@
     </div>
   </footer>
 </body>
-  </html>
+          </html>
