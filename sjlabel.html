@@ -1,277 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artist Label Platform</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            background-color: black; 
-            color: white; 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artist Label Platform</title>
+  <script type="module">
+    // Import Firebase v9 modular
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
+    const adminEmail = "simo.jibou@gmail.com";
+
+    // Handle redirect result
+    getRedirectResult(auth).then((result) => {
+      if (result && result.user) {
+        console.log("Logged in via redirect:", result.user);
+      }
+    }).catch((error) => {
+      alert("Login error: " + error.message);
+    });
+
+    // Login
+    document.getElementById("login-btn").addEventListener("click", () => {
+      signInWithRedirect(auth, provider).catch((error) => {
+        alert("Login error: " + error.message);
+      });
+    });
+
+    // Logout
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      signOut(auth).catch((error) => {
+        console.error("Logout error:", error);
+      });
+    });
+
+    // Auth State Listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById("login-btn").style.display = "none";
+        document.getElementById("logout-btn").style.display = "block";
+        document.getElementById("submit-track-section").style.display = "block";
+
+        if (user.email === adminEmail) {
+          document.getElementById("admin-section").style.display = "block";
+          document.getElementById("tracks-list").style.display = "block";
+          loadTracks();
+        } else {
+          document.getElementById("admin-section").style.display = "none";
+          document.getElementById("tracks-list").style.display = "none";
         }
-        .section { margin-bottom: 20px; }
-        button { padding: 10px; margin-top: 10px; background-color: #333; color: white; border: 1px solid #555; }
-        input { 
-            display: block; 
-            margin-bottom: 10px; 
-            width: 100%; 
-            max-width: 300px; 
-            padding: 5px; 
-            background-color: #222; 
-            color: white; 
-            border: 1px solid #555; 
+
+        loadArtists();
+      } else {
+        document.getElementById("login-btn").style.display = "block";
+        document.getElementById("logout-btn").style.display = "none";
+        document.getElementById("admin-section").style.display = "none";
+        document.getElementById("submit-track-section").style.display = "none";
+        document.getElementById("tracks-list").style.display = "none";
+        document.getElementById("artists-ul").innerHTML = "";
+        document.getElementById("tracks-ul").innerHTML = "";
+      }
+    });
+
+    // Add Artist
+    document.getElementById("add-artist-btn").addEventListener("click", async () => {
+      const name = document.getElementById("artist-name").value;
+      const instagram = document.getElementById("artist-instagram").value;
+      const spotify = document.getElementById("artist-spotify").value;
+      const picFile = document.getElementById("artist-pic").files[0];
+
+      if (!name || !picFile) {
+        alert("Name and picture are required");
+        return;
+      }
+
+      try {
+        const storageRef = ref(storage, `artists/${picFile.name}`);
+        await uploadBytes(storageRef, picFile);
+        const picUrl = await getDownloadURL(storageRef);
+
+        await addDoc(collection(db, "artists"), {
+          name,
+          instagram,
+          spotify,
+          picUrl
+        });
+
+        document.getElementById("admin-message").innerText = "Artist added!";
+        loadArtists();
+      } catch (error) {
+        console.error("Error adding artist:", error);
+      }
+    });
+
+    // Submit Track
+    document.getElementById("submit-track-btn").addEventListener("click", async () => {
+      const trackName = document.getElementById("track-name").value;
+      const artistName = document.getElementById("track-artist-name").value;
+      const trackLink = document.getElementById("track-link").value;
+      const picFile = document.getElementById("track-pic").files[0];
+
+      if (!trackName || !artistName || !trackLink || !picFile) {
+        alert("All fields are required");
+        return;
+      }
+
+      try {
+        const storageRef = ref(storage, `tracks/${picFile.name}`);
+        await uploadBytes(storageRef, picFile);
+        const picUrl = await getDownloadURL(storageRef);
+
+        await addDoc(collection(db, "tracks"), {
+          trackName,
+          artistName,
+          trackLink,
+          picUrl,
+          submittedBy: auth.currentUser.email
+        });
+
+        document.getElementById("submit-message").innerText = "Track submitted!";
+        if (auth.currentUser.email === adminEmail) {
+          loadTracks();
         }
-        a { color: #1e90ff; }
-        img { max-width: 100%; height: auto; }
-        
-        /* Mobile responsiveness */
-        @media (max-width: 600px) {
-            body { margin: 10px; }
-            input { max-width: none; }
-            button { width: 100%; }
-            .section { padding: 10px; }
-        }
-    </style>
+      } catch (error) {
+        console.error("Error submitting track:", error);
+      }
+    });
+
+    // Load Artists
+    async function loadArtists() {
+      try {
+        const snapshot = await getDocs(collection(db, "artists"));
+        const ul = document.getElementById("artists-ul");
+        ul.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <img src="${data.picUrl}" width="100">
+            <strong>${data.name}</strong> - Instagram: ${data.instagram || "N/A"}, Spotify: ${data.spotify || "N/A"}
+          `;
+          ul.appendChild(li);
+        });
+      } catch (error) {
+        console.error("Error loading artists:", error);
+      }
+    }
+
+    // Load Tracks
+    async function loadTracks() {
+      try {
+        const snapshot = await getDocs(collection(db, "tracks"));
+        const ul = document.getElementById("tracks-ul");
+        ul.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <img src="${data.picUrl}" width="100">
+            <strong>${data.trackName}</strong> by ${data.artistName} - 
+            <a href="${data.trackLink}" target="_blank">${data.trackLink}</a> 
+            (Submitted by: ${data.submittedBy})
+          `;
+          ul.appendChild(li);
+        });
+      } catch (error) {
+        console.error("Error loading tracks:", error);
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: black; color: white; }
+    .section { margin-bottom: 20px; }
+    button { padding: 10px; background: #333; color: white; border: 1px solid #555; margin-top: 10px; }
+    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; padding: 5px; background: #222; color: white; border: 1px solid #555; }
+    a { color: #1e90ff; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 600px) {
+      body { margin: 10px; }
+      input { max-width: none; }
+      button { width: 100%; }
+      .section { padding: 10px; }
+    }
+  </style>
 </head>
 <body>
 
 <h1>Artist Label Platform</h1>
 
-<!-- Login Section -->
 <div id="login-section" class="section">
-    <button id="login-btn">Login with Google</button>
-    <button id="logout-btn" style="display: none;">Logout</button>
+  <button id="login-btn">Login with Google</button>
+  <button id="logout-btn" style="display: none;">Logout</button>
 </div>
 
-<!-- Admin Section: Add Artist (visible only to admin) -->
 <div id="admin-section" class="section" style="display: none;">
-    <h2>Admin: Add Artist</h2>
-    <input type="text" id="artist-name" placeholder="Artist Name">
-    <input type="text" id="artist-instagram" placeholder="Instagram Account (e.g., @username)">
-    <input type="text" id="artist-spotify" placeholder="Spotify Link">
-    <input type="file" id="artist-pic" accept="image/*">
-    <button id="add-artist-btn">Add Artist</button>
-    <div id="admin-message"></div>
+  <h2>Admin: Add Artist</h2>
+  <input type="text" id="artist-name" placeholder="Artist Name">
+  <input type="text" id="artist-instagram" placeholder="Instagram Account">
+  <input type="text" id="artist-spotify" placeholder="Spotify Link">
+  <input type="file" id="artist-pic" accept="image/*">
+  <button id="add-artist-btn">Add Artist</button>
+  <div id="admin-message"></div>
 </div>
 
-<!-- Submit Track Section (visible to anyone logged in, but you can adjust) -->
 <div id="submit-track-section" class="section" style="display: none;">
-    <h2>Submit Track</h2>
-    <input type="text" id="track-name" placeholder="Track Name">
-    <input type="text" id="track-artist-name" placeholder="Artist Name">
-    <input type="text" id="track-link" placeholder="SoundCloud Private Link">
-    <input type="file" id="track-pic" accept="image/*">
-    <button id="submit-track-btn">Submit Track</button>
-    <div id="submit-message"></div>
+  <h2>Submit Track</h2>
+  <input type="text" id="track-name" placeholder="Track Name">
+  <input type="text" id="track-artist-name" placeholder="Artist Name">
+  <input type="text" id="track-link" placeholder="SoundCloud Private Link">
+  <input type="file" id="track-pic" accept="image/*">
+  <button id="submit-track-btn">Submit Track</button>
+  <div id="submit-message"></div>
 </div>
 
-<!-- List of Artists (for display, optional) -->
 <div id="artists-list" class="section">
-    <h2>Artists</h2>
-    <ul id="artists-ul"></ul>
+  <h2>Artists</h2>
+  <ul id="artists-ul"></ul>
 </div>
 
-<!-- List of Submitted Tracks (for admin, optional) -->
 <div id="tracks-list" class="section" style="display: none;">
-    <h2>Submitted Tracks</h2>
-    <ul id="tracks-ul"></ul>
+  <h2>Submitted Tracks</h2>
+  <ul id="tracks-ul"></ul>
 </div>
-
-<script>
-    // Firebase config
-    const firebaseConfig = {
-        apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-        authDomain: "sj-one.firebaseapp.com",
-        databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-        projectId: "sj-one",
-        storageBucket: "sj-one.appspot.com",
-        messagingSenderId: "426335553508",
-        appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-        measurementId: "G-YQTVZQWXGB"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const storage = firebase.storage();
-
-    const adminEmail = 'simo.jibou@gmail.com'; // Admin email
-
-    // Google Auth Provider
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    // Handle redirect result on page load
-    auth.getRedirectResult().then((result) => {
-        if (result.user) {
-            console.log('Logged in via redirect:', result.user);
-        }
-    }).catch((error) => {
-        console.error('Redirect login error:', error);
-        alert('Login error: ' + error.message);
-    });
-
-    // Login Button - Use Redirect instead of Popup
-    document.getElementById('login-btn').addEventListener('click', () => {
-        auth.signInWithRedirect(provider).catch((error) => {
-            console.error('Login redirect error:', error);
-            alert('Login error: ' + error.message);
-        });
-    });
-
-    // Logout Button
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        auth.signOut().then(() => {
-            console.log('Logged out');
-        }).catch((error) => {
-            console.error('Logout error:', error);
-        });
-    });
-
-    // Auth State Listener
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            document.getElementById('login-btn').style.display = 'none';
-            document.getElementById('logout-btn').style.display = 'block';
-            document.getElementById('submit-track-section').style.display = 'block';
-
-            // Check if admin
-            if (user.email === adminEmail) {
-                document.getElementById('admin-section').style.display = 'block';
-                document.getElementById('tracks-list').style.display = 'block';
-                loadTracks(); // Load tracks for admin
-            } else {
-                document.getElementById('admin-section').style.display = 'none';
-                document.getElementById('tracks-list').style.display = 'none';
-            }
-
-            loadArtists();
-        } else {
-            document.getElementById('login-btn').style.display = 'block';
-            document.getElementById('logout-btn').style.display = 'none';
-            document.getElementById('admin-section').style.display = 'none';
-            document.getElementById('submit-track-section').style.display = 'none';
-            document.getElementById('tracks-list').style.display = 'none';
-            document.getElementById('artists-ul').innerHTML = '';
-            document.getElementById('tracks-ul').innerHTML = '';
-        }
-    });
-
-    // Add Artist Button (Admin only)
-    document.getElementById('add-artist-btn').addEventListener('click', async () => {
-        const name = document.getElementById('artist-name').value;
-        const instagram = document.getElementById('artist-instagram').value;
-        const spotify = document.getElementById('artist-spotify').value;
-        const picFile = document.getElementById('artist-pic').files[0];
-
-        if (!name || !picFile) {
-            alert('Name and picture are required');
-            return;
-        }
-
-        try {
-            // Upload pic to storage
-            const storageRef = storage.ref(`artists/${picFile.name}`);
-            await storageRef.put(picFile);
-            const picUrl = await storageRef.getDownloadURL();
-
-            // Add to Firestore
-            await db.collection('artists').add({
-                name,
-                instagram,
-                spotify,
-                picUrl
-            });
-
-            document.getElementById('admin-message').innerText = 'Artist added!';
-            loadArtists();
-        } catch (error) {
-            console.error('Error adding artist:', error);
-            document.getElementById('admin-message').innerText = 'Error adding artist.';
-        }
-    });
-
-    // Submit Track Button
-    document.getElementById('submit-track-btn').addEventListener('click', async () => {
-        const trackName = document.getElementById('track-name').value;
-        const artistName = document.getElementById('track-artist-name').value;
-        const trackLink = document.getElementById('track-link').value;
-        const picFile = document.getElementById('track-pic').files[0];
-
-        if (!trackName || !artistName || !trackLink || !picFile) {
-            alert('All fields are required');
-            return;
-        }
-
-        try {
-            // Upload pic to storage
-            const storageRef = storage.ref(`tracks/${picFile.name}`);
-            await storageRef.put(picFile);
-            const picUrl = await storageRef.getDownloadURL();
-
-            // Add to Firestore
-            await db.collection('tracks').add({
-                trackName,
-                artistName,
-                trackLink,
-                picUrl,
-                submittedBy: auth.currentUser.email
-            });
-
-            document.getElementById('submit-message').innerText = 'Track submitted!';
-            if (auth.currentUser.email === adminEmail) {
-                loadTracks();
-            }
-        } catch (error) {
-            console.error('Error submitting track:', error);
-            document.getElementById('submit-message').innerText = 'Error submitting track.';
-        }
-    });
-
-    // Load Artists
-    function loadArtists() {
-        db.collection('artists').get().then((querySnapshot) => {
-            const ul = document.getElementById('artists-ul');
-            ul.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <img src="${data.picUrl}" alt="${data.name}" width="100">
-                    <strong>${data.name}</strong> - Instagram: ${data.instagram || 'N/A'}, Spotify: ${data.spotify || 'N/A'}
-                `;
-                ul.appendChild(li);
-            });
-        }).catch((error) => {
-            console.error('Error loading artists:', error);
-        });
-    }
-
-    // Load Tracks (for admin)
-    function loadTracks() {
-        db.collection('tracks').get().then((querySnapshot) => {
-            const ul = document.getElementById('tracks-ul');
-            ul.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <img src="${data.picUrl}" alt="${data.trackName}" width="100">
-                    <strong>${data.trackName}</strong> by ${data.artistName} - Link: <a href="${data.trackLink}">${data.trackLink}</a> (Submitted by: ${data.submittedBy})
-                `;
-                ul.appendChild(li);
-            });
-        }).catch((error) => {
-            console.error('Error loading tracks:', error);
-        });
-    }
-</script>
 
 </body>
 </html>
