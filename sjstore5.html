@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -208,8 +208,8 @@
           // Fallback to hardcoded rates
           exchangeRates = {
             DH: 1,
-            USD: 0.102,
-            EUR: 0.093
+            USD: 0.11,
+            EUR: 0.094
           };
         }
       }
@@ -1810,10 +1810,14 @@
         <label for="payment-address" id="payment-address-label">Delivery Address</label>
         <input type="text" id="payment-address" required>
         <label id="payment-method-label">Payment Method</label>
-        <select name="payment-method" required>
-          <option value="COD" id="cod-option">Cash on Delivery (COD)</option>
-          <option value="Online" id="online-option">Online Payment</option>
-        </select>
+        <div>
+          <input type="radio" id="cod" name="payment-method" value="COD" checked>
+          <label for="cod" id="cod-option">Cash on Delivery (COD)</label>
+        </div>
+        <div>
+          <input type="radio" id="online" name="payment-method" value="Online">
+          <label for="online" id="online-option">Online Payment</label>
+        </div>
         <button type="submit" id="submit-payment">Submit Payment</button>
         <button id="close-payment-modal">Close</button>
       </form>
