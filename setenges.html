@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SJ STORE - Settings</title>
+  <!-- Google Fonts - Roboto as Helvetica alternative -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Firebase v12.3.0 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginBtn = document.getElementById("login-btn");
+      const profilePic = document.getElementById("profile-pic");
+      const logoutBtn = document.getElementById("logout-btn");
+      const settingsForm = document.getElementById("settings-form");
+      const settingsProfilePic = document.getElementById("settings-profile-pic");
+      const settingsUserName = document.getElementById("settings-user-name");
+      const backBtn = document.getElementById("back-btn");
+      let currentUser = null;
+      let userData = {};
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          loginBtn.style.display = "none";
+          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
+          profilePic.style.display = "block";
+          profilePic.title = user.displayName || "User";
+          logoutBtn.style.display = "block";
+          loadUserData();
+        } else {
+          loginBtn.style.display = "inline-block";
+          profilePic.style.display = "none";
+          logoutBtn.style.display = "none";
+          userData = {};
+          settingsForm.style.display = "none";
+          alert("Please log in to access settings.");
+          window.location.href = "index.html"; // Redirect to main page if not logged in
+        }
+      });
+      async function loadUserData() {
+        if (currentUser) {
+          const userRef = ref(db, `users/${currentUser.uid}`);
+          try {
+            const snapshot = await get(userRef);
+            if (snapshot.exists()) {
+              userData = snapshot.val();
+            } else {
+              userData = {};
+            }
+            // Populate form
+            settingsProfilePic.src = currentUser.photoURL || "https://via.placeholder.com/100";
+            settingsUserName.textContent = currentUser.displayName || "User";
+            document.getElementById("whatsapp-phone").value = userData.whatsappPhone || "";
+            document.getElementById("delivery-address").value = userData.deliveryAddress || "";
+            document.getElementById("currency-select").value = userData.currency || "DH";
+            document.getElementById("language-select").value = userData.language || "English";
+          } catch (error) {
+            console.error("Error loading user data:", error);
+          }
+        }
+      }
+      loginBtn.addEventListener("click", () => {
+        signInWithPopup(auth, provider)
+          .then((result) => {
+            alert("Login successful!");
+          })
+          .catch((error) => {
+            alert("Login failed: " + error.message);
+          });
+      });
+      logoutBtn.addEventListener("click", () => {
+        signOut(auth)
+          .then(() => {
+            alert("Logged out successfully!");
+            window.location.href = "index.html";
+          })
+          .catch((error) => {
+            alert("Logout failed: " + error.message);
+          });
+      });
+      settingsForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert("Please log in to save settings.");
+          return;
+        }
+        const whatsappPhone = document.getElementById("whatsapp-phone").value;
+        const deliveryAddress = document.getElementById("delivery-address").value;
+        const currency = document.getElementById("currency-select").value;
+        const language = document.getElementById("language-select").value;
+        try {
+          await set(ref(db, `users/${currentUser.uid}`), {
+            whatsappPhone,
+            deliveryAddress,
+            currency,
+            language
+          });
+          alert("Settings saved successfully!");
+        } catch (error) {
+          alert(`Failed to save settings: ${error.message}`);
+        }
+      });
+      backBtn.addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+    });
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #000;
+      color: #fff;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #000;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid #333;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 0;
+    }
+    #back-btn, #login-btn, #logout-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+    #back-btn:hover, #login-btn:hover, #logout-btn:hover {
+      border-color: #ccc;
+      background-color: #222;
+    }
+    #profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      display: none;
+    }
+    #logout-btn {
+      display: none;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 1.5rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .settings-container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #111;
+      padding: 2rem;
+      border: 1px solid #333;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      background: #222;
+      padding: 1.5rem;
+      border: 1px solid #333;
+      border-radius: 0;
+    }
+    label {
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.875rem;
+    }
+    input, select {
+      padding: 0.75rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      border-radius: 0;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    input:focus, select:focus {
+      border-color: #fff;
+      outline: none;
+    }
+    button[type="submit"] {
+      background: #fff;
+      color: #000;
+      padding: 0.75rem;
+      border: none;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button[type="submit"]:hover {
+      background: #e0e0e0;
+    }
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .profile-section img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+    .profile-section h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem;
+      }
+      .settings-container {
+        margin: 1rem;
+        padding: 1rem;
+      }
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.75rem;
+      }
+      .profile-section img {
+        width: 80px;
+        height: 80px;
+      }
+      .profile-section h3 {
+        font-size: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <button id="back-btn">Back</button>
+      <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
+    </div>
+    <div class="header-right">
+      <button id="login-btn">Login</button>
+      <img id="profile-pic" alt="Profile Pic">
+      <button id="logout-btn">Logout</button>
+    </div>
+  </div>
+  <h1>Settings</h1>
+  <div class="settings-container">
+    <form id="settings-form">
+      <div class="profile-section">
+        <img id="settings-profile-pic" alt="Profile Pic">
+        <h3 id="settings-user-name"></h3>
+      </div>
+      <label for="currency-select">Currency</label>
+      <select id="currency-select">
+        <option value="DH">DH (Moroccan Dirham)</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+      <label for="language-select">Language</label>
+      <select id="language-select">
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="Arabic">Arabic</option>
+      </select>
+      <label for="whatsapp-phone">WhatsApp Phone</label>
+      <input type="text" id="whatsapp-phone" placeholder="Enter WhatsApp phone number">
+      <label for="delivery-address">Delivery Address</label>
+      <input type="text" id="delivery-address" placeholder="Enter delivery address">
+      <button type="submit">Save Settings</button>
+    </form>
+  </div>
+</body>
+</html>
