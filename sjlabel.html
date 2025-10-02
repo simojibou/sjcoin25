@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artist Label Platform</title>
   <script type="module">
-    // Import Firebase v9 modular
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+    // Import Firebase v10 modular (latest stable as of 2025)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
     // Firebase config
     const firebaseConfig = {
@@ -31,31 +31,151 @@
     const provider = new GoogleAuthProvider();
     const adminEmail = "simo.jibou@gmail.com";
 
-    // Handle redirect result
-    getRedirectResult(auth).then((result) => {
-      if (result && result.user) {
-        console.log("Logged in via redirect:", result.user);
-      }
-    }).catch((error) => {
-      alert("Login error: " + error.message);
-    });
-
-    // Login
-    document.getElementById("login-btn").addEventListener("click", () => {
-      signInWithRedirect(auth, provider).catch((error) => {
+    // Handle redirect result on page load
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log("Logged in via redirect:", result.user);
+        } else if (result?.error) {
+          console.error("Redirect error:", result.error);
+          alert("Login failed: " + result.error.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect catch error:", error);
         alert("Login error: " + error.message);
       });
-    });
 
-    // Logout
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      signOut(auth).catch((error) => {
-        console.error("Logout error:", error);
-      });
+    // Login button
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginBtn = document.getElementById("login-btn");
+      if (loginBtn) {
+        loginBtn.addEventListener("click", async () => {
+          try {
+            console.log("Starting redirect login...");
+            await signInWithRedirect(auth, provider);
+          } catch (error) {
+            console.error("Login error:", error);
+            alert("Login error: " + error.message);
+          }
+        });
+      }
+
+      const logoutBtn = document.getElementById("logout-btn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          try {
+            await signOut(auth);
+            console.log("Logged out successfully");
+          } catch (error) {
+            console.error("Logout error:", error);
+          }
+        });
+      }
+
+      // Add Artist button
+      const addArtistBtn = document.getElementById("add-artist-btn");
+      if (addArtistBtn) {
+        addArtistBtn.addEventListener("click", async () => {
+          const name = document.getElementById("artist-name").value.trim();
+          const instagram = document.getElementById("artist-instagram").value.trim();
+          const spotify = document.getElementById("artist-spotify").value.trim();
+          const picFile = document.getElementById("artist-pic").files[0];
+
+          if (!name || !picFile) {
+            alert("Name and picture are required");
+            return;
+          }
+
+          if (!auth.currentUser || auth.currentUser.email !== adminEmail) {
+            alert("Admin access required");
+            return;
+          }
+
+          try {
+            // Unique filename to avoid overwrites
+            const timestamp = Date.now();
+            const storageRef = ref(storage, `artists/${auth.currentUser.uid}_${timestamp}_${picFile.name}`);
+            await uploadBytes(storageRef, picFile);
+            const picUrl = await getDownloadURL(storageRef);
+
+            await addDoc(collection(db, "artists"), {
+              name,
+              instagram,
+              spotify,
+              picUrl,
+              addedBy: auth.currentUser.email,
+              addedAt: new Date()
+            });
+
+            document.getElementById("admin-message").innerText = "Artist added successfully!";
+            document.getElementById("artist-name").value = "";
+            document.getElementById("artist-instagram").value = "";
+            document.getElementById("artist-spotify").value = "";
+            document.getElementById("artist-pic").value = "";
+            loadArtists();
+          } catch (error) {
+            console.error("Error adding artist:", error);
+            document.getElementById("admin-message").innerText = "Error: " + error.message;
+          }
+        });
+      }
+
+      // Submit Track button
+      const submitTrackBtn = document.getElementById("submit-track-btn");
+      if (submitTrackBtn) {
+        submitTrackBtn.addEventListener("click", async () => {
+          const trackName = document.getElementById("track-name").value.trim();
+          const artistName = document.getElementById("track-artist-name").value.trim();
+          const trackLink = document.getElementById("track-link").value.trim();
+          const picFile = document.getElementById("track-pic").files[0];
+
+          if (!trackName || !artistName || !trackLink || !picFile) {
+            alert("All fields are required");
+            return;
+          }
+
+          if (!auth.currentUser) {
+            alert("Please log in first");
+            return;
+          }
+
+          try {
+            // Unique filename
+            const timestamp = Date.now();
+            const storageRef = ref(storage, `tracks/${auth.currentUser.uid}_${timestamp}_${picFile.name}`);
+            await uploadBytes(storageRef, picFile);
+            const picUrl = await getDownloadURL(storageRef);
+
+            await addDoc(collection(db, "tracks"), {
+              trackName,
+              artistName,
+              trackLink,
+              picUrl,
+              submittedBy: auth.currentUser.email,
+              submittedAt: new Date()
+            });
+
+            document.getElementById("submit-message").innerText = "Track submitted successfully!";
+            document.getElementById("track-name").value = "";
+            document.getElementById("track-artist-name").value = "";
+            document.getElementById("track-link").value = "";
+            document.getElementById("track-pic").value = "";
+
+            if (auth.currentUser.email === adminEmail) {
+              loadTracks();
+            }
+          } catch (error) {
+            console.error("Error submitting track:", error);
+            document.getElementById("submit-message").innerText = "Error: " + error.message;
+          }
+        });
+      }
     });
 
     // Auth State Listener
     onAuthStateChanged(auth, (user) => {
+      console.log("Auth state changed:", user ? user.email : "No user");
       if (user) {
         document.getElementById("login-btn").style.display = "none";
         document.getElementById("logout-btn").style.display = "block";
@@ -82,71 +202,6 @@
       }
     });
 
-    // Add Artist
-    document.getElementById("add-artist-btn").addEventListener("click", async () => {
-      const name = document.getElementById("artist-name").value;
-      const instagram = document.getElementById("artist-instagram").value;
-      const spotify = document.getElementById("artist-spotify").value;
-      const picFile = document.getElementById("artist-pic").files[0];
-
-      if (!name || !picFile) {
-        alert("Name and picture are required");
-        return;
-      }
-
-      try {
-        const storageRef = ref(storage, `artists/${picFile.name}`);
-        await uploadBytes(storageRef, picFile);
-        const picUrl = await getDownloadURL(storageRef);
-
-        await addDoc(collection(db, "artists"), {
-          name,
-          instagram,
-          spotify,
-          picUrl
-        });
-
-        document.getElementById("admin-message").innerText = "Artist added!";
-        loadArtists();
-      } catch (error) {
-        console.error("Error adding artist:", error);
-      }
-    });
-
-    // Submit Track
-    document.getElementById("submit-track-btn").addEventListener("click", async () => {
-      const trackName = document.getElementById("track-name").value;
-      const artistName = document.getElementById("track-artist-name").value;
-      const trackLink = document.getElementById("track-link").value;
-      const picFile = document.getElementById("track-pic").files[0];
-
-      if (!trackName || !artistName || !trackLink || !picFile) {
-        alert("All fields are required");
-        return;
-      }
-
-      try {
-        const storageRef = ref(storage, `tracks/${picFile.name}`);
-        await uploadBytes(storageRef, picFile);
-        const picUrl = await getDownloadURL(storageRef);
-
-        await addDoc(collection(db, "tracks"), {
-          trackName,
-          artistName,
-          trackLink,
-          picUrl,
-          submittedBy: auth.currentUser.email
-        });
-
-        document.getElementById("submit-message").innerText = "Track submitted!";
-        if (auth.currentUser.email === adminEmail) {
-          loadTracks();
-        }
-      } catch (error) {
-        console.error("Error submitting track:", error);
-      }
-    });
-
     // Load Artists
     async function loadArtists() {
       try {
@@ -157,8 +212,10 @@
           const data = doc.data();
           const li = document.createElement("li");
           li.innerHTML = `
-            <img src="${data.picUrl}" width="100">
-            <strong>${data.name}</strong> - Instagram: ${data.instagram || "N/A"}, Spotify: ${data.spotify || "N/A"}
+            <img src="${data.picUrl}" alt="${data.name}" width="100" height="100">
+            <strong>${data.name}</strong><br>
+            Instagram: <a href="https://instagram.com/${data.instagram.replace('@', '')}" target="_blank">${data.instagram || "N/A"}</a><br>
+            Spotify: <a href="${data.spotify}" target="_blank">${data.spotify || "N/A"}</a>
           `;
           ul.appendChild(li);
         });
@@ -177,10 +234,10 @@
           const data = doc.data();
           const li = document.createElement("li");
           li.innerHTML = `
-            <img src="${data.picUrl}" width="100">
-            <strong>${data.trackName}</strong> by ${data.artistName} - 
-            <a href="${data.trackLink}" target="_blank">${data.trackLink}</a> 
-            (Submitted by: ${data.submittedBy})
+            <img src="${data.picUrl}" alt="${data.trackName}" width="100" height="100">
+            <strong>${data.trackName}</strong> by ${data.artistName}<br>
+            Link: <a href="${data.trackLink}" target="_blank">Listen on SoundCloud</a><br>
+            Submitted by: ${data.submittedBy} on ${data.submittedAt?.toDate ? data.submittedAt.toDate().toLocaleString() : 'N/A'}
           `;
           ul.appendChild(li);
         });
@@ -192,20 +249,25 @@
 
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: black; color: white; }
-    .section { margin-bottom: 20px; }
-    button { padding: 10px; background: #333; color: white; border: 1px solid #555; margin-top: 10px; border-radius: 5px; cursor: pointer; }
+    h1, h2 { text-align: center; }
+    .section { margin-bottom: 20px; padding: 15px; background: #111; border-radius: 8px; }
+    button { padding: 10px 15px; background: #333; color: white; border: 1px solid #555; margin-top: 10px; border-radius: 5px; cursor: pointer; width: 100%; }
     button:hover { background: #444; }
     label { display: block; margin-bottom: 5px; font-weight: bold; color: #ddd; }
-    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 3px; }
-    a { color: #1e90ff; }
-    img { max-width: 100%; height: auto; border-radius: 5px; }
+    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; padding: 8px; background: #222; color: white; border: 1px solid #555; border-radius: 3px; box-sizing: border-box; }
+    input[type="file"] { padding: 5px; }
+    a { color: #1e90ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img { max-width: 100%; height: auto; border-radius: 5px; display: block; margin-bottom: 10px; }
     ul { list-style-type: none; padding: 0; }
-    li { margin-bottom: 15px; padding: 10px; background: #222; border-radius: 5px; }
+    li { margin-bottom: 15px; padding: 15px; background: #222; border-radius: 8px; border-left: 4px solid #1e90ff; }
+    #admin-message, #submit-message { color: #4CAF50; margin-top: 10px; }
     @media (max-width: 600px) {
       body { margin: 10px; }
       input { max-width: none; }
       button { width: 100%; }
       .section { padding: 10px; }
+      li { padding: 10px; }
     }
   </style>
 </head>
@@ -222,10 +284,10 @@
   <h2>Admin: Add Artist</h2>
   <label for="artist-name">Artist Name:</label>
   <input type="text" id="artist-name" placeholder="Artist Name">
-  <label for="artist-instagram">Instagram Account:</label>
-  <input type="text" id="artist-instagram" placeholder="Instagram Account">
+  <label for="artist-instagram">Instagram Account (e.g., @username):</label>
+  <input type="text" id="artist-instagram" placeholder="@username">
   <label for="artist-spotify">Spotify Link:</label>
-  <input type="text" id="artist-spotify" placeholder="Spotify Link">
+  <input type="text" id="artist-spotify" placeholder="https://open.spotify.com/...">
   <label for="artist-pic">Artist Picture:</label>
   <input type="file" id="artist-pic" accept="image/*">
   <button id="add-artist-btn">Add Artist</button>
@@ -239,7 +301,7 @@
   <label for="track-artist-name">Artist Name:</label>
   <input type="text" id="track-artist-name" placeholder="Artist Name">
   <label for="track-link">SoundCloud Private Link:</label>
-  <input type="text" id="track-link" placeholder="SoundCloud Private Link">
+  <input type="text" id="track-link" placeholder="https://soundcloud.com/...">
   <label for="track-pic">Track Picture:</label>
   <input type="file" id="track-pic" accept="image/*">
   <button id="submit-track-btn">Submit Track</button>
@@ -247,12 +309,12 @@
 </div>
 
 <div id="artists-list" class="section">
-  <h2>Artists</h2>
+  <h2>Our Artists</h2>
   <ul id="artists-ul"></ul>
 </div>
 
 <div id="tracks-list" class="section" style="display: none;">
-  <h2>Submitted Tracks</h2>
+  <h2>Submitted Tracks (Admin Only)</h2>
   <ul id="tracks-ul"></ul>
 </div>
 
