@@ -1,112 +1,110 @@
-```html
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            max-width: 800px;
-            margin: auto;
-        }
-
-        h1, h2, h3 {
-            text-align: center;
-        }
-
-        button {
-            padding: 10px;
-            margin: 5px;
-            cursor: pointer;
-        }
-
-        input, select {
-            display: block;
-            margin: 10px 0;
-            padding: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        #status {
-            text-align: center;
-            color: red;
-            margin: 10px 0;
-        }
-
-        .artist-item, .track-item {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .artist-item img, .track-item img {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            margin-right: 20px;
-        }
-
-        .item-info {
-            flex: 1;
-        }
-
-        .item-actions {
-            display: flex;
-            flex-direction: column;
-        }
-    </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SJ Label — لوحة إدارة</title>
+  <style>
+    /* بسيط وجاهز للطباعة */
+    :root{--maxw:1000px;--accent:#0b5ed7}
+    body{font-family:system-ui,Segoe UI,Helvetica,Arial;direction:rtl;padding:16px;background:#f6f8fb}
+    .container{max-width:var(--maxw);margin:0 auto;background:white;padding:18px;border-radius:10px;box-shadow:0 6px 20px rgba(10,10,20,0.06)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{font-size:20px;margin:0}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .small{font-size:13px;color:#666}
+    .row{display:flex;gap:12px;margin-top:12px}
+    .card{padding:12px;border:1px solid #eee;border-radius:8px;flex:1}
+    label{display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px}
+    img.thumb{max-width:120px;border-radius:6px;margin-top:8px}
+    .list{margin-top:12px}
+    .item{display:flex;align-items:center;gap:12px;padding:8px;border-bottom:1px solid #f0f0f0}
+    .actions button{margin-left:6px}
+    .msg{padding:8px;border-radius:6px;margin-top:8px}
+    .success{background:#e6ffed;border:1px solid #8be08d}
+    .error{background:#ffecec;border:1px solid #ff8b8b}
+    footer{margin-top:18px;font-size:13px;color:#666}
+  </style>
 </head>
 <body>
-    <div id="login">
-        <h1>Admin Login</h1>
-        <button onclick="signIn()">Sign in with Google</button>
+  <div class="container">
+    <header>
+      <div>
+        <h1>SJ Label — لوحة إدارة الفنانين والمقاطع</h1>
+        <div class="small">تسجيل الدخول عبر Google فقط. المستخدم المسؤول: <strong>simo.jibou@gmail.com</strong></div>
+      </div>
+      <div>
+        <div id="auth-area">
+          <button id="login-btn">تسجيل الدخول بـ Google</button>
+          <button id="logout-btn" style="display:none">تسجيل الخروج</button>
+        </div>
+      </div>
+    </header><main id="app" style="display:none">
+  <div class="row">
+    <div class="card" style="flex:0.6">
+      <h3>إضافة / تعديل فنان</h3>
+      <form id="artist-form">
+        <input type="hidden" id="artist-id" />
+        <label>اسم الفنان</label>
+        <input id="artist-name" required />
+        <label>رابط إنستاغرام</label>
+        <input id="artist-insta" placeholder="https://instagram.com/..." />
+        <label>رابط سبوتيفاي</label>
+        <input id="artist-spotify" placeholder="https://open.spotify.com/..." />
+        <label>صورة الفنان (jpg/png) - الحد الأقصى 2MB</label>
+        <input id="artist-photo" type="file" accept="image/png,image/jpeg" />
+        <img id="artist-photo-preview" class="thumb" style="display:none" />
+        <div style="margin-top:8px">
+          <button type="submit">حفظ الفنان</button>
+          <button type="button" id="artist-cancel">إلغاء</button>
+        </div>
+      </form>
+      <div id="artist-msg" class="msg" style="display:none"></div>
     </div>
-    <div id="admin" style="display: none;">
-        <h1>Admin Panel</h1>
-        <div id="status"></div>
-        <section id="artists-section">
-            <h2>Artists</h2>
-            <button onclick="showAddArtistForm()">Add Artist</button>
-            <div id="artist-list"></div>
-            <div id="artist-form" style="display: none;">
-                <h3 id="artist-form-title">Add Artist</h3>
-                <input type="text" id="artist-name" placeholder="Name" required>
-                <input type="file" id="artist-photo" accept="image/jpeg, image/png">
-                <input type="text" id="artist-instagram" placeholder="Instagram URL">
-                <input type="text" id="artist-spotify" placeholder="Spotify URL">
-                <button onclick="saveArtist()">Save</button>
-                <button onclick="cancelForm('artist-form')">Cancel</button>
-            </div>
-        </section>
-        <section id="tracks-section">
-            <h2>Tracks</h2>
-            <button onclick="showAddTrackForm()">Add Track</button>
-            <div id="track-list"></div>
-            <div id="track-form" style="display: none;">
-                <h3 id="track-form-title">Add Track</h3>
-                <input type="text" id="track-name" placeholder="Track Name" required>
-                <select id="track-artist-id" required></select>
-                <input type="file" id="track-photo" accept="image/jpeg, image/png">
-                <input type="text" id="track-soundcloud" placeholder="SoundCloud Link (public or private)" required>
-                <button onclick="saveTrack()">Save</button>
-                <button onclick="cancelForm('track-form')">Cancel</button>
-            </div>
-        </section>
-        <button onclick="signOut()">Sign Out</button>
+
+    <div class="card" style="flex:0.4">
+      <h3>إضافة / تعديل مقطع</h3>
+      <form id="track-form">
+        <input type="hidden" id="track-id" />
+        <label>اسم المقطع</label>
+        <input id="track-name" required />
+        <label>اختر الفنان</label>
+        <select id="track-artist"></select>
+        <label>رابط SoundCloud (يمكن أن يكون رابطًا خاصًا)</label>
+        <input id="track-sc" placeholder="https://soundcloud.com/..." />
+        <label>صورة المقطع (jpg/png) - الحد الأقصى 2MB</label>
+        <input id="track-photo" type="file" accept="image/png,image/jpeg" />
+        <img id="track-photo-preview" class="thumb" style="display:none" />
+        <div style="margin-top:8px">
+          <button type="submit">حفظ المقطع</button>
+          <button type="button" id="track-cancel">إلغاء</button>
+        </div>
+      </form>
+      <div id="track-msg" class="msg" style="display:none"></div>
     </div>
-    <script>
-        const firebaseConfig = {
+  </div>
+
+  <section class="list">
+    <h3>قائمة الفنانين</h3>
+    <div id="artists-list" class="card"></div>
+  </section>
+
+  <section class="list">
+    <h3>قائمة المقاطع</h3>
+    <div id="tracks-list" class="card"></div>
+  </section>
+
+</main>
+
+<footer>
+  تعليمات النشر: ركب Firebase CLI ثم نفّذ `firebase init hosting` ثم `firebase deploy`.
+</footer>
+
+  </div>  <!-- Firebase SDK عبر CDN (مقترح modular) - ضع نسخة مناسبة إذا رغبت -->  <script type="module">
+    // --- ضع هنا تكوين مشروعك من Firebase Console ---
+    const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
             databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
@@ -117,327 +115,287 @@
             measurementId: "G-YQTVZQWXGB"
         };
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const storage = firebase.storage();
+    // --- استيراد مكتبات Firebase من CDN modular ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, addDoc, getDocs, onSnapshot, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-        let currentUser = null;
-        let artistsCache = {}; // id: {name, ...}
-        let editingArtistId = null;
-        let editingTrackId = null;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const adminRef = db.collection('admins').doc(user.email);
-                const adminDoc = await adminRef.get();
-                if (adminDoc.exists) {
-                    currentUser = user;
-                    document.getElementById('login').style.display = 'none';
-                    document.getElementById('admin').style.display = 'block';
-                    loadArtists();
-                    loadTracks();
-                } else {
-                    showStatus('You are not an admin.');
-                    auth.signOut();
-                }
-            } else {
-                document.getElementById('login').style.display = 'block';
-                document.getElementById('admin').style.display = 'none';
-            }
-        });
+    // admin email hard-coded as requirement, and we also check 'admins' collection if exists
+    const PRIMARY_ADMIN_EMAIL = 'simo.jibou@gmail.com';
 
-        function signIn() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => showStatus(error.message));
+    // helper UI refs
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const appRoot = document.getElementById('app');
+    const artistForm = document.getElementById('artist-form');
+    const trackForm = document.getElementById('track-form');
+    const artistsList = document.getElementById('artists-list');
+    const tracksList = document.getElementById('tracks-list');
+    const trackArtistSelect = document.getElementById('track-artist');
+
+    // messages
+    const artistMsg = document.getElementById('artist-msg');
+    const trackMsg = document.getElementById('track-msg');
+
+    // login
+    loginBtn.addEventListener('click', async ()=>{
+      try{
+        await signInWithPopup(auth, provider);
+      }catch(e){alert('خطأ في تسجيل الدخول: '+e.message)}
+    });
+    logoutBtn.addEventListener('click', ()=>signOut(auth));
+
+    // auth state
+    onAuthStateChanged(auth, async user=>{
+      if(user){
+        const email = user.email || '';
+        const isAdmin = await checkIsAdmin(email);
+        if(!isAdmin){
+          alert('حسابك ليس مفعلًا كأدمن. تواصل مع صاحب الحساب.');
+          signOut(auth);
+          return;
+        }
+        loginBtn.style.display='none'; logoutBtn.style.display='inline-block';
+        appRoot.style.display='block';
+        startListeners();
+      } else {
+        loginBtn.style.display='inline-block'; logoutBtn.style.display='none';
+        appRoot.style.display='none';
+        stopListeners();
+      }
+    });
+
+    // Check admin: either PRIMARY_ADMIN_EMAIL or present in 'admins' collection
+    async function checkIsAdmin(email){
+      if(!email) return false;
+      if(email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) return true;
+      try{
+        const adminsColl = collection(db, 'admins');
+        const snaps = await getDocs(adminsColl);
+        for(const d of snaps.docs){
+          const data = d.data();
+          if(data.email && data.email.toLowerCase() === email.toLowerCase()) return true;
+        }
+      }catch(e){console.warn('فشل التحقق من قائمة الأدمنز:', e)}
+      return false;
+    }
+
+    // realtime listeners
+    let artistsUnsub=null, tracksUnsub=null;
+    function startListeners(){
+      const artistsQ = query(collection(db,'artists'), orderBy('createdAt','desc'));
+      artistsUnsub = onSnapshot(artistsQ, snap=>{
+        renderArtists(snap.docs);
+        populateArtistsSelect(snap.docs);
+      });
+      const tracksQ = query(collection(db,'tracks'), orderBy('createdAt','desc'));
+      tracksUnsub = onSnapshot(tracksQ, snap=>{
+        renderTracks(snap.docs);
+      });
+    }
+    function stopListeners(){ if(artistsUnsub) artistsUnsub(); if(tracksUnsub) tracksUnsub(); }
+
+    // Render functions
+    function renderArtists(docs){
+      artistsList.innerHTML='';
+      docs.forEach(d=>{
+        const data = d.data();
+        const id = d.id;
+        const el = document.createElement('div'); el.className='item';
+        const img = document.createElement('img'); img.className='thumb'; img.src = data.photoUrl || '';
+        const info = document.createElement('div'); info.style.flex='1';
+        info.innerHTML = `<strong>${escapeHtml(data.name||'---')}</strong><div class='small'>${escapeHtml(data.instagram||'')}</div><div class='small'>${escapeHtml(data.spotify||'')}</div>`;
+        const actions = document.createElement('div'); actions.className='actions';
+        const editBtn = document.createElement('button'); editBtn.textContent='تعديل'; editBtn.addEventListener('click', ()=>fillArtistForm(id,data));
+        const delBtn = document.createElement('button'); delBtn.textContent='حذف'; delBtn.addEventListener('click', ()=>deleteArtist(id,data));
+        actions.appendChild(editBtn); actions.appendChild(delBtn);
+        el.appendChild(img); el.appendChild(info); el.appendChild(actions);
+        artistsList.appendChild(el);
+      });
+    }
+    function renderTracks(docs){
+      tracksList.innerHTML='';
+      docs.forEach(d=>{
+        const data = d.data();
+        const id = d.id;
+        const el = document.createElement('div'); el.className='item';
+        const img = document.createElement('img'); img.className='thumb'; img.src = data.trackPhotoUrl || '';
+        const info = document.createElement('div'); info.style.flex='1';
+        info.innerHTML = `<strong>${escapeHtml(data.trackName||'---')}</strong><div class='small'>Artist ID: ${escapeHtml(data.artistId||'')}</div><div class='small'>${escapeHtml(data.soundcloudLink||'')}</div>`;
+        const actions = document.createElement('div'); actions.className='actions';
+        const editBtn = document.createElement('button'); editBtn.textContent='تعديل'; editBtn.addEventListener('click', ()=>fillTrackForm(id,data));
+        const delBtn = document.createElement('button'); delBtn.textContent='حذف'; delBtn.addEventListener('click', ()=>deleteTrack(id,data));
+        actions.appendChild(editBtn); actions.appendChild(delBtn);
+        el.appendChild(img); el.appendChild(info); el.appendChild(actions);
+        tracksList.appendChild(el);
+      });
+    }
+
+    function populateArtistsSelect(docs){
+      trackArtistSelect.innerHTML='';
+      const empty = document.createElement('option'); empty.value=''; empty.textContent='-- اختر فنان --'; trackArtistSelect.appendChild(empty);
+      docs.forEach(d=>{
+        const opt = document.createElement('option'); opt.value = d.id; opt.textContent = d.data().name || d.id; trackArtistSelect.appendChild(opt);
+      });
+    }
+
+    // Forms handling
+    artistForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      clearMsg(artistMsg);
+      const id = document.getElementById('artist-id').value;
+      const name = document.getElementById('artist-name').value.trim();
+      const insta = document.getElementById('artist-insta').value.trim();
+      const spotify = document.getElementById('artist-spotify').value.trim();
+      const file = document.getElementById('artist-photo').files[0];
+      if(file && !validateImage(file, artistMsg)) return;
+      try{
+        if(!id){
+          // add
+          const docRef = await addDoc(collection(db,'artists'), { name, instagram: insta, spotify, createdAt: serverTimestamp() });
+          const docId = docRef.id;
+          let photoUrl='';
+          if(file){
+            const p = storageRef(storage, `artists/${docId}/photo`);
+            await uploadBytes(p, file);
+            photoUrl = await getDownloadURL(p);
+            await updateDoc(doc(db,'artists',docId), { photoUrl });
+          }
+          showMsg(artistMsg,'تم إضافة الفنان بنجاح','success');
+          artistForm.reset(); document.getElementById('artist-photo-preview').style.display='none';
+        } else {
+          // update
+          const docRef = doc(db,'artists',id);
+          await updateDoc(docRef, { name, instagram: insta, spotify });
+          if(file){
+            const p = storageRef(storage, `artists/${id}/photo`);
+            await uploadBytes(p,file);
+            const photoUrl = await getDownloadURL(p);
+            await updateDoc(docRef, { photoUrl });
+          }
+          showMsg(artistMsg,'تم تحديث الفنان','success');
+          artistForm.reset(); document.getElementById('artist-photo-preview').style.display='none';
+        }
+      }catch(e){showMsg(artistMsg,'خطأ: '+e.message,'error')}
+    });
+
+    document.getElementById('artist-photo').addEventListener('change', e=>previewFile(e.target.files[0],'artist-photo-preview',artistMsg));
+    document.getElementById('artist-cancel').addEventListener('click', ()=>{artistForm.reset(); document.getElementById('artist-photo-preview').style.display='none'; clearMsg(artistMsg)});
+
+    trackForm.addEventListener('submit', async (e)=>{
+      e.preventDefault(); clearMsg(trackMsg);
+      const id = document.getElementById('track-id').value;
+      const name = document.getElementById('track-name').value.trim();
+      const artistId = document.getElementById('track-artist').value;
+      const sc = document.getElementById('track-sc').value.trim();
+      const file = document.getElementById('track-photo').files[0];
+      if(!artistId){ showMsg(trackMsg,'اختر فنانًا للمقطع','error'); return; }
+      if(file && !validateImage(file, trackMsg)) return;
+      try{
+        if(!id){
+          const docRef = await addDoc(collection(db,'tracks'), { trackName: name, artistId, soundcloudLink: sc, createdAt: serverTimestamp() });
+          const docId = docRef.id;
+          if(file){
+            const p = storageRef(storage, `tracks/${docId}/photo`);
+            await uploadBytes(p,file);
+            const trackPhotoUrl = await getDownloadURL(p);
+            await updateDoc(doc(db,'tracks',docId), { trackPhotoUrl });
+          }
+          showMsg(trackMsg,'تم إضافة المقطع','success');
+          trackForm.reset(); document.getElementById('track-photo-preview').style.display='none';
+        } else {
+          const docRef = doc(db,'tracks',id);
+          await updateDoc(docRef, { trackName: name, artistId, soundcloudLink: sc });
+          if(file){
+            const p = storageRef(storage, `tracks/${id}/photo`);
+            await uploadBytes(p,file);
+            const trackPhotoUrl = await getDownloadURL(p);
+            await updateDoc(docRef, { trackPhotoUrl });
+          }
+          showMsg(trackMsg,'تم تحديث المقطع','success');
+          trackForm.reset(); document.getElementById('track-photo-preview').style.display='none';
+        }
+      }catch(e){ showMsg(trackMsg,'خطأ: '+e.message,'error') }
+    });
+    document.getElementById('track-photo').addEventListener('change', e=>previewFile(e.target.files[0],'track-photo-preview',trackMsg));
+    document.getElementById('track-cancel').addEventListener('click', ()=>{trackForm.reset(); document.getElementById('track-photo-preview').style.display='none'; clearMsg(trackMsg)});
+
+    // Fill forms for edit
+    async function fillArtistForm(id,data){ document.getElementById('artist-id').value=id; document.getElementById('artist-name').value=data.name||''; document.getElementById('artist-insta').value=data.instagram||''; document.getElementById('artist-spotify').value=data.spotify||''; if(data.photoUrl){ const p=document.getElementById('artist-photo-preview'); p.src=data.photoUrl; p.style.display='block'; } }
+    async function fillTrackForm(id,data){ document.getElementById('track-id').value=id; document.getElementById('track-name').value=data.trackName||''; document.getElementById('track-artist').value = data.artistId||''; document.getElementById('track-sc').value = data.soundcloudLink||''; if(data.trackPhotoUrl){ const p=document.getElementById('track-photo-preview'); p.src=data.trackPhotoUrl; p.style.display='block'; } }
+
+    // Delete helpers
+    async function deleteArtist(id,data){ if(!confirm('هل تريد حذف هذا الفنان؟ سيتم حذف بياناته (لا تحذف من الستوريج تلقائيًا).')) return; try{ // delete firestore doc
+        await deleteDoc(doc(db,'artists',id));
+        // attempt to delete storage photo
+        try{ const p = storageRef(storage, `artists/${id}/photo`); await deleteObject(p); }catch(e){}
+        alert('تم الحذف');
+      }catch(e){alert('خطأ: '+e.message)} }
+    async function deleteTrack(id,data){ if(!confirm('هل تريد حذف هذا المقطع؟')) return; try{ await deleteDoc(doc(db,'tracks',id)); try{ const p = storageRef(storage, `tracks/${id}/photo`); await deleteObject(p);}catch(e){} alert('تم الحذف'); }catch(e){alert('خطأ: '+e.message)} }
+
+    // utils
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    function showMsg(el,msg,type){ el.textContent=msg; el.className='msg '+(type==='success'?'success':'error'); el.style.display='block'; }
+    function clearMsg(el){ el.textContent=''; el.style.display='none'; }
+
+    function previewFile(file,previewId,msgEl){ clearMsg(msgEl); if(!file) return; if(!validateImage(file,msgEl)) return; const reader = new FileReader(); reader.onload = e=>{ const img = document.getElementById(previewId); img.src = e.target.result; img.style.display='block'; }; reader.readAsDataURL(file); }
+
+    function validateImage(file,msgEl){ const allowed = ['image/png','image/jpeg']; if(!allowed.includes(file.type)){ showMsg(msgEl,'نوع الملف غير مسموح. استخدم PNG أو JPG','error'); return false; } const maxSize = 2*1024*1024; if(file.size > maxSize){ showMsg(msgEl,'حجم الصورة أكبر من 2MB','error'); return false; } return true; }
+
+    // small helper to get doc ref
+    function doc(dbRef, path, id){ return doc2(dbRef,path,id); }
+    // workaround: we used import name "doc" earlier - create alias
+    import { doc as doc2 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // NOTE: Because we used onSnapshot and modular imports, we rely on Firestore permissions defined in Security Rules.
+
+    // End of module
+  </script>  <!-- README: قواعد الأمان (ضعها في Console -> Rules) -->  <!--
+    Firestore security rules example (تسمح بالقراءة للكل، والكتابة للأدمن فقط):
+
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        function isAdmin() {
+          return request.auth != null && (
+            request.auth.token.email == 'simo.jibou@gmail.com' ||
+            // أو افحص قائمة admins collection عبر custom claim أو عن طريق إدخال emails في قواعدك الثابتة
+            false
+          );
         }
 
-        function signOut() {
-            auth.signOut();
+        match /artists/{artistId} {
+          allow read: if true;
+          allow create, update, delete: if isAdmin();
         }
-
-        function showStatus(message, isError = true) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.style.color = isError ? 'red' : 'green';
-            setTimeout(() => status.textContent = '', 5000);
+        match /tracks/{trackId} {
+          allow read: if true;
+          allow create, update, delete: if isAdmin();
         }
+      }
+    }
 
-        async function loadArtists() {
-            const snapshot = await db.collection('artists').orderBy('createdAt', 'desc').get();
-            const list = document.getElementById('artist-list');
-            list.innerHTML = '';
-            artistsCache = {};
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                artistsCache[doc.id] = data;
-                const item = document.createElement('div');
-                item.className = 'artist-item';
-                item.innerHTML = `
-                    <img src="${data.photoUrl || ''}" alt="Photo">
-                    <div class="item-info">
-                        <strong>${data.name}</strong><br>
-                        Instagram: ${data.instagram || 'N/A'}<br>
-                        Spotify: ${data.spotify || 'N/A'}
-                    </div>
-                    <div class="item-actions">
-                        <button onclick="editArtist('${doc.id}')">Edit</button>
-                        <button onclick="deleteArtist('${doc.id}')">Delete</button>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-            populateArtistSelect();
+    Storage rules example (تمنع الكتابة إلا للأدمن):
+
+    rules_version = '2';
+    service firebase.storage {
+      match /b/{bucket}/o {
+        match /artists/{artistId}/photo {
+          allow read; // اختياري: اجعلها عامة
+          allow write: if request.auth != null && request.auth.token.email == 'simo.jibou@gmail.com';
         }
-
-        function populateArtistSelect() {
-            const select = document.getElementById('track-artist-id');
-            select.innerHTML = '<option value="">Select Artist</option>';
-            Object.entries(artistsCache).forEach(([id, {name}]) => {
-                select.innerHTML += `<option value="${id}">${name}</option>`;
-            });
+        match /tracks/{trackId}/photo {
+          allow read;
+          allow write: if request.auth != null && request.auth.token.email == 'simo.jibou@gmail.com';
         }
-
-        async function loadTracks() {
-            const snapshot = await db.collection('tracks').orderBy('createdAt', 'desc').get();
-            const list = document.getElementById('track-list');
-            list.innerHTML = '';
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const artist = artistsCache[data.artistId] || {name: 'Unknown'};
-                const item = document.createElement('div');
-                item.className = 'track-item';
-                item.innerHTML = `
-                    <img src="${data.trackPhotoUrl || ''}" alt="Photo">
-                    <div class="item-info">
-                        <strong>${data.trackName}</strong><br>
-                        Artist: ${artist.name}<br>
-                        SoundCloud: ${data.soundcloudLink}
-                    </div>
-                    <div class="item-actions">
-                        <button onclick="editTrack('${doc.id}')">Edit</button>
-                        <button onclick="deleteTrack('${doc.id}')">Delete</button>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        function showAddArtistForm() {
-            editingArtistId = null;
-            document.getElementById('artist-form-title').textContent = 'Add Artist';
-            clearForm('artist');
-            document.getElementById('artist-form').style.display = 'block';
-        }
-
-        function showAddTrackForm() {
-            editingTrackId = null;
-            document.getElementById('track-form-title').textContent = 'Add Track';
-            clearForm('track');
-            document.getElementById('track-form').style.display = 'block';
-        }
-
-        function cancelForm(formId) {
-            document.getElementById(formId).style.display = 'none';
-            clearForm(formId.split('-')[0]);
-        }
-
-        function clearForm(type) {
-            if (type === 'artist') {
-                document.getElementById('artist-name').value = '';
-                document.getElementById('artist-photo').value = '';
-                document.getElementById('artist-instagram').value = '';
-                document.getElementById('artist-spotify').value = '';
-            } else if (type === 'track') {
-                document.getElementById('track-name').value = '';
-                document.getElementById('track-artist-id').value = '';
-                document.getElementById('track-photo').value = '';
-                document.getElementById('track-soundcloud').value = '';
-            }
-        }
-
-        async function saveArtist() {
-            const name = document.getElementById('artist-name').value.trim();
-            const instagram = document.getElementById('artist-instagram').value.trim();
-            const spotify = document.getElementById('artist-spotify').value.trim();
-            const photoFile = document.getElementById('artist-photo').files[0];
-
-            if (!name) return showStatus('Name is required.');
-
-            if (photoFile && !validateImage(photoFile)) return;
-
-            try {
-                let docRef;
-                if (editingArtistId) {
-                    docRef = db.collection('artists').doc(editingArtistId);
-                } else {
-                    docRef = db.collection('artists').doc();
-                }
-                const id = docRef.id;
-
-                let photoUrl = editingArtistId ? artistsCache[editingArtistId].photoUrl : null;
-                if (photoFile) {
-                    const storageRef = storage.ref(`artists/${id}/photo`);
-                    await storageRef.put(photoFile);
-                    photoUrl = await storageRef.getDownloadURL();
-                }
-
-                await docRef.set({
-                    name,
-                    photoUrl,
-                    instagram,
-                    spotify,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                showStatus('Artist saved successfully.', false);
-                cancelForm('artist-form');
-                loadArtists();
-                loadTracks(); // Reload tracks to update artist names if needed
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        async function saveTrack() {
-            const trackName = document.getElementById('track-name').value.trim();
-            const artistId = document.getElementById('track-artist-id').value;
-            const soundcloudLink = document.getElementById('track-soundcloud').value.trim();
-            const photoFile = document.getElementById('track-photo').files[0];
-
-            if (!trackName || !artistId || !soundcloudLink) return showStatus('All fields except photo are required.');
-
-            if (photoFile && !validateImage(photoFile)) return;
-
-            try {
-                let docRef;
-                if (editingTrackId) {
-                    docRef = db.collection('tracks').doc(editingTrackId);
-                } else {
-                    docRef = db.collection('tracks').doc();
-                }
-                const id = docRef.id;
-
-                let trackPhotoUrl = editingTrackId ? (await docRef.get()).data().trackPhotoUrl : null;
-                if (photoFile) {
-                    const storageRef = storage.ref(`tracks/${id}/photo`);
-                    await storageRef.put(photoFile);
-                    trackPhotoUrl = await storageRef.getDownloadURL();
-                }
-
-                await docRef.set({
-                    trackName,
-                    artistId,
-                    trackPhotoUrl,
-                    soundcloudLink,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                showStatus('Track saved successfully.', false);
-                cancelForm('track-form');
-                loadTracks();
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        function editArtist(id) {
-            const data = artistsCache[id];
-            document.getElementById('artist-name').value = data.name;
-            document.getElementById('artist-instagram').value = data.instagram || '';
-            document.getElementById('artist-spotify').value = data.spotify || '';
-            document.getElementById('artist-photo').value = ''; // Can't prefill file
-            document.getElementById('artist-form-title').textContent = 'Edit Artist';
-            editingArtistId = id;
-            document.getElementById('artist-form').style.display = 'block';
-        }
-
-        function editTrack(id) {
-            db.collection('tracks').doc(id).get().then(doc => {
-                const data = doc.data();
-                document.getElementById('track-name').value = data.trackName;
-                document.getElementById('track-artist-id').value = data.artistId;
-                document.getElementById('track-soundcloud').value = data.soundcloudLink;
-                document.getElementById('track-photo').value = ''; // Can't prefill
-                document.getElementById('track-form-title').textContent = 'Edit Track';
-                editingTrackId = id;
-                document.getElementById('track-form').style.display = 'block';
-            });
-        }
-
-        async function deleteArtist(id) {
-            if (!confirm('Are you sure?')) return;
-            try {
-                const data = artistsCache[id];
-                if (data.photoUrl) {
-                    await storage.refFromURL(data.photoUrl).delete();
-                }
-                await db.collection('artists').doc(id).delete();
-                showStatus('Artist deleted.', false);
-                loadArtists();
-                loadTracks();
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        async function deleteTrack(id) {
-            if (!confirm('Are you sure?')) return;
-            try {
-                const doc = await db.collection('tracks').doc(id).get();
-                const data = doc.data();
-                if (data.trackPhotoUrl) {
-                    await storage.refFromURL(data.trackPhotoUrl).delete();
-                }
-                await db.collection('tracks').doc(id).delete();
-                showStatus('Track deleted.', false);
-                loadTracks();
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        function validateImage(file) {
-            const allowedTypes = ['image/jpeg', 'image/png'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (!allowedTypes.includes(file.type)) {
-                showStatus('Only JPEG or PNG images allowed.');
-                return false;
-            }
-            if (file.size > maxSize) {
-                showStatus('Image size must be less than 5MB.');
-                return false;
-            }
-            return true;
-        }
-    </script>
-    <!-- Setup Instructions (for reference, not part of the app) -->
-    <!--
-    1. Create Firebase Project: Already done, using the provided config.
-    2. Add Admin: In Firestore, create collection 'admins'. Add document with ID 'simo.jibou@gmail.com' and any field (e.g., allowed: true).
-    3. Security Rules:
-       For Firestore:
-       rules_version = '2';
-       service cloud.firestore {
-         match /databases/{database}/documents {
-           match /{document=**} {
-             allow read: if true;  // Public read; change to false if not needed
-             allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
-           }
-         }
-       }
-       For Storage:
-       rules_version = '2';
-       service firebase.storage {
-         match /b/{bucket}/o {
-           match /{allPaths=**} {
-             allow read: if true;  // Public read
-             allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
-           }
-         }
-       }
-    4. Deploy to Hosting: Use Firebase CLI to deploy this file as index.html.
-    -->
-</body>
+      }
+    }
+  --></body>
 </html>
-```
