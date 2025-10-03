@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +42,7 @@
       const logoutOption = document.getElementById("logout-option");
       const sellNowOption = document.getElementById("sell-now-option");
       const settingsOption = document.getElementById("settings-option");
+      const orderDashboardOption = document.getElementById("order-dashboard-option");
       const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
@@ -111,7 +111,8 @@
           login: 'Login',
           sellNow: 'Sell Now',
           settings: 'Settings',
-          logout: 'Logout'
+          logout: 'Logout',
+          orderDashboard: 'Order Dashboard'
         },
         French: {
           title: 'SJ STORE',
@@ -150,7 +151,8 @@
           login: 'Connexion',
           sellNow: 'Vendre maintenant',
           settings: 'Paramètres',
-          logout: 'Déconnexion'
+          logout: 'Déconnexion',
+          orderDashboard: 'Order Dashboard'
         },
         Arabic: {
           title: 'SJ STORE',
@@ -189,7 +191,8 @@
           login: 'تسجيل الدخول',
           sellNow: 'بيع الآن',
           settings: 'الإعدادات',
-          logout: 'تسجيل الخروج'
+          logout: 'تسجيل الخروج',
+          orderDashboard: 'Order Dashboard'
         }
       };
       async function fetchExchangeRates() {
@@ -222,6 +225,7 @@
         sellNowOption.textContent = t.sellNow;
         settingsOption.textContent = t.settings;
         logoutOption.textContent = t.logout;
+        if (orderDashboardOption) orderDashboardOption.textContent = t.orderDashboard;
         document.querySelector('#sell-modal h2').textContent = t.sellTitle;
         document.getElementById("sell-product-title").placeholder = t.productTitle;
         document.getElementById("sell-product-price").placeholder = t.productPrice.replace('DH', getCurrencySymbol(userData.currency));
@@ -290,6 +294,7 @@
             isSeller = userData.role === "seller";
             adminPanel.style.display = isSeller ? "block" : "none";
             sellNowOption.style.display = isSeller ? "block" : "none";
+            if (orderDashboardOption) orderDashboardOption.style.display = isSeller ? "block" : "none";
             if (isSeller) loadAdminSliders();
             applyLanguage(userData.language);
             renderProducts(searchInput.value, currentCategory);
@@ -339,6 +344,12 @@
         dropdownMenu.style.display = "none";
         window.location.href = "setenges.html";
       });
+      if (orderDashboardOption) {
+        orderDashboardOption.addEventListener("click", () => {
+          dropdownMenu.style.display = "none";
+          window.location.href = "order-dashboard.html";
+        });
+      }
       chatBtn.addEventListener("click", () => {
         window.location.href = "sjchat.html";
       });
@@ -1623,6 +1634,7 @@
         <img id="profile-pic" alt="Profile Pic">
         <div id="dropdown-menu" class="dropdown-menu">
           <button id="sell-now-option">Sell Now</button>
+          <button id="order-dashboard-option">Order Dashboard</button>
           <button id="settings-option">Settings</button>
           <button id="logout-option">Logout</button>
         </div>
@@ -1903,5 +1915,4 @@
     </div>
   </footer>
 </body>
-</html>
-```
+  </html>
