@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Firebase v12.3.0 Modular -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getFirestore, collection, doc, onSnapshot, updateDoc, query, where, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    const firebaseConfig = {
+      // same config
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginBtn = document.getElementById("login-btn");
+      const profilePic = document.getElementById("profile-pic");
+      const dropdownMenu = document.getElementById("dropdown-menu");
+      const logoutOption = document.getElementById("logout-option");
+      const balanceEl = document.getElementById("balance");
+      const ordersList = document.getElementById("orders-list");
+      let currentUser = null;
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          loginBtn.style.display = "none";
+          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
+          profilePic.style.display = "block";
+          const userRef = doc(db, "users", user.uid);
+          onSnapshot(userRef, (snap) => {
+            if (!snap.exists() || snap.data().role !== "seller") {
+              document.body.innerHTML = "<h1>Not authorized as seller</h1><button id='login-btn'>Login</button>";
+              document.getElementById("login-btn").addEventListener("click", () => signInWithPopup(auth, provider));
+              return;
+            }
+            balanceEl.textContent = `Balance: ${snap.data().balance || 0} DH`;
+          });
+          const ordersQ = query(collection(db, "orders"), where("sellerId", "==", user.uid));
+          onSnapshot(ordersQ, (snap) => {
+            ordersList.innerHTML = "";
+            snap.docs.forEach((d) => {
+              const order = {id: d.id, ...d.data()};
+              const div = document.createElement("div");
+              div.classList.add("order-item");
+              div.innerHTML = `
+                <h3>Order ${order.id}</h3>
+                <p>Buyer: ${order.buyerName} (${order.buyerId})</p>
+                <p>Full Name: ${order.fullName}</p>
+                <p>WhatsApp: ${order.whatsappPhone}</p>
+                <p>Address: ${order.address}</p>
+                <p>Payment: ${order.paymentMethod}</p>
+                <p>Total: ${order.totalAmount} DH</p>
+                <p>Created: ${order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleString() : ''}</p>
+                <ul>${order.products.map(p => `<li>${p.name} x ${p.qty} @ ${p.price} DH</li>`).join('')}</ul>
+                <select id="status-${order.id}">
+                  <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
+                  <option value="processing" ${order.status === "processing" ? "selected" : ""}>Processing</option>
+                  <option value="completed" ${order.status === "completed" ? "selected" : ""}>Completed</option>
+                </select>
+              `;
+              div.querySelector("select").addEventListener("change", async (e) => {
+                const newStatus = e.target.value;
+                await updateDoc(doc(db, "orders", order.id), {status: newStatus});
+                if (newStatus === "completed") {
+                  await updateDoc(doc(db, "users", user.uid), {balance: increment(order.totalAmount)});
+                }
+              });
+              ordersList.appendChild(div);
+            });
+          });
+        } else {
+          // show login
+          profilePic.style.display = "none";
+          loginBtn.style.display = "block";
+        }
+      });
+      loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
+      // other listeners for profile, logout
+      logoutOption.addEventListener("click", () => signOut(auth));
+    });
+  </script>
+  <style>
+    /* Similar style as sjstore.html, add .order-item { background: #111; padding: 1rem; border: 1px solid #333; margin-bottom: 1rem; } */
+    /* Responsive with media queries */
+  </style>
+</head>
+<body>
+  <div class="header">
+    <!-- similar header -->
+  </div>
+  <h1>Order Dashboard</h1>
+  <div id="balance">Balance: 0 DH</div>
+  <div id="orders-list"></div>
+</body>
+</html>
