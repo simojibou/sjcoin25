@@ -13,15 +13,16 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <!-- Firebase v12.3.0 Modular -->
+  <!-- Firebase v12.3.0 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
-    import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    import { getDatabase, ref, onValue, set, push, remove, get, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
       projectId: "sj-one",
       storageBucket: "sj-one.appspot.com",
       messagingSenderId: "426335553508",
@@ -29,7 +30,7 @@
       measurementId: "G-YQTVZQWXGB"
     };
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
     const auth = getAuth(app);
     const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
@@ -41,8 +42,8 @@
       const dropdownMenu = document.getElementById("dropdown-menu");
       const logoutOption = document.getElementById("logout-option");
       const sellNowOption = document.getElementById("sell-now-option");
+      const marketerOption = document.getElementById("marketer-option");
       const settingsOption = document.getElementById("settings-option");
-      const orderDashboardOption = document.getElementById("order-dashboard-option");
       const chatBtn = document.getElementById("chat-btn");
       const adminPanel = document.getElementById("admin-panel");
       const addProductForm = document.getElementById("add-product-form");
@@ -59,17 +60,20 @@
       const sellModal = document.getElementById("sell-modal");
       const sellProductForm = document.getElementById("sell-product-form");
       const closeSellModal = document.getElementById("close-sell-modal");
+      const marketerModal = document.getElementById("marketer-modal");
+      const affiliateList = document.getElementById("affiliate-list");
+      const closeMarketerModal = document.getElementById("close-marketer-modal");
       const paymentModal = document.getElementById("payment-modal");
       const paymentForm = document.getElementById("payment-form");
       const closePaymentModal = document.getElementById("close-payment-modal");
       const categoryCards = document.querySelectorAll(".category-card");
       const titleH1 = document.querySelector("h1");
       let currentUser = null;
-      let isSeller = false;
+      let isAdmin = false;
       let products = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
-      let currentCategory = ""; 
-      let userData = { currency: 'DH', language: 'English', role: 'buyer', balance: 0 };
+      let currentCategory = ""; // Track selected category
+      let userData = { currency: 'DH', language: 'English' };
       let exchangeRates = {
         DH: 1
       };
@@ -101,7 +105,7 @@
           productOrderUrl: 'Order URL (optional)',
           selectCategory: 'Select Category',
           addProduct: 'Add Product',
-          adminPanel: 'Seller Control Panel',
+          adminPanel: 'Admin Control Panel',
           addProductHeader: 'Add Product',
           addSliderHeader: 'Add Slider Item',
           currentSliders: 'Current Sliders',
@@ -110,9 +114,13 @@
           chat: 'Chat',
           login: 'Login',
           sellNow: 'Sell Now',
+          marketerDashboard: 'Marketer Dashboard',
           settings: 'Settings',
           logout: 'Logout',
-          orderDashboard: 'Order Dashboard'
+          affiliateTitle: 'Affiliate Dashboard',
+          generateLink: 'Generate Affiliate Link',
+          copyLink: 'Copy Link',
+          commissions: 'Your Commissions'
         },
         French: {
           title: 'SJ STORE',
@@ -150,9 +158,13 @@
           chat: 'Chat',
           login: 'Connexion',
           sellNow: 'Vendre maintenant',
+          marketerDashboard: 'Tableau de bord du marketeur',
           settings: 'Paramètres',
           logout: 'Déconnexion',
-          orderDashboard: 'Order Dashboard'
+          affiliateTitle: 'Tableau de bord affilié',
+          generateLink: 'Générer un lien affilié',
+          copyLink: 'Copier le lien',
+          commissions: 'Vos commissions'
         },
         Arabic: {
           title: 'SJ STORE',
@@ -190,9 +202,13 @@
           chat: 'دردشة',
           login: 'تسجيل الدخول',
           sellNow: 'بيع الآن',
+          marketerDashboard: 'لوحة تحكم التسويق',
           settings: 'الإعدادات',
           logout: 'تسجيل الخروج',
-          orderDashboard: 'Order Dashboard'
+          affiliateTitle: 'لوحة تحكم التابع',
+          generateLink: 'إنشاء رابط تابع',
+          copyLink: 'نسخ الرابط',
+          commissions: 'عمولاتك'
         }
       };
       async function fetchExchangeRates() {
@@ -223,9 +239,9 @@
         loginBtn.textContent = t.login;
         chatBtn.textContent = t.chat;
         sellNowOption.textContent = t.sellNow;
+        marketerOption.textContent = t.marketerDashboard;
         settingsOption.textContent = t.settings;
         logoutOption.textContent = t.logout;
-        if (orderDashboardOption) orderDashboardOption.textContent = t.orderDashboard;
         document.querySelector('#sell-modal h2').textContent = t.sellTitle;
         document.getElementById("sell-product-title").placeholder = t.productTitle;
         document.getElementById("sell-product-price").placeholder = t.productPrice.replace('DH', getCurrencySymbol(userData.currency));
@@ -242,6 +258,7 @@
         document.querySelector('#admin-panel h3:nth-of-type(3)').textContent = t.currentSliders;
         document.querySelector('#cart-modal h2').textContent = t.cartTitle;
         document.querySelector('#payment-modal h2').textContent = t.paymentTitle;
+        document.querySelector('#marketer-modal h2').textContent = t.affiliateTitle;
         document.getElementById("payment-fullname-label").textContent = t.fullName;
         document.getElementById("payment-whatsapp-label").textContent = t.whatsappPhone;
         document.getElementById("payment-address-label").textContent = t.address;
@@ -251,6 +268,7 @@
         document.getElementById("submit-payment").textContent = t.submitPayment;
         closeModal.textContent = t.close;
         closeSellModal.textContent = t.close;
+        closeMarketerModal.textContent = t.close;
         closePaymentModal.textContent = t.close;
         payNowBtn.textContent = t.payNow;
         if (lang === 'Arabic') {
@@ -274,7 +292,7 @@
         }
       }
       function updateCartCount() {
-        cartCount.textContent = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+        cartCount.textContent = cart.length;
       }
       updateCartCount();
       onAuthStateChanged(auth, (user) => {
@@ -284,28 +302,25 @@
           profilePic.src = user.photoURL || "https://via.placeholder.com/40";
           profilePic.style.display = "block";
           profilePic.title = user.displayName || "User";
-          const userRef = doc(db, `users/${user.uid}`);
-          onSnapshot(userRef, async (snap) => {
-            if (!snap.exists()) {
-              const role = user.email === "simo.jibou@gmail.com" ? "seller" : "buyer";
-              await setDoc(userRef, { role, balance: 0, currency: 'DH', language: 'English' });
-            }
-            userData = snap.data() || { currency: 'DH', language: 'English', role: 'buyer', balance: 0 };
-            isSeller = userData.role === "seller";
-            adminPanel.style.display = isSeller ? "block" : "none";
-            sellNowOption.style.display = isSeller ? "block" : "none";
-            if (orderDashboardOption) orderDashboardOption.style.display = isSeller ? "block" : "none";
-            if (isSeller) loadAdminSliders();
+          isAdmin = user.email === "simo.jibou@gmail.com";
+          adminPanel.style.display = isAdmin ? "block" : "none";
+          if (isAdmin) loadAdminSliders();
+          const userRef = ref(db, `users/${user.uid}`);
+          onValue(userRef, (snapshot) => {
+            userData = snapshot.val() || { currency: 'DH', language: 'English' };
+            marketerOption.style.display = "block";
+            sellNowOption.style.display = "block";
             applyLanguage(userData.language);
             renderProducts(searchInput.value, currentCategory);
+            loadAffiliateDashboard();
           });
         } else {
           loginBtn.style.display = "inline-block";
           profilePic.style.display = "none";
           dropdownMenu.style.display = "none";
           adminPanel.style.display = "none";
-          isSeller = false;
-          userData = { currency: 'DH', language: 'English', role: 'buyer', balance: 0 };
+          isAdmin = false;
+          userData = { currency: 'DH', language: 'English' };
           applyLanguage('English');
         }
         renderProducts();
@@ -317,6 +332,12 @@
       loginBtn.addEventListener("click", () => {
         signInWithPopup(auth, provider)
           .then((result) => {
+            const userRef = ref(db, `users/${result.user.uid}`);
+            get(userRef).then((snapshot) => {
+              if (!snapshot.exists()) {
+                set(userRef, { currency: 'DH', language: 'English' });
+              }
+            });
             alert("Login successful!");
           })
           .catch((error) => {
@@ -340,16 +361,15 @@
         dropdownMenu.style.display = "none";
         sellModal.style.display = "block";
       });
+      marketerOption.addEventListener("click", () => {
+        dropdownMenu.style.display = "none";
+        marketerModal.style.display = "block";
+        loadAffiliateDashboard();
+      });
       settingsOption.addEventListener("click", () => {
         dropdownMenu.style.display = "none";
         window.location.href = "setenges.html";
       });
-      if (orderDashboardOption) {
-        orderDashboardOption.addEventListener("click", () => {
-          dropdownMenu.style.display = "none";
-          window.location.href = "order-dashboard.html";
-        });
-      }
       chatBtn.addEventListener("click", () => {
         window.location.href = "sjchat.html";
       });
@@ -359,6 +379,9 @@
         }
         if (e.target === sellModal) {
           sellModal.style.display = "none";
+        }
+        if (e.target === marketerModal) {
+          marketerModal.style.display = "none";
         }
         if (e.target === paymentModal) {
           paymentModal.style.display = "none";
@@ -370,15 +393,34 @@
       closeSellModal.addEventListener("click", () => {
         sellModal.style.display = "none";
       });
+      closeMarketerModal.addEventListener("click", () => {
+        marketerModal.style.display = "none";
+      });
       closePaymentModal.addEventListener("click", () => {
         paymentModal.style.display = "none";
       });
       closeModal.addEventListener("click", () => {
         cartModal.style.display = "none";
       });
-      onSnapshot(collection(db, "products"), (snapshot) => {
-        products = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+      const productRef = ref(db, "Product");
+      onValue(productRef, (snapshot) => {
+        products = [];
+        snapshot.forEach((childSnapshot) => {
+          const data = childSnapshot.val();
+          products.push({
+            id: childSnapshot.key,
+            title: data.title,
+            price: data.price,
+            des: data.des,
+            orderUrl: data.orderUrl,
+            photo: data.photo,
+            userId: data.id,
+            category: data.category || "Uncategorized" // Default if no category
+          });
+        });
         renderProducts(searchInput.value, currentCategory);
+      }, (error) => {
+        alert(`Failed to load products: ${error.message}. Please check your Realtime Database configuration and permissions.`);
       });
       function renderProducts(filter = "", category = "") {
         const t = translations[userData.language] || translations.English;
@@ -397,6 +439,7 @@
               <button class="order-btn">${t.orderNow}</button>
             `;
           }
+          let affiliateButton = `<button class="generate-affiliate-btn" data-pid="${product.id}">${t.generateLink}</button>`;
           const convertedPrice = getConvertedPrice(product.price, userData.currency);
           const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
@@ -408,6 +451,7 @@
             <button class="whatsapp-btn">${t.contactWhatsApp}</button>
             ${orderButton}
             <button class="add-to-cart-btn">${t.addToCart}</button>
+            ${affiliateButton}
           `;
           div.querySelector(".whatsapp-btn").addEventListener("click", () => {
             const phone = product.des ? product.des.replace(/\D/g, "") : "";
@@ -423,17 +467,17 @@
             });
           }
           div.querySelector(".add-to-cart-btn").addEventListener("click", () => {
-            const existing = cart.find(c => c.id === product.id);
-            if (existing) {
-              existing.qty = (existing.qty || 1) + 1;
-            } else {
-              cart.push({...product, qty: 1});
-            }
+            cart.push(product);
             localStorage.setItem("cart", JSON.stringify(cart));
             updateCartCount();
             alert("Added to cart!");
           });
-          if (isSeller && product.sellerId === currentUser.uid) {
+          if (div.querySelector(".generate-affiliate-btn")) {
+            div.querySelector(".generate-affiliate-btn").addEventListener("click", () => {
+              generateAffiliateLink(product.id);
+            });
+          }
+          if (isAdmin || (product.userId === currentUser.uid)) {
             const adminActions = document.createElement("div");
             adminActions.classList.add("admin-actions");
             const editBtn = document.createElement("button");
@@ -475,9 +519,14 @@
         }
         return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0` : '';
       }
-      onSnapshot(collection(db, "Sliders"), (snapshot) => {
+      const sliderRef = ref(db, "Sliders");
+      onValue(sliderRef, (snapshot) => {
         sliderContainer.innerHTML = "";
-        let slides = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+        let slides = [];
+        snapshot.forEach((childSnapshot) => {
+          const slideData = { id: childSnapshot.key, ...childSnapshot.val() };
+          slides.push(slideData);
+        });
         if (slides.length > 0) {
           slides.forEach((slide) => {
             let element;
@@ -503,6 +552,8 @@
           });
           startSlider(slides.length);
         }
+      }, (error) => {
+        alert("Failed to load sliders: " + error.message);
       });
       let slideIndex = 0;
       function startSlider(numSlides) {
@@ -547,11 +598,11 @@
         }, 5000);
       }
       function loadAdminSliders() {
-        onSnapshot(collection(db, "Sliders"), (snapshot) => {
+        onValue(sliderRef, (snapshot) => {
           sliderList.innerHTML = "";
-          snapshot.docs.forEach((d) => {
-            const sliderId = d.id;
-            const slide = d.data();
+          snapshot.forEach((childSnapshot) => {
+            const sliderId = childSnapshot.key;
+            const slide = childSnapshot.val();
             const div = document.createElement("div");
             div.classList.add("slider-item");
             let element;
@@ -565,7 +616,7 @@
             div.innerHTML = `${element}<button>${translations[userData.language].delete || 'Delete'}</button>`;
             div.querySelector("button").addEventListener("click", () => {
               if (confirm("Delete this slider item?")) {
-                deleteDoc(doc(db, `Sliders/${sliderId}`))
+                remove(ref(db, `Sliders/${sliderId}`))
                   .then(() => alert("Slider item deleted!"))
                   .catch((error) => {
                     alert("Failed to delete slider item: " + error.message);
@@ -574,6 +625,8 @@
             });
             sliderList.appendChild(div);
           });
+        }, (error) => {
+          alert("Failed to load sliders: " + error.message);
         });
       }
       async function convertToWebP(file) {
@@ -639,8 +692,8 @@
       }
       addProductForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (!currentUser || !isSeller) {
-          alert("Please log in as seller to add a product.");
+        if (!currentUser) {
+          alert("Please log in to add a product.");
           return;
         }
         const title = document.getElementById("product-title").value;
@@ -655,13 +708,16 @@
         }
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-          await addDoc(collection(db, "products"), {
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key;
+          await set(productRef, {
             title,
             price,
             des,
             orderUrl,
             photo: photoUrl,
-            sellerId: currentUser.uid,
+            id: currentUser.uid,
+            pId,
             category
           });
           addProductForm.reset();
@@ -672,8 +728,8 @@
       });
       sellProductForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (!currentUser || !isSeller) {
-          alert("Please log in as seller to add a product.");
+        if (!currentUser) {
+          alert("Please log in to add a product.");
           return;
         }
         const title = document.getElementById("sell-product-title").value;
@@ -687,12 +743,15 @@
         }
         try {
           const photoUrl = await uploadFile(photoFile, `products/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-          await addDoc(collection(db, "products"), {
+          const productRef = push(ref(db, "Product"));
+          const pId = productRef.key;
+          await set(productRef, {
             title,
             price,
             des,
             photo: photoUrl,
-            sellerId: currentUser.uid,
+            id: currentUser.uid,
+            pId,
             category
           });
           sellProductForm.reset();
@@ -709,11 +768,14 @@
         const newOrderUrl = prompt("Edit Order URL:", product.orderUrl || "");
         const newCategory = prompt("Edit Category:", product.category);
         if (newTitle && newPrice && newDes) {
-          updateDoc(doc(db, `products/${productId}`), {
+          set(ref(db, `Product/${productId}`), {
             title: newTitle,
             price: newPrice,
             des: newDes,
             orderUrl: newOrderUrl,
+            photo: product.photo,
+            id: product.userId,
+            pId: productId,
             category: newCategory
           }).then(() => {
             alert("Product updated!");
@@ -724,7 +786,7 @@
       }
       function deleteProduct(productId) {
         if (confirm("Delete this product?")) {
-          deleteDoc(doc(db, `products/${productId}`))
+          remove(ref(db, `Product/${productId}`))
             .then(() => {
               alert("Product deleted!");
             })
@@ -735,8 +797,8 @@
       }
       addSliderForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (!currentUser || !isSeller) {
-          alert("Only sellers can add slider items.");
+        if (!currentUser || !isAdmin) {
+          alert("Only admins can add slider items.");
           return;
         }
         const sliderFile = document.getElementById("slider-image").files[0];
@@ -756,7 +818,8 @@
             }
             sliderUrl = sliderUrlInput;
           }
-          await addDoc(collection(db, "Sliders"), { imageUrl: sliderUrl });
+          const newSliderRef = push(ref(db, "Sliders"));
+          await set(newSliderRef, { imageUrl: sliderUrl });
           addSliderForm.reset();
           alert("Slider item added successfully!");
         } catch (error) {
@@ -774,13 +837,12 @@
         cart.forEach((product, index) => {
           const div = document.createElement("div");
           div.classList.add("cart-item");
-          const qty = product.qty || 1;
-          const convertedPrice = parseFloat(getConvertedPrice(product.price, userData.currency)) * qty;
+          const convertedPrice = parseFloat(getConvertedPrice(product.price, userData.currency));
           total += convertedPrice;
           const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
             <img src="${product.photo || 'https://via.placeholder.com/80'}" alt="${product.title || 'No title'}">
-            <h4>${product.title || 'Untitled'} x ${qty}</h4>
+            <h4>${product.title || 'Untitled'}</h4>
             <p>${convertedPrice.toFixed(2)} ${symbol}</p>
             <button class="remove-from-cart">Remove</button>
           `;
@@ -830,36 +892,44 @@
           return;
         }
         try {
-          const ordersBySeller = {};
-          cart.forEach(item => {
-            const sellerId = item.sellerId;
-            if (!ordersBySeller[sellerId]) ordersBySeller[sellerId] = [];
-            ordersBySeller[sellerId].push(item);
+          const orderRef = push(ref(db, "Orders"));
+          const orderId = orderRef.key;
+          let total = 0;
+          const cartItems = cart.map(item => {
+            const convertedPrice = parseFloat(getConvertedPrice(item.price, userData.currency));
+            total += convertedPrice;
+            return {
+              productId: item.id,
+              title: item.title,
+              price: item.price, // Original price in DH
+              quantity: 1 // Assuming quantity 1 for simplicity
+            };
           });
-          for (const sellerId in ordersBySeller) {
-            const items = ordersBySeller[sellerId];
-            const productMap = {};
-            let total = 0;
-            items.forEach(item => {
-              const pid = item.id;
-              const qty = item.qty || 1;
-              if (!productMap[pid]) productMap[pid] = {productId: pid, name: item.title, price: item.price, qty: 0};
-              productMap[pid].qty += qty;
-              total += parseFloat(item.price) * qty;
-            });
-            const productsArr = Object.values(productMap);
-            await addDoc(collection(db, "orders"), {
-              buyerId: currentUser.uid,
-              sellerId,
-              products: productsArr,
-              totalAmount: total,
-              status: "pending",
-              createdAt: serverTimestamp(),
-              buyerName: currentUser.displayName || fullName,
-              fullName,
-              whatsappPhone,
-              address,
-              paymentMethod
+          const urlParams = new URLSearchParams(window.location.search);
+          const refCode = urlParams.get('ref');
+          const affiliateData = refCode ? { affiliateCode: refCode } : {};
+          await set(orderRef, {
+            userId: currentUser.uid,
+            fullName,
+            whatsappPhone,
+            address,
+            paymentMethod,
+            currency: userData.currency,
+            total,
+            items: cartItems,
+            status: "Pending",
+            createdAt: Date.now(),
+            ...affiliateData
+          });
+          if (refCode) {
+            const affiliateRef = ref(db, `affiliates/${refCode}`);
+            get(affiliateRef).then((snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                const commission = total * 0.15; // 15% commission
+                const commissions = data.commissions || 0;
+                update(affiliateRef, { commissions: commissions + commission });
+              }
             });
           }
           alert("Order submitted successfully!");
@@ -871,6 +941,52 @@
           alert(`Failed to submit order: ${error.message}`);
         }
       });
+      function generateUniqueCode() {
+        return Math.random().toString(36).substr(2, 9);
+      }
+      function generateAffiliateLink(productId) {
+        if (!currentUser) return;
+        const code = generateUniqueCode();
+        const link = `${window.location.origin}${window.location.pathname}?ref=${code}&pid=${productId}`;
+        const affiliateRef = push(ref(db, "affiliate_links"));
+        set(affiliateRef, {
+          code,
+          productId,
+          marketerId: currentUser.uid,
+          createdAt: Date.now()
+        });
+        prompt("Copy this affiliate link:", link);
+      }
+      function loadAffiliateDashboard() {
+        if (!currentUser) return;
+        affiliateList.innerHTML = "";
+        const affiliateLinksRef = ref(db, "affiliate_links");
+        onValue(affiliateLinksRef, (snapshot) => {
+          snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            if (data.marketerId === currentUser.uid) {
+              const div = document.createElement("div");
+              div.classList.add("affiliate-item");
+              const link = `${window.location.origin}${window.location.pathname}?ref=${data.code}&pid=${data.productId}`;
+              div.innerHTML = `
+                <p>Product ID: ${data.productId}</p>
+                <p>Link: <a href="${link}" target="_blank">${link}</a></p>
+                <button class="copy-link-btn">Copy Link</button>
+              `;
+              div.querySelector(".copy-link-btn").addEventListener("click", () => {
+                navigator.clipboard.writeText(link).then(() => alert("Link copied!"));
+              });
+              affiliateList.appendChild(div);
+            }
+          });
+        });
+        const marketerRef = ref(db, `users/${currentUser.uid}`);
+        onValue(marketerRef, (snapshot) => {
+          const data = snapshot.val();
+          const commissions = data.commissions || 0;
+          document.getElementById("commissions-total").textContent = `Total Commissions: ${commissions.toFixed(2)} DH`;
+        });
+      }
       const isAndroid = /Android/i.test(navigator.userAgent);
       const popup = document.getElementById("android-popup");
       const pwaBtn = document.getElementById("pwa-install-btn");
@@ -1101,7 +1217,7 @@
       color: #fff;
       margin-bottom: 1rem;
     }
-    .whatsapp-btn, .order-btn, .add-to-cart-btn {
+    .whatsapp-btn, .order-btn, .add-to-cart-btn, .generate-affiliate-btn {
       width: 100%;
       padding: 0.75rem;
       border: none;
@@ -1134,6 +1250,13 @@
     }
     .add-to-cart-btn:hover {
       background: #e0e0e0;
+    }
+    .generate-affiliate-btn {
+      background: #ffc107;
+      color: #000;
+    }
+    .generate-affiliate-btn:hover {
+      background: #e0a800;
     }
     #admin-panel {
       display: none;
@@ -1252,12 +1375,12 @@
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    #cart-list, #sell-product-form, #payment-form {
+    #cart-list, #sell-product-form, #payment-form, #affiliate-list {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
-    .cart-item {
+    .cart-item, .affiliate-item {
       background: #222;
       padding: 1rem;
       border-radius: 0;
@@ -1282,7 +1405,7 @@
       color: #fff;
       margin: 0;
     }
-    .remove-from-cart {
+    .remove-from-cart, .copy-link-btn {
       background: #fff;
       color: #000;
       border: none;
@@ -1293,10 +1416,10 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    .remove-from-cart:hover {
+    .remove-from-cart:hover, .copy-link-btn:hover {
       background: #e0e0e0;
     }
-    #cart-total {
+    #cart-total, #commissions-total {
       font-size: 1.25rem;
       font-weight: 700;
       text-align: right;
@@ -1317,7 +1440,7 @@
     #pay-now-btn:hover {
       background: #0056b3;
     }
-    #close-modal, #close-sell-modal, #close-payment-modal {
+    #close-modal, #close-sell-modal, #close-marketer-modal, #close-payment-modal {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -1330,7 +1453,7 @@
       margin-top: 1rem;
       transition: border-color 0.3s;
     }
-    #close-modal:hover, #close-sell-modal:hover, #close-payment-modal:hover {
+    #close-modal:hover, #close-sell-modal:hover, #close-marketer-modal:hover, #close-payment-modal:hover {
       border-color: #ccc;
     }
     .admin-actions {
@@ -1634,7 +1757,7 @@
         <img id="profile-pic" alt="Profile Pic">
         <div id="dropdown-menu" class="dropdown-menu">
           <button id="sell-now-option">Sell Now</button>
-          <button id="order-dashboard-option">Order Dashboard</button>
+          <button id="marketer-option">Marketer Dashboard</button>
           <button id="settings-option">Settings</button>
           <button id="logout-option">Logout</button>
         </div>
@@ -1729,7 +1852,7 @@
   </div>
   <div class="product-list" id="product-list"></div>
   <div id="admin-panel">
-    <h2>Seller Control Panel</h2>
+    <h2>Admin Control Panel</h2>
     <h3>Add Product</h3>
     <form id="add-product-form">
       <input type="text" id="product-title" placeholder="Product Title" required>
@@ -1788,6 +1911,14 @@
         <button type="submit">Add Product</button>
         <button id="close-sell-modal">Close</button>
       </form>
+    </div>
+  </div>
+  <div id="marketer-modal" class="modal">
+    <div class="modal-content">
+      <h2>Affiliate Dashboard</h2>
+      <div id="affiliate-list"></div>
+      <p id="commissions-total">Total Commissions: 0 DH</p>
+      <button id="close-marketer-modal">Close</button>
     </div>
   </div>
   <div id="payment-modal" class="modal">
@@ -1915,4 +2046,4 @@
     </div>
   </footer>
 </body>
-  </html>
+                </html>
