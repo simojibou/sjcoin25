@@ -272,7 +272,7 @@
                         resolve(blob);
                     }, 'image/jpeg', quality);
                 };
-                img.onerror = reject;
+                img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
                 img.src = URL.createObjectURL(file);
             });
         }
@@ -526,7 +526,7 @@
                 loadArtists();
             } catch (error) {
                 console.error(error);
-                alert('Error adding artist: ' + error.message);
+                alert('Error adding artist: ' + (error.message || error));
             }
         });
 
@@ -560,7 +560,7 @@
                 loadArtists();
             } catch (error) {
                 console.error(error);
-                alert('Error updating artist: ' + error.message);
+                alert('Error updating artist: ' + (error.message || error));
             }
         });
 
@@ -598,7 +598,7 @@
                 loadSlider();
             } catch (error) {
                 console.error('Slider add error:', error);
-                alert('Error adding slider: ' + error.message);
+                alert('Error adding slider: ' + (error.message || error));
             }
         });
 
@@ -631,7 +631,7 @@
                 loadSlider();
             } catch (error) {
                 console.error('Slider edit error:', error);
-                alert('Error updating slider: ' + error.message);
+                alert('Error updating slider: ' + (error.message || error));
             }
         });
 
@@ -677,7 +677,7 @@
                 submitMusicForm.reset();
             } catch (error) {
                 console.error(error);
-                alert('Error submitting music: ' + error.message);
+                alert('Error submitting music: ' + (error.message || error));
             }
         });
     </script>
@@ -874,4 +874,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-    </html>
+        </html>
