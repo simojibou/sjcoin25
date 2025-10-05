@@ -1,111 +1,217 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>SJ Label</title>
+    <!-- Bootstrap CSS for responsive layout -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS for modern dark theme -->
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            max-width: 800px;
-            margin: auto;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        h1, h2, h3 {
-            text-align: center;
+        .header-carousel {
+            position: relative;
+            height: 500px;
+            overflow: hidden;
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 40px;
         }
-
-        button {
-            padding: 10px;
-            margin: 5px;
-            cursor: pointer;
+        .carousel-item {
+            height: 500px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
         }
-
-        input, select {
-            display: block;
-            margin: 10px 0;
-            padding: 10px;
+        .carousel-caption {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .carousel-caption a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .carousel-caption a:hover {
+            color: #ffffff;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+        }
+        .artist-card {
+            background: #1a1a1a;
+            border: none;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        .artist-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(74, 144, 226, 0.3);
+        }
+        .artist-card img {
             width: 100%;
-            box-sizing: border-box;
-        }
-
-        #status {
-            text-align: center;
-            color: red;
-            margin: 10px 0;
-        }
-
-        .artist-item, .track-item {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .artist-item img, .track-item img {
-            width: 100px;
-            height: 100px;
+            height: 200px;
             object-fit: cover;
-            margin-right: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
         }
-
-        .item-info {
-            flex: 1;
+        .artist-card h5 {
+            color: #4a90e2;
+            font-weight: 600;
         }
-
-        .item-actions {
+        .artist-card p {
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+        .social-links {
+            margin-top: 10px;
+        }
+        .social-links a {
+            color: #ffffff;
+            margin-right: 10px;
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+        .social-links a:hover {
+            color: #4a90e2;
+        }
+        .admin-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .artist-card:hover .admin-actions {
+            opacity: 1;
+        }
+        .admin-actions button {
+            background: none;
+            border: none;
+            color: #ffffff;
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .admin-actions button:hover {
+            color: #4a90e2;
+        }
+        .form-section {
+            background: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin: 40px auto;
+            max-width: 600px;
+            padding: 30px;
+        }
+        .form-control, .form-control:focus {
+            background: #2a2a2a;
+            border: 1px solid #4a90e2;
+            color: #ffffff;
+            border-radius: 10px;
+        }
+        .form-control::placeholder {
+            color: #888888;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+            background: linear-gradient(135deg, #357abd 0%, #4a90e2 100%);
+        }
+        .btn-secondary {
+            background: #555555;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+        }
+        .btn-secondary:hover {
+            background: #666666;
+        }
+        .user-info {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin: 10px 0;
+        }
+        .icon {
+            color: #4a90e2;
+            margin-right: 8px;
+        }
+        .modal-content {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-radius: 20px;
+        }
+        .modal-header, .modal-footer {
+            border-color: #4a90e2;
+        }
+        .manager-item {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 768px) {
+            .header-carousel {
+                height: 300px;
+            }
+            .carousel-item {
+                height: 300px;
+            }
+            .logo {
+                width: 40px;
+                height: 40px;
+            }
+            .artist-card {
+                margin: 10px 0;
+            }
+            .form-section {
+                margin: 20px;
+                padding: 20px;
+            }
+            .admin-actions {
+                position: static;
+                opacity: 1;
+                margin-top: 10px;
+            }
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js"></script>
-</head>
-<body>
-    <div id="login">
-        <h1>Admin Login</h1>
-        <button onclick="signIn()">Sign in with Google</button>
-    </div>
-    <div id="admin" style="display: none;">
-        <h1>Admin Panel</h1>
-        <div id="status"></div>
-        <section id="artists-section">
-            <h2>Artists</h2>
-            <button onclick="showAddArtistForm()">Add Artist</button>
-            <div id="artist-list"></div>
-            <div id="artist-form" style="display: none;">
-                <h3 id="artist-form-title">Add Artist</h3>
-                <input type="text" id="artist-name" placeholder="Name" required>
-                <input type="file" id="artist-photo" accept="image/jpeg, image/png">
-                <input type="text" id="artist-instagram" placeholder="Instagram URL">
-                <input type="text" id="artist-spotify" placeholder="Spotify URL">
-                <button onclick="saveArtist()">Save</button>
-                <button onclick="cancelForm('artist-form')">Cancel</button>
-            </div>
-        </section>
-        <section id="tracks-section">
-            <h2>Tracks</h2>
-            <button onclick="showAddTrackForm()">Add Track</button>
-            <div id="track-list"></div>
-            <div id="track-form" style="display: none;">
-                <h3 id="track-form-title">Add Track</h3>
-                <input type="text" id="track-name" placeholder="Track Name" required>
-                <select id="track-artist-id" required></select>
-                <input type="file" id="track-photo" accept="image/jpeg, image/png">
-                <input type="text" id="track-soundcloud" placeholder="SoundCloud Link (public or private)" required>
-                <button onclick="saveTrack()">Save</button>
-                <button onclick="cancelForm('track-form')">Cancel</button>
-            </div>
-        </section>
-        <button onclick="signOut()">Sign Out</button>
-    </div>
-    <script>
+    <!-- Firebase SDKs (Modular Imports) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
+
+        // Your Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -117,310 +223,661 @@
             measurementId: "G-YQTVZQWXGB"
         };
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const storage = firebase.storage();
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        // Handle redirect result for errors
-        auth.getRedirectResult().catch(error => {
-            showStatus(error.message);
+        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
+        let currentUser = null;
+        let editingArtistId = null;
+        let editingSliderId = null;
+
+        // Elements
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const artistsList = document.getElementById('artists-list');
+        const adminSection = document.getElementById('admin-section');
+        const artistManagementSection = document.getElementById('artist-management-section');
+        const submissionSection = document.getElementById('submission-section');
+        const addArtistForm = document.getElementById('add-artist-form');
+        const submitMusicForm = document.getElementById('submit-music-form');
+        const addSliderForm = document.getElementById('add-slider-form');
+        const addManagerForm = document.getElementById('add-manager-form');
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        const editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
+
+        // Google Auth Provider
+        const provider = new GoogleAuthProvider();
+
+        // Compress Image Function
+        async function compressImage(file, maxWidth = 1024, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const { width, height } = img;
+                    if (width > maxWidth) {
+                        canvas.width = maxWidth;
+                        canvas.height = (height / width) * maxWidth;
+                    } else {
+                        canvas.width = width;
+                        canvas.height = height;
+                    }
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(blob => {
+                        resolve(blob);
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Login with Google
+        loginBtn.addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(error => console.error(error));
         });
 
-        let currentUser = null;
-        let artistsCache = {}; // id: {name, ...}
-        let editingArtistId = null;
-        let editingTrackId = null;
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(error => console.error(error));
+        });
 
-        auth.onAuthStateChanged(async (user) => {
+        // Auth State Listener
+        onAuthStateChanged(auth, async user => {
+            currentUser = user;
             if (user) {
-                const adminRef = db.collection('admins').doc(user.email);
-                const adminDoc = await adminRef.get();
-                if (adminDoc.exists) {
-                    currentUser = user;
-                    document.getElementById('login').style.display = 'none';
-                    document.getElementById('admin').style.display = 'block';
-                    loadArtists();
-                    loadTracks();
+                loginBtn.classList.add('d-none');
+                logoutBtn.classList.remove('d-none');
+                userInfo.innerHTML = `<i class="bi bi-person-circle icon"></i>Logged in as: ${user.email}`;
+                submissionSection.classList.remove('d-none');
+
+                if (user.email === ADMIN_EMAIL) {
+                    adminSection.classList.remove('d-none');
+                    artistManagementSection.classList.remove('d-none');
+                    // Add default managers if they don't exist
+                    const defaultManagers = ['narotovssimo038@gmail.com', 'n1ne.to.world@gmail.com'];
+                    for (const email of defaultManagers) {
+                        const q = query(collection(db, 'managers'), where('email', '==', email));
+                        const snap = await getDocs(q);
+                        if (snap.empty) {
+                            await addDoc(collection(db, 'managers'), { email });
+                            console.log('Added default manager:', email);
+                        }
+                    }
+                    loadManagers();
                 } else {
-                    showStatus('You are not an admin.');
-                    auth.signOut();
+                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
+                    getDocs(q).then(snap => {
+                        if (!snap.empty) {
+                            artistManagementSection.classList.remove('d-none');
+                        }
+                    }).catch(err => console.error(err));
                 }
             } else {
-                document.getElementById('login').style.display = 'block';
-                document.getElementById('admin').style.display = 'none';
+                loginBtn.classList.remove('d-none');
+                logoutBtn.classList.add('d-none');
+                userInfo.innerHTML = '';
+                adminSection.classList.add('d-none');
+                artistManagementSection.classList.add('d-none');
+                submissionSection.classList.add('d-none');
+            }
+            loadArtists();
+            loadSlider();
+        });
+
+        // Load Slider from Firestore
+        function loadSlider() {
+            const sliderCol = collection(db, 'sliders');
+            const q = query(sliderCol, orderBy('createdAt'));
+            getDocs(q).then(snapshot => {
+                const headerCarousel = document.querySelector('.header-carousel .carousel-inner');
+                headerCarousel.innerHTML = '';
+                if (snapshot.empty) {
+                    // Default slide if no sliders
+                    const defaultSlide = document.createElement('div');
+                    defaultSlide.className = 'carousel-item active';
+                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1200x500/1e3c72/ffffff?text=SJ+Label')";
+                    defaultSlide.innerHTML = `
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(defaultSlide);
+                    return;
+                }
+                let active = true;
+                snapshot.forEach(doc => {
+                    const slide = doc.data();
+                    const slideId = doc.id;
+                    const carouselItem = document.createElement('div');
+                    carouselItem.className = `carousel-item ${active ? 'active' : ''}`;
+                    carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <button onclick="editSlider('${slideId}')" class="btn btn-sm btn-outline-light me-1" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteSlider('${slideId}')" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `;
+                    }
+                    carouselItem.innerHTML = `
+                        ${adminActions}
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${slide.title || ''}</h1>
+                                <p>${slide.description || ''}</p>
+                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(carouselItem);
+                    active = false;
+                });
+            }).catch(error => console.error(error));
+        }
+
+        // Load Artists from Firestore
+        function loadArtists() {
+            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>'; // Reset
+            const artistsCol = collection(db, 'artists');
+            getDocs(artistsCol).then(snapshot => {
+                if (snapshot.empty) {
+                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet. Add some!</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const artist = doc.data();
+                    const artistId = doc.id;
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4 col-sm-6';
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="admin-actions">
+                                <button onclick="editArtist('${artistId}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteArtist('${artistId}')" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `;
+                    }
+                    card.innerHTML = `
+                        <div class="artist-card">
+                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
+                            ${adminActions}
+                            <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                            <div class="social-links">
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    artistsList.appendChild(card);
+                });
+            }).catch(error => console.error(error));
+        }
+
+        // Load Managers
+        function loadManagers() {
+            const managersList = document.getElementById('managers-list');
+            managersList.innerHTML = '<h4 class="mb-3"><i class="bi bi-people icon"></i>Current Managers</h4>';
+            getDocs(collection(db, 'managers')).then(snapshot => {
+                if (snapshot.empty) {
+                    managersList.innerHTML += '<p class="text-muted">No managers yet.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'manager-item';
+                    div.innerHTML = `
+                        <span>${data.email}</span>
+                        <button class="btn btn-danger btn-sm" onclick="removeManager('${doc.id}')">Remove</button>
+                    `;
+                    managersList.appendChild(div);
+                });
+            }).catch(error => console.error(error));
+        }
+
+        // Global functions for onclick
+        window.editArtist = function(artistId) {
+            editingArtistId = artistId;
+            const artistRef = doc(db, 'artists', artistId);
+            getDoc(artistRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const artist = docSnap.data();
+                    document.getElementById('edit-artist-name').value = artist.name || '';
+                    document.getElementById('edit-artist-description').value = artist.description || '';
+                    document.getElementById('edit-artist-instagram').value = artist.instagram || '';
+                    document.getElementById('edit-artist-spotify').value = artist.spotify || '';
+                    editModal.show();
+                }
+            });
+        };
+
+        window.deleteArtist = function(artistId) {
+            if (confirm('Are you sure you want to delete this artist?')) {
+                const artistRef = doc(db, 'artists', artistId);
+                deleteDoc(artistRef).then(() => {
+                    alert('Artist deleted!');
+                    loadArtists();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.editSlider = function(sliderId) {
+            editingSliderId = sliderId;
+            const sliderRef = doc(db, 'sliders', sliderId);
+            getDoc(sliderRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const slider = docSnap.data();
+                    document.getElementById('edit-slider-title').value = slider.title || '';
+                    document.getElementById('edit-slider-description').value = slider.description || '';
+                    document.getElementById('edit-slider-link').value = slider.link || '';
+                    editSliderModal.show();
+                }
+            });
+        };
+
+        window.deleteSlider = function(sliderId) {
+            if (confirm('Are you sure you want to delete this slider?')) {
+                const sliderRef = doc(db, 'sliders', sliderId);
+                deleteDoc(sliderRef).then(() => {
+                    alert('Slider deleted!');
+                    loadSlider();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.removeManager = function(id) {
+            if (confirm('Are you sure you want to remove this manager?')) {
+                deleteDoc(doc(db, 'managers', id)).then(() => {
+                    loadManagers();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        // Add Artist (Admin/Manager)
+        addArtistForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('artist-name').value;
+            const description = document.getElementById('artist-description').value;
+            const instagram = document.getElementById('artist-instagram').value;
+            const spotify = document.getElementById('artist-spotify').value;
+            const imageFile = document.getElementById('artist-image').files[0];
+
+            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    artistData.imageUrl = url;
+                }
+                await addDoc(collection(db, 'artists'), artistData);
+                alert('Artist added!');
+                addArtistForm.reset();
+                loadArtists();
+            } catch (error) {
+                console.error(error);
+                alert('Error adding artist: ' + (error.message || error));
             }
         });
 
-        function signIn() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithRedirect(provider);
-        }
+        // Edit Artist
+        document.getElementById('edit-artist-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('edit-artist-name').value;
+            const description = document.getElementById('edit-artist-description').value;
+            const instagram = document.getElementById('edit-artist-instagram').value;
+            const spotify = document.getElementById('edit-artist-spotify').value;
+            const imageFile = document.getElementById('edit-artist-image').files[0];
 
-        function signOut() {
-            auth.signOut();
-        }
-
-        function showStatus(message, isError = true) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.style.color = isError ? 'red' : 'green';
-            setTimeout(() => status.textContent = '', 5000);
-        }
-
-        async function loadArtists() {
-            const snapshot = await db.collection('artists').orderBy('createdAt', 'desc').get();
-            const list = document.getElementById('artist-list');
-            list.innerHTML = '';
-            artistsCache = {};
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                artistsCache[doc.id] = data;
-                const item = document.createElement('div');
-                item.className = 'artist-item';
-                item.innerHTML = `
-                    <img src="${data.photoUrl || ''}" alt="Photo">
-                    <div class="item-info">
-                        <strong>${data.name}</strong><br>
-                        Instagram: ${data.instagram || 'N/A'}<br>
-                        Spotify: ${data.spotify || 'N/A'}
-                    </div>
-                    <div class="item-actions">
-                        <button onclick="editArtist('${doc.id}')">Edit</button>
-                        <button onclick="deleteArtist('${doc.id}')">Delete</button>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-            populateArtistSelect();
-        }
-
-        function populateArtistSelect() {
-            const select = document.getElementById('track-artist-id');
-            select.innerHTML = '<option value="">Select Artist</option>';
-            Object.entries(artistsCache).forEach(([id, {name}]) => {
-                select.innerHTML += `<option value="${id}">${name}</option>`;
-            });
-        }
-
-        async function loadTracks() {
-            const snapshot = await db.collection('tracks').orderBy('createdAt', 'desc').get();
-            const list = document.getElementById('track-list');
-            list.innerHTML = '';
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const artist = artistsCache[data.artistId] || {name: 'Unknown'};
-                const item = document.createElement('div');
-                item.className = 'track-item';
-                item.innerHTML = `
-                    <img src="${data.trackPhotoUrl || ''}" alt="Photo">
-                    <div class="item-info">
-                        <strong>${data.trackName}</strong><br>
-                        Artist: ${artist.name}<br>
-                        SoundCloud: ${data.soundcloudLink}
-                    </div>
-                    <div class="item-actions">
-                        <button onclick="editTrack('${doc.id}')">Edit</button>
-                        <button onclick="deleteTrack('${doc.id}')">Delete</button>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        function showAddArtistForm() {
-            editingArtistId = null;
-            document.getElementById('artist-form-title').textContent = 'Add Artist';
-            clearForm('artist');
-            document.getElementById('artist-form').style.display = 'block';
-        }
-
-        function showAddTrackForm() {
-            editingTrackId = null;
-            document.getElementById('track-form-title').textContent = 'Add Track';
-            clearForm('track');
-            document.getElementById('track-form').style.display = 'block';
-        }
-
-        function cancelForm(formId) {
-            document.getElementById(formId).style.display = 'none';
-            clearForm(formId.split('-')[0]);
-        }
-
-        function clearForm(type) {
-            if (type === 'artist') {
-                document.getElementById('artist-name').value = '';
-                document.getElementById('artist-photo').value = '';
-                document.getElementById('artist-instagram').value = '';
-                document.getElementById('artist-spotify').value = '';
-            } else if (type === 'track') {
-                document.getElementById('track-name').value = '';
-                document.getElementById('track-artist-id').value = '';
-                document.getElementById('track-photo').value = '';
-                document.getElementById('track-soundcloud').value = '';
-            }
-        }
-
-        async function saveArtist() {
-            const name = document.getElementById('artist-name').value.trim();
-            const instagram = document.getElementById('artist-instagram').value.trim();
-            const spotify = document.getElementById('artist-spotify').value.trim();
-            const photoFile = document.getElementById('artist-photo').files[0];
-
-            if (!name) return showStatus('Name is required.');
-
-            if (photoFile && !validateImage(photoFile)) return;
+            const artistRef = doc(db, 'artists', editingArtistId);
+            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
 
             try {
-                let docRef;
-                if (editingArtistId) {
-                    docRef = db.collection('artists').doc(editingArtistId);
-                } else {
-                    docRef = db.collection('artists').doc();
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = url;
                 }
-                const id = docRef.id;
-
-                let photoUrl = editingArtistId ? artistsCache[editingArtistId].photoUrl : null;
-                if (photoFile) {
-                    const storageRef = storage.ref(`artists/${id}/photo`);
-                    await storageRef.put(photoFile);
-                    photoUrl = await storageRef.getDownloadURL();
-                }
-
-                await docRef.set({
-                    name,
-                    photoUrl,
-                    instagram,
-                    spotify,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                showStatus('Artist saved successfully.', false);
-                cancelForm('artist-form');
+                await updateDoc(artistRef, updateData);
+                alert('Artist updated!');
+                editModal.hide();
                 loadArtists();
-                loadTracks(); // Reload tracks to update artist names if needed
             } catch (error) {
-                showStatus(error.message);
+                console.error(error);
+                alert('Error updating artist: ' + (error.message || error));
             }
-        }
+        });
 
-        async function saveTrack() {
-            const trackName = document.getElementById('track-name').value.trim();
-            const artistId = document.getElementById('track-artist-id').value;
-            const soundcloudLink = document.getElementById('track-soundcloud').value.trim();
-            const photoFile = document.getElementById('track-photo').files[0];
+        // Add Slider (Admin only)
+        addSliderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('slider-title').value;
+            const description = document.getElementById('slider-description').value;
+            const link = document.getElementById('slider-link').value;
+            const imageFile = document.getElementById('slider-image').files[0];
 
-            if (!trackName || !artistId || !soundcloudLink) return showStatus('All fields except photo are required.');
-
-            if (photoFile && !validateImage(photoFile)) return;
+            if (!imageFile) {
+                alert('Please select an image for the slider.');
+                return;
+            }
+            if (!imageFile.type.startsWith('image/')) {
+                alert('Please select an image file only.');
+                return;
+            }
 
             try {
-                let docRef;
-                if (editingTrackId) {
-                    docRef = db.collection('tracks').doc(editingTrackId);
-                } else {
-                    docRef = db.collection('tracks').doc();
-                }
-                const id = docRef.id;
+                const compressed = await compressImage(imageFile, 1920, 0.7);
+                const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const imageUrl = await getDownloadURL(snapshot.ref);
+                await addDoc(collection(db, 'sliders'), {
+                    title: title || '',
+                    description: description || '',
+                    link: link || '',
+                    imageUrl,
+                    createdAt: serverTimestamp()
+                });
+                alert('Slider added successfully!');
+                addSliderForm.reset();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider add error:', error);
+                alert('Error adding slider: ' + (error.message || error));
+            }
+        });
 
-                let trackPhotoUrl = editingTrackId ? (await docRef.get()).data().trackPhotoUrl : null;
-                if (photoFile) {
-                    const storageRef = storage.ref(`tracks/${id}/photo`);
-                    await storageRef.put(photoFile);
-                    trackPhotoUrl = await storageRef.getDownloadURL();
-                }
+        // Edit Slider
+        document.getElementById('edit-slider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('edit-slider-title').value;
+            const description = document.getElementById('edit-slider-description').value;
+            const link = document.getElementById('edit-slider-link').value;
+            const imageFile = document.getElementById('edit-slider-image').files[0];
 
-                await docRef.set({
+            const sliderRef = doc(db, 'sliders', editingSliderId);
+            const updateData = { title: title || '', description: description || '', link: link || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile, 1920, 0.7);
+                    const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const imageUrl = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = imageUrl;
+                }
+                await updateDoc(sliderRef, updateData);
+                alert('Slider updated!');
+                editSliderModal.hide();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider edit error:', error);
+                alert('Error updating slider: ' + (error.message || error));
+            }
+        });
+
+        // Add Manager (Admin only)
+        addManagerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('manager-email').value;
+            addDoc(collection(db, 'managers'), { email }).then(() => {
+                alert('Manager added!');
+                addManagerForm.reset();
+                loadManagers();
+            }).catch(error => console.error(error));
+        });
+
+        // Submit Music
+        submitMusicForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const artistName = document.getElementById('submit-artist-name').value;
+            const trackName = document.getElementById('track-name').value;
+            const soundcloudLink = document.getElementById('soundcloud-link').value;
+            const coverFile = document.getElementById('cover-upload').files[0];
+
+            if (!coverFile.type.startsWith('image/')) {
+                alert('Please select an image file only for cover art.');
+                return;
+            }
+
+            try {
+                const compressed = await compressImage(coverFile);
+                const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const url = await getDownloadURL(snapshot.ref);
+                // Save submission to Firestore
+                await addDoc(collection(db, 'submissions'), {
+                    artistName,
                     trackName,
-                    artistId,
-                    trackPhotoUrl,
+                    coverUrl: url,
                     soundcloudLink,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                showStatus('Track saved successfully.', false);
-                cancelForm('track-form');
-                loadTracks();
+                    submittedBy: auth.currentUser.email,
+                    timestamp: serverTimestamp()
+                });
+                alert('Submission successful!');
+                submitMusicForm.reset();
             } catch (error) {
-                showStatus(error.message);
+                console.error(error);
+                alert('Error submitting music: ' + (error.message || error));
             }
-        }
-
-        function editArtist(id) {
-            const data = artistsCache[id];
-            document.getElementById('artist-name').value = data.name;
-            document.getElementById('artist-instagram').value = data.instagram || '';
-            document.getElementById('artist-spotify').value = data.spotify || '';
-            document.getElementById('artist-photo').value = ''; // Can't prefill file
-            document.getElementById('artist-form-title').textContent = 'Edit Artist';
-            editingArtistId = id;
-            document.getElementById('artist-form').style.display = 'block';
-        }
-
-        function editTrack(id) {
-            db.collection('tracks').doc(id).get().then(doc => {
-                const data = doc.data();
-                document.getElementById('track-name').value = data.trackName;
-                document.getElementById('track-artist-id').value = data.artistId;
-                document.getElementById('track-soundcloud').value = data.soundcloudLink;
-                document.getElementById('track-photo').value = ''; // Can't prefill
-                document.getElementById('track-form-title').textContent = 'Edit Track';
-                editingTrackId = id;
-                document.getElementById('track-form').style.display = 'block';
-            });
-        }
-
-        async function deleteArtist(id) {
-            if (!confirm('Are you sure?')) return;
-            try {
-                const data = artistsCache[id];
-                if (data.photoUrl) {
-                    await storage.refFromURL(data.photoUrl).delete();
-                }
-                await db.collection('artists').doc(id).delete();
-                showStatus('Artist deleted.', false);
-                loadArtists();
-                loadTracks();
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        async function deleteTrack(id) {
-            if (!confirm('Are you sure?')) return;
-            try {
-                const doc = await db.collection('tracks').doc(id).get();
-                const data = doc.data();
-                if (data.trackPhotoUrl) {
-                    await storage.refFromURL(data.trackPhotoUrl).delete();
-                }
-                await db.collection('tracks').doc(id).delete();
-                showStatus('Track deleted.', false);
-                loadTracks();
-            } catch (error) {
-                showStatus(error.message);
-            }
-        }
-
-        function validateImage(file) {
-            const allowedTypes = ['image/jpeg', 'image/png'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (!allowedTypes.includes(file.type)) {
-                showStatus('Only JPEG or PNG images allowed.');
-                return false;
-            }
-            if (file.size > maxSize) {
-                showStatus('Image size must be less than 5MB.');
-                return false;
-            }
-            return true;
-        }
+        });
     </script>
-    <!-- Updated: Changed to signInWithRedirect instead of signInWithPopup to fix common issues like popup blocking or mobile compatibility. -->
-    <!-- If still not working, check Firebase console: Ensure Google Sign-in is enabled in Authentication. -->
-    <!-- Ensure your domain (localhost or hosted) is in Authorized domains in Auth settings. -->
-    <!-- Ensure admins collection has a doc with ID 'simo.jibou@gmail.com'. -->
-    <!-- Security Rules as before. -->
+</head>
+<body>
+
+    <!-- Header Carousel -->
+    <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            <!-- Slides loaded dynamically -->
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#headerCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#headerCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Login/Logout Section -->
+        <div id="auth-section" class="text-center my-4">
+            <button id="login-btn" class="btn btn-primary"><i class="bi bi-google icon"></i>Login with Google</button>
+            <button id="logout-btn" class="btn btn-secondary d-none"><i class="bi bi-box-arrow-right icon"></i>Logout</button>
+            <div id="user-info" class="user-info d-inline-block"></div>
+        </div>
+
+        <!-- Artists Showcase Section -->
+        <div id="artists-list" class="row justify-content-center">
+            <!-- Artists loaded dynamically -->
+        </div>
+
+        <!-- Artist Management Section (Admin & Managers) -->
+        <div id="artist-management-section" class="form-section d-none">
+            <h3 class="text-center mb-4"><i class="bi bi-plus-circle icon"></i>Add New Artist</h3>
+            <form id="add-artist-form">
+                <div class="mb-3">
+                    <label for="artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <textarea class="form-control" id="artist-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image</label>
+                    <input type="file" class="form-control" id="artist-image" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                    <input type="url" class="form-control" id="artist-instagram" placeholder="https://instagram.com/artist">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                    <input type="url" class="form-control" id="artist-spotify" placeholder="https://open.spotify.com/artist">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Artist</button>
+            </form>
+        </div>
+
+        <!-- Admin Dashboard Section (Admin only) -->
+        <div id="admin-section" class="form-section d-none">
+            <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
+            <form id="add-slider-form">
+                <div class="mb-3">
+                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                    <input type="text" class="form-control" id="slider-title" placeholder="Slide Title">
+                </div>
+                <div class="mb-3">
+                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                    <textarea class="form-control" id="slider-description" rows="2" placeholder="Slide Description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (required)</label>
+                    <input type="file" class="form-control" id="slider-image" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                    <input type="url" class="form-control" id="slider-link" placeholder="https://example.com">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Slider</button>
+            </form>
+
+            <hr class="my-4" style="border-color: #4a90e2;">
+
+            <h3 class="text-center mb-4"><i class="bi bi-person-plus icon"></i>Add Manager</h3>
+            <form id="add-manager-form">
+                <div class="mb-3">
+                    <label for="manager-email" class="form-label"><i class="bi bi-envelope icon"></i>Manager Email</label>
+                    <input type="email" class="form-control" id="manager-email" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Manager</button>
+            </form>
+            <div id="managers-list"></div>
+        </div>
+
+        <!-- Music Submission Section -->
+        <div id="submission-section" class="form-section d-none">
+            <h3 class="text-center mb-4"><i class="bi bi-upload icon"></i>Submit Your Music</h3>
+            <form id="submit-music-form">
+                <div class="mb-3">
+                    <label for="submit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="submit-artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="track-name" class="form-label"><i class="bi bi-music-note-list icon"></i>Track Name</label>
+                    <input type="text" class="form-control" id="track-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cover-upload" class="form-label"><i class="bi bi-image icon"></i>Cover Art</label>
+                    <input type="file" class="form-control" id="cover-upload" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="soundcloud-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Private SoundCloud Link</label>
+                    <input type="url" class="form-control" id="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Artist Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Artist</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-artist-form">
+                        <div class="mb-3">
+                            <label for="edit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                            <input type="text" class="form-control" id="edit-artist-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                            <textarea class="form-control" id="edit-artist-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-artist-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                            <input type="url" class="form-control" id="edit-artist-instagram" placeholder="https://instagram.com/artist">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                            <input type="url" class="form-control" id="edit-artist-spotify" placeholder="https://open.spotify.com/artist">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Artist</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Slider Modal -->
+    <div class="modal fade" id="editSliderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Slider</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-slider-form">
+                        <div class="mb-3">
+                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                            <input type="text" class="form-control" id="edit-slider-title" placeholder="Slide Title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                            <textarea class="form-control" id="edit-slider-description" rows="2" placeholder="Slide Description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-slider-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                            <input type="url" class="form-control" id="edit-slider-link" placeholder="https://example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Slider</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
-```
+                                </html>
