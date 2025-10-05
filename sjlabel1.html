@@ -15,35 +15,33 @@
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
+        .header-carousel {
+            position: relative;
+            height: 500px;
+            overflow: hidden;
             border-radius: 0 0 30px 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             margin-bottom: 40px;
         }
-        .header h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
+        .carousel-item {
+            height: 500px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
         }
-        .header .logo {
-            width: 60px;
-            height: 60px;
-            background: #ffffff;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin-right: 15px;
-            color: #1e3c72;
+        .carousel-caption {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
         }
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
+        .carousel-caption a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .carousel-caption a:hover {
+            color: #ffffff;
         }
         .artist-card {
             background: #1a1a1a;
@@ -167,6 +165,12 @@
             border-color: #4a90e2;
         }
         @media (max-width: 768px) {
+            .header-carousel {
+                height: 300px;
+            }
+            .carousel-item {
+                height: 300px;
+            }
             .header h1 {
                 font-size: 2rem;
             }
@@ -188,7 +192,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         // Your Firebase config
@@ -212,6 +216,7 @@
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
         let editingArtistId = null;
+        let editingSliderId = null;
 
         // Elements
         const loginBtn = document.getElementById('login-btn');
@@ -222,7 +227,9 @@
         const submissionSection = document.getElementById('submission-section');
         const addArtistForm = document.getElementById('add-artist-form');
         const submitMusicForm = document.getElementById('submit-music-form');
+        const addSliderForm = document.getElementById('add-slider-form');
         const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        const editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
 
         // Google Auth Provider
         const provider = new GoogleAuthProvider();
@@ -257,7 +264,63 @@
                 submissionSection.classList.add('d-none');
             }
             loadArtists();
+            loadSlider();
         });
+
+        // Load Slider from Firestore
+        function loadSlider() {
+            const sliderCol = collection(db, 'sliders');
+            const q = query(sliderCol, orderBy('createdAt'));
+            getDocs(q).then(snapshot => {
+                const headerCarousel = document.querySelector('.header-carousel .carousel-inner');
+                headerCarousel.innerHTML = '';
+                if (snapshot.empty) {
+                    // Default slide if no sliders
+                    const defaultSlide = document.createElement('div');
+                    defaultSlide.className = 'carousel-item active';
+                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1200x500/1e3c72/ffffff?text=SJ+Label')";
+                    defaultSlide.innerHTML = `
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>SJ Label</h1>
+                                <p>Elevating Voices in the Digital Music Era</p>
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(defaultSlide);
+                    return;
+                }
+                let active = true;
+                snapshot.forEach(doc => {
+                    const slide = doc.data();
+                    const slideId = doc.id;
+                    const carouselItem = document.createElement('div');
+                    carouselItem.className = `carousel-item ${active ? 'active' : ''}`;
+                    carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <button onclick="editSlider('${slideId}')" class="btn btn-sm btn-outline-light me-1" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteSlider('${slideId}')" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `;
+                    }
+                    carouselItem.innerHTML = `
+                        ${adminActions}
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${slide.title || 'SJ Label'}</h1>
+                                <p>${slide.description || 'Elevating Voices in the Digital Music Era'}</p>
+                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(carouselItem);
+                    active = false;
+                });
+            }).catch(error => console.error(error));
+        }
 
         // Load Artists from Firestore
         function loadArtists() {
@@ -325,6 +388,30 @@
             }
         };
 
+        window.editSlider = function(sliderId) {
+            editingSliderId = sliderId;
+            const sliderRef = doc(db, 'sliders', sliderId);
+            getDoc(sliderRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const slider = docSnap.data();
+                    document.getElementById('edit-slider-title').value = slider.title || '';
+                    document.getElementById('edit-slider-description').value = slider.description || '';
+                    document.getElementById('edit-slider-link').value = slider.link || '';
+                    editSliderModal.show();
+                }
+            });
+        };
+
+        window.deleteSlider = function(sliderId) {
+            if (confirm('Are you sure you want to delete this slider?')) {
+                const sliderRef = doc(db, 'sliders', sliderId);
+                deleteDoc(sliderRef).then(() => {
+                    alert('Slider deleted!');
+                    loadSlider();
+                }).catch(error => console.error(error));
+            }
+        };
+
         // Add Artist (Admin only)
         addArtistForm.addEventListener('submit', e => {
             e.preventDefault();
@@ -338,7 +425,7 @@
             const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
 
             if (imageFile) {
-                const storageRef = ref(storage, `artists/${imageFile.name}`);
+                const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name}`);
                 uploadBytes(storageRef, imageFile).then(snapshot => {
                     return getDownloadURL(snapshot.ref);
                 }).then(url => {
@@ -371,7 +458,7 @@
             const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
 
             if (imageFile) {
-                const storageRef = ref(storage, `artists/${imageFile.name}`);
+                const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name}`);
                 uploadBytes(storageRef, imageFile).then(snapshot => {
                     return getDownloadURL(snapshot.ref);
                 }).then(url => {
@@ -391,6 +478,69 @@
             }
         });
 
+        // Add Slider (Admin only)
+        addSliderForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const title = document.getElementById('slider-title').value;
+            const description = document.getElementById('slider-description').value;
+            const link = document.getElementById('slider-link').value;
+            const imageFile = document.getElementById('slider-image').files[0];
+
+            if (!imageFile) {
+                alert('Please select an image for the slider.');
+                return;
+            }
+
+            const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name}`);
+            uploadBytes(storageRef, imageFile).then(snapshot => {
+                return getDownloadURL(snapshot.ref);
+            }).then(imageUrl => {
+                return addDoc(collection(db, 'sliders'), {
+                    title: title || '',
+                    description: description || '',
+                    link: link || '',
+                    imageUrl,
+                    createdAt: serverTimestamp()
+                });
+            }).then(() => {
+                alert('Slider added!');
+                addSliderForm.reset();
+                loadSlider();
+            }).catch(error => console.error(error));
+        });
+
+        // Edit Slider
+        document.getElementById('edit-slider-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const title = document.getElementById('edit-slider-title').value;
+            const description = document.getElementById('edit-slider-description').value;
+            const link = document.getElementById('edit-slider-link').value;
+            const imageFile = document.getElementById('edit-slider-image').files[0];
+
+            const sliderRef = doc(db, 'sliders', editingSliderId);
+            const updateData = { title: title || '', description: description || '', link: link || '' };
+
+            if (imageFile) {
+                const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name}`);
+                uploadBytes(storageRef, imageFile).then(snapshot => {
+                    return getDownloadURL(snapshot.ref);
+                }).then(imageUrl => {
+                    updateData.imageUrl = imageUrl;
+                    return updateDoc(sliderRef, updateData);
+                }).then(() => {
+                    alert('Slider updated!');
+                    editSliderModal.hide();
+                    loadSlider();
+                }).catch(error => console.error(error));
+            } else {
+                updateDoc(sliderRef, updateData).then(() => {
+                    alert('Slider updated!');
+                    editSliderModal.hide();
+                    loadSlider();
+                }).catch(error => console.error(error));
+            }
+        });
+
         // Submit Music
         submitMusicForm.addEventListener('submit', e => {
             e.preventDefault();
@@ -400,7 +550,7 @@
             const coverFile = document.getElementById('cover-upload').files[0];
 
             // Upload cover to Storage
-            const storageRef = ref(storage, `covers/${coverFile.name}`);
+            const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
             uploadBytes(storageRef, coverFile).then(snapshot => {
                 return getDownloadURL(snapshot.ref);
             }).then(url => {
@@ -422,11 +572,19 @@
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="header">
-        <div class="logo">SJ</div>
-        <h1>SJ Label</h1>
-        <p>Elevating Voices in the Digital Music Era</p>
+    <!-- Header Carousel -->
+    <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            <!-- Slides loaded dynamically -->
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#headerCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#headerCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
     </div>
 
     <div class="container">
@@ -464,9 +622,32 @@
                 </div>
                 <div class="mb-3">
                     <label for="artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
-                    <input type="url" class="form-control" id="artist-spotify" placeholder="https://spotify.com/artist">
+                    <input type="url" class="form-control" id="artist-spotify" placeholder="https://open.spotify.com/artist">
                 </div>
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Artist</button>
+            </form>
+
+            <hr class="my-4" style="border-color: #4a90e2;">
+
+            <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
+            <form id="add-slider-form">
+                <div class="mb-3">
+                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title</label>
+                    <input type="text" class="form-control" id="slider-title" placeholder="Slide Title">
+                </div>
+                <div class="mb-3">
+                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <textarea class="form-control" id="slider-description" rows="2" placeholder="Slide Description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image</label>
+                    <input type="file" class="form-control" id="slider-image" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                    <input type="url" class="form-control" id="slider-link" placeholder="https://example.com">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Slider</button>
             </form>
         </div>
 
@@ -523,9 +704,42 @@
                         </div>
                         <div class="mb-3">
                             <label for="edit-artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
-                            <input type="url" class="form-control" id="edit-artist-spotify" placeholder="https://spotify.com/artist">
+                            <input type="url" class="form-control" id="edit-artist-spotify" placeholder="https://open.spotify.com/artist">
                         </div>
                         <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Artist</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Slider Modal -->
+    <div class="modal fade" id="editSliderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Slider</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-slider-form">
+                        <div class="mb-3">
+                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title</label>
+                            <input type="text" class="form-control" id="edit-slider-title" placeholder="Slide Title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                            <textarea class="form-control" id="edit-slider-description" rows="2" placeholder="Slide Description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-slider-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                            <input type="url" class="form-control" id="edit-slider-link" placeholder="https://example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Slider</button>
                     </form>
                 </div>
             </div>
@@ -535,4 +749,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+                </html>
