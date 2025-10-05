@@ -296,26 +296,39 @@
                 userInfo.innerHTML = `<i class="bi bi-person-circle icon"></i>Logged in as: ${user.email}`;
                 submissionSection.classList.remove('d-none');
 
-                if (user.email === ADMIN_EMAIL) {
+                const userEmailLower = user.email.toLowerCase();
+
+                if (userEmailLower === ADMIN_EMAIL.toLowerCase()) {
                     adminSection.classList.remove('d-none');
                     artistManagementSection.classList.remove('d-none');
                     // Add default managers if they don't exist
                     const defaultManagers = ['narotovssimo038@gmail.com', 'n1ne.to.world@gmail.com'];
                     for (const email of defaultManagers) {
-                        const q = query(collection(db, 'managers'), where('email', '==', email));
-                        const snap = await getDocs(q);
-                        if (snap.empty) {
-                            await addDoc(collection(db, 'managers'), { email });
-                            console.log('Added default manager:', email);
+                        const q = query(collection(db, 'managers'), where('email', '==', email.toLowerCase()));
+                        try {
+                            const snap = await getDocs(q);
+                            if (snap.empty) {
+                                await addDoc(collection(db, 'managers'), { email: email.toLowerCase() });
+                                console.log('Added default manager:', email);
+                            }
+                        } catch (err) {
+                            console.error('Error checking/adding default manager:', err);
                         }
                     }
                     loadManagers();
                 } else {
-                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        artistManagementSection.classList.remove('d-none');
-                    }
+                    // Check if user is a manager
+                    const q = query(collection(db, 'managers'), where('email', '==', userEmailLower));
+                    getDocs(q).then(snap => {
+                        if (!snap.empty) {
+                            artistManagementSection.classList.remove('d-none');
+                            console.log('User is a manager, showing artist management section');
+                        } else {
+                            console.log('User is not a manager');
+                        }
+                    }).catch(err => {
+                        console.error('Error checking manager status:', err);
+                    });
                 }
             } else {
                 loginBtn.classList.remove('d-none');
@@ -358,7 +371,7 @@
                     carouselItem.className = `carousel-item ${active ? 'active' : ''}`;
                     carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
                     let adminActions = '';
-                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                    if (currentUser && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                         adminActions = `
                             <div class="position-absolute top-0 end-0 p-2">
                                 <button onclick="editSlider('${slideId}')" class="btn btn-sm btn-outline-light me-1" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -397,7 +410,7 @@
                     const card = document.createElement('div');
                     card.className = 'col-md-4 col-sm-6';
                     let adminActions = '';
-                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                    if (currentUser && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                         adminActions = `
                             <div class="admin-actions">
                                 <button onclick="editArtist('${artistId}')" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -643,8 +656,16 @@
         // Add Manager (Admin only)
         addManagerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('manager-email').value;
+            let email = document.getElementById('manager-email').value.trim();
+            email = email.toLowerCase();
             try {
+                // Check if already exists
+                const q = query(collection(db, 'managers'), where('email', '==', email));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    alert('Manager already exists!');
+                    return;
+                }
                 await addDoc(collection(db, 'managers'), { email });
                 alert('Manager added successfully!');
                 addManagerForm.reset();
@@ -883,4 +904,5 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+</html>
                                                                                         </html>
