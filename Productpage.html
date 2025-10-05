@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Page - SJ STORE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getDatabase, ref, get, update, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    const firebaseConfig = { // same config };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    document.addEventListener("DOMContentLoaded", () => {
+      const productDetailContent = document.getElementById("product-detail-content");
+      const closeProductDetail = document.getElementById("close-product-detail");
+      const urlParams = new URLSearchParams(window.location.search);
+      const pid = urlParams.get('pid');
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        localStorage.setItem('affiliateCode', refCode);
+        const affiliateRef = ref(db, `affiliate_links/${refCode}`);
+        update(affiliateRef, { clicks: increment(1) });
+      }
+      if (pid) {
+        get(ref(db, "Product/" + pid)).then((snapshot) => {
+          const product = snapshot.val();
+          if (product) {
+            const t = { /* translations */ }; // copy translations
+            const convertedPrice = getConvertedPrice(product.price, 'DH'); // assume functions copied
+            const symbol = getCurrencySymbol('DH');
+            productDetailContent.innerHTML = `
+              <img src="${product.photo || 'https://via.placeholder.com/400'}" alt="${product.title}">
+              <h3>${product.title}</h3>
+              <p class="price">${convertedPrice} ${symbol}</p>
+              <p>${product.des}</p>
+              <button class="add-to-cart-btn">Add to Cart</button>
+              <button class="generate-affiliate-btn">Generate Affiliate Link</button>
+            `;
+            productDetailContent.querySelector(".add-to-cart-btn").addEventListener("click", () => {
+              let cart = JSON.parse(localStorage.getItem("cart")) || [];
+              cart.push(product);
+              localStorage.setItem("cart", JSON.stringify(cart));
+              alert("Added to cart!");
+              window.location.href = 'SJSTORE.html'; // redirect to main to view cart
+            });
+            productDetailContent.querySelector(".generate-affiliate-btn").addEventListener("click", () => {
+              generateAffiliateLink(pid); // copy function
+            });
+          }
+        });
+      }
+      closeProductDetail.addEventListener("click", () => {
+        window.location.href = 'SJSTORE.html';
+      });
+      // copy needed functions: getConvertedPrice, getCurrencySymbol, generateAffiliateLink, translations
+    });
+  </script>
+  <style>
+    // Copy styles for product detail
+  </style>
+</head>
+<body>
+  <div class="modal-content">
+    <h2>Product Details</h2>
+    <div id="product-detail-content"></div>
+    <button id="close-product-detail">Close</button>
+  </div>
+</body>
+</html>
