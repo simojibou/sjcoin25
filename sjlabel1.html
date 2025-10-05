@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,29 +43,11 @@
         .carousel-caption a:hover {
             color: #ffffff;
         }
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-            border-radius: 0 0 30px 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            margin-bottom: 40px;
-        }
-        .header h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
         .logo {
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            margin-right: 15px;
-        }
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
+            margin-bottom: 15px;
         }
         .artist-card {
             background: #1a1a1a;
@@ -191,7 +172,7 @@
         }
         .manager-item {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             padding: 10px;
             background: #2a2a2a;
@@ -205,8 +186,9 @@
             .carousel-item {
                 height: 300px;
             }
-            .header h1 {
-                font-size: 2rem;
+            .logo {
+                width: 40px;
+                height: 40px;
             }
             .artist-card {
                 margin: 10px 0;
@@ -353,6 +335,7 @@
                     defaultSlide.innerHTML = `
                         <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
+                                <img src="https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG" alt="SJ Logo" class="logo">
                                 <h1>SJ Label</h1>
                                 <p>Elevating Voices in the Digital Music Era</p>
                             </div>
@@ -381,6 +364,7 @@
                         ${adminActions}
                         <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
+                                <img src="https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG" alt="SJ Logo" class="logo">
                                 <h1>${slide.title || 'SJ Label'}</h1>
                                 <p>${slide.description || 'Elevating Voices in the Digital Music Era'}</p>
                                 ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
@@ -526,6 +510,10 @@
 
             try {
                 if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
                     const compressed = await compressImage(imageFile);
                     const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                     const snapshot = await uploadBytes(storageRef, compressed);
@@ -538,7 +526,7 @@
                 loadArtists();
             } catch (error) {
                 console.error(error);
-                alert('Error adding artist');
+                alert('Error adding artist: ' + error.message);
             }
         });
 
@@ -556,6 +544,10 @@
 
             try {
                 if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
                     const compressed = await compressImage(imageFile);
                     const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                     const snapshot = await uploadBytes(storageRef, compressed);
@@ -568,7 +560,7 @@
                 loadArtists();
             } catch (error) {
                 console.error(error);
-                alert('Error updating artist');
+                alert('Error updating artist: ' + error.message);
             }
         });
 
@@ -584,6 +576,10 @@
                 alert('Please select an image for the slider.');
                 return;
             }
+            if (!imageFile.type.startsWith('image/')) {
+                alert('Please select an image file only.');
+                return;
+            }
 
             try {
                 const compressed = await compressImage(imageFile, 1920, 0.7);
@@ -597,12 +593,12 @@
                     imageUrl,
                     createdAt: serverTimestamp()
                 });
-                alert('Slider added!');
+                alert('Slider added successfully!');
                 addSliderForm.reset();
                 loadSlider();
             } catch (error) {
-                console.error(error);
-                alert('Error adding slider');
+                console.error('Slider add error:', error);
+                alert('Error adding slider: ' + error.message);
             }
         });
 
@@ -619,6 +615,10 @@
 
             try {
                 if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
                     const compressed = await compressImage(imageFile, 1920, 0.7);
                     const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                     const snapshot = await uploadBytes(storageRef, compressed);
@@ -630,8 +630,8 @@
                 editSliderModal.hide();
                 loadSlider();
             } catch (error) {
-                console.error(error);
-                alert('Error updating slider');
+                console.error('Slider edit error:', error);
+                alert('Error updating slider: ' + error.message);
             }
         });
 
@@ -654,6 +654,11 @@
             const soundcloudLink = document.getElementById('soundcloud-link').value;
             const coverFile = document.getElementById('cover-upload').files[0];
 
+            if (!coverFile.type.startsWith('image/')) {
+                alert('Please select an image file only for cover art.');
+                return;
+            }
+
             try {
                 const compressed = await compressImage(coverFile);
                 const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
@@ -672,7 +677,7 @@
                 submitMusicForm.reset();
             } catch (error) {
                 console.error(error);
-                alert('Error submitting music');
+                alert('Error submitting music: ' + error.message);
             }
         });
     </script>
@@ -740,15 +745,15 @@
             <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
             <form id="add-slider-form">
                 <div class="mb-3">
-                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title</label>
+                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
                     <input type="text" class="form-control" id="slider-title" placeholder="Slide Title">
                 </div>
                 <div class="mb-3">
-                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
                     <textarea class="form-control" id="slider-description" rows="2" placeholder="Slide Description"></textarea>
                 </div>
                 <div class="mb-3">
-                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image</label>
+                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (required)</label>
                     <input type="file" class="form-control" id="slider-image" accept="image/*" required>
                 </div>
                 <div class="mb-3">
@@ -844,11 +849,11 @@
                 <div class="modal-body">
                     <form id="edit-slider-form">
                         <div class="mb-3">
-                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title</label>
+                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
                             <input type="text" class="form-control" id="edit-slider-title" placeholder="Slide Title">
                         </div>
                         <div class="mb-3">
-                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
                             <textarea class="form-control" id="edit-slider-description" rows="2" placeholder="Slide Description"></textarea>
                         </div>
                         <div class="mb-3">
