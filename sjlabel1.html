@@ -4,44 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SJ Label</title>
-    <!-- Bootstrap CSS for good design -->
+    <!-- Bootstrap CSS for responsive layout -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS for label design -->
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS for modern dark theme -->
     <style>
         body {
-            background-color: #f8f9fa;
-            font-family: 'Arial', sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .header {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
-            padding: 20px;
+            padding: 40px 20px;
             text-align: center;
-            border-radius: 0 0 20px 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .header .logo {
+            width: 60px;
+            height: 60px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-right: 15px;
+            color: #1e3c72;
+        }
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
         }
         .artist-card {
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #1a1a1a;
+            border: none;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        .artist-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(74, 144, 226, 0.3);
+        }
+        .artist-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+        .artist-card h5 {
+            color: #4a90e2;
+            font-weight: 600;
+        }
+        .artist-card p {
+            opacity: 0.8;
+            font-size: 0.95rem;
         }
         .form-section {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            margin: 20px auto;
+            background: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin: 40px auto;
             max-width: 600px;
+            padding: 30px;
+        }
+        .form-control, .form-control:focus {
+            background: #2a2a2a;
+            border: 1px solid #4a90e2;
+            color: #ffffff;
+            border-radius: 10px;
+        }
+        .form-control::placeholder {
+            color: #888888;
         }
         .btn-primary {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
         }
         .btn-primary:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+            background: linear-gradient(135deg, #357abd 0%, #4a90e2 100%);
+        }
+        .btn-secondary {
+            background: #555555;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+        }
+        .btn-secondary:hover {
+            background: #666666;
+        }
+        .user-info {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin: 10px 0;
+        }
+        .icon {
+            color: #4a90e2;
+            margin-right: 8px;
+        }
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .artist-card {
+                margin: 10px 0;
+            }
+            .form-section {
+                margin: 20px;
+                padding: 20px;
+            }
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
@@ -99,7 +192,7 @@
             if (user) {
                 loginBtn.classList.add('d-none');
                 logoutBtn.classList.remove('d-none');
-                userInfo.textContent = `Logged in as: ${user.email}`;
+                userInfo.innerHTML = `<i class="bi bi-person-circle icon"></i>Logged in as: ${user.email}`;
                 submissionSection.classList.remove('d-none');
 
                 if (user.email === ADMIN_EMAIL) {
@@ -108,7 +201,7 @@
             } else {
                 loginBtn.classList.remove('d-none');
                 logoutBtn.classList.add('d-none');
-                userInfo.textContent = '';
+                userInfo.innerHTML = '';
                 adminSection.classList.add('d-none');
                 submissionSection.classList.add('d-none');
             }
@@ -117,14 +210,24 @@
 
         // Load Artists from Firestore
         function loadArtists() {
-            artistsList.innerHTML = '<h2 class="text-center">Our Artists</h2>'; // Reset
+            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>'; // Reset
             const artistsCol = collection(db, 'artists');
             getDocs(artistsCol).then(snapshot => {
+                if (snapshot.empty) {
+                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet. Add some!</p>';
+                    return;
+                }
                 snapshot.forEach(doc => {
                     const artist = doc.data();
                     const card = document.createElement('div');
-                    card.className = 'col-md-4 artist-card';
-                    card.innerHTML = `<h5>${artist.name}</h5>`;
+                    card.className = 'col-md-4 col-sm-6';
+                    card.innerHTML = `
+                        <div class="artist-card">
+                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
+                            <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                        </div>
+                    `;
                     artistsList.appendChild(card);
                 });
             }).catch(error => console.error(error));
@@ -134,11 +237,29 @@
         addArtistForm.addEventListener('submit', e => {
             e.preventDefault();
             const name = document.getElementById('artist-name').value;
-            addDoc(collection(db, 'artists'), { name }).then(() => {
-                alert('Artist added!');
-                addArtistForm.reset();
-                loadArtists();
-            }).catch(error => console.error(error));
+            const description = document.getElementById('artist-description').value;
+            const imageFile = document.getElementById('artist-image').files[0];
+            let imageUrl = '';
+
+            if (imageFile) {
+                const storageRef = ref(storage, `artists/${imageFile.name}`);
+                uploadBytes(storageRef, imageFile).then(snapshot => {
+                    return getDownloadURL(snapshot.ref);
+                }).then(url => {
+                    imageUrl = url;
+                    return addDoc(collection(db, 'artists'), { name, description, imageUrl });
+                }).then(() => {
+                    alert('Artist added!');
+                    addArtistForm.reset();
+                    loadArtists();
+                }).catch(error => console.error(error));
+            } else {
+                addDoc(collection(db, 'artists'), { name, description }).then(() => {
+                    alert('Artist added!');
+                    addArtistForm.reset();
+                    loadArtists();
+                }).catch(error => console.error(error));
+            }
         });
 
         // Submit Music
@@ -172,58 +293,67 @@
 </head>
 <body>
 
+    <!-- Header -->
     <div class="header">
+        <div class="logo">SJ</div>
         <h1>SJ Label</h1>
-        <p>Welcome to SJ Label - Your Music Distribution Platform</p>
+        <p>Elevating Voices in the Digital Music Era</p>
     </div>
 
     <div class="container">
         <!-- Login/Logout Section -->
         <div id="auth-section" class="text-center my-4">
-            <button id="login-btn" class="btn btn-primary">Login with Google</button>
-            <button id="logout-btn" class="btn btn-secondary d-none">Logout</button>
-            <p id="user-info"></p>
+            <button id="login-btn" class="btn btn-primary"><i class="bi bi-google icon"></i>Login with Google</button>
+            <button id="logout-btn" class="btn btn-secondary d-none"><i class="bi bi-box-arrow-right icon"></i>Logout</button>
+            <div id="user-info" class="user-info d-inline-block"></div>
         </div>
 
-        <!-- Artists List Section -->
-        <div id="artists-list" class="row">
-            <h2 class="text-center">Our Artists</h2>
-            <!-- Artists will be dynamically added here -->
+        <!-- Artists Showcase Section -->
+        <div id="artists-list" class="row justify-content-center">
+            <!-- Artists loaded dynamically -->
         </div>
 
-        <!-- Admin Section: Add Artist (only for admin) -->
+        <!-- Admin Dashboard Section -->
         <div id="admin-section" class="form-section d-none">
-            <h3>Add New Artist</h3>
+            <h3 class="text-center mb-4"><i class="bi bi-plus-circle icon"></i>Add New Artist</h3>
             <form id="add-artist-form">
                 <div class="mb-3">
-                    <label for="artist-name" class="form-label">Artist Name</label>
+                    <label for="artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
                     <input type="text" class="form-control" id="artist-name" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Add Artist</button>
+                <div class="mb-3">
+                    <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <textarea class="form-control" id="artist-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image</label>
+                    <input type="file" class="form-control" id="artist-image" accept="image/*">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Artist</button>
             </form>
         </div>
 
-        <!-- Submission Section: Submit Music -->
+        <!-- Music Submission Section -->
         <div id="submission-section" class="form-section d-none">
-            <h3>Submit Your Music for Distribution</h3>
+            <h3 class="text-center mb-4"><i class="bi bi-upload icon"></i>Submit Your Music</h3>
             <form id="submit-music-form">
                 <div class="mb-3">
-                    <label for="submit-artist-name" class="form-label">Artist Name</label>
+                    <label for="submit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
                     <input type="text" class="form-control" id="submit-artist-name" required>
                 </div>
                 <div class="mb-3">
-                    <label for="track-name" class="form-label">Track Name</label>
+                    <label for="track-name" class="form-label"><i class="bi bi-music-note-list icon"></i>Track Name</label>
                     <input type="text" class="form-control" id="track-name" required>
                 </div>
                 <div class="mb-3">
-                    <label for="cover-upload" class="form-label">Cover Art</label>
+                    <label for="cover-upload" class="form-label"><i class="bi bi-image icon"></i>Cover Art</label>
                     <input type="file" class="form-control" id="cover-upload" accept="image/*" required>
                 </div>
                 <div class="mb-3">
-                    <label for="soundcloud-link" class="form-label">Private SoundCloud Link</label>
-                    <input type="url" class="form-control" id="soundcloud-link" required>
+                    <label for="soundcloud-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Private SoundCloud Link</label>
+                    <input type="url" class="form-control" id="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
             </form>
         </div>
     </div>
