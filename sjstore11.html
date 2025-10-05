@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SJ STORE</title>
+  <!-- Google Fonts - Roboto as Helvetica alternative -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Firebase v12.3.0 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
+    import { getDatabase, ref, onValue, set, push, remove, get, update, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
+    document.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("product-list");
+      const sliderContainer = document.getElementById("slider-container");
+      const loginBtn = document.getElementById("login-btn");
+      const profilePic = document.getElementById("profile-pic");
+      const dropdownMenu = document.getElementById("dropdown-menu");
+      const logoutOption = document.getElementById("logout-option");
+      const sellNowOption = document.getElementById("sell-now-option");
+      const marketerOption = document.getElementById("marketer-option");
+      const settingsOption = document.getElementById("settings-option");
+      const chatBtn = document.getElementById("chat-btn");
+      const adminPanel = document.getElementById("admin-panel");
+      const addProductForm = document.getElementById("add-product-form");
+      const addSliderForm = document.getElementById("add-slider-form");
+      const sliderList = document.getElementById("slider-list");
+      const searchInput = document.getElementById("search-input");
+      const cartIcon = document.getElementById("cart-icon");
+      const cartCount = document.getElementById("cart-count");
+      const cartModal = document.getElementById("cart-modal");
+      const cartList = document.getElementById("cart-list");
+      const cartTotal = document.getElementById("cart-total");
+      const payNowBtn = document.getElementById("pay-now-btn");
+      const closeModal = document.getElementById("close-modal");
+      const paymentModal = document.getElementById("payment-modal");
+      const paymentForm = document.getElementById("payment-form");
+      const closePaymentModal = document.getElementById("close-payment-modal");
+      const categoryCards = document.querySelectorAll(".category-card");
+      const titleH1 = document.querySelector("h1");
+      let currentUser = null;
+      let isAdmin = false;
+      let products = [];
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let currentCategory = ""; // Track selected category
+      let userData = { currency: 'DH', language: 'English' };
+      let exchangeRates = {
+        DH: 1
+      };
+      const translations = {
+        English: {
+          title: 'SJ STORE',
+          searchPlaceholder: 'Search products...',
+          orderNow: 'Order Now',
+          contactWhatsApp: '📞 Contact via WhatsApp',
+          addToCart: 'Add to Cart',
+          noProducts: 'No products found.',
+          cartTitle: 'My Cart',
+          cartEmpty: 'Your cart is empty.',
+          cartTotal: 'Total',
+          payNow: 'Pay Now',
+          paymentTitle: 'Payment Details',
+          fullName: 'Full Name',
+          whatsappPhone: 'WhatsApp Phone Number',
+          address: 'Delivery Address',
+          paymentMethod: 'Payment Method',
+          cod: 'Cash on Delivery (COD)',
+          online: 'Online Payment',
+          submitPayment: 'Submit Payment',
+          close: 'Close',
+          sellTitle: 'Sell a Product',
+          productTitle: 'Product Title',
+          productPrice: 'Price (DH)',
+          productDes: 'WhatsApp Phone Number',
+          productOrderUrl: 'Order URL (optional)',
+          selectCategory: 'Select Category',
+          addProduct: 'Add Product',
+          adminPanel: 'Admin Control Panel',
+          addProductHeader: 'Add Product',
+          addSliderHeader: 'Add Slider Item',
+          currentSliders: 'Current Sliders',
+          delete: 'Delete',
+          edit: 'Edit',
+          chat: 'Chat',
+          login: 'Login',
+          sellNow: 'Sell Now',
+          marketerDashboard: 'Marketer Dashboard',
+          settings: 'Settings',
+          logout: 'Logout',
+          affiliateTitle: 'Affiliate Dashboard',
+          generateLink: 'Generate Affiliate Link',
+          copyLink: 'Copy Link',
+          commissions: 'Your Commissions',
+          clicks: 'Clicks',
+          buyers: 'Buyers',
+          productDetail: 'Product Details'
+        },
+        // French and Arabic translations omitted for brevity, add them as in previous code
+      };
+      // Other functions like fetchExchangeRates, applyLanguage, etc., as in previous code
+      // ...
+      function renderProducts(filter = "", category = "") {
+        // ... as in previous code, but change div.addEventListener("click", () => window.location.href = 'productpage.html?pid=' + product.id);
+        // Remove showProductDetail
+      }
+      // Remove showProductDetail function
+      // Other event listeners and functions as in previous code
+      // For paymentForm submit, add:
+      const affiliateCode = localStorage.getItem('affiliateCode');
+      const affiliateData = affiliateCode ? { affiliateCode: affiliateCode } : {};
+      // ... set order with ...affiliateData
+      // After successful order:
+      if (affiliateCode) {
+        // ... increment buyers and commissions
+        localStorage.removeItem('affiliateCode');
+      }
+      // ...
+    });
+  </script>
+  <style>
+    // Same styles as before, remove product-detail-modal styles if not needed
+  </style>
+</head>
+<body>
+  // Same body as before, remove product-detail-modal div
+</body>
+</html>
