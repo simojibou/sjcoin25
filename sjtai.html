@@ -173,8 +173,8 @@
             .content { margin-left: 240px; }
             .predictions-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
             .chart-container { height: 500px; }
-            .market-item { padding: 12px 25px; }
             .market-list { justify-content: flex-start; }
+            .market-item { padding: 12px 25px; }
         }
         /* Mobile Mode */
         @media (max-width: 767px) {
@@ -188,6 +188,8 @@
     </style>
     <!-- ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
@@ -323,7 +325,18 @@
                 }
                 initCharts();
                 initChat(role);
+                initNavListeners();
             }
+        }
+
+        function initNavListeners() {
+            document.querySelectorAll('#nav a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = link.getAttribute('data-section');
+                    showSection(sectionId);
+                });
+            });
         }
 
         function showSection(sectionId) {
@@ -340,10 +353,10 @@
 
         function initMarketSelection(role) {
             const categorySelect = document.getElementById('category-select');
-            categorySelect.onchange = () => {
+            categorySelect.addEventListener('change', () => {
                 currentCategory = categorySelect.value;
                 renderItemList();
-            };
+            });
             renderItemList();
         }
 
@@ -354,7 +367,7 @@
                 const button = document.createElement('button');
                 button.classList.add('market-item');
                 button.innerHTML = `<i class="${icons[currentCategory]}"></i> ${item}`;
-                button.onclick = () => selectItem(item);
+                button.addEventListener('click', () => selectItem(item));
                 itemList.appendChild(button);
             });
             selectItem(markets[currentCategory][0]);
@@ -377,11 +390,17 @@
             try {
                 const apiMap = {
                     Crypto: `https://api.coingecko.com/api/v3/coins/${item.toLowerCase()}/ohlc?vs_currency=usd&days=1`,
-                    Stocks: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${item}&interval=5min&apikey=demo`,
-                    Forex: `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${item.split('/')[0]}&to_symbol=${item.split('/')[1]}&interval=5min&apikey=demo`,
-                    Gold: `https://www.goldapi.io/api/${item}`
+                    Stocks: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${item}&interval=5min&apikey=YOUR_ALPHA_VANTAGE_API_KEY`,
+                    Forex: `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${item.split('/')[0]}&to_symbol=${item.split('/')[1]}&interval=5min&apikey=YOUR_ALPHA_VANTAGE_API_KEY`,
+                    Gold: `https://www.goldapi.io/api/${item}?access_token=YOUR_GOLDAPI_KEY`
                 };
-                const response = await fetch(apiMap[currentCategory]);
+                const response = await fetch(apiMap[currentCategory], {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`HTTP ${response.status}: ${errorData.message || 'Bad Request'}`);
+                }
                 const json = await response.json();
                 if (currentCategory === 'Crypto') {
                     data = json.map(d => ({ x: d[0], y: [d[1], d[2], d[3], d[4]] }));
@@ -399,7 +418,8 @@
                     ];
                 }
             } catch (err) {
-                console.error('Chart API error:', err);
+                console.error(`Chart API error for ${item}:`, err.message);
+                updateStatus(`Failed to load chart for ${item}: ${err.message}. Using mock data.`);
                 data = [
                     { x: new Date(Date.now() - 4*3600000), y: [100, 105, 99, 102] },
                     { x: new Date(Date.now() - 3*3600000), y: [102, 107, 101, 104] },
@@ -435,19 +455,22 @@
                 <p>${guidance}</p>
                 <p>Confidence: ${confidence} | Risk: ${risk}</p>
                 <div id="countdown-${item}" class="countdown"></div>
-                <button class="action-btn" onclick="markDone('${item}')">Mark as Done</button>
-                <button class="ignore-btn" onclick="ignoreInstruction('${item}')">Ignore</button>
+                <button class="action-btn" data-item="${item}">Mark as Done</button>
+                <button class="ignore-btn" data-item="${item}">Ignore</button>
             `;
             aiSection.appendChild(card);
+            card.querySelector('.action-btn').addEventListener('click', () => markDoneAI(item));
+            card.querySelector('.ignore-btn').addEventListener('click', () => ignoreInstructionAI(item));
             startCountdown(`countdown-${item}`, Math.floor(Math.random() * 3600 + 3600));
         }
 
         function startCountdown(id, seconds) {
             const element = document.getElementById(id);
             let time = seconds;
-            const interval = setInterval(() => {
+            clearInterval(countdownInterval); // Clear any existing interval
+            countdownInterval = setInterval(() => {
                 if (time <= 0) {
-                    clearInterval(interval);
+                    clearInterval(countdownInterval);
                     element.innerText = 'Time expired';
                     return;
                 }
@@ -457,15 +480,14 @@
                 const secs = time % 60;
                 element.innerText = `Time left: ${hours}h ${mins}m ${secs}s`;
             }, 1000);
-            countdownInterval = interval;
         }
 
-        function markDone(item) {
+        function markDoneAI(item) {
             updateStatus(`Marked ${item} as done`);
             document.getElementById('ai-instructions').innerHTML = '';
         }
 
-        function ignoreInstruction(item) {
+        function ignoreInstructionAI(item) {
             updateStatus(`Ignored instruction for ${item}`);
             document.getElementById('ai-instructions').innerHTML = '';
         }
@@ -553,10 +575,12 @@
                             <p>${data.guidance || data.details}</p>
                             <p>Entry: ${data.entry_point || 'N/A'} | Exit: ${data.exit_point || 'N/A'} | Risk: ${data.risk || 'N/A'}</p>
                             <div id="countdown-${doc.id}" class="countdown"></div>
-                            <button class="action-btn" onclick="markDone('${doc.id}')">Mark as Done</button>
-                            <button class="ignore-btn" onclick="ignoreInstruction('${doc.id}')">Ignore</button>
+                            <button class="action-btn" data-id="${doc.id}">Mark as Done</button>
+                            <button class="ignore-btn" data-id="${doc.id}">Ignore</button>
                         `;
                         actionsGrid.appendChild(card);
+                        card.querySelector('.action-btn').addEventListener('click', () => markDone(doc.id));
+                        card.querySelector('.ignore-btn').addEventListener('click', () => ignoreInstruction(doc.id));
                         startCountdown(`countdown-${doc.id}`, Math.floor(Math.random() * 10800 + 3600));
                     }
                 });
@@ -564,6 +588,7 @@
         }
 
         async function markDone(predictionId) {
+            if (!currentUser) return;
             const userRef = doc(db, 'users', currentUser.uid);
             await updateDoc(userRef, {
                 donePredictions: arrayUnion(predictionId)
@@ -572,6 +597,7 @@
         }
 
         async function ignoreInstruction(predictionId) {
+            if (!currentUser) return;
             const userRef = doc(db, 'users', currentUser.uid);
             await updateDoc(userRef, {
                 donePredictions: arrayUnion(predictionId)
@@ -667,7 +693,10 @@
                     })
                 });
 
-                if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Bad Request'}`);
+                }
 
                 const data = await response.json();
                 let prediction;
@@ -692,6 +721,7 @@
                 await addDoc(collection(db, 'predictions'), prediction);
                 updateStatus(`AI Prediction for ${market} added!`);
             } catch (err) {
+                console.error('AI Prediction error:', err.message);
                 updateStatus(`AI Generation Error: ${err.message}. Using mock prediction.`);
                 const mock = { 
                     market, 
@@ -818,21 +848,16 @@
         }
 
         // Expose global functions
+        window.toggleTheme = toggleTheme;
         window.signInWithGoogle = signInWithGoogle;
         window.logout = logout;
-        window.showSection = showSection;
         window.toggleNav = toggleNav;
         window.toggleView = toggleView;
         window.addPrediction = addPrediction;
         window.generateAIPrediction = generateAIPrediction;
-        window.toggleTheme = toggleTheme;
         window.sendChatMessage = sendChatMessage;
         window.filterPredictions = filterPredictions;
-        window.markDone = markDone;
-        window.ignoreInstruction = ignoreInstruction;
     </script>
-    <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 </head>
 <body>
     <header>
@@ -842,14 +867,14 @@
     </header>
     <nav id="nav" class="hidden">
         <ul>
-            <li><a href="#" onclick="showSection('dashboard')">Dashboard</a></li>
-            <li><a href="#" onclick="showSection('predictions')">Predictions</a></li>
-            <li><a href="#" onclick="showSection('vip-predictions')">VIP Predictions</a></li>
-            <li><a href="#" onclick="showSection('trading-actions')">Trading Actions</a></li>
-            <li><a href="#" onclick="showSection('payments')">Payments</a></li>
-            <li><a href="#" onclick="showSection('profile')">Profile</a></li>
-            <li><a href="#" onclick="showSection('support')">Support</a></li>
-            <li id="admin-link" class="hidden"><a href="#" onclick="showSection('admin')">Admin</a></li>
+            <li><a href="#" data-section="dashboard">Dashboard</a></li>
+            <li><a href="#" data-section="predictions">Predictions</a></li>
+            <li><a href="#" data-section="vip-predictions">VIP Predictions</a></li>
+            <li><a href="#" data-section="trading-actions">Trading Actions</a></li>
+            <li><a href="#" data-section="payments">Payments</a></li>
+            <li><a href="#" data-section="profile">Profile</a></li>
+            <li><a href="#" data-section="support">Support</a></li>
+            <li id="admin-link" class="hidden"><a href="#" data-section="admin">Admin</a></li>
         </ul>
     </nav>
     <div class="container">
