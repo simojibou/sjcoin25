@@ -25,7 +25,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         // Firebase Config
         const firebaseConfig = {
@@ -51,7 +51,7 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                checkAndSetUserRole(user.uid);
+                checkAndSetUserRole(user.uid, user.email);
             } else {
                 showAuth();
             }
@@ -73,11 +73,26 @@
             document.getElementById('admin-section').classList.add('hidden');
         }
 
-        async function checkAndSetUserRole(uid) {
+        async function checkAndSetUserRole(uid, email) {
             const userRef = doc(db, 'users', uid);
             const docSnap = await getDoc(userRef);
+            let role = 'none'; // Default for all users
+
+            // 🔑 NEW: Auto-assign admin for specific email
+            if (email === 'simo.jibou@gmail.com') {
+                role = 'admin';
+            }
+
             if (!docSnap.exists()) {
-                await setDoc(userRef, { role: 'none' });
+                await setDoc(userRef, { role: role, email: email });
+                updateStatus(`User role set to: ${role}`);
+            } else {
+                // If doc exists, update if it's the admin email
+                const existingData = docSnap.data();
+                if (email === 'simo.jibou@gmail.com' && existingData.role !== 'admin') {
+                    await updateDoc(userRef, { role: 'admin' });
+                    updateStatus('Admin role upgraded!');
+                }
             }
             loadUserRole(uid);
         }
@@ -174,7 +189,7 @@
             }).render(paypalDiv);
         }
 
-        // 🔑 FIX: Make functions globally accessible for onclick
+        // 🔑 Make functions globally accessible for onclick
         window.signInWithGoogle = signInWithGoogle;
         window.logout = logout;
         window.addPrediction = addPrediction;
