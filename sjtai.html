@@ -20,6 +20,7 @@
         .auth-button img { width:24px; margin-right:10px; }
         @media (max-width:600px) { .container { padding:20px; } }
     </style>
+
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
@@ -43,8 +44,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
-
-        const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID"; // ضع هنا رقم العميل الصحيح
+        const PAYPAL_CLIENT_ID = "AYuKzB5bK3jL9m_abc123def456ghi789"; // Replace with your real PayPal Client ID
         let currentUser = null;
 
         // Auth State
@@ -59,10 +59,8 @@
 
         function signInWithGoogle() {
             signInWithPopup(auth, googleProvider)
-            .then(result => {
-                updateStatus('Signed in successfully as ' + result.user.displayName);
-            })
-            .catch(err => updateStatus(err.message));
+                .then(result => { updateStatus('Signed in successfully as ' + result.user.displayName); })
+                .catch(err => updateStatus(err.message));
         }
 
         function logout() {
@@ -141,10 +139,11 @@
         }
 
         async function generateAIPrediction() {
-            // Mock AI
-            const mockAIResponse = { market: 'Crypto', prediction: 'Bullish next week', details: 'AI analysis: Bitcoin expected to rise 5%.', premium:false, timestamp: serverTimestamp() };
-            try { await addDoc(collection(db, 'predictions'), mockAIResponse); updateStatus('AI Prediction added'); }
-            catch(err){ updateStatus(err.message); }
+            const mockAIResponse = { market: 'Crypto', prediction: 'Bullish next week', details: 'AI analysis: Bitcoin expected to rise 5%.', premium: false, timestamp: serverTimestamp() };
+            try { 
+                await addDoc(collection(db, 'predictions'), mockAIResponse); 
+                updateStatus('AI Prediction added'); 
+            } catch(err){ updateStatus(err.message); }
         }
 
         function updateUserRole(role) {
@@ -154,6 +153,7 @@
         function updateStatus(msg){ document.getElementById('status').innerText = msg; }
 
         function initPayPalButtons(role){
+            if (typeof paypal === 'undefined') return; // Wait for PayPal to load
             const paypalDiv = document.getElementById('paypal-buttons');
             paypalDiv.innerHTML = '';
             if(role==='none'){
@@ -165,6 +165,7 @@
         }
 
         function showUpgrade(){
+            if (typeof paypal === 'undefined') return;
             const paypalDiv = document.getElementById('paypal-buttons');
             paypalDiv.innerHTML = '';
             paypal.Buttons({
@@ -172,14 +173,22 @@
                 onApprove: (data, actions)=> actions.order.capture().then(details=>{ updateUserRole('vip'); updateStatus('Upgrade successful!'); })
             }).render(paypalDiv);
         }
+
+        // 🔑 FIX: Make functions globally accessible for onclick
+        window.signInWithGoogle = signInWithGoogle;
+        window.logout = logout;
+        window.addPrediction = addPrediction;
+        window.generateAIPrediction = generateAIPrediction;
+        window.showUpgrade = showUpgrade;
     </script>
-    <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
+
+    <!-- PayPal SDK (loads after module) -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AYuKzB5bK3jL9m_abc123def456ghi789&currency=USD"></script>
 </head>
 <body>
     <div class="container">
         <h1>AI Market Predictions</h1>
-
+        
         <!-- Auth Section -->
         <div id="auth-section">
             <h2>Sign in with Google</h2>
@@ -202,7 +211,7 @@
         <!-- Admin Panel Section -->
         <div id="admin-section" class="hidden">
             <h2>Admin Panel</h2>
-            <textarea id="new-prediction" placeholder="Enter new prediction JSON"></textarea>
+            <textarea id="new-prediction" placeholder='Enter new prediction JSON e.g. {"market":"Stocks","prediction":"Buy","details":"...","premium":true}'></textarea>
             <button onclick="addPrediction()">Add Prediction Manually</button>
             <button onclick="generateAIPrediction()">Generate AI Prediction</button>
             <button onclick="logout()">Logout</button>
