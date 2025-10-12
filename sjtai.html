@@ -213,7 +213,7 @@
 
         const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY";
         const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID";
-        const ALPHA_VANTAGE_API_KEY = "CPZ0T8BE3W90VIXF";
+        const ALPHA_VANTAGE_API_KEYS = ["CPZ0T8BE3W90VIXF", "4INKWATCMJKFMG26"];
         const GOLDAPI_KEY = "goldapi-19qv28smgo5ihps-io";
 
         let currentUser = null;
@@ -377,7 +377,7 @@
 
         async function selectItem(item) {
             currentItem = item;
-            updateChart(item);
+            await updateChart(item);
             updateAIInstructions(item);
         }
 
@@ -390,39 +390,59 @@
             chartContainer.appendChild(div);
             let data = [];
             try {
+                // Normalize symbols for Alpha Vantage
+                const normalizedItem = item === 'BRK.B' ? 'BRK.B' : item.replace('-', '.'); // e.g., BRK-B to BRK.B
                 const apiMap = {
                     Crypto: `https://api.coingecko.com/api/v3/coins/${item.toLowerCase()}/ohlc?vs_currency=usd&days=1`,
-                    Stocks: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${item}&interval=5min&apikey=${ALPHA_VANTAGE_API_KEY}`,
-                    Forex: `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${item.split('/')[0]}&to_symbol=${item.split('/')[1]}&interval=5min&apikey=${ALPHA_VANTAGE_API_KEY}`,
+                    Stocks: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${normalizedItem}&interval=5min&apikey=`,
+                    Forex: `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${item.split('/')[0]}&to_symbol=${item.split('/')[1]}&interval=5min&apikey=`,
                     Gold: `https://www.goldapi.io/api/${item}?access_token=${GOLDAPI_KEY}`
                 };
-                const response = await fetch(apiMap[currentCategory], {
-                    headers: { 'Accept': 'application/json' }
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`HTTP ${response.status}: ${errorData.message || errorData.error || 'Bad Request'}`);
-                }
-                const json = await response.json();
-                if (currentCategory === 'Crypto') {
-                    data = json.map(d => ({ x: d[0], y: [d[1], d[2], d[3], d[4]] }));
-                } else if (currentCategory === 'Stocks' || currentCategory === 'Forex') {
-                    const timeSeries = json[currentCategory === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'];
-                    if (!timeSeries) {
-                        throw new Error(`No ${currentCategory === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'} data in response`);
+                let lastError = null;
+                for (let i = 0; i < ALPHA_VANTAGE_API_KEYS.length; i++) {
+                    const apiKey = ALPHA_VANTAGE_API_KEYS[i];
+                    const url = (currentCategory === 'Stocks' || currentCategory === 'Forex') 
+                        ? apiMap[currentCategory] + apiKey 
+                        : apiMap[currentCategory];
+                    try {
+                        const response = await fetch(url, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            lastError = new Error(`HTTP ${response.status}: ${errorData["Error Message"] || errorData.error || 'Bad Request'}`);
+                            if (i === ALPHA_VANTAGE_API_KEYS.length - 1) throw lastError;
+                            await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 15s to avoid rate limits
+                            continue;
+                        }
+                        const json = await response.json();
+                        if (currentCategory === 'Crypto') {
+                            data = json.map(d => ({ x: d[0], y: [d[1], d[2], d[3], d[4]] }));
+                        } else if (currentCategory === 'Stocks' || currentCategory === 'Forex') {
+                            const timeSeries = json[currentCategory === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'];
+                            if (!timeSeries) {
+                                throw new Error(`No ${currentCategory === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'} data in response`);
+                            }
+                            data = Object.entries(timeSeries).map(([time, val]) => ({
+                                x: new Date(time).getTime(),
+                                y: [parseFloat(val['1. open']), parseFloat(val['2. high']), parseFloat(val['3. low']), parseFloat(val['4. close'])]
+                            }));
+                        } else if (currentCategory === 'Gold') {
+                            if (!json.price) {
+                                throw new Error('No price data in GoldAPI response');
+                            }
+                            data = [
+                                { x: new Date().getTime(), y: [json.price, json.price + 10, json.price - 10, json.price] }
+                            ];
+                        }
+                        break; // Success, exit loop
+                    } catch (err) {
+                        lastError = err;
+                        if (i === ALPHA_VANTAGE_API_KEYS.length - 1) throw err;
+                        await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 15s for next attempt
                     }
-                    data = Object.entries(timeSeries).map(([time, val]) => ({
-                        x: new Date(time).getTime(),
-                        y: [parseFloat(val['1. open']), parseFloat(val['2. high']), parseFloat(val['3. low']), parseFloat(val['4. close'])]
-                    }));
-                } else if (currentCategory === 'Gold') {
-                    if (!json.price) {
-                        throw new Error('No price data in GoldAPI response');
-                    }
-                    data = [
-                        { x: new Date().getTime(), y: [json.price, json.price + 10, json.price - 10, json.price] }
-                    ];
                 }
+                if (data.length === 0) throw lastError;
             } catch (err) {
                 console.error(`Chart API error for ${item}:`, err.message);
                 updateStatus(`Failed to load chart for ${item}: ${err.message}. Using mock data.`);
