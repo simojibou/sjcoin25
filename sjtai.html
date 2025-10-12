@@ -75,6 +75,8 @@
         .prediction-card { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
         .prediction-card i { margin-right: 10px; color: var(--highlight-color); }
         .vip-highlight { border: 2px solid var(--highlight-color); }
+        .action-btn { background: var(--accent-color); color: #fff; border: none; padding: 8px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
+        .done { background: #4caf50; }
         .toggle-btn { 
             background: var(--accent-color); 
             color: #fff; 
@@ -154,7 +156,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot, where } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -179,6 +181,7 @@
         let unsubscribePredictions = null;
         let unsubscribeNotifications = null;
         let unsubscribeChat = null;
+        let donePredictions = [];
 
         // Theme Toggle
         function toggleTheme() {
@@ -230,7 +233,7 @@
             }
 
             if (!docSnap.exists()) {
-                await setDoc(userRef, { role: role, email: email, createdAt: serverTimestamp(), planExpiry: null });
+                await setDoc(userRef, { role: role, email: email, createdAt: serverTimestamp(), planExpiry: null, donePredictions: [] });
                 updateStatus(`Welcome! Role set to: ${role}`);
             } else {
                 const existingData = docSnap.data();
@@ -250,6 +253,7 @@
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 const role = data.role;
+                donePredictions = data.donePredictions || [];
                 document.getElementById('user-role').innerText = role.charAt(0).toUpperCase() + role.slice(1);
                 document.getElementById('profile-role').innerText = role.charAt(0).toUpperCase() + role.slice(1);
                 document.getElementById('profile-email').innerText = data.email;
@@ -260,6 +264,7 @@
                 if (role !== 'admin') {
                     initRealTimePredictions(role);
                     initNotifications(role);
+                    initTradingActions(role);
                 } else {
                     loadAllPredictions();
                 }
@@ -272,7 +277,7 @@
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById(sectionId + '-section').classList.add('active');
             if (window.innerWidth < 768) toggleNav();
-            if (sectionId === 'predictions') toggleView('card');
+            if (sectionId === 'predictions' || sectionId === 'vip-predictions') toggleView('card');
             if (sectionId === 'support') initChat(document.getElementById('user-role').innerText.toLowerCase());
         }
 
@@ -280,13 +285,13 @@
             document.getElementById('nav').classList.toggle('open');
         }
 
-        function initRealTimePredictions(role) {
+        function initRealTimePredictions(role, premiumFilter = false) {
             if (unsubscribePredictions) unsubscribePredictions();
-            const predictionsGrid = document.getElementById('predictions-grid');
-            const marketFilter = document.getElementById('market-filter').value;
-            const q = marketFilter 
-                ? query(collection(db, 'predictions'), where('market', '==', marketFilter), orderBy('timestamp', 'desc'), limit(20))
-                : query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(20));
+            const predictionsGrid = document.getElementById(premiumFilter ? 'vip-predictions-grid' : 'predictions-grid');
+            const marketFilter = document.getElementById(premiumFilter ? 'vip-market-filter' : 'market-filter').value;
+            let q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(20));
+            if (marketFilter) q = query(q, where('market', '==', marketFilter));
+            if (premiumFilter) q = query(q, where('premium', '==', true));
             unsubscribePredictions = onSnapshot(q, (querySnapshot) => {
                 predictionsGrid.innerHTML = '';
                 querySnapshot.forEach((doc) => {
@@ -305,6 +310,8 @@
                         card.innerHTML = `
                             <h3><i class="${iconClass}"></i> ${data.market} - ${data.prediction}</h3>
                             <p>${data.details}</p>
+                            <p>Action: ${data.action || 'N/A'} | Entry: ${data.entry_point || 'N/A'} | Exit: ${data.exit_point || 'N/A'} | Risk: ${data.risk || 'N/A'}</p>
+                            <p>${data.guidance || ''}</p>
                             <small>Date: ${data.timestamp?.toDate().toLocaleString()} | Confidence: ${data.confidence || 'High'}</small>
                         `;
                         predictionsGrid.appendChild(card);
@@ -336,6 +343,44 @@
                     }
                 });
             });
+        }
+
+        function initTradingActions(role) {
+            const actionsGrid = document.getElementById('actions-grid');
+            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(20));
+            onSnapshot(q, (querySnapshot) => {
+                actionsGrid.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const isPremium = data.premium || false;
+                    if ((role === 'vip' || !isPremium) && !donePredictions.includes(doc.id)) {
+                        const card = document.createElement('div');
+                        card.classList.add('prediction-card');
+                        if (isPremium) card.classList.add('vip-highlight');
+                        const iconClass = {
+                            'Crypto': 'fab fa-btc',
+                            'Stocks': 'fas fa-chart-line',
+                            'Forex': 'fas fa-exchange-alt',
+                            'Gold': 'fas fa-coins'
+                        }[data.market] || 'fas fa-question';
+                        card.innerHTML = `
+                            <h3><i class="${iconClass}"></i> ${data.market} - ${data.action || 'N/A'}</h3>
+                            <p>${data.guidance || data.details}</p>
+                            <p>Entry: ${data.entry_point || 'N/A'} | Exit: ${data.exit_point || 'N/A'} | Risk: ${data.risk || 'N/A'}</p>
+                            <button class="action-btn" onclick="markDone('${doc.id}')">Mark as Done</button>
+                        `;
+                        actionsGrid.appendChild(card);
+                    }
+                });
+            });
+        }
+
+        async function markDone(predictionId) {
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, {
+                donePredictions: arrayUnion(predictionId)
+            });
+            loadUserData(currentUser.uid);
         }
 
         function initChat(role) {
@@ -395,7 +440,7 @@
                 updateStatus('Prediction added successfully!');
                 document.getElementById('new-prediction').value = '';
             } catch (e) { 
-                updateStatus('Invalid JSON format. Use: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":false,"confidence":"High"}'); 
+                updateStatus('Invalid JSON format. Use: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":false,"confidence":"High","action":"Buy","entry_point":"50000","exit_point":"55000","risk":"Medium","guidance":"Buy now if price below entry"}'); 
             }
         }
 
@@ -404,7 +449,7 @@
             const markets = marketSelect ? [marketSelect] : ['Crypto', 'Stocks', 'Forex', 'Gold'];
             const market = markets[Math.floor(Math.random() * markets.length)];
             const today = new Date().toLocaleDateString();
-            const prompt = `Generate a concise market prediction for ${market} on ${today}. Include: bullish/bearish outlook, price target, 2-3 reasons based on current trends, and confidence level (High/Medium/Low). Format as JSON: {"market":"${market}","prediction":"[Outlook]","details":"[Reasons]","premium":${Math.random() > 0.5},"confidence":"[Confidence]"}`;
+            const prompt = `Generate a concise market prediction for ${market} on ${today}. Include: bullish/bearish outlook, price target, 2-3 reasons based on current trends, confidence level (High/Medium/Low), action (Buy/Sell/Hold), entry_point (price), exit_point (price), risk (Low/Medium/High), guidance (short actionable sentence). Format as JSON: {"market":"${market}","prediction":"[Outlook]","details":"[Reasons]","premium":${Math.random() > 0.5},"confidence":"[Confidence]","action":"[Action]","entry_point":"[Entry]","exit_point":"[Exit]","risk":"[Risk]","guidance":"[Guidance]"}`;
 
             if (!OPENAI_API_KEY || OPENAI_API_KEY === 'sk-your-openai-api-key-here') {
                 updateStatus('Please set your OpenAI API key for AI predictions.');
@@ -439,6 +484,11 @@
                         details: 'Based on recent data analysis.',
                         premium: Math.random() > 0.5,
                         confidence: 'High',
+                        action: 'Buy',
+                        entry_point: '50000',
+                        exit_point: '55000',
+                        risk: 'Medium',
+                        guidance: 'Buy now if price below entry',
                         timestamp: serverTimestamp()
                     };
                 }
@@ -452,7 +502,12 @@
                     prediction: 'Bullish next week', 
                     details: 'AI analysis: Expected rise based on trends.', 
                     premium: false, 
-                    confidence: 'High', 
+                    confidence: 'High',
+                    action: 'Buy',
+                    entry_point: '50000',
+                    exit_point: '55000',
+                    risk: 'Medium',
+                    guidance: 'Buy now if price below entry',
                     timestamp: serverTimestamp() 
                 };
                 await addDoc(collection(db, 'predictions'), mock);
@@ -498,36 +553,59 @@
             }
         }
 
-        function initCharts() {
+        async function initCharts() {
             const markets = [
-                { name: 'Crypto', icon: 'fab fa-btc' },
-                { name: 'Stocks', icon: 'fas fa-chart-line' },
-                { name: 'Forex', icon: 'fas fa-exchange-alt' },
-                { name: 'Gold', icon: 'fas fa-coins' }
+                { name: 'Crypto', symbol: 'BTC', icon: 'fab fa-btc', api: 'https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1' },
+                { name: 'Stocks', symbol: 'IBM', icon: 'fas fa-chart-line', api: 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo' },
+                { name: 'Forex', symbol: 'EUR/USD', icon: 'fas fa-exchange-alt', api: 'https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&apikey=demo' },
+                { name: 'Gold', symbol: 'XAU/USD', icon: 'fas fa-coins', api: 'https://www.goldapi.io/api/XAU/USD' }
             ];
-            markets.forEach(market => {
+            for (const market of markets) {
                 const chartId = `${market.name.toLowerCase()}-chart`;
+                let data = [];
+                try {
+                    const response = await fetch(market.api);
+                    const json = await response.json();
+                    if (market.name === 'Crypto') {
+                        data = json.map(d => ({ x: d[0], y: [d[1], d[2], d[3], d[4]] }));
+                    } else if (market.name === 'Stocks' || market.name === 'Forex') {
+                        const timeSeries = json[market.name === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'];
+                        if (timeSeries) {
+                            data = Object.entries(timeSeries).map(([time, val]) => ({
+                                x: new Date(time).getTime(),
+                                y: [parseFloat(val['1. open']), parseFloat(val['2. high']), parseFloat(val['3. low']), parseFloat(val['4. close'])]
+                            }));
+                        }
+                    } else if (market.name === 'Gold') {
+                        // GoldAPI returns current price, use mock for candlestick
+                        data = [
+                            { x: new Date().getTime(), y: [json.price, json.price + 10, json.price - 10, json.price] } // Mock
+                        ];
+                    }
+                } catch (err) {
+                    console.error('API fetch error', err);
+                    // Mock data fallback
+                    data = [
+                        { x: new Date(1546275600000), y: [6629.81, 6650.5, 6623.04, 6633.33] },
+                        { x: new Date(1546362000000), y: [6632.01, 6643.59, 6620, 6630.11] },
+                        { x: new Date(1546448400000), y: [6630.71, 6648.95, 6623.34, 6635.65] },
+                        { x: new Date(1546707600000), y: [6624.61, 6632.2, 6617, 6626.02] },
+                        { x: new Date(1546794000000), y: [6635.65, 6651, 6629.67, 6638.24] }
+                    ];
+                }
                 const options = {
-                    series: [{
-                        data: [
-                            { x: new Date(1546275600000), y: [6629.81, 6650.5, 6623.04, 6633.33] },
-                            { x: new Date(1546362000000), y: [6632.01, 6643.59, 6620, 6630.11] },
-                            { x: new Date(1546448400000), y: [6630.71, 6648.95, 6623.34, 6635.65] },
-                            { x: new Date(1546707600000), y: [6624.61, 6632.2, 6617, 6626.02] },
-                            { x: new Date(1546794000000), y: [6635.65, 6651, 6629.67, 6638.24] }
-                        ]
-                    }],
+                    series: [{ data }],
                     chart: { type: 'candlestick', height: window.innerWidth < 768 ? 250 : 350 },
                     title: { text: `<i class="${market.icon}"></i> ${market.name} Chart`, align: 'center' },
                     xaxis: { type: 'datetime' },
                     yaxis: { tooltip: { enabled: true } }
                 };
                 new ApexCharts(document.getElementById(chartId), options).render();
-            });
+            }
         }
 
-        function filterPredictions() {
-            initRealTimePredictions(document.getElementById('user-role').innerText.toLowerCase());
+        function filterPredictions(premiumFilter = false) {
+            initRealTimePredictions(document.getElementById('user-role').innerText.toLowerCase(), premiumFilter);
         }
 
         async function loadAllPredictions() {
@@ -549,6 +627,8 @@
                 pred.innerHTML = `
                     <h3><i class="${iconClass}"></i> ${data.market} - ${data.prediction}</h3>
                     <p>${data.details}</p>
+                    <p>Action: ${data.action || 'N/A'} | Entry: ${data.entry_point || 'N/A'} | Exit: ${data.exit_point || 'N/A'} | Risk: ${data.risk || 'N/A'}</p>
+                    <p>${data.guidance || ''}</p>
                     <small>Date: ${data.timestamp?.toDate().toLocaleString()} | Confidence: ${data.confidence || 'High'}</small>
                 `;
                 predictionsDiv.appendChild(pred);
@@ -566,6 +646,7 @@
         window.toggleTheme = toggleTheme;
         window.sendChatMessage = sendChatMessage;
         window.filterPredictions = filterPredictions;
+        window.markDone = markDone;
     </script>
     <!-- PayPal SDK -->
     <script src="https://www.paypal.com/sdk/js?client-id=AYuKzB5bK3jL9m_abc123def456ghi789&currency=USD"></script>
@@ -580,6 +661,8 @@
         <ul>
             <li><a href="#" onclick="showSection('dashboard')">Dashboard</a></li>
             <li><a href="#" onclick="showSection('predictions')">Predictions</a></li>
+            <li><a href="#" onclick="showSection('vip-predictions')">VIP Predictions</a></li>
+            <li><a href="#" onclick="showSection('trading-actions')">Trading Actions</a></li>
             <li><a href="#" onclick="showSection('payments')">Payments</a></li>
             <li><a href="#" onclick="showSection('profile')">Profile</a></li>
             <li><a href="#" onclick="showSection('support')">Support</a></li>
@@ -641,6 +724,31 @@
             </div>
         </div>
 
+        <!-- VIP Predictions -->
+        <div id="vip-predictions-section" class="section">
+            <div class="card" id="vip-predictions-container">
+                <h2>VIP AI Predictions</h2>
+                <button class="toggle-btn" onclick="toggleView('card')">Card View</button>
+                <button class="toggle-btn" onclick="toggleView('list')">List View</button>
+                <select id="vip-market-filter" onchange="filterPredictions(true)">
+                    <option value="">All Markets</option>
+                    <option value="Crypto">Crypto</option>
+                    <option value="Stocks">Stocks</option>
+                    <option value="Forex">Forex</option>
+                    <option value="Gold">Gold</option>
+                </select>
+                <div id="vip-predictions-grid" class="predictions-grid"></div>
+            </div>
+        </div>
+
+        <!-- Trading Actions -->
+        <div id="trading-actions-section" class="section">
+            <div class="card">
+                <h2>Trading Actions</h2>
+                <div id="actions-grid" class="predictions-grid"></div>
+            </div>
+        </div>
+
         <!-- Payments -->
         <div id="payments-section" class="section">
             <div class="card">
@@ -685,7 +793,7 @@
                     <option value="Gold">Gold</option>
                 </select>
                 <button onclick="generateAIPrediction()">Generate AI Prediction</button>
-                <textarea id="new-prediction" placeholder='Manual JSON: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":true,"confidence":"High"}'></textarea>
+                <textarea id="new-prediction" placeholder='Manual JSON: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":true,"confidence":"High","action":"Buy","entry_point":"50000","exit_point":"55000","risk":"Medium","guidance":"Buy now if price below entry"}'></textarea>
                 <button onclick="addPrediction()">Add Manual Prediction</button>
                 <h3>All Predictions</h3>
                 <div id="admin-predictions"></div>
