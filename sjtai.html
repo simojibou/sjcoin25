@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Market Predictions SaaS</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
             --bg-color: #121212;
@@ -68,8 +69,11 @@
             border: 1px solid var(--border-color); 
         }
         .chart-container { height: 300px; margin: 20px 0; }
+        .chart-title { display: flex; align-items: center; gap: 10px; }
+        .chart-title i { font-size: 1.2em; color: var(--highlight-color); }
         .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .prediction-card { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .prediction-card i { margin-right: 10px; color: var(--highlight-color); }
         .vip-highlight { border: 2px solid var(--highlight-color); }
         .toggle-btn { 
             background: var(--accent-color); 
@@ -105,7 +109,16 @@
         .auth-button img { width: 24px; margin-right: 10px; }
         .theme-toggle { cursor: pointer; padding: 8px; border-radius: 4px; background: var(--accent-color); color: #fff; }
         .market-list { display: flex; justify-content: space-around; margin: 20px 0; }
-        .market-item { background: var(--card-bg); padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .market-item { 
+            background: var(--card-bg); 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color); 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .market-item i { font-size: 1.2em; color: var(--highlight-color); }
         input, textarea, select { 
             background: var(--card-bg); 
             color: var(--text-color); 
@@ -123,6 +136,7 @@
             .content { margin-left: 220px; }
             .predictions-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
             .chart-container { height: 350px; }
+            .market-item { padding: 15px 25px; }
         }
         /* Mobile Mode */
         @media (max-width: 767px) {
@@ -131,6 +145,7 @@
             .predictions-grid { grid-template-columns: 1fr; }
             .list-view .prediction-card { flex-direction: column; align-items: flex-start; }
             .chart-container { height: 250px; }
+            .market-item { padding: 10px 15px; }
         }
     </style>
     <!-- ApexCharts -->
@@ -281,8 +296,14 @@
                         const card = document.createElement('div');
                         card.classList.add('prediction-card');
                         if (isPremium) card.classList.add('vip-highlight');
+                        const iconClass = {
+                            'Crypto': 'fab fa-btc',
+                            'Stocks': 'fas fa-chart-line',
+                            'Forex': 'fas fa-exchange-alt',
+                            'Gold': 'fas fa-coins'
+                        }[data.market] || 'fas fa-question';
                         card.innerHTML = `
-                            <h3>${data.market} - ${data.prediction}</h3>
+                            <h3><i class="${iconClass}"></i> ${data.market} - ${data.prediction}</h3>
                             <p>${data.details}</p>
                             <small>Date: ${data.timestamp?.toDate().toLocaleString()} | Confidence: ${data.confidence || 'High'}</small>
                         `;
@@ -304,7 +325,13 @@
                     if (role === 'vip' || !isPremium) {
                         const item = document.createElement('div');
                         item.classList.add('notification-item');
-                        item.innerText = `New Prediction for ${data.market}: ${data.prediction} (${data.timestamp?.toDate().toLocaleString()})`;
+                        const iconClass = {
+                            'Crypto': 'fab fa-btc',
+                            'Stocks': 'fas fa-chart-line',
+                            'Forex': 'fas fa-exchange-alt',
+                            'Gold': 'fas fa-coins'
+                        }[data.market] || 'fas fa-question';
+                        item.innerHTML = `<i class="${iconClass}"></i> New Prediction for ${data.market}: ${data.prediction} (${data.timestamp?.toDate().toLocaleString()})`;
                         notificationsDiv.appendChild(item);
                     }
                 });
@@ -314,7 +341,7 @@
         function initChat(role) {
             if (unsubscribeChat) unsubscribeChat();
             const chatContainer = document.getElementById('chat-container');
-            const adminId = 'admin'; // Simplified: use a fixed admin ID
+            const adminId = 'admin';
             let q;
             if (role === 'admin') {
                 q = query(collection(db, 'chat'), orderBy('timestamp', 'desc'), limit(50));
@@ -435,7 +462,7 @@
         function updateUserRole(newRole) {
             if (!currentUser) return;
             const expiry = new Date();
-            expiry.setMonth(expiry.getMonth() + 1); // 1-month subscription
+            expiry.setMonth(expiry.getMonth() + 1);
             updateDoc(doc(db, 'users', currentUser.uid), { 
                 role: newRole, 
                 planExpiry: expiry 
@@ -472,9 +499,14 @@
         }
 
         function initCharts() {
-            const markets = ['Crypto', 'Stocks', 'Forex', 'Gold'];
+            const markets = [
+                { name: 'Crypto', icon: 'fab fa-btc' },
+                { name: 'Stocks', icon: 'fas fa-chart-line' },
+                { name: 'Forex', icon: 'fas fa-exchange-alt' },
+                { name: 'Gold', icon: 'fas fa-coins' }
+            ];
             markets.forEach(market => {
-                const chartId = `${market.toLowerCase()}-chart`;
+                const chartId = `${market.name.toLowerCase()}-chart`;
                 const options = {
                     series: [{
                         data: [
@@ -486,7 +518,7 @@
                         ]
                     }],
                     chart: { type: 'candlestick', height: window.innerWidth < 768 ? 250 : 350 },
-                    title: { text: `${market} Chart`, align: 'center' },
+                    title: { text: `<i class="${market.icon}"></i> ${market.name} Chart`, align: 'center' },
                     xaxis: { type: 'datetime' },
                     yaxis: { tooltip: { enabled: true } }
                 };
@@ -496,6 +528,31 @@
 
         function filterPredictions() {
             initRealTimePredictions(document.getElementById('user-role').innerText.toLowerCase());
+        }
+
+        async function loadAllPredictions() {
+            const predictionsDiv = document.getElementById('admin-predictions');
+            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'));
+            const querySnapshot = await getDocs(q);
+            predictionsDiv.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const pred = document.createElement('div');
+                pred.classList.add('prediction-card');
+                if (data.premium) pred.classList.add('vip-highlight');
+                const iconClass = {
+                    'Crypto': 'fab fa-btc',
+                    'Stocks': 'fas fa-chart-line',
+                    'Forex': 'fas fa-exchange-alt',
+                    'Gold': 'fas fa-coins'
+                }[data.market] || 'fas fa-question';
+                pred.innerHTML = `
+                    <h3><i class="${iconClass}"></i> ${data.market} - ${data.prediction}</h3>
+                    <p>${data.details}</p>
+                    <small>Date: ${data.timestamp?.toDate().toLocaleString()} | Confidence: ${data.confidence || 'High'}</small>
+                `;
+                predictionsDiv.appendChild(pred);
+            });
         }
 
         // Expose global functions
@@ -548,10 +605,10 @@
                 <p>Plan: <span id="user-role">None</span></p>
                 <p>Balance: $0 (Mock)</p>
                 <div class="market-list">
-                    <span class="market-item">Crypto</span>
-                    <span class="market-item">Stocks</span>
-                    <span class="market-item">Forex</span>
-                    <span class="market-item">Gold</span>
+                    <span class="market-item"><i class="fab fa-btc"></i> Crypto</span>
+                    <span class="market-item"><i class="fas fa-chart-line"></i> Stocks</span>
+                    <span class="market-item"><i class="fas fa-exchange-alt"></i> Forex</span>
+                    <span class="market-item"><i class="fas fa-coins"></i> Gold</span>
                 </div>
             </div>
             <div class="card">
