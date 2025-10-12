@@ -84,11 +84,11 @@
         }
 
         async function checkAndSetUserRole(uid, email) {
-            const userRef = doc(db, 'users', uid);
+            const userRef = doc(db, 'users', uid); // Use lowercase 'users' to match rules
             const docSnap = await getDoc(userRef);
             let role = 'none';
 
-            // Auto-assign admin for specific email (as per previous)
+            // Auto-assign admin for specific email
             if (email === 'simo.jibou@gmail.com') {
                 role = 'admin';
             }
@@ -132,7 +132,7 @@
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('dashboard-section').classList.add('hidden');
             document.getElementById('admin-section').classList.remove('hidden');
-            loadAllPredictions(); // Admin sees all
+            loadAllPredictions();
         }
 
         function initRealTimePredictions(role) {
@@ -158,7 +158,7 @@
                         `;
                         predictionsDiv.appendChild(pred);
                         hasPrediction = true;
-                        if (role !== 'admin' && !isPremium && role === 'vip') newPred = true; // Simulate notification
+                        if (role !== 'admin' && !isPremium && role === 'vip') newPred = true;
                     }
                 });
                 if (newPred) {
@@ -206,7 +206,8 @@
         }
 
         async function generateAIPrediction() {
-            const markets = ['Crypto', 'Stocks', 'Forex', 'Gold'];
+            const marketSelect = document.getElementById('market-select').value;
+            const markets = marketSelect ? [marketSelect] : ['Crypto', 'Stocks', 'Forex', 'Gold'];
             const market = markets[Math.floor(Math.random() * markets.length)];
             const today = new Date().toLocaleDateString();
             const prompt = `Generate a concise market prediction for ${market} on ${today}. Include: bullish/bearish outlook, price target, and 2-3 reasons based on current trends. Format as JSON: {"market":"${market}","prediction":"[Outlook]","details":"[Reasons]","premium":${Math.random() > 0.5}}`;
@@ -238,7 +239,6 @@
                 try {
                     prediction = JSON.parse(data.choices[0].message.content);
                 } catch {
-                    // Fallback mock if parse fails
                     prediction = {
                         market: market,
                         prediction: 'Bullish trend expected',
@@ -252,7 +252,6 @@
                 updateStatus(`AI Prediction for ${market} added!`);
             } catch (err) {
                 updateStatus(`AI Generation Error: ${err.message}. Using mock prediction.`);
-                // Fallback to mock
                 const mock = { market, prediction: 'Bullish next week', details: 'AI analysis: Expected rise based on trends.', premium: false, timestamp: serverTimestamp() };
                 await addDoc(collection(db, 'predictions'), mock);
             }
@@ -277,7 +276,7 @@
 
         function initPayPalButtons(role) {
             if (typeof paypal === 'undefined') {
-                setTimeout(() => initPayPalButtons(role), 1000); // Wait for PayPal SDK
+                setTimeout(() => initPayPalButtons(role), 1000);
                 return;
             }
             const paypalDiv = document.getElementById('paypal-buttons');
@@ -354,7 +353,7 @@
             </select>
             <button onclick="generateAIPrediction()">Generate AI Prediction</button>
             <br>
-            <textarea id="new-prediction" placeholder='Manual JSON: {"market":"Crypto","prediction":"Bullish","details":"AI or manual details","premium":true}'></textarea>
+            <textarea id="new-prediction" placeholder='Manual JSON: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":true}'></textarea>
             <button onclick="addPrediction()">Add Manual Prediction</button>
             <h3>All Predictions</h3>
             <div id="admin-predictions"></div>
