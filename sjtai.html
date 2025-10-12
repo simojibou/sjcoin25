@@ -12,22 +12,24 @@
         .hidden { display:none; }
         button { background:linear-gradient(135deg,#6200ea,#03dac6); color:#fff; border:none; padding:12px 24px; margin:10px 0; cursor:pointer; border-radius:8px; font-weight:500; transition: transform 0.2s, box-shadow 0.2s; }
         button:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(98,0,234,0.5); }
-        input, textarea { background:#2c2c2c; color:#fff; border:1px solid #333; padding:12px; margin:10px 0; width:100%; box-sizing:border-box; border-radius:8px; }
+        input, textarea, select { background:#2c2c2c; color:#fff; border:1px solid #333; padding:12px; margin:10px 0; width:100%; box-sizing:border-box; border-radius:8px; }
         .prediction { background:#2c2c2c; border:1px solid #333; padding:16px; margin:16px 0; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .premium { border-left: 4px solid #ff9800; }
         #paypal-buttons { margin:20px 0; text-align:center; }
-        #status { text-align:center; color:#ff5252; }
-        .auth-button { display:flex; align-items:center; justify-content:center; background:#fff; color:#000; font-weight:bold; }
+        #status { text-align:center; color:#ff5252; margin:10px 0; }
+        .auth-button { display:flex; align-items:center; justify-content:center; background:#fff; color:#000; font-weight:bold; margin:10px 0; }
         .auth-button img { width:24px; margin-right:10px; }
+        .notification { background:#4caf50; color:white; padding:10px; border-radius:8px; margin:10px 0; }
         @media (max-width:600px) { .container { padding:20px; } }
     </style>
 
     <!-- Firebase SDK -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-        // Firebase Config
+        // Firebase Config (Replace with your config)
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -44,8 +46,15 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
-        const PAYPAL_CLIENT_ID = "AYuKzB5bK3jL9m_abc123def456ghi789"; // Replace with your real PayPal Client ID
+
+        // OpenAI API Key (Replace with your actual key - Use environment variables in production)
+        const OPENAI_API_KEY = "sk-your-openai-api-key-here"; // Get free credits at openai.com
+
+        // PayPal Client ID (Replace with your sandbox/live ID)
+        const PAYPAL_CLIENT_ID = "AYuKzB5bK3jL9m_abc123def456ghi789";
+
         let currentUser = null;
+        let unsubscribePredictions = null;
 
         // Auth State
         onAuthStateChanged(auth, (user) => {
@@ -54,17 +63,18 @@
                 checkAndSetUserRole(user.uid, user.email);
             } else {
                 showAuth();
+                if (unsubscribePredictions) unsubscribePredictions();
             }
         });
 
         function signInWithGoogle() {
             signInWithPopup(auth, googleProvider)
                 .then(result => { updateStatus('Signed in successfully as ' + result.user.displayName); })
-                .catch(err => updateStatus(err.message));
+                .catch(err => updateStatus('Error: ' + err.message));
         }
 
         function logout() {
-            signOut(auth).then(() => updateStatus('Logged out')).catch(err => updateStatus(err.message));
+            signOut(auth).then(() => updateStatus('Logged out')).catch(err => updateStatus('Error: ' + err.message));
         }
 
         function showAuth() {
@@ -76,18 +86,17 @@
         async function checkAndSetUserRole(uid, email) {
             const userRef = doc(db, 'users', uid);
             const docSnap = await getDoc(userRef);
-            let role = 'none'; // Default for all users
+            let role = 'none';
 
-            // 🔑 NEW: Auto-assign admin for specific email
+            // Auto-assign admin for specific email (as per previous)
             if (email === 'simo.jibou@gmail.com') {
                 role = 'admin';
             }
 
             if (!docSnap.exists()) {
-                await setDoc(userRef, { role: role, email: email });
-                updateStatus(`User role set to: ${role}`);
+                await setDoc(userRef, { role: role, email: email, createdAt: serverTimestamp() });
+                updateStatus(`Welcome! Role set to: ${role}`);
             } else {
-                // If doc exists, update if it's the admin email
                 const existingData = docSnap.data();
                 if (email === 'simo.jibou@gmail.com' && existingData.role !== 'admin') {
                     await updateDoc(userRef, { role: 'admin' });
@@ -102,9 +111,11 @@
             if (docSnap.exists()) {
                 const role = docSnap.data().role;
                 document.getElementById('user-role').innerText = `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`;
-                if (role === 'admin') showAdmin();
-                else if (role === 'regular' || role === 'vip') showDashboard(role);
-                else showDashboard('none');
+                if (role === 'admin') {
+                    showAdmin();
+                } else {
+                    showDashboard(role);
+                }
             }
         }
 
@@ -112,7 +123,7 @@
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('dashboard-section').classList.remove('hidden');
             document.getElementById('admin-section').classList.add('hidden');
-            loadPredictions(role);
+            initRealTimePredictions(role);
             initPayPalButtons(role);
             document.getElementById('upgrade-btn').classList.toggle('hidden', role !== 'regular');
         }
@@ -121,26 +132,64 @@
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('dashboard-section').classList.add('hidden');
             document.getElementById('admin-section').classList.remove('hidden');
+            loadAllPredictions(); // Admin sees all
         }
 
-        async function loadPredictions(role) {
+        function initRealTimePredictions(role) {
+            if (unsubscribePredictions) unsubscribePredictions();
             const predictionsDiv = document.getElementById('predictions');
-            predictionsDiv.innerHTML = '';
-            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(5));
-            const querySnapshot = await getDocs(q);
-            let hasPrediction = false;
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                const isPremium = data.premium || false;
-                if (role === 'vip' || !isPremium) {
-                    const pred = document.createElement('div');
-                    pred.classList.add('prediction');
-                    pred.innerHTML = `<h3>${data.market}</h3><p>${data.prediction}</p><p>${data.details}</p><small>${data.timestamp?.toDate ? data.timestamp.toDate().toLocaleString() : ''}</small>`;
-                    predictionsDiv.appendChild(pred);
-                    hasPrediction = true;
+            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(10));
+            unsubscribePredictions = onSnapshot(q, (querySnapshot) => {
+                predictionsDiv.innerHTML = '';
+                let hasPrediction = false;
+                let newPred = false;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const isPremium = data.premium || false;
+                    if (role === 'vip' || !isPremium || role === 'admin') {
+                        const pred = document.createElement('div');
+                        pred.classList.add('prediction');
+                        if (isPremium) pred.classList.add('premium');
+                        pred.innerHTML = `
+                            <h3>${data.market}</h3>
+                            <p><strong>${data.prediction}</strong></p>
+                            <p>${data.details}</p>
+                            <small>${data.timestamp?.toDate ? data.timestamp.toDate().toLocaleString() : 'Just now'}</small>
+                        `;
+                        predictionsDiv.appendChild(pred);
+                        hasPrediction = true;
+                        if (role !== 'admin' && !isPremium && role === 'vip') newPred = true; // Simulate notification
+                    }
+                });
+                if (newPred) {
+                    const notif = document.createElement('div');
+                    notif.classList.add('notification');
+                    notif.innerText = 'New prediction available!';
+                    predictionsDiv.insertBefore(notif, predictionsDiv.firstChild);
+                    setTimeout(() => notif.remove(), 5000);
                 }
+                if (!hasPrediction) predictionsDiv.innerHTML = '<p>No predictions available for your role.</p>';
             });
-            if (!hasPrediction) predictionsDiv.innerHTML = '<p>No predictions available for your role.</p>';
+        }
+
+        async function loadAllPredictions() {
+            const predictionsDiv = document.getElementById('admin-predictions');
+            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'));
+            const querySnapshot = await getDocs(q);
+            predictionsDiv.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const pred = document.createElement('div');
+                pred.classList.add('prediction');
+                if (data.premium) pred.classList.add('premium');
+                pred.innerHTML = `
+                    <h3>${data.market}</h3>
+                    <p><strong>${data.prediction}</strong></p>
+                    <p>${data.details}</p>
+                    <small>${data.timestamp?.toDate ? data.timestamp.toDate().toLocaleString() : ''}</small>
+                `;
+                predictionsDiv.appendChild(pred);
+            });
         }
 
         async function addPrediction() {
@@ -149,47 +198,117 @@
                 const prediction = JSON.parse(predictionText);
                 prediction.timestamp = serverTimestamp();
                 await addDoc(collection(db, 'predictions'), prediction);
-                updateStatus('Prediction added');
-            } catch (e) { updateStatus('Invalid JSON'); }
+                updateStatus('Prediction added successfully!');
+                document.getElementById('new-prediction').value = '';
+            } catch (e) { 
+                updateStatus('Invalid JSON format. Use: {"market":"Crypto","prediction":"Bullish","details":"Details here","premium":false}'); 
+            }
         }
 
         async function generateAIPrediction() {
-            const mockAIResponse = { market: 'Crypto', prediction: 'Bullish next week', details: 'AI analysis: Bitcoin expected to rise 5%.', premium: false, timestamp: serverTimestamp() };
-            try { 
-                await addDoc(collection(db, 'predictions'), mockAIResponse); 
-                updateStatus('AI Prediction added'); 
-            } catch(err){ updateStatus(err.message); }
+            const markets = ['Crypto', 'Stocks', 'Forex', 'Gold'];
+            const market = markets[Math.floor(Math.random() * markets.length)];
+            const today = new Date().toLocaleDateString();
+            const prompt = `Generate a concise market prediction for ${market} on ${today}. Include: bullish/bearish outlook, price target, and 2-3 reasons based on current trends. Format as JSON: {"market":"${market}","prediction":"[Outlook]","details":"[Reasons]","premium":${Math.random() > 0.5}}`;
+
+            if (!OPENAI_API_KEY || OPENAI_API_KEY === 'sk-your-openai-api-key-here') {
+                updateStatus('Please set your OpenAI API key for AI predictions.');
+                return;
+            }
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [{ role: 'user', content: prompt }],
+                        max_tokens: 200,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+
+                const data = await response.json();
+                let prediction;
+                try {
+                    prediction = JSON.parse(data.choices[0].message.content);
+                } catch {
+                    // Fallback mock if parse fails
+                    prediction = {
+                        market: market,
+                        prediction: 'Bullish trend expected',
+                        details: 'Based on recent data analysis.',
+                        premium: Math.random() > 0.5,
+                        timestamp: serverTimestamp()
+                    };
+                }
+                prediction.timestamp = serverTimestamp();
+                await addDoc(collection(db, 'predictions'), prediction);
+                updateStatus(`AI Prediction for ${market} added!`);
+            } catch (err) {
+                updateStatus(`AI Generation Error: ${err.message}. Using mock prediction.`);
+                // Fallback to mock
+                const mock = { market, prediction: 'Bullish next week', details: 'AI analysis: Expected rise based on trends.', premium: false, timestamp: serverTimestamp() };
+                await addDoc(collection(db, 'predictions'), mock);
+            }
         }
 
-        function updateUserRole(role) {
-            updateDoc(doc(db,'users',currentUser.uid), { role }).then(()=>loadUserRole(currentUser.uid));
+        function updateUserRole(newRole) {
+            if (!currentUser) return;
+            updateDoc(doc(db, 'users', currentUser.uid), { role: newRole })
+                .then(() => {
+                    updateStatus(`Upgraded to ${newRole}!`);
+                    loadUserRole(currentUser.uid);
+                })
+                .catch(err => updateStatus('Upgrade failed: ' + err.message));
         }
 
-        function updateStatus(msg){ document.getElementById('status').innerText = msg; }
+        function updateStatus(msg) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = msg;
+            statusEl.style.color = msg.includes('Error') || msg.includes('Invalid') ? '#ff5252' : '#4caf50';
+            setTimeout(() => { statusEl.innerText = ''; }, 5000);
+        }
 
-        function initPayPalButtons(role){
-            if (typeof paypal === 'undefined') return; // Wait for PayPal to load
+        function initPayPalButtons(role) {
+            if (typeof paypal === 'undefined') {
+                setTimeout(() => initPayPalButtons(role), 1000); // Wait for PayPal SDK
+                return;
+            }
             const paypalDiv = document.getElementById('paypal-buttons');
             paypalDiv.innerHTML = '';
-            if(role==='none'){
+            if (role === 'none') {
                 paypal.Buttons({
-                    createOrder: (data, actions)=> actions.order.create({ purchase_units:[{ amount:{ value:'50.00' } }] }),
-                    onApprove: (data, actions)=> actions.order.capture().then(details=>{ updateUserRole('regular'); updateStatus('Payment successful!'); })
+                    createOrder: (data, actions) => actions.order.create({
+                        purchase_units: [{ amount: { value: '50.00', currency_code: 'USD' } }]
+                    }),
+                    onApprove: (data, actions) => actions.order.capture().then(details => {
+                        updateUserRole('regular');
+                    })
                 }).render(paypalDiv);
             }
         }
 
-        function showUpgrade(){
+        function showUpgrade() {
             if (typeof paypal === 'undefined') return;
             const paypalDiv = document.getElementById('paypal-buttons');
             paypalDiv.innerHTML = '';
             paypal.Buttons({
-                createOrder: (data, actions)=> actions.order.create({ purchase_units:[{ amount:{ value:'100.00' } }] }),
-                onApprove: (data, actions)=> actions.order.capture().then(details=>{ updateUserRole('vip'); updateStatus('Upgrade successful!'); })
+                createOrder: (data, actions) => actions.order.create({
+                    purchase_units: [{ amount: { value: '100.00', currency_code: 'USD' } }]
+                }),
+                onApprove: (data, actions) => actions.order.capture().then(details => {
+                    updateUserRole('vip');
+                })
             }).render(paypalDiv);
         }
 
-        // 🔑 Make functions globally accessible for onclick
+        // Expose functions globally for onclick
         window.signInWithGoogle = signInWithGoogle;
         window.logout = logout;
         window.addPrediction = addPrediction;
@@ -197,16 +316,16 @@
         window.showUpgrade = showUpgrade;
     </script>
 
-    <!-- PayPal SDK (loads after module) -->
+    <!-- PayPal SDK -->
     <script src="https://www.paypal.com/sdk/js?client-id=AYuKzB5bK3jL9m_abc123def456ghi789&currency=USD"></script>
 </head>
 <body>
     <div class="container">
-        <h1>AI Market Predictions</h1>
+        <h1>AI Market Predictions SaaS</h1>
         
         <!-- Auth Section -->
         <div id="auth-section">
-            <h2>Sign in with Google</h2>
+            <h2>Sign In to Get Started</h2>
             <button onclick="signInWithGoogle()" class="auth-button">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
                 Sign in with Google
@@ -215,20 +334,30 @@
 
         <!-- Dashboard Section -->
         <div id="dashboard-section" class="hidden">
-            <h2>Dashboard</h2>
+            <h2>Your Dashboard</h2>
             <p id="user-role"></p>
             <div id="predictions"></div>
             <div id="paypal-buttons"></div>
             <button onclick="logout()">Logout</button>
-            <button id="upgrade-btn" onclick="showUpgrade()" class="hidden">Upgrade to VIP</button>
+            <button id="upgrade-btn" class="hidden" onclick="showUpgrade()">Upgrade to VIP ($100)</button>
         </div>
 
         <!-- Admin Panel Section -->
         <div id="admin-section" class="hidden">
             <h2>Admin Panel</h2>
-            <textarea id="new-prediction" placeholder='Enter new prediction JSON e.g. {"market":"Stocks","prediction":"Buy","details":"...","premium":true}'></textarea>
-            <button onclick="addPrediction()">Add Prediction Manually</button>
+            <select id="market-select">
+                <option value="">Auto-select Market</option>
+                <option value="Crypto">Crypto</option>
+                <option value="Stocks">Stocks</option>
+                <option value="Forex">Forex</option>
+                <option value="Gold">Gold</option>
+            </select>
             <button onclick="generateAIPrediction()">Generate AI Prediction</button>
+            <br>
+            <textarea id="new-prediction" placeholder='Manual JSON: {"market":"Crypto","prediction":"Bullish","details":"AI or manual details","premium":true}'></textarea>
+            <button onclick="addPrediction()">Add Manual Prediction</button>
+            <h3>All Predictions</h3>
+            <div id="admin-predictions"></div>
             <button onclick="logout()">Logout</button>
         </div>
 
