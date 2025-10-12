@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Marketer Dashboard - SJ STORE</title>
+  <!-- Google Fonts - Roboto as Helvetica alternative -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Firebase v12.3.0 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
+    import { getDatabase, ref, onValue, set, push, remove, get, update, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
+    document.addEventListener("DOMContentLoaded", () => {
+      const affiliateList = document.getElementById("affiliate-list");
+      const commissionsTotal = document.getElementById("commissions-total");
+      const closeMarketerModal = document.getElementById("close-marketer-modal");
+      let products = [];
+      const productRef = ref(db, "Product");
+      onValue(productRef, (snapshot) => {
+        products = [];
+        snapshot.forEach((childSnapshot) => {
+          const data = childSnapshot.val();
+          products.push({
+            id: childSnapshot.key,
+            title: data.title,
+            price: data.price,
+            des: data.des,
+            orderUrl: data.orderUrl,
+            photo: data.photo,
+            userId: data.id,
+            category: data.category || "Uncategorized" // Default if no category
+          });
+        });
+      });
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          alert("Please log in to add a product.");
+          window.location.href = "SJSTORE.html";
+        } else {
+          loadAffiliateDashboard(user.uid);
+        }
+      });
+      closeMarketerModal.addEventListener("click", () => {
+        window.location.href = "SJSTORE.html";
+      });
+      function loadAffiliateDashboard(uid) {
+        affiliateList.innerHTML = "";
+        const affiliateLinksRef = ref(db, "affiliate_links");
+        onValue(affiliateLinksRef, (snapshot) => {
+          snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            if (data.marketerId === uid) {
+              const product = products.find(p => p.id === data.productId);
+              const t = translations[userData.language] || translations.English;
+              const div = document.createElement("div");
+              div.classList.add("affiliate-item");
+              const link = `${window.location.origin}${window.location.pathname}?ref=${data.code}&pid=${data.productId}`;
+              div.innerHTML = `
+                <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${product ? product.title : 'Product'}">
+                <p>Product: ${product ? product.title : 'Unknown'}</p>
+                <p>${t.clicks}: ${data.clicks || 0}</p>
+                <p>${t.buyers}: ${data.buyers || 0}</p>
+                <p>Link: <a href="${link}" target="_blank">${link}</a></p>
+                <button class="copy-link-btn">${t.copyLink}</button>
+              `;
+              div.querySelector(".copy-link-btn").addEventListener("click", () => {
+                navigator.clipboard.writeText(link).then(() => alert("Link copied!"));
+              });
+              affiliateList.appendChild(div);
+            }
+          });
+        });
+        const marketerRef = ref(db, `users/${uid}`);
+        onValue(marketerRef, (snapshot) => {
+          const data = snapshot.val();
+          const commissions = data.commissions || 0;
+          commissionsTotal.textContent = `Total Commissions: ${commissions.toFixed(2)} DH`;
+        });
+      }
+      const translations = {
+        English: {
+          // ... full English translations
+        },
+        French: {
+          // ... full French
+        },
+        Arabic: {
+          // ... full Arabic
+        }
+      };
+      // Apply language if needed, but since standalone, perhaps default to English
+    });
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #000;
+      color: #fff;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .modal-content {
+      background: #111;
+      margin: 10% auto;
+      padding: 2rem;
+      border-radius: 0;
+      width: 90%;
+      max-width: 600px;
+      border: 1px solid #333;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    #affiliate-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .affiliate-item {
+      background: #222;
+      padding: 1rem;
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border: 1px solid #333;
+    }
+    .affiliate-item img {
+      width: 80px;
+      height: 80px;
+      border-radius: 0;
+      object-fit: cover;
+    }
+    .copy-link-btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .copy-link-btn:hover {
+      background: #e0e0e0;
+    }
+    #commissions-total {
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-align: right;
+      margin-top: 1rem;
+    }
+    #close-marketer-modal {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.75rem;
+      width: 100%;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: border-color 0.3s;
+    }
+    #close-marketer-modal:hover {
+      border-color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="modal-content">
+    <h2>Affiliate Dashboard</h2>
+    <div id="affiliate-list"></div>
+    <p id="commissions-total">Total Commissions: 0 DH</p>
+    <button id="close-marketer-modal">Close</button>
+  </div>
+</body>
+</html>
