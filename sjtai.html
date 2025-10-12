@@ -8,7 +8,7 @@
     <style>
         body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#121212; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; }
         .container { max-width:900px; width:100%; background:#1e1e1e; padding:40px; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.5); margin:20px; }
-        h1,h2 { text-align:center; color:#fff; }
+        h1,h2,h3 { text-align:center; color:#fff; }
         .hidden { display:none; }
         button { background:linear-gradient(135deg,#6200ea,#03dac6); color:#fff; border:none; padding:12px 24px; margin:10px 0; cursor:pointer; border-radius:8px; font-weight:500; transition: transform 0.2s, box-shadow 0.2s; }
         button:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(98,0,234,0.5); }
@@ -20,7 +20,9 @@
         .auth-button { display:flex; align-items:center; justify-content:center; background:#fff; color:#000; font-weight:bold; margin:10px 0; }
         .auth-button img { width:24px; margin-right:10px; }
         .notification { background:#4caf50; color:white; padding:10px; border-radius:8px; margin:10px 0; }
-        @media (max-width:600px) { .container { padding:20px; } }
+        .market-list { display: flex; justify-content: space-around; margin: 20px 0; }
+        .market-item { background:#2c2c2c; padding:10px 20px; border-radius:8px; cursor:default; }
+        @media (max-width:600px) { .container { padding:20px; } .market-list { flex-direction: column; align-items: center; } .market-item { margin: 5px 0; } }
     </style>
 
     <!-- Firebase SDK -->
@@ -47,8 +49,8 @@
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
 
-        // OpenAI API Key (Replace with your actual key - Use environment variables in production)
-        const OPENAI_API_KEY = "sk-your-openai-api-key-here"; // Get free credits at openai.com
+        // OpenAI API Key (Replace with your actual key)
+        const OPENAI_API_KEY = "sk-your-openai-api-key-here";
 
         // PayPal Client ID (Replace with your sandbox/live ID)
         const PAYPAL_CLIENT_ID = "AYuKzB5bK3jL9m_abc123def456ghi789";
@@ -84,11 +86,10 @@
         }
 
         async function checkAndSetUserRole(uid, email) {
-            const userRef = doc(db, 'users', uid); // Use lowercase 'users' to match rules
+            const userRef = doc(db, 'users', uid);
             const docSnap = await getDoc(userRef);
             let role = 'none';
 
-            // Auto-assign admin for specific email
             if (email === 'simo.jibou@gmail.com') {
                 role = 'admin';
             }
@@ -138,7 +139,10 @@
         function initRealTimePredictions(role) {
             if (unsubscribePredictions) unsubscribePredictions();
             const predictionsDiv = document.getElementById('predictions');
-            const q = query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(10));
+            const marketFilter = document.getElementById('market-filter').value;
+            const q = marketFilter 
+                ? query(collection(db, 'predictions'), where('market', '==', marketFilter), orderBy('timestamp', 'desc'), limit(10))
+                : query(collection(db, 'predictions'), orderBy('timestamp', 'desc'), limit(10));
             unsubscribePredictions = onSnapshot(q, (querySnapshot) => {
                 predictionsDiv.innerHTML = '';
                 let hasPrediction = false;
@@ -168,7 +172,7 @@
                     predictionsDiv.insertBefore(notif, predictionsDiv.firstChild);
                     setTimeout(() => notif.remove(), 5000);
                 }
-                if (!hasPrediction) predictionsDiv.innerHTML = '<p>No predictions available for your role.</p>';
+                if (!hasPrediction) predictionsDiv.innerHTML = `<p>No predictions available for ${marketFilter || 'your role'}.</p>`;
             });
         }
 
@@ -307,12 +311,17 @@
             }).render(paypalDiv);
         }
 
-        // Expose functions globally for onclick
+        function filterPredictions() {
+            initRealTimePredictions(document.getElementById('user-role').innerText.split(': ')[1].toLowerCase());
+        }
+
+        // Expose functions globally
         window.signInWithGoogle = signInWithGoogle;
         window.logout = logout;
         window.addPrediction = addPrediction;
         window.generateAIPrediction = generateAIPrediction;
         window.showUpgrade = showUpgrade;
+        window.filterPredictions = filterPredictions;
     </script>
 
     <!-- PayPal SDK -->
@@ -335,6 +344,19 @@
         <div id="dashboard-section" class="hidden">
             <h2>Your Dashboard</h2>
             <p id="user-role"></p>
+            <div class="market-list">
+                <span class="market-item">Crypto</span>
+                <span class="market-item">Stocks</span>
+                <span class="market-item">Forex</span>
+                <span class="market-item">Gold</span>
+            </div>
+            <select id="market-filter" onchange="filterPredictions()">
+                <option value="">All Markets</option>
+                <option value="Crypto">Crypto</option>
+                <option value="Stocks">Stocks</option>
+                <option value="Forex">Forex</option>
+                <option value="Gold">Gold</option>
+            </select>
             <div id="predictions"></div>
             <div id="paypal-buttons"></div>
             <button onclick="logout()">Logout</button>
