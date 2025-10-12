@@ -31,7 +31,7 @@
             color: var(--text-color); 
             min-height: 100vh; 
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         header { 
             background: var(--card-bg); 
             padding: 10px 20px; 
@@ -39,6 +39,9 @@
             align-items: center; 
             justify-content: space-between; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+            position: sticky; 
+            top: 0; 
+            z-index: 5; 
         }
         .logo { font-size: 1.5em; font-weight: bold; }
         nav { 
@@ -47,16 +50,16 @@
             top: 0; 
             left: 0; 
             height: 100%; 
-            width: 250px; 
-            padding: 60px 20px 20px; 
+            width: 220px; 
+            padding: 80px 20px 20px; 
             transform: translateX(-100%); 
-            transition: transform 0.3s; 
+            transition: transform 0.3s ease; 
             z-index: 10; 
         }
         nav.open { transform: translateX(0); }
         nav ul { list-style: none; padding: 0; }
         nav li { margin: 15px 0; }
-        nav a { color: var(--text-color); text-decoration: none; font-size: 1.1em; display: block; }
+        nav a { color: var(--text-color); text-decoration: none; font-size: 1.1em; display: block; transition: color 0.2s; }
         nav a:hover { color: var(--accent-color); }
         .hamburger { display: block; cursor: pointer; font-size: 1.5em; }
         .content { padding: 20px; }
@@ -70,16 +73,20 @@
             margin: 20px 0; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
             border: 1px solid var(--border-color); 
+            transition: transform 0.2s; 
         }
+        .card:hover { transform: translateY(-5px); }
         .chart-container { height: 400px; margin: 20px 0; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
         .chart-title { display: flex; align-items: center; gap: 10px; }
         .chart-title i { font-size: 1.2em; color: var(--highlight-color); }
         .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .prediction-card { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .prediction-card { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); transition: transform 0.2s; }
+        .prediction-card:hover { transform: translateY(-3px); }
         .prediction-card i { margin-right: 10px; color: var(--highlight-color); }
         .vip-highlight { border: 2px solid var(--highlight-color); }
-        .action-btn { background: var(--accent-color); color: #fff; border: none; padding: 8px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
-        .done { background: #4caf50; }
+        .action-btn { background: var(--accent-color); color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; margin: 5px; transition: background 0.2s; }
+        .action-btn:hover { background: #7f39fb; }
+        .done { background: var(--buy-color); }
         .toggle-btn { 
             background: var(--accent-color); 
             color: #fff; 
@@ -88,17 +95,19 @@
             cursor: pointer; 
             border-radius: 4px; 
             margin: 10px 5px; 
+            transition: background 0.2s; 
         }
+        .toggle-btn:hover { background: #7f39fb; }
         .list-view .predictions-grid { grid-template-columns: 1fr; }
         .list-view .prediction-card { display: flex; justify-content: space-between; align-items: center; }
         .notifications { background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 20px 0; }
         .notification-item { margin: 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         .chat-container { max-height: 400px; overflow-y: auto; padding: 10px; background: var(--card-bg); border-radius: 8px; }
-        .chat-message { margin: 10px 0; padding: 10px; border-radius: 4px; }
-        .chat-message.user { background: #4caf50; align-self: flex-end; }
-        .chat-message.admin { background: #6200ea; }
+        .chat-message { margin: 10px 0; padding: 10px; border-radius: 4px; transition: background 0.2s; }
+        .chat-message.user { background: var(--buy-color); align-self: flex-end; }
+        .chat-message.admin { background: var(--accent-color); }
         #paypal-buttons { text-align: center; }
-        #status { text-align: center; color: #ff5252; margin: 10px 0; }
+        #status { text-align: center; color: var(--sell-color); margin: 10px 0; }
         .auth-button { 
             display: flex; 
             align-items: center; 
@@ -110,10 +119,13 @@
             padding: 10px; 
             border-radius: 8px; 
             border: 1px solid var(--border-color); 
+            transition: background 0.2s; 
         }
         .auth-button img { width: 24px; margin-right: 10px; }
-        .theme-toggle { cursor: pointer; padding: 8px; border-radius: 4px; background: var(--accent-color); color: #fff; }
-        .market-list { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
+        .auth-button:hover { background: var(--accent-color); }
+        .theme-toggle { cursor: pointer; padding: 8px 16px; border-radius: 4px; background: var(--accent-color); color: #fff; transition: background 0.2s; }
+        .theme-toggle:hover { background: #7f39fb; }
+        .market-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; }
         .market-item { 
             background: var(--card-bg); 
             padding: 10px 20px; 
@@ -123,9 +135,9 @@
             align-items: center; 
             gap: 10px; 
             cursor: pointer; 
-            margin: 5px; 
+            transition: background 0.2s, transform 0.2s; 
         }
-        .market-item:hover { background: var(--accent-color); }
+        .market-item:hover { background: var(--accent-color); transform: translateY(-3px); }
         .market-item i { font-size: 1.2em; color: var(--highlight-color); }
         input, textarea, select { 
             background: var(--card-bg); 
@@ -136,21 +148,33 @@
             width: 100%; 
             box-sizing: border-box; 
             border-radius: 8px; 
+            transition: border-color 0.2s; 
         }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent-color); }
         .ai-instruction { margin-top: 10px; padding: 10px; border-radius: 4px; }
         .buy { background: var(--buy-color); }
         .sell { background: var(--sell-color); }
         .hold { background: var(--hold-color); color: #333; }
-        .countdown { font-weight: bold; }
-        .ignore-btn { background: #9e9e9e; color: #fff; border: none; padding: 8px; cursor: pointer; border-radius: 4px; margin-left: 10px; }
+        .countdown { font-weight: bold; margin-top: 10px; }
+        .ignore-btn { background: #9e9e9e; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; margin-left: 10px; transition: background 0.2s; }
+        .ignore-btn:hover { background: #757575; }
         /* PC Mode */
         @media (min-width: 768px) {
             .hamburger { display: none; }
-            nav { transform: translateX(0); width: 200px; position: sticky; top: 0; height: 100vh; padding: 20px; }
-            .content { margin-left: 220px; }
+            nav { 
+                transform: translateX(0); 
+                width: 220px; 
+                position: sticky; 
+                top: 0; 
+                height: 100vh; 
+                padding: 20px; 
+                box-shadow: 2px 0 4px rgba(0,0,0,0.2); 
+            }
+            .content { margin-left: 240px; }
             .predictions-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
             .chart-container { height: 500px; }
-            .market-item { padding: 15px 25px; }
+            .market-item { padding: 12px 25px; }
+            .market-list { justify-content: flex-start; }
         }
         /* Mobile Mode */
         @media (max-width: 767px) {
@@ -171,14 +195,13 @@
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
-            authDomain: "sj-one.firebaseapp.com",
-            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
-            projectId: "sj-one",
-            storageBucket: "sj-one.appspot.com",
-            messagingSenderId: "426335553508",
-            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
-            measurementId: "G-YQTVZQWXGB"
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+            projectId: "YOUR_FIREBASE_PROJECT_ID",
+            storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+            appId: "YOUR_FIREBASE_APP_ID",
+            measurementId: "YOUR_FIREBASE_MEASUREMENT_ID"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -186,8 +209,8 @@
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
 
-        const OPENAI_API_KEY = "sk-your-openai-api-key-here";
-        const PAYPAL_CLIENT_ID = "AYuKzB5bK3jL9m_abc123def456ghi789";
+        const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY";
+        const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID";
 
         let currentUser = null;
         let unsubscribePredictions = null;
@@ -334,41 +357,68 @@
                 button.onclick = () => selectItem(item);
                 itemList.appendChild(button);
             });
-            selectItem(markets[currentCategory][0]); // Select first item by default
+            selectItem(markets[currentCategory][0]);
         }
 
-        function selectItem(item) {
+        async function selectItem(item) {
             currentItem = item;
             updateChart(item);
             updateAIInstructions(item);
         }
 
-        function updateChart(item) {
+        async function updateChart(item) {
             const chartContainer = document.getElementById('item-chart');
             chartContainer.innerHTML = '';
             const chartId = 'item-chart-inner';
             const div = document.createElement('div');
             div.id = chartId;
             chartContainer.appendChild(div);
+            let data = [];
+            try {
+                const apiMap = {
+                    Crypto: `https://api.coingecko.com/api/v3/coins/${item.toLowerCase()}/ohlc?vs_currency=usd&days=1`,
+                    Stocks: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${item}&interval=5min&apikey=demo`,
+                    Forex: `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${item.split('/')[0]}&to_symbol=${item.split('/')[1]}&interval=5min&apikey=demo`,
+                    Gold: `https://www.goldapi.io/api/${item}`
+                };
+                const response = await fetch(apiMap[currentCategory]);
+                const json = await response.json();
+                if (currentCategory === 'Crypto') {
+                    data = json.map(d => ({ x: d[0], y: [d[1], d[2], d[3], d[4]] }));
+                } else if (currentCategory === 'Stocks' || currentCategory === 'Forex') {
+                    const timeSeries = json[currentCategory === 'Stocks' ? 'Time Series (5min)' : 'Time Series FX (5min)'];
+                    if (timeSeries) {
+                        data = Object.entries(timeSeries).map(([time, val]) => ({
+                            x: new Date(time).getTime(),
+                            y: [parseFloat(val['1. open']), parseFloat(val['2. high']), parseFloat(val['3. low']), parseFloat(val['4. close'])]
+                        }));
+                    }
+                } else if (currentCategory === 'Gold') {
+                    data = [
+                        { x: new Date().getTime(), y: [json.price, json.price + 10, json.price - 10, json.price] }
+                    ];
+                }
+            } catch (err) {
+                console.error('Chart API error:', err);
+                data = [
+                    { x: new Date(Date.now() - 4*3600000), y: [100, 105, 99, 102] },
+                    { x: new Date(Date.now() - 3*3600000), y: [102, 107, 101, 104] },
+                    { x: new Date(Date.now() - 2*3600000), y: [104, 109, 103, 106] },
+                    { x: new Date(Date.now() - 1*3600000), y: [106, 111, 105, 108] },
+                    { x: new Date(Date.now()), y: [108, 113, 107, 110] }
+                ];
+            }
             const options = {
-                series: [{
-                    data: [
-                        { x: new Date(Date.now() - 4*3600000), y: [100, 105, 99, 102] },
-                        { x: new Date(Date.now() - 3*3600000), y: [102, 107, 101, 104] },
-                        { x: new Date(Date.now() - 2*3600000), y: [104, 109, 103, 106] },
-                        { x: new Date(Date.now() - 1*3600000), y: [106, 111, 105, 108] },
-                        { x: new Date(Date.now()), y: [108, 113, 107, 110] }
-                    ]
-                }],
+                series: [{ data }],
                 chart: { type: 'candlestick', height: '100%' },
-                title: { text: `${currentItem} Chart`, align: 'center' },
+                title: { text: `<i class="${icons[currentCategory]}"></i> ${item} Chart`, align: 'center' },
                 xaxis: { type: 'datetime' },
                 yaxis: { tooltip: { enabled: true } }
             };
             new ApexCharts(div, options).render();
         }
 
-        function updateAIInstructions(item) {
+        async function updateAIInstructions(item) {
             const aiSection = document.getElementById('ai-instructions');
             aiSection.innerHTML = '';
             const actions = ['Buy', 'Sell', 'Hold'];
@@ -379,7 +429,7 @@
             const exit = entry + Math.random() * 500;
             const guidance = `Suggested action for ${item}: ${action} at entry price $${entry.toFixed(2)}, target exit $${exit.toFixed(2)}.`;
             const card = document.createElement('div');
-            card.classList.add('prediction-card', action.toLowerCase());
+            card.classList.add('prediction-card', 'ai-instruction', action.toLowerCase());
             card.innerHTML = `
                 <h3>${action} ${item}</h3>
                 <p>${guidance}</p>
@@ -389,7 +439,7 @@
                 <button class="ignore-btn" onclick="ignoreInstruction('${item}')">Ignore</button>
             `;
             aiSection.appendChild(card);
-            startCountdown(`countdown-${item}`, Math.floor(Math.random() * 3600 + 3600)); // Random 1-2 hours
+            startCountdown(`countdown-${item}`, Math.floor(Math.random() * 3600 + 3600));
         }
 
         function startCountdown(id, seconds) {
@@ -407,7 +457,7 @@
                 const secs = time % 60;
                 element.innerText = `Time left: ${hours}h ${mins}m ${secs}s`;
             }, 1000);
-            countdownInterval = interval; // For demo, can clear if needed
+            countdownInterval = interval;
         }
 
         function markDone(item) {
@@ -490,7 +540,7 @@
                     const isPremium = data.premium || false;
                     if ((role === 'vip' || !isPremium) && !donePredictions.includes(doc.id)) {
                         const card = document.createElement('div');
-                        card.classList.add('prediction-card');
+                        card.classList.add('prediction-card', data.action ? data.action.toLowerCase() : '');
                         if (isPremium) card.classList.add('vip-highlight');
                         const iconClass = {
                             'Crypto': 'fab fa-btc',
@@ -507,7 +557,7 @@
                             <button class="ignore-btn" onclick="ignoreInstruction('${doc.id}')">Ignore</button>
                         `;
                         actionsGrid.appendChild(card);
-                        startCountdown(`countdown-${doc.id}`, Math.floor(Math.random() * 10800 + 3600)); // 1-3 hours
+                        startCountdown(`countdown-${doc.id}`, Math.floor(Math.random() * 10800 + 3600));
                     }
                 });
             });
@@ -521,27 +571,12 @@
             updateStatus('Marked as done');
         }
 
-        function ignoreInstruction(predictionId) {
+        async function ignoreInstruction(predictionId) {
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, {
+                donePredictions: arrayUnion(predictionId)
+            });
             updateStatus('Ignored instruction');
-            // For demo, just remove from UI
-            initTradingActions(document.getElementById('user-role').innerText.toLowerCase());
-        }
-
-        function startCountdown(id, seconds) {
-            const element = document.getElementById(id);
-            let time = seconds;
-            const interval = setInterval(() => {
-                if (time <= 0) {
-                    clearInterval(interval);
-                    element.innerText = 'Time expired';
-                    return;
-                }
-                time--;
-                const hours = Math.floor(time / 3600);
-                const mins = Math.floor((time % 3600) / 60);
-                const secs = time % 60;
-                element.innerText = `Time left: ${hours}h ${mins}m ${secs}s`;
-            }, 1000);
         }
 
         function initChat(role) {
@@ -612,7 +647,7 @@
             const today = new Date().toLocaleDateString();
             const prompt = `Generate a concise market prediction for ${market} on ${today}. Include: bullish/bearish outlook, price target, 2-3 reasons based on current trends, confidence level (High/Medium/Low), action (Buy/Sell/Hold), entry_point (price), exit_point (price), risk (Low/Medium/High), guidance (short actionable sentence). Format as JSON: {"market":"${market}","prediction":"[Outlook]","details":"[Reasons]","premium":${Math.random() > 0.5},"confidence":"[Confidence]","action":"[Action]","entry_point":"[Entry]","exit_point":"[Exit]","risk":"[Risk]","guidance":"[Guidance]"}`;
 
-            if (!OPENAI_API_KEY || OPENAI_API_KEY === 'sk-your-openai-api-key-here') {
+            if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') {
                 updateStatus('Please set your OpenAI API key for AI predictions.');
                 return;
             }
@@ -733,7 +768,7 @@
                             { x: new Date(Date.now()), y: [108, 113, 107, 110] }
                         ]
                     }],
-                    chart: { type: 'candlestick', height: window.innerWidth < 768 ? 250 : 350 },
+                    chart: { type: 'candlestick', height: window.innerWidth < 768 ? 300 : 500 },
                     title: { text: `<i class="${market.icon}"></i> ${market.item} Chart`, align: 'center' },
                     xaxis: { type: 'datetime' },
                     yaxis: { tooltip: { enabled: true } }
@@ -773,6 +808,15 @@
             });
         }
 
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(reg => console.log('Service Worker registered:', reg))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+
         // Expose global functions
         window.signInWithGoogle = signInWithGoogle;
         window.logout = logout;
@@ -788,7 +832,7 @@
         window.ignoreInstruction = ignoreInstruction;
     </script>
     <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=AYuKzB5bK3jL9m_abc123def456ghi789&currency=USD"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 </head>
 <body>
     <header>
