@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,7 +72,7 @@
             border-radius: 15px;
             margin-bottom: 15px;
         }
-        .artist-card h5, .artist-card h3 {
+        .artist-card h5 {
             color: #4a90e2;
             font-weight: 600;
         }
@@ -180,18 +180,6 @@
             border-radius: 10px;
             margin-bottom: 10px;
         }
-        .cursor-pointer {
-            cursor: pointer;
-        }
-        .single-artist-card img {
-            height: 400px;
-        }
-        .single-artist-card h3 {
-            font-size: 2rem;
-        }
-        .single-artist-card p {
-            font-size: 1.1rem;
-        }
         @media (max-width: 768px) {
             .header-carousel {
                 height: 300px;
@@ -214,9 +202,6 @@
                 position: static;
                 opacity: 1;
                 margin-top: 10px;
-            }
-            .single-artist-card img {
-                height: 300px;
             }
         }
     </style>
@@ -293,6 +278,12 @@
             });
         }
 
+        // Get Query Param Function
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
         // Login with Google
         loginBtn.addEventListener('click', () => {
             signInWithPopup(auth, provider).catch(error => console.error(error));
@@ -332,55 +323,14 @@
                 artistManagementSection.classList.add('d-none');
                 submissionSection.classList.add('d-none');
             }
-            loadContent();
-        });
-
-        // Load Content based on URL
-        function loadContent() {
-            loadSlider();
-            artistsList.innerHTML = '';
-            const path = window.location.pathname;
-            if (path === '/' || path === '' || path === '/index.html') {
-                loadArtistList();
-            } else if (path.startsWith('/artist/')) {
-                let id = path.substring('/artist/'.length);
-                if (id.endsWith('/')) id = id.slice(0, -1);
-                loadSingleArtist(id);
+            const artistId = getQueryParam('artist');
+            if (artistId) {
+                loadSingleArtist(artistId);
             } else {
-                artistsList.innerHTML = '<h2 class="text-center mb-4">Page not found</h2>';
+                loadArtists();
+                loadSlider();
             }
-        }
-
-        // Handle browser back/forward
-        window.addEventListener('popstate', loadContent);
-
-        // Navigate to artist page
-        window.navigateToArtist = function(id) {
-            history.pushState({ page: 'artist', id }, '', '/artist/' + id);
-            loadContent();
-        };
-
-        // Navigate back to list
-        window.navigateBack = function() {
-            history.pushState({ page: 'list' }, '', '/');
-            loadContent();
-        };
-
-        // Share artist link
-        window.shareArtist = function(id, e) {
-            if (e) e.stopPropagation();
-            const link = window.location.origin + '/artist/' + id;
-            navigator.clipboard.writeText(link).then(() => {
-                alert('Link copied to clipboard!');
-            }).catch(err => console.error(err));
-        };
-
-        // Share current page
-        window.shareCurrent = function() {
-            navigator.clipboard.writeText(window.location.href).then(() => {
-                alert('Link copied to clipboard!');
-            }).catch(err => console.error(err));
-        };
+        });
 
         // Load Slider from Firestore
         function loadSlider() {
@@ -435,8 +385,8 @@
             }).catch(error => console.error(error));
         }
 
-        // Load Artist List from Firestore
-        function loadArtistList() {
+        // Load Artists from Firestore (list view)
+        function loadArtists() {
             artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>'; // Reset
             const artistsCol = collection(db, 'artists');
             getDocs(artistsCol).then(snapshot => {
@@ -453,14 +403,13 @@
                     if (currentUser && currentUser.email === ADMIN_EMAIL) {
                         adminActions = `
                             <div class="admin-actions">
-                                <button onclick="shareArtist('${artistId}', event)" title="Share"><i class="bi bi-share"></i></button>
-                                <button onclick="editArtist('${artistId}', event)" title="Edit"><i class="bi bi-pencil"></i></button>
-                                <button onclick="deleteArtist('${artistId}', event)" title="Delete"><i class="bi bi-trash"></i></button>
+                                <button onclick="editArtist('${artistId}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteArtist('${artistId}')" title="Delete"><i class="bi bi-trash"></i></button>
                             </div>
                         `;
                     }
                     card.innerHTML = `
-                        <div class="artist-card cursor-pointer" onclick="navigateToArtist('${artistId}')">
+                        <div class="artist-card">
                             <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
                             ${adminActions}
                             <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
@@ -469,6 +418,7 @@
                                 ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                                 ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
+                            <a href="?artist=${artistId}" class="stretched-link"></a>
                         </div>
                     `;
                     artistsList.appendChild(card);
@@ -476,51 +426,55 @@
             }).catch(error => console.error(error));
         }
 
-        // Load Single Artist
-        function loadSingleArtist(id) {
+        // Load Single Artist (full page view)
+        async function loadSingleArtist(id) {
             const artistRef = doc(db, 'artists', id);
-            getDoc(artistRef).then(docSnap => {
-                if (!docSnap.exists()) {
-                    artistsList.innerHTML = '<h2 class="text-center mb-4">Artist not found</h2>';
-                    return;
-                }
+            const docSnap = await getDoc(artistRef);
+            if (docSnap.exists()) {
                 const artist = docSnap.data();
+                // Hide unnecessary sections for full artist page
+                document.querySelector('.header-carousel').style.display = 'none';
+                document.getElementById('submission-section').style.display = 'none';
+                document.getElementById('admin-section').style.display = 'none';
+                document.getElementById('artist-management-section').style.display = 'none';
+                // Clear artists-list
+                artistsList.innerHTML = '';
+                // Admin actions for single view
                 let adminActions = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
-                        <div class="admin-actions">
-                            <button onclick="shareArtist('${id}', event)" title="Share"><i class="bi bi-share"></i></button>
-                            <button onclick="editArtist('${id}', event)" title="Edit"><i class="bi bi-pencil"></i></button>
-                            <button onclick="deleteArtist('${id}', event)" title="Delete"><i class="bi bi-trash"></i></button>
+                        <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
+                            <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                         </div>
                     `;
                 }
-                artistsList.innerHTML = `
-                    <div class="text-center mb-4">
-                        <button class="btn btn-secondary" onclick="navigateBack()"><i class="bi bi-arrow-left icon"></i>Back to Artists</button>
-                    </div>
+                // Create full page content
+                const fullPage = document.createElement('div');
+                fullPage.className = 'container my-5';
+                fullPage.innerHTML = `
                     <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6">
-                            <div class="artist-card single-artist-card">
-                                <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
+                        <div class="col-md-8">
+                            <div class="artist-card" style="padding: 40px; background: #1a1a1a; border-radius: 20px;">
                                 ${adminActions}
-                                <h3><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h3>
-                                <p>${artist.description || 'Emerging talent in the music scene.'}</p>
-                                <div class="social-links">
+                                <img src="${artist.imageUrl || 'https://via.placeholder.com/800x400/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}" style="width: 100%; height: auto; border-radius: 15px; margin-bottom: 20px;">
+                                <h2 style="color: #4a90e2;"><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h2>
+                                <p style="font-size: 1.1rem;">${artist.description || 'Emerging talent in the music scene.'}</p>
+                                <div class="social-links" style="font-size: 2rem;">
                                     ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                                     ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                                 </div>
                             </div>
-                            <div class="text-center mt-3">
-                                <button class="btn btn-primary" onclick="shareCurrent()"><i class="bi bi-share icon"></i>Share this Page</button>
-                            </div>
                         </div>
                     </div>
+                    <div class="text-center mt-4">
+                        <a href="/" class="btn btn-secondary">Back to Home</a>
+                    </div>
                 `;
-            }).catch(error => {
-                console.error(error);
-                artistsList.innerHTML = '<h2 class="text-center mb-4">Error loading artist</h2>';
-            });
+                artistsList.appendChild(fullPage);
+            } else {
+                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+            }
         }
 
         // Load Managers
@@ -546,8 +500,7 @@
         }
 
         // Global functions for onclick
-        window.editArtist = function(artistId, e) {
-            if (e) e.stopPropagation();
+        window.editArtist = function(artistId) {
             editingArtistId = artistId;
             const artistRef = doc(db, 'artists', artistId);
             getDoc(artistRef).then(docSnap => {
@@ -562,13 +515,12 @@
             });
         };
 
-        window.deleteArtist = function(artistId, e) {
-            if (e) e.stopPropagation();
+        window.deleteArtist = function(artistId) {
             if (confirm('Are you sure you want to delete this artist?')) {
                 const artistRef = doc(db, 'artists', artistId);
                 deleteDoc(artistRef).then(() => {
                     alert('Artist deleted!');
-                    loadContent();
+                    loadArtists();
                 }).catch(error => console.error(error));
             }
         };
@@ -628,10 +580,10 @@
                     const url = await getDownloadURL(snapshot.ref);
                     artistData.imageUrl = url;
                 }
-                const docRef = await addDoc(collection(db, 'artists'), artistData);
-                alert('Artist added! Shareable link: ' + window.location.origin + '/artist/' + docRef.id);
+                await addDoc(collection(db, 'artists'), artistData);
+                alert('Artist added!');
                 addArtistForm.reset();
-                loadContent();
+                loadArtists();
             } catch (error) {
                 console.error(error);
                 alert('Error adding artist: ' + (error.message || error));
@@ -665,7 +617,12 @@
                 await updateDoc(artistRef, updateData);
                 alert('Artist updated!');
                 editModal.hide();
-                loadContent();
+                const artistId = getQueryParam('artist');
+                if (artistId) {
+                    loadSingleArtist(artistId);
+                } else {
+                    loadArtists();
+                }
             } catch (error) {
                 console.error(error);
                 alert('Error updating artist: ' + (error.message || error));
@@ -817,7 +774,7 @@
 
         <!-- Artists Showcase Section -->
         <div id="artists-list" class="row justify-content-center">
-            <!-- Artists or single artist loaded dynamically -->
+            <!-- Artists loaded dynamically -->
         </div>
 
         <!-- Artist Management Section (Admin & Managers) -->
@@ -983,4 +940,3 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-```
