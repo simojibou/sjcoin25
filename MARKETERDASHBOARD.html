@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,8 +10,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
-    import { getDatabase, ref, onValue, set, push, remove, get, update, increment } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, get, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -26,19 +24,66 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
     document.addEventListener("DOMContentLoaded", () => {
       const affiliateList = document.getElementById("affiliate-list");
       const commissionsTotal = document.getElementById("commissions-total");
       const closeMarketerModal = document.getElementById("close-marketer-modal");
+      const productSelect = document.getElementById("product-select");
+      const generateLinkBtn = document.getElementById("generate-link-btn");
       let products = [];
+      let userData = { language: 'English' };
+      const translations = {
+        English: {
+          affiliateTitle: 'Affiliate Dashboard',
+          selectProduct: 'Select a Product',
+          generateLink: 'Generate Affiliate Link',
+          copyLink: 'Copy Link',
+          commissions: 'Total Commissions',
+          close: 'Close',
+          product: 'Product',
+          clicks: 'Clicks',
+          buyers: 'Buyers'
+        },
+        French: {
+          affiliateTitle: 'Tableau de bord affilié',
+          selectProduct: 'Sélectionner un produit',
+          generateLink: 'Générer un lien affilié',
+          copyLink: 'Copier le lien',
+          commissions: 'Commissions totales',
+          close: 'Fermer',
+          product: 'Produit',
+          clicks: 'Clics',
+          buyers: 'Acheteurs'
+        },
+        Arabic: {
+          affiliateTitle: 'لوحة تحكم التابع',
+          selectProduct: 'اختر منتجًا',
+          generateLink: 'إنشاء رابط تابع',
+          copyLink: 'نسخ الرابط',
+          commissions: 'إجمالي العمولات',
+          close: 'إغلاق',
+          product: 'المنتج',
+          clicks: 'النقرات',
+          buyers: 'المشترين'
+        }
+      };
+      function applyLanguage(lang) {
+        const t = translations[lang] || translations.English;
+        document.querySelector('h2').textContent = t.affiliateTitle;
+        productSelect.firstChild.textContent = t.selectProduct;
+        generateLinkBtn.textContent = t.generateLink;
+        commissionsTotal.textContent = `${t.commissions}: 0 DH`;
+        closeMarketerModal.textContent = t.close;
+        loadAffiliateDashboard(auth.currentUser?.uid);
+      }
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
         products = [];
+        productSelect.innerHTML = `<option value="" disabled selected>${translations[userData.language]?.selectProduct || 'Select a Product'}</option>`;
         snapshot.forEach((childSnapshot) => {
           const data = childSnapshot.val();
-          products.push({
+          const product = {
             id: childSnapshot.key,
             title: data.title,
             price: data.price,
@@ -46,40 +91,85 @@
             orderUrl: data.orderUrl,
             photo: data.photo,
             userId: data.id,
-            category: data.category || "Uncategorized" // Default if no category
-          });
+            category: data.category || "Uncategorized"
+          };
+          products.push(product);
+          const option = document.createElement("option");
+          option.value = product.id;
+          option.textContent = product.title;
+          productSelect.appendChild(option);
         });
       });
       onAuthStateChanged(auth, (user) => {
         if (!user) {
-          alert("Please log in to add a product.");
+          alert("Please log in to access the dashboard.");
           window.location.href = "SJSTORE.html";
         } else {
-          loadAffiliateDashboard(user.uid);
+          const userRef = ref(db, `users/${user.uid}`);
+          get(userRef).then((snapshot) => {
+            userData = snapshot.val() || { language: 'English' };
+            applyLanguage(userData.language);
+            loadAffiliateDashboard(user.uid);
+          });
         }
       });
       closeMarketerModal.addEventListener("click", () => {
         window.location.href = "SJSTORE.html";
       });
+      function generateUniqueCode() {
+        return Math.random().toString(36).substr(2, 9);
+      }
+      generateLinkBtn.addEventListener("click", () => {
+        const productId = productSelect.value;
+        if (!productId) {
+          alert("Please select a product.");
+          return;
+        }
+        if (!auth.currentUser) {
+          alert("Please log in to generate a link.");
+          return;
+        }
+        const code = generateUniqueCode();
+        const link = `${window.location.origin}/SJSTORE.html?ref=${code}&pid=${productId}`;
+        const affiliateRef = push(ref(db, "affiliate_links"));
+        set(affiliateRef, {
+          code,
+          productId,
+          marketerId: auth.currentUser.uid,
+          createdAt: Date.now(),
+          clicks: 0,
+          buyers: 0
+        }).then(() => {
+          loadAffiliateDashboard(auth.currentUser.uid);
+          alert(`Affiliate link generated: ${link}`);
+        }).catch(error => {
+          alert(`Failed to generate affiliate link: ${error.message}`);
+        });
+      });
       function loadAffiliateDashboard(uid) {
         affiliateList.innerHTML = "";
         const affiliateLinksRef = ref(db, "affiliate_links");
         onValue(affiliateLinksRef, (snapshot) => {
+          affiliateList.innerHTML = "";
+          const t = translations[userData.language] || translations.English;
           snapshot.forEach((childSnapshot) => {
             const data = childSnapshot.val();
             if (data.marketerId === uid) {
               const product = products.find(p => p.id === data.productId);
-              const t = translations[userData.language] || translations.English;
               const div = document.createElement("div");
               div.classList.add("affiliate-item");
-              const link = `${window.location.origin}${window.location.pathname}?ref=${data.code}&pid=${data.productId}`;
+              const link = `${window.location.origin}/SJSTORE.html?ref=${data.code}&pid=${data.productId}`;
               div.innerHTML = `
                 <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${product ? product.title : 'Product'}">
-                <p>Product: ${product ? product.title : 'Unknown'}</p>
-                <p>${t.clicks}: ${data.clicks || 0}</p>
-                <p>${t.buyers}: ${data.buyers || 0}</p>
-                <p>Link: <a href="${link}" target="_blank">${link}</a></p>
-                <button class="copy-link-btn">${t.copyLink}</button>
+                <div class="affiliate-details">
+                  <p><strong>${t.product}:</strong> ${product ? product.title : 'Unknown'}</p>
+                  <p><strong>Price:</strong> ${product ? product.price : 'N/A'} DH</p>
+                  <p><strong>Category:</strong> ${product ? product.category : 'N/A'}</p>
+                  <p><strong>${t.clicks}:</strong> ${data.clicks || 0}</p>
+                  <p><strong>${t.buyers}:</strong> ${data.buyers || 0}</p>
+                  <p><strong>Link:</strong> <a href="${link}" target="_blank">${link}</a></p>
+                  <button class="copy-link-btn">${t.copyLink}</button>
+                </div>
               `;
               div.querySelector(".copy-link-btn").addEventListener("click", () => {
                 navigator.clipboard.writeText(link).then(() => alert("Link copied!"));
@@ -92,21 +182,10 @@
         onValue(marketerRef, (snapshot) => {
           const data = snapshot.val();
           const commissions = data.commissions || 0;
-          commissionsTotal.textContent = `Total Commissions: ${commissions.toFixed(2)} DH`;
+          const t = translations[userData.language] || translations.English;
+          commissionsTotal.textContent = `${t.commissions}: ${commissions.toFixed(2)} DH`;
         });
       }
-      const translations = {
-        English: {
-          // ... full English translations
-        },
-        French: {
-          // ... full French
-        },
-        Arabic: {
-          // ... full Arabic
-        }
-      };
-      // Apply language if needed, but since standalone, perhaps default to English
     });
   </script>
   <style>
@@ -121,21 +200,32 @@
       color: #fff;
       line-height: 1.6;
       min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .modal-content {
       background: #111;
-      margin: 10% auto;
+      margin: 5% auto;
       padding: 2rem;
       border-radius: 0;
       width: 90%;
-      max-width: 600px;
+      max-width: 800px;
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 1.5rem;
     }
     #affiliate-list {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      margin-bottom: 1.5rem;
     }
     .affiliate-item {
       background: #222;
@@ -145,6 +235,10 @@
       align-items: center;
       gap: 1rem;
       border: 1px solid #333;
+      transition: transform 0.3s;
+    }
+    .affiliate-item:hover {
+      transform: translateY(-3px);
     }
     .affiliate-item img {
       width: 80px;
@@ -152,7 +246,19 @@
       border-radius: 0;
       object-fit: cover;
     }
-    .copy-link-btn {
+    .affiliate-details {
+      flex: 1;
+    }
+    .affiliate-details p {
+      margin: 0.5rem 0;
+      font-size: 0.875rem;
+    }
+    .affiliate-details strong {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .copy-link-btn, #generate-link-btn {
       background: #fff;
       color: #000;
       border: none;
@@ -163,7 +269,7 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    .copy-link-btn:hover {
+    .copy-link-btn:hover, #generate-link-btn:hover {
       background: #e0e0e0;
     }
     #commissions-total {
@@ -188,11 +294,59 @@
     #close-marketer-modal:hover {
       border-color: #ccc;
     }
+    #product-select-form {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #product-select {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      border-radius: 0;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    #product-select:focus {
+      border-color: #fff;
+      outline: none;
+    }
+    @media (max-width: 480px) {
+      .modal-content {
+        padding: 1.5rem;
+        width: 95%;
+      }
+      .affiliate-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .affiliate-item img {
+        width: 100%;
+        height: auto;
+      }
+      .affiliate-details p {
+        font-size: 0.75rem;
+      }
+      #product-select-form {
+        flex-direction: column;
+      }
+      #generate-link-btn {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="modal-content">
     <h2>Affiliate Dashboard</h2>
+    <div id="product-select-form">
+      <select id="product-select">
+        <option value="" disabled selected>Select a Product</option>
+      </select>
+      <button id="generate-link-btn">Generate Affiliate Link</button>
+    </div>
     <div id="affiliate-list"></div>
     <p id="commissions-total">Total Commissions: 0 DH</p>
     <button id="close-marketer-modal">Close</button>
