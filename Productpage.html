@@ -87,7 +87,7 @@
           addToCart: '<i class="fas fa-cart-plus"></i> Add to Cart',
           generateLink: '<i class="fas fa-link"></i> Generate Affiliate Link',
           close: '<i class="fas fa-arrow-left"></i> Back to Store',
-          noProduct: 'Product not found.',
+          noProduct: 'Product not found. Please check the product ID or database.',
           productDetails: 'Product Details',
           loading: 'Loading product...',
           error: 'Error loading product',
@@ -99,7 +99,7 @@
           addToCart: '<i class="fas fa-cart-plus"></i> Ajouter au panier',
           generateLink: '<i class="fas fa-link"></i> Générer un lien affilié',
           close: '<i class="fas fa-arrow-left"></i> Retour au magasin',
-          noProduct: 'Produit non trouvé.',
+          noProduct: 'Produit non trouvé. Veuillez vérifier l\'identifiant du produit ou la base de données.',
           productDetails: 'Détails du produit',
           loading: 'Chargement du produit...',
           error: 'Erreur lors du chargement du produit',
@@ -111,7 +111,7 @@
           addToCart: '<i class="fas fa-cart-plus"></i> أضف إلى السلة',
           generateLink: '<i class="fas fa-link"></i> إنشاء رابط تابع',
           close: '<i class="fas fa-arrow-right"></i> العودة إلى المتجر',
-          noProduct: 'لم يتم العثور على المنتج.',
+          noProduct: 'لم يتم العثور على المنتج. يرجى التحقق من معرف المنتج أو قاعدة البيانات.',
           productDetails: 'تفاصيل المنتج',
           loading: 'جاري تحميل المنتج...',
           error: 'خطأ أثناء تحميل المنتج',
@@ -135,7 +135,7 @@
       function setupImageZoom(img, zoomContainer, lens, zoomLevel = 2.5) {
         const zoomImage = zoomContainer.querySelector('.zoom-image');
         if (!img.complete || img.naturalWidth === 0) {
-          console.warn('Image not loaded for zoom');
+          console.warn('Image not loaded for zoom:', img.src);
           zoomContainer.style.display = 'none';
           return;
         }
@@ -191,12 +191,17 @@
         if (user) {
           const userRef = ref(db, `users/${user.uid}`);
           get(userRef).then((snapshot) => {
-            userData = snapshot.val() || { currency: 'DH', language: 'English' };
-            console.log('User data loaded:', userData);
+            if (snapshot.exists()) {
+              userData = snapshot.val();
+              console.log('User data loaded:', userData);
+            } else {
+              console.warn('No user data found, using defaults');
+              userData = { currency: 'DH', language: 'English' };
+            }
             applyLanguage(userData.language);
             loadProduct();
           }).catch((error) => {
-            console.error('Failed to load user data:', error);
+            console.error('Failed to load user data:', error.message);
             applyLanguage('English');
             loadProduct();
           });
@@ -215,12 +220,12 @@
         const t = translations[userData.language] || translations.English;
 
         if (!pid) {
-          console.error('No product ID provided in URL');
+          console.error('No product ID provided in URL. Current URL:', window.location.href);
           productDetailContent.innerHTML = `<p class="error">${t.noProduct}</p>`;
           return;
         }
 
-        console.log('Loading product with ID:', pid);
+        console.log('Attempting to load product with ID:', pid);
 
         if (refCode) {
           const affiliateLinksQuery = query(
@@ -237,21 +242,24 @@
                   const linkRef = ref(db, `affiliate_links/${childSnapshot.key}`);
                   update(linkRef, { clicks: (data.clicks || 0) + 1 })
                     .then(() => console.log('Affiliate click tracked for code:', refCode))
-                    .catch((error) => console.error('Failed to update click count:', error));
+                    .catch((error) => console.error('Failed to update click count:', error.message));
                 }
               });
             } else {
               console.warn('No affiliate link found for code:', refCode);
             }
           } catch (error) {
-            console.error('Error tracking affiliate link:', error);
+            console.error('Error tracking affiliate link:', error.message);
           }
         }
 
         try {
-          const snapshot = await get(ref(db, `Product/${pid}`));
-          const product = snapshot.val();
-          if (product) {
+          // Check database path
+          const productRef = ref(db, `Product/${pid}`);
+          console.log('Querying Firebase path:', `Product/${pid}`);
+          const snapshot = await get(productRef);
+          if (snapshot.exists()) {
+            const product = snapshot.val();
             console.log('Product data fetched:', product);
             const convertedPrice = getConvertedPrice(product.price, userData.currency);
             const symbol = getCurrencySymbol(userData.currency);
@@ -275,18 +283,26 @@
             const zoomContainer = productDetailContent.querySelector('.product-image-wrapper');
             const lens = productDetailContent.querySelector('.zoom-lens');
             img.addEventListener('load', () => {
+              console.log('Image loaded successfully:', img.src);
               setupImageZoom(img, zoomContainer, lens, 2.5);
+            });
+            img.addEventListener('error', () => {
+              console.error('Failed to load image:', img.src);
+              img.src = 'https://via.placeholder.com/400x400/111/fff?text=Image+Failed';
             });
             productDetailContent.querySelector(".whatsapp-btn").addEventListener("click", () => {
               const phone = product.des ? product.des.replace(/\D/g, "") : "";
               if (phone) {
+                console.log('Opening WhatsApp with phone:', phone);
                 window.open(`https://wa.me/${phone}`, "_blank");
               } else {
+                console.warn('No WhatsApp number provided for product:', product);
                 alert("No WhatsApp number provided for this product.");
               }
             });
             if (product.orderUrl) {
               productDetailContent.querySelector(".order-btn").addEventListener("click", () => {
+                console.log('Opening order URL:', product.orderUrl);
                 window.open(product.orderUrl, "_blank");
               });
             }
@@ -305,12 +321,14 @@
             productDetailContent.innerHTML = `<p class="error">${t.noProduct}</p>`;
           }
         } catch (error) {
-          console.error('Error loading product:', error);
-          productDetailContent.innerHTML = `<p class="error">${t.error}: ${error.message}</p>`;
+          console.error('Error loading product:', error.message);
+          console.error('Error code:', error.code);
+          productDetailContent.innerHTML = `<p class="error">${t.error}: ${error.message} (Check console for details)</p>`;
         }
       }
 
       closeProductDetail.addEventListener("click", () => {
+        console.log('Redirecting to store:', 'https://simojibou.github.io/sjcoin25/sjstore.html');
         window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html";
       });
 
@@ -320,6 +338,7 @@
 
       function generateAffiliateLink(productId) {
         if (!currentUser) {
+          console.warn('User not logged in for affiliate link generation');
           alert("Please log in to generate an affiliate link.");
           return;
         }
@@ -337,13 +356,16 @@
           console.log('Affiliate link created:', link);
           prompt("Copy this affiliate link:", link);
         }).catch((error) => {
-          console.error('Failed to generate affiliate link:', error);
+          console.error('Failed to generate affiliate link:', error.message);
           alert(`Failed to generate affiliate link: ${error.message}`);
         });
       }
 
       fetchExchangeRates().then(() => {
         console.log('Exchange rates loaded, proceeding to load product');
+        loadProduct();
+      }).catch((error) => {
+        console.error('Failed to initialize exchange rates:', error.message);
         loadProduct();
       });
     });
