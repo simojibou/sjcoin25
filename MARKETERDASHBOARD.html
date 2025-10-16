@@ -96,7 +96,7 @@
       onValue(productRef, (snapshot) => {
         products = [];
         productSelect.innerHTML = `<option value="" disabled selected>${translations[userData.language]?.selectProduct || 'Select a Product'}</option>`;
-        const productMap = new Map(); // Use Map to ensure no duplicates
+        const productMap = new Map();
         snapshot.forEach((childSnapshot) => {
           const productId = childSnapshot.key;
           if (!productMap.has(productId)) {
@@ -130,14 +130,12 @@
           get(userRef).then((snapshot) => {
             userData = snapshot.val() || { language: 'English' };
             applyLanguage(userData.language);
-            // Update user profile section
-            const t = translations[userData.language] || translations.English;
             userProfile.innerHTML = `
               <div class="user-profile-content">
                 <img src="${user.photoURL || 'https://via.placeholder.com/50'}" alt="Profile Picture" class="profile-pic">
                 <div>
-                  <p><strong>${t.profile}:</strong> ${user.displayName || 'Anonymous'}</p>
-                  <p><strong>${t.email}:</strong> ${user.email || 'N/A'}</p>
+                  <p><strong>${translations[userData.language]?.profile || 'User Profile'}:</strong> ${user.displayName || 'Anonymous'}</p>
+                  <p><strong>${translations[userData.language]?.email || 'Email'}:</strong> ${user.email || 'N/A'}</p>
                 </div>
               </div>
             `;
@@ -219,6 +217,8 @@
               affiliateList.appendChild(div);
             }
           });
+        }, (error) => {
+          console.error("Failed to load affiliate links:", error);
         });
         const marketerRef = ref(db, `users/${uid}`);
         onValue(marketerRef, (snapshot) => {
@@ -226,6 +226,8 @@
           const commissions = data.commissions || 0;
           const t = translations[userData.language] || translations.English;
           commissionsTotal.textContent = `${t.commissions}: ${commissions.toFixed(2)} DH`;
+        }, (error) => {
+          console.error("Failed to load user data:", error);
         });
       }
     });
