@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS adapted from ElGrandeToto's design with big slider -->
+    <!-- Custom CSS adapted from ElGrandeToto's design with enhanced mobile slider -->
     <style>
         :root {
             --color-red: #ff0000;
@@ -355,23 +355,32 @@
             transform: translateY(0);
         }
 
-        /* Responsive */
+        /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             .hero-section {
-                height: 70vh;
+                height: 90vh; /* Increased for bigger mobile slider */
             }
             .carousel-item {
-                height: 70vh;
+                height: 90vh; /* Match hero-section height */
+            }
+            .carousel-caption {
+                padding: var(--space-2);
+                max-width: 90%;
+                border-radius: 15px;
             }
             .carousel-caption h1 {
-                font-size: 2rem;
+                font-size: 2.5rem; /* Larger font for mobile */
             }
             .carousel-caption p {
-                font-size: 1rem;
+                font-size: 1.1rem;
             }
             .music-platforms-bar {
-                bottom: 5%;
+                bottom: 3%; /* Adjusted to avoid overlap */
                 gap: var(--space-1);
+                padding: 8px 16px;
+            }
+            .music-platforms-bar a {
+                font-size: 1.5rem; /* Slightly smaller icons */
             }
             .artist-card {
                 margin: var(--space-1) 0;
@@ -528,7 +537,7 @@
                     defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
                     heroBg.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
                     defaultSlide.innerHTML = `
-                       <div class="d-flex h-100 align-items-center justify-content-center">
+                        <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
                                 <h1>Welcome to SJ Label</h1>
                                 <p>Discover the future of music.</p>
@@ -559,15 +568,13 @@
                     }
                     carouselItem.innerHTML = `
                         ${adminActions}
-
-
-
-
-
-
-
-
-                     
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${slide.title || ''}</h1>
+                                <p>${slide.description || ''}</p>
+                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
+                            </div>
+                        </div>
                     `;
                     headerCarousel.appendChild(carouselItem);
                     active = false;
@@ -1010,12 +1017,12 @@
                 <span class="visually-hidden">Next</span>
             </button>
         </div>
-        <!-- Music Platforms Bar 
+        <!-- Music Platforms Bar -->
         <div class="music-platforms-bar">
             <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
             <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-        </div> -->
+        </div>
     </section>
 
     <!-- Particles -->
