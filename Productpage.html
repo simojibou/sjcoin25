@@ -90,8 +90,7 @@
           noProduct: 'Product not found.',
           productDetails: 'Product Details',
           loading: 'Loading product...',
-          error: 'Error loading product',
-          zoomAria: 'Zoom in on product image'
+          error: 'Error loading product'
         },
         French: {
           orderNow: 'Commander maintenant',
@@ -102,8 +101,7 @@
           noProduct: 'Produit non trouvé.',
           productDetails: 'Détails du produit',
           loading: 'Chargement du produit...',
-          error: 'Erreur lors du chargement du produit',
-          zoomAria: 'Zoomer sur l\'image du produit'
+          error: 'Erreur lors du chargement du produit'
         },
         Arabic: {
           orderNow: 'اطلب الآن',
@@ -114,8 +112,7 @@
           noProduct: 'لم يتم العثور على المنتج.',
           productDetails: 'تفاصيل المنتج',
           loading: 'جاري تحميل المنتج...',
-          error: 'خطأ أثناء تحميل المنتج',
-          zoomAria: 'تكبير صورة المنتج'
+          error: 'خطأ أثناء تحميل المنتج'
         }
       };
 
@@ -130,62 +127,6 @@
           document.body.dir = 'ltr';
           document.querySelector('.modal-content').classList.remove('rtl');
         }
-      }
-
-      function setupImageZoom(img, zoomContainer, lens, zoomLevel = 2.5) {
-        const zoomImage = zoomContainer.querySelector('.zoom-image');
-        if (!img.complete || img.naturalWidth === 0) {
-          console.warn('Image not loaded for zoom');
-          zoomContainer.style.display = 'none';
-          return;
-        }
-
-        const imgRect = img.getBoundingClientRect();
-        lens.style.backgroundImage = `url('${img.src}')`;
-        lens.style.backgroundSize = `${imgRect.width * zoomLevel}px ${imgRect.height * zoomLevel}px`;
-
-        function moveLens(e) {
-          e.preventDefault();
-          const pos = getCursorPos(e, img);
-          let x = pos.x - lens.offsetWidth / 2;
-          let y = pos.y - lens.offsetHeight / 2;
-
-          // Constrain lens within image bounds
-          if (x < 0) x = 0;
-          if (y < 0) y = 0;
-          if (x > imgRect.width - lens.offsetWidth) x = imgRect.width - lens.offsetWidth;
-          if (y > imgRect.height - lens.offsetHeight) y = imgRect.height - lens.offsetHeight;
-
-          lens.style.left = `${x}px`;
-          lens.style.top = `${y}px`;
-          zoomImage.style.backgroundPosition = `-${x * zoomLevel}px -${y * zoomLevel}px`;
-        }
-
-        function getCursorPos(e, img) {
-          const rect = img.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-          return { x, y };
-        }
-
-        img.addEventListener('mousemove', moveLens);
-        img.addEventListener('mouseenter', () => {
-          if (window.matchMedia('(pointer: fine)').matches) {
-            lens.style.display = 'block';
-            zoomImage.style.display = 'block';
-          }
-        });
-        img.addEventListener('mouseleave', () => {
-          lens.style.display = 'none';
-          zoomImage.style.display = 'none';
-        });
-
-        // Support touch devices with tap-to-zoom (optional)
-        img.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          lens.style.display = 'none';
-          zoomImage.style.display = 'none';
-        });
       }
 
       onAuthStateChanged(auth, (user) => {
@@ -259,10 +200,8 @@
             const symbol = getCurrencySymbol(userData.currency);
             let orderButton = product.orderUrl ? `<button class="order-btn" aria-label="${t.orderNow}">${t.orderNow}</button>` : '';
             productDetailContent.innerHTML = `
-              <div class="product-image-wrapper" role="region" aria-label="${t.zoomAria}">
+              <div class="product-image-wrapper">
                 <img src="${product.photo || 'https://via.placeholder.com/400x400/111/fff?text=No+Image'}" alt="${product.title || 'No title'}" loading="lazy">
-                <div class="zoom-lens"></div>
-                <div class="zoom-image"></div>
               </div>
               <h3>${product.title || 'Untitled'}</h3>
               <p class="price">${convertedPrice} ${symbol}</p>
@@ -273,12 +212,6 @@
                 <button class="generate-affiliate-btn" aria-label="${t.generateLink.replace(/<[^>]+>/g, '')}">${t.generateLink}</button>
               </div>
             `;
-            const img = productDetailContent.querySelector('img');
-            const zoomContainer = productDetailContent.querySelector('.product-image-wrapper');
-            const lens = productDetailContent.querySelector('.zoom-lens');
-            img.addEventListener('load', () => {
-              setupImageZoom(img, zoomContainer, lens, 2.5);
-            });
             productDetailContent.querySelector(".whatsapp-btn").addEventListener("click", () => {
               const phone = product.des ? product.des.replace(/\D/g, "") : "";
               if (phone) {
@@ -403,7 +336,6 @@
       margin-bottom: 1.5rem;
       border-radius: 8px;
       background: #111;
-      position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -422,37 +354,6 @@
 
     img:hover {
       transform: scale(1.05);
-    }
-
-    .zoom-lens {
-      position: absolute;
-      width: 100px;
-      height: 100px;
-      background: rgba(255, 255, 255, 0.3);
-      border: 2px solid #fff;
-      border-radius: 50%;
-      display: none;
-      pointer-events: none;
-      cursor: none;
-    }
-
-    .zoom-image {
-      position: absolute;
-      top: 0;
-      right: calc(100% + 1rem);
-      width: 400px;
-      height: 400px;
-      background: #111;
-      border: 2px solid #333;
-      border-radius: 8px;
-      display: none;
-      background-size: 1000px 1000px; /* Adjusted for zoomLevel 2.5 */
-      z-index: 10;
-    }
-
-    .rtl .zoom-image {
-      right: auto;
-      left: calc(100% + 1rem);
     }
 
     h3 {
@@ -587,15 +488,6 @@
       background: rgba(255, 68, 68, 0.1);
       border-radius: 8px;
       padding: 1rem;
-    }
-
-    @media (max-width: 900px) {
-      .zoom-image {
-        display: none !important;
-      }
-      .zoom-lens {
-        display: none !important;
-      }
     }
 
     @media (max-width: 600px) {
