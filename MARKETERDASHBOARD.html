@@ -119,6 +119,8 @@
             productSelect.appendChild(option);
           }
         });
+      }, (error) => {
+        console.error("Failed to load products:", error);
       });
       
       onAuthStateChanged(auth, (user) => {
@@ -140,6 +142,9 @@
               </div>
             `;
             loadAffiliateDashboard(user.uid);
+          }).catch((error) => {
+            console.error("Failed to load user data:", error);
+            alert("Error loading user data. Please try again.");
           });
         }
       });
@@ -182,6 +187,7 @@
           loadAffiliateDashboard(auth.currentUser.uid);
           alert(`Affiliate link generated: ${link}`);
         }).catch(error => {
+          console.error("Failed to generate affiliate link:", error);
           alert(`Failed to generate affiliate link: ${error.message}`);
         });
       });
@@ -192,6 +198,11 @@
         onValue(affiliateLinksRef, (snapshot) => {
           affiliateList.innerHTML = "";
           const t = translations[userData.language] || translations.English;
+          if (!snapshot.exists()) {
+            console.warn("No affiliate links found for user:", uid);
+            affiliateList.innerHTML = `<p>${t.noLinks || 'No affiliate links available.'}</p>`;
+            return;
+          }
           snapshot.forEach((childSnapshot) => {
             const data = childSnapshot.val();
             if (data.marketerId === uid) {
@@ -219,6 +230,7 @@
           });
         }, (error) => {
           console.error("Failed to load affiliate links:", error);
+          affiliateList.innerHTML = `<p>Error loading affiliate links: ${error.message}</p>`;
         });
         const marketerRef = ref(db, `users/${uid}`);
         onValue(marketerRef, (snapshot) => {
