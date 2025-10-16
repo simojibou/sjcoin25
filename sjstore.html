@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -490,6 +491,11 @@
             adminActions.appendChild(deleteBtn);
             div.appendChild(adminActions);
           }
+          div.addEventListener("click", (e) => {
+            if (!e.target.closest('button')) {
+              window.location.href = `Productpage.html?id=${product.id}`;
+            }
+          });
           container.appendChild(div);
         });
         if (filteredProducts.length === 0) {
@@ -2112,3 +2118,4 @@
   </footer>
 </body>
 </html>
+```
