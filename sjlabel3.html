@@ -528,7 +528,7 @@
                     defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
                     heroBg.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
                     defaultSlide.innerHTML = `
-                        <div class="d-flex h-100 align-items-center justify-content-center">
+                       <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
                                 <h1>Welcome to SJ Label</h1>
                                 <p>Discover the future of music.</p>
@@ -559,13 +559,15 @@
                     }
                     carouselItem.innerHTML = `
                         ${adminActions}
-                        <div class="d-flex h-100 align-items-center justify-content-center">
-                            <div class="carousel-caption">
-                                <h1>${slide.title || ''}</h1>
-                                <p>${slide.description || ''}</p>
-                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
-                            </div>
-                        </div>
+
+
+
+
+
+
+
+
+                     
                     `;
                     headerCarousel.appendChild(carouselItem);
                     active = false;
@@ -1008,12 +1010,12 @@
                 <span class="visually-hidden">Next</span>
             </button>
         </div>
-        <!-- Music Platforms Bar -->
+        <!-- Music Platforms Bar 
         <div class="music-platforms-bar">
             <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
             <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-        </div>
+        </div> -->
     </section>
 
     <!-- Particles -->
