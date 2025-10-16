@@ -96,19 +96,22 @@
       onValue(productRef, (snapshot) => {
         products = [];
         productSelect.innerHTML = `<option value="" disabled selected>${translations[userData.language]?.selectProduct || 'Select a Product'}</option>`;
+        const productMap = new Map(); // Use Map to ensure no duplicates
         snapshot.forEach((childSnapshot) => {
-          const data = childSnapshot.val();
-          const product = {
-            id: childSnapshot.key,
-            title: data.title,
-            price: data.price,
-            des: data.des,
-            orderUrl: data.orderUrl,
-            photo: data.photo,
-            userId: data.id,
-            category: data.category || "Uncategorized"
-          };
-          if (!products.some(p => p.id === product.id)) {
+          const productId = childSnapshot.key;
+          if (!productMap.has(productId)) {
+            const data = childSnapshot.val();
+            const product = {
+              id: productId,
+              title: data.title,
+              price: data.price,
+              des: data.des,
+              orderUrl: data.orderUrl,
+              photo: data.photo,
+              userId: data.id,
+              category: data.category || "Uncategorized"
+            };
+            productMap.set(productId, product);
             products.push(product);
             const option = document.createElement("option");
             option.value = product.id;
