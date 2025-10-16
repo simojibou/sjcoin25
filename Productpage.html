@@ -11,7 +11,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
-    import { getDatabase, ref, onValue, set, push, remove, get, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    import { getDatabase, ref, get, push, set, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -37,6 +37,9 @@
       let userData = { currency: 'DH', language: 'English' };
       let exchangeRates = { DH: 1 };
 
+      // Display loading state
+      productDetailContent.innerHTML = `<p class="loading">Loading product...</p>`;
+
       async function fetchExchangeRates() {
         try {
           const response = await fetch('https://open.er-api.com/v6/latest/MAD');
@@ -47,6 +50,9 @@
               USD: data.rates.USD,
               EUR: data.rates.EUR
             };
+            console.log('Exchange rates fetched:', exchangeRates);
+          } else {
+            throw new Error('Exchange rate API failed');
           }
         } catch (error) {
           console.error('Failed to fetch exchange rates:', error);
@@ -55,6 +61,7 @@
             USD: 0.11,
             EUR: 0.094
           };
+          console.warn('Using fallback exchange rates:', exchangeRates);
         }
       }
 
@@ -80,7 +87,9 @@
           generateLink: 'Generate Affiliate Link',
           close: 'Close',
           noProduct: 'Product not found.',
-          productDetails: 'Product Details'
+          productDetails: 'Product Details',
+          loading: 'Loading product...',
+          error: 'Error loading product'
         },
         French: {
           orderNow: 'Commander maintenant',
@@ -89,7 +98,9 @@
           generateLink: 'Générer un lien affilié',
           close: 'Fermer',
           noProduct: 'Produit non trouvé.',
-          productDetails: 'Détails du produit'
+          productDetails: 'Détails du produit',
+          loading: 'Chargement du produit...',
+          error: 'Erreur lors du chargement du produit'
         },
         Arabic: {
           orderNow: 'اطلب الآن',
@@ -98,7 +109,9 @@
           generateLink: 'إنشاء رابط تابع',
           close: 'إغلاق',
           noProduct: 'لم يتم العثور على المنتج.',
-          productDetails: 'تفاصيل المنتج'
+          productDetails: 'تفاصيل المنتج',
+          loading: 'جاري تحميل المنتج...',
+          error: 'خطأ أثناء تحميل المنتج'
         }
       };
 
@@ -117,13 +130,19 @@
         currentUser = user;
         if (user) {
           const userRef = ref(db, `users/${user.uid}`);
-          onValue(userRef, (snapshot) => {
+          get(userRef).then((snapshot) => {
             userData = snapshot.val() || { currency: 'DH', language: 'English' };
+            console.log('User data loaded:', userData);
             applyLanguage(userData.language);
+            loadProduct();
+          }).catch((error) => {
+            console.error('Failed to load user data:', error);
+            applyLanguage('English');
             loadProduct();
           });
         } else {
           userData = { currency: 'DH', language: 'English' };
+          console.log('No user logged in, using default settings');
           applyLanguage('English');
           loadProduct();
         }
@@ -131,11 +150,20 @@
 
       async function loadProduct() {
         const urlParams = new URLSearchParams(window.location.search);
-        const pid = urlParams.get('id'); // Changed to 'id' to match SJSTORE.html
+        const pid = urlParams.get('id'); // Consistent with SJSTORE.html
         const refCode = urlParams.get('ref');
         const t = translations[userData.language] || translations.English;
 
-        if (refCode && pid) {
+        if (!pid) {
+          console.error('No product ID provided in URL');
+          productDetailContent.innerHTML = `<p class="error">${t.noProduct}</p>`;
+          return;
+        }
+
+        console.log('Loading product with ID:', pid);
+
+        // Track affiliate link click if refCode exists
+        if (refCode) {
           const affiliateLinksQuery = query(
             ref(db, "affiliate_links"),
             orderByChild('code'),
@@ -149,67 +177,67 @@
                 if (data.productId === pid) {
                   const linkRef = ref(db, `affiliate_links/${childSnapshot.key}`);
                   update(linkRef, { clicks: (data.clicks || 0) + 1 })
-                    .catch((error) => console.error("Failed to update click count:", error));
+                    .then(() => console.log('Affiliate click tracked for code:', refCode))
+                    .catch((error) => console.error('Failed to update click count:', error));
                 }
               });
+            } else {
+              console.warn('No affiliate link found for code:', refCode);
             }
           } catch (error) {
-            console.error("Error tracking affiliate link:", error);
+            console.error('Error tracking affiliate link:', error);
           }
         }
 
-        if (pid) {
-          try {
-            const snapshot = await get(ref(db, `Product/${pid}`));
-            const product = snapshot.val();
-            if (product) {
-              const convertedPrice = getConvertedPrice(product.price, userData.currency);
-              const symbol = getCurrencySymbol(userData.currency);
-              let orderButton = product.orderUrl ? `<button class="order-btn">${t.orderNow}</button>` : '';
-              productDetailContent.innerHTML = `
-                <div class="product-image-wrapper">
-                  <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
-                </div>
-                <h3>${product.title || 'Untitled'}</h3>
-                <p class="price">${convertedPrice} ${symbol}</p>
-                <button class="whatsapp-btn">${t.contactWhatsApp}</button>
-                ${orderButton}
-                <button class="add-to-cart-btn">${t.addToCart}</button>
-                <button class="generate-affiliate-btn">${t.generateLink}</button>
-              `;
-              productDetailContent.querySelector(".whatsapp-btn").addEventListener("click", () => {
-                const phone = product.des ? product.des.replace(/\D/g, "") : "";
-                if (phone) {
-                  window.open(`https://wa.me/${phone}`, "_blank");
-                } else {
-                  alert("No WhatsApp number provided for this product.");
-                }
-              });
-              if (product.orderUrl) {
-                productDetailContent.querySelector(".order-btn").addEventListener("click", () => {
-                  window.open(product.orderUrl, "_blank");
-                });
+        try {
+          const snapshot = await get(ref(db, `Product/${pid}`));
+          const product = snapshot.val();
+          if (product) {
+            console.log('Product data fetched:', product);
+            const convertedPrice = getConvertedPrice(product.price, userData.currency);
+            const symbol = getCurrencySymbol(userData.currency);
+            let orderButton = product.orderUrl ? `<button class="order-btn">${t.orderNow}</button>` : '';
+            productDetailContent.innerHTML = `
+              <div class="product-image-wrapper">
+                <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
+              </div>
+              <h3>${product.title || 'Untitled'}</h3>
+              <p class="price">${convertedPrice} ${symbol}</p>
+              <button class="whatsapp-btn">${t.contactWhatsApp}</button>
+              ${orderButton}
+              <button class="add-to-cart-btn">${t.addToCart}</button>
+              <button class="generate-affiliate-btn">${t.generateLink}</button>
+            `;
+            productDetailContent.querySelector(".whatsapp-btn").addEventListener("click", () => {
+              const phone = product.des ? product.des.replace(/\D/g, "") : "";
+              if (phone) {
+                window.open(`https://wa.me/${phone}`, "_blank");
+              } else {
+                alert("No WhatsApp number provided for this product.");
               }
-              productDetailContent.querySelector(".add-to-cart-btn").addEventListener("click", () => {
-                let cart = JSON.parse(localStorage.getItem("cart")) || [];
-                cart.push({ ...product, id: pid });
-                localStorage.setItem("cart", JSON.stringify(cart));
-                // Update cart count
-                const cartCount = document.getElementById("cart-count");
-                if (cartCount) cartCount.textContent = cart.length;
-                alert("Added to cart!");
+            });
+            if (product.orderUrl) {
+              productDetailContent.querySelector(".order-btn").addEventListener("click", () => {
+                window.open(product.orderUrl, "_blank");
               });
-              productDetailContent.querySelector(".generate-affiliate-btn").addEventListener("click", () => {
-                generateAffiliateLink(pid);
-              });
-            } else {
-              productDetailContent.innerHTML = `<p>${t.noProduct}</p>`;
             }
-          } catch (error) {
-            productDetailContent.innerHTML = `<p>Error loading product: ${error.message}</p>`;
+            productDetailContent.querySelector(".add-to-cart-btn").addEventListener("click", () => {
+              let cart = JSON.parse(localStorage.getItem("cart")) || [];
+              cart.push({ ...product, id: pid });
+              localStorage.setItem("cart", JSON.stringify(cart));
+              console.log('Cart updated:', cart);
+              alert("Added to cart!");
+            });
+            productDetailContent.querySelector(".generate-affiliate-btn").addEventListener("click", () => {
+              generateAffiliateLink(pid);
+            });
+          } else {
+            console.error('Product not found for ID:', pid);
+            productDetailContent.innerHTML = `<p class="error">${t.noProduct}</p>`;
           }
-        } else {
-          productDetailContent.innerHTML = `<p>${t.noProduct}</p>`;
+        } catch (error) {
+          console.error('Error loading product:', error);
+          productDetailContent.innerHTML = `<p class="error">${t.error}: ${error.message}</p>`;
         }
       }
 
@@ -237,13 +265,19 @@
           buyers: 0,
           createdAt: Date.now()
         }).then(() => {
+          console.log('Affiliate link created:', link);
           prompt("Copy this affiliate link:", link);
         }).catch((error) => {
+          console.error('Failed to generate affiliate link:', error);
           alert(`Failed to generate affiliate link: ${error.message}`);
         });
       }
 
-      fetchExchangeRates().then(() => loadProduct());
+      // Fetch exchange rates and load product
+      fetchExchangeRates().then(() => {
+        console.log('Exchange rates loaded, proceeding to load product');
+        loadProduct();
+      });
     });
   </script>
   <style>
@@ -365,6 +399,14 @@
     }
     #close-product-detail:hover {
       border-color: #ccc;
+    }
+    .loading, .error {
+      font-size: 1rem;
+      text-align: center;
+      color: #ccc;
+    }
+    .error {
+      color: #ff4444;
     }
     @media (max-width: 480px) {
       .modal-content {
