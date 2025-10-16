@@ -1,41 +1,104 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ Music</title>
+    <title>SJ Label - Artist Management</title>
     <!-- Bootstrap CSS for responsive layout -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS for futuristic sleek design: black and gold scheme, electric blue accents, glowing, neon, holographic effects -->
+    <!-- Custom CSS adapted from ElGrandeToto's design -->
     <style>
+        :root {
+            --color-red: #ff0000;
+            --color-white: #ffffff;
+            --color-dark: #0a0a0a;
+            --color-dark-transparent: #0a0a0af2;
+            --color-dark-transparent-alt: #1a1a1ad9;
+            --color-dark-light: #1a1a1a;
+            --space-unit: 8px;
+            --space-1: calc(1 * var(--space-unit));
+            --space-2: calc(2 * var(--space-unit));
+            --space-3: calc(3 * var(--space-unit));
+        }
+
         body {
-            background-color: #000000;
-            color: #FFD700; /* Gold text */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-image: url('https://via.placeholder.com/1920x1080/000/000?text=Digital+Universe'); /* Digital universe background */
-            background-size: cover;
-            background-attachment: fixed;
+            background: linear-gradient(135deg, #050608, #101218, #090c14);
+            color: var(--color-white);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
-        h1, h2, h3, h5 {
-            text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; /* Neon glow */
+
+        /* Glassmorphism effect */
+        .glass-effect {
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
         }
-        .header-carousel {
+
+        /* Top social bar */
+        .top-social-bar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: var(--space-2) 0;
+            transition: transform 0.3s ease;
+        }
+        .top-social-bar.hidden {
+            transform: translateY(-100%);
+        }
+        .top-social-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .top-social-links a {
+            color: var(--color-white);
+            margin: 0 var(--space-1);
+            font-size: 1.5rem;
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        .top-social-links a:hover {
+            color: var(--color-red);
+            transform: scale(1.2);
+        }
+
+        /* Hero section (replacing carousel) */
+        .hero-section {
             position: relative;
-            height: 500px;
+            height: 100vh;
             overflow: hidden;
-            border-radius: 0 0 30px 30px;
-            box-shadow: 0 8px 32px rgba(0, 191, 255, 0.5); /* Electric blue glow */
-            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .carousel-item {
-            height: 500px;
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-size: cover;
             background-position: center;
+            transform: scale(1.1);
+            transition: transform 0.1s ease;
+        }
+        .hero-section .carousel-inner {
             position: relative;
-            filter: brightness(1.2); /* Holographic effect */
+            z-index: 1;
+        }
+        .carousel-item {
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
         }
         .carousel-caption {
             background: rgba(0, 0, 0, 0.5);
@@ -44,72 +107,89 @@
             backdrop-filter: blur(10px);
         }
         .carousel-caption a {
-            color: #00BFFF; /* Electric blue */
+            color: #4a90e2;
             text-decoration: none;
             font-weight: 600;
         }
         .carousel-caption a:hover {
-            color: #FFD700; /* Gold on hover */
+            color: var(--color-white);
         }
-        .logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin-bottom: 15px;
+
+        /* Music platforms bar */
+        .music-platforms-bar {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-2);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
         }
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
+        .music-platforms-bar a {
+            color: var(--color-white);
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .music-platforms-bar a:hover {
+            transform: scale(1.2);
+        }
+
+        /* Artist cards styled as tour cards */
+        .artist-section {
+            position: relative;
+            padding: var(--space-3) 0;
+            overflow: hidden;
+        }
+        .artist-list {
+            position: relative;
+            z-index: 1;
         }
         .artist-card {
-            background: rgba(26, 26, 26, 0.8); /* Semi-transparent for holographic feel */
-            border: none;
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            padding: 20px;
-            margin: 15px;
-            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5); /* Glowing equalizer-like shadow */
+            padding: var(--space-2);
+            margin: var(--space-1);
+            position: relative;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             overflow: hidden;
-            position: relative;
-            animation: float 6s ease-in-out infinite; /* Floating album covers effect */
         }
         .artist-card:hover {
-            transform: translateY(-10px) scale(1.05); /* Energetic hover */
-            box-shadow: 0 0 40px rgba(0, 191, 255, 0.8);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
         }
         .artist-card img {
             width: 100%;
             height: 200px;
             object-fit: cover;
             border-radius: 15px;
-            margin-bottom: 15px;
-            filter: drop-shadow(0 0 10px #00BFFF); /* Holographic soundwaves effect */
+            margin-bottom: var(--space-1);
         }
         .artist-card h5 {
-            color: #00BFFF; /* Electric blue */
+            color: var(--color-red);
             font-weight: 600;
+            letter-spacing: 1px;
         }
         .artist-card p {
             opacity: 0.8;
             font-size: 0.95rem;
         }
-        .social-links {
-            margin-top: 10px;
-        }
         .social-links a {
-            color: #FFD700; /* Gold */
-            margin-right: 10px;
+            color: var(--color-white);
+            margin-right: var(--space-1);
             font-size: 1.5rem;
             transition: color 0.3s ease;
         }
         .social-links a:hover {
-            color: #00BFFF; /* Electric blue hover */
+            color: var(--color-red);
         }
         .admin-actions {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: var(--space-1);
+            right: var(--space-1);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -119,139 +199,144 @@
         .admin-actions button {
             background: none;
             border: none;
-            color: #FFD700;
+            color: var(--color-white);
             margin-left: 5px;
             cursor: pointer;
             font-size: 1.2rem;
         }
         .admin-actions button:hover {
-            color: #00BFFF;
+            color: var(--color-red);
         }
+
+        /* Forms */
         .form-section {
-            background: rgba(26, 26, 26, 0.8);
-            border-radius: 20px;
-            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
-            margin: 40px auto;
+            margin: var(--space-3) auto;
             max-width: 600px;
-            padding: 30px;
+            padding: var(--space-2);
         }
         .form-control, .form-control:focus {
-            background: #2a2a2a;
-            border: 1px solid #00BFFF;
-            color: #FFD700;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-red);
+            color: var(--color-white);
             border-radius: 10px;
         }
         .form-control::placeholder {
-            color: #888888;
+            color: rgba(255, 255, 255, 0.5);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #00BFFF 0%, #007BFF 100%);
+            background: linear-gradient(135deg, var(--color-red) 0%, #cc0000 100%);
             border: none;
             border-radius: 25px;
             padding: 12px 30px;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 191, 255, 0.4);
-            background: linear-gradient(135deg, #007BFF 0%, #00BFFF 100%);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+            background: linear-gradient(135deg, #cc0000 0%, var(--color-red) 100%);
         }
         .btn-secondary {
-            background: #555555;
+            background: rgba(255, 255, 255, 0.1);
             border: none;
             border-radius: 25px;
             padding: 12px 30px;
         }
         .btn-secondary:hover {
-            background: #666666;
+            background: rgba(255, 255, 255, 0.2);
         }
-        .user-info {
-            background: rgba(26, 26, 26, 0.8);
-            border-radius: 10px;
-            padding: 10px 20px;
-            margin: 10px 0;
-        }
-        .icon {
-            color: #00BFFF;
-            margin-right: 8px;
-        }
+
+        /* Modals */
         .modal-content {
-            background: rgba(26, 26, 26, 0.8);
-            color: #FFD700;
+            background: var(--color-dark-light);
+            color: var(--color-white);
             border-radius: 20px;
         }
         .modal-header, .modal-footer {
-            border-color: #00BFFF;
+            border-color: var(--color-red);
         }
-        .manager-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #2a2a2a;
-            border-radius: 10px;
-            margin-bottom: 10px;
+        .btn-close-white {
+            filter: invert(1);
         }
+
+        /* Footer */
+        .site-footer {
+            text-align: center;
+            padding: var(--space-3);
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .site-footer a {
+            color: var(--color-red);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .site-footer a:hover {
+            color: var(--color-white);
+        }
+
+        /* Particles for background effect */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .stagger-item.enhanced-appear {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .header-carousel {
-                height: 300px;
+            .hero-section {
+                height: 60vh;
             }
             .carousel-item {
-                height: 300px;
-            }
-            .logo {
-                width: 40px;
-                height: 40px;
+                height: 60vh;
             }
             .artist-card {
-                margin: 10px 0;
+                margin: var(--space-1) 0;
             }
             .form-section {
-                margin: 20px;
-                padding: 20px;
+                margin: var(--space-2);
+                padding: var(--space-1);
             }
             .admin-actions {
                 position: static;
                 opacity: 1;
-                margin-top: 10px;
+                margin-top: var(--space-1);
             }
-        }
-        /* Glowing equalizer animation */
-        .equalizer {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            height: 50px;
-            margin-bottom: 20px;
-        }
-        .bar {
-            width: 5px;
-            margin: 0 2px;
-            background: #00BFFF;
-            animation: equalizer 1s infinite;
-            box-shadow: 0 0 10px #00BFFF;
-        }
-        .bar:nth-child(1) { height: 20px; animation-delay: 0.1s; }
-        .bar:nth-child(2) { height: 30px; animation-delay: 0.2s; }
-        .bar:nth-child(3) { height: 40px; animation-delay: 0.3s; }
-        .bar:nth-child(4) { height: 30px; animation-delay: 0.4s; }
-        .bar:nth-child(5) { height: 20px; animation-delay: 0.5s; }
-        @keyframes equalizer {
-            0% { height: 10px; }
-            50% { height: 40px; }
-            100% { height: 10px; }
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-storage.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
-        // Your Firebase config
+        // Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -379,10 +464,9 @@
                 const headerCarousel = document.querySelector('.header-carousel .carousel-inner');
                 headerCarousel.innerHTML = '';
                 if (snapshot.empty) {
-                    // Default slide if no sliders
                     const defaultSlide = document.createElement('div');
                     defaultSlide.className = 'carousel-item active';
-                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1200x500/000/FFD700?text=SJ+Music')";
+                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1200x500/1e3c72/ffffff?text=SJ+Label')";
                     defaultSlide.innerHTML = `
                         <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
@@ -397,7 +481,7 @@
                     const slide = doc.data();
                     const slideId = doc.id;
                     const carouselItem = document.createElement('div');
-                    carouselItem.className = `carousel-item ${active ? 'active' : ''}`;
+                    carouselItem.className = `carousel-item ${active ? 'active' : ''} stagger-item`;
                     carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
                     let adminActions = '';
                     if (currentUser && currentUser.email === ADMIN_EMAIL) {
@@ -421,12 +505,18 @@
                     headerCarousel.appendChild(carouselItem);
                     active = false;
                 });
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
             }).catch(error => console.error(error));
         }
 
-        // Load Artists from Firestore (list view)
+        // Load Artists from Firestore
         function loadArtists() {
-            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>'; // Reset
+            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>';
             const artistsCol = collection(db, 'artists');
             getDocs(artistsCol).then(snapshot => {
                 if (snapshot.empty) {
@@ -448,8 +538,8 @@
                         `;
                     }
                     card.innerHTML = `
-                        <div class="artist-card">
-                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/000/FFD700?text=Artist+Photo'}" alt="${artist.name}">
+                        <div class="artist-card stagger-item">
+                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
                             ${adminActions}
                             <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
                             <p>${artist.description || 'Emerging talent in the music scene.'}</p>
@@ -462,23 +552,26 @@
                     `;
                     artistsList.appendChild(card);
                 });
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
             }).catch(error => console.error(error));
         }
 
-        // Load Single Artist (full page view)
+        // Load Single Artist
         async function loadSingleArtist(id) {
             const artistRef = doc(db, 'artists', id);
             const docSnap = await getDoc(artistRef);
             if (docSnap.exists()) {
                 const artist = docSnap.data();
-                // Hide unnecessary sections for full artist page
-                document.querySelector('.header-carousel').style.display = 'none';
+                document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
-                // Clear artists-list
                 artistsList.innerHTML = '';
-                // Admin actions for single view
                 let adminActions = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
@@ -488,16 +581,15 @@
                         </div>
                     `;
                 }
-                // Create full page content
                 const fullPage = document.createElement('div');
                 fullPage.className = 'container my-5';
                 fullPage.innerHTML = `
                     <div class="row justify-content-center">
                         <div class="col-md-8">
-                            <div class="artist-card" style="padding: 40px; background: rgba(26,26,26,0.8); border-radius: 20px;">
+                            <div class="artist-card glass-effect" style="padding: 40px;">
                                 ${adminActions}
-                                <img src="${artist.imageUrl || 'https://via.placeholder.com/800x400/000/FFD700?text=Artist+Photo'}" alt="${artist.name}" style="width: 100%; height: auto; border-radius: 15px; margin-bottom: 20px;">
-                                <h2 style="color: #00BFFF;"><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h2>
+                                <img src="${artist.imageUrl || 'https://via.placeholder.com/800x400/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}" style="width: 100%; height: auto; border-radius: 15px; margin-bottom: 20px;">
+                                <h2 style="color: var(--color-red);"><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h2>
                                 <p style="font-size: 1.1rem;">${artist.description || 'Emerging talent in the music scene.'}</p>
                                 <div class="social-links" style="font-size: 2rem;">
                                     ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
@@ -528,7 +620,7 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const div = document.createElement('div');
-                    div.className = 'manager-item';
+                    div.className = 'manager-item glass-effect';
                     div.innerHTML = `
                         <span>${data.email}</span>
                         <button class="btn btn-danger btn-sm" onclick="removeManager('${doc.id}')">Remove</button>
@@ -538,7 +630,7 @@
             }).catch(error => console.error(error));
         }
 
-        // Global functions for onclick
+        // Global functions
         window.editArtist = function(artistId) {
             editingArtistId = artistId;
             const artistRef = doc(db, 'artists', artistId);
@@ -559,7 +651,7 @@
                 const artistRef = doc(db, 'artists', artistId);
                 deleteDoc(artistRef).then(() => {
                     alert('Artist deleted!');
-                    window.location.href = '/';
+                    loadArtists();
                 }).catch(error => console.error(error));
             }
         };
@@ -596,7 +688,7 @@
             }
         };
 
-        // Add Artist (Admin/Manager)
+        // Add Artist
         addArtistForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('artist-name').value;
@@ -668,7 +760,7 @@
             }
         });
 
-        // Add Slider (Admin only)
+        // Add Slider
         addSliderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('slider-title').value;
@@ -739,7 +831,7 @@
             }
         });
 
-        // Add Manager (Admin only)
+        // Add Manager
         addManagerForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('manager-email').value;
@@ -768,7 +860,6 @@
                 const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                 const snapshot = await uploadBytes(storageRef, compressed);
                 const url = await getDownloadURL(snapshot.ref);
-                // Save submission to Firestore
                 await addDoc(collection(db, 'submissions'), {
                     artistName,
                     trackName,
@@ -784,49 +875,95 @@
                 alert('Error submitting music: ' + (error.message || error));
             }
         });
+
+        // Scroll-based social bar hide
+        let lastScrollY = 0;
+        window.addEventListener('scroll', () => {
+            const socialBar = document.querySelector('.top-social-bar');
+            if (window.scrollY > lastScrollY && window.scrollY > 100) {
+                socialBar.classList.add('hidden');
+            } else {
+                socialBar.classList.remove('hidden');
+            }
+            lastScrollY = window.scrollY;
+        });
+
+        // Particle generation
+        function createParticles() {
+            const particleContainer = document.querySelector('.particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = `${Math.random() * 10 + 5}px`;
+                particle.style.height = particle.style.width;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
+                particleContainer.appendChild(particle);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', createParticles);
     </script>
 </head>
 <body>
-
-    <!-- Header Carousel -->
-    <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            <!-- Slides loaded dynamically -->
+    <!-- Top Social Bar -->
+    <div class="top-social-bar">
+        <div class="container">
+            <div class="top-social-container">
+                <div class="top-social-links">
+                    <a href="https://instagram.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="https://twitter.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+                    <a href="https://tiktok.com/@sjlabel" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://facebook.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                </div>
+            </div>
         </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#headerCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#headerCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-        </button>
     </div>
 
+    <!-- Hero Section with Carousel -->
+    <section id="hero" class="hero-section">
+        <div class="hero-bg" style="background-image: url('https://via.placeholder.com/1200x500/1e3c72/ffffff?text=SJ+Label');"></div>
+        <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <!-- Slides loaded dynamically -->
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#headerCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#headerCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+        <!-- Music Platforms Bar -->
+        <div class="music-platforms-bar">
+            <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
+            <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+        </div>
+    </section>
+
+    <!-- Particles -->
+    <div class="particles"></div>
+
     <div class="container">
-        <!-- Login/Logout Section -->
-        <div id="auth-section" class="text-center my-4">
+        <!-- Auth Section -->
+        <div id="auth-section" class="text-center my-4 glass-effect">
             <button id="login-btn" class="btn btn-primary"><i class="bi bi-google icon"></i>Login with Google</button>
             <button id="logout-btn" class="btn btn-secondary d-none"><i class="bi bi-box-arrow-right icon"></i>Logout</button>
             <div id="user-info" class="user-info d-inline-block"></div>
         </div>
 
-        <!-- Glowing Equalizer -->
-        <div class="equalizer">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </div>
-
         <!-- Artists Showcase Section -->
-        <div id="artists-list" class="row justify-content-center">
-            <!-- Artists loaded dynamically -->
-        </div>
+        <section id="artists" class="artist-section">
+            <div id="artists-list" class="row justify-content-center artist-list">
+                <!-- Artists loaded dynamically -->
+            </div>
+        </section>
 
-        <!-- Artist Management Section (Admin & Managers) -->
-        <div id="artist-management-section" class="form-section d-none">
+        <!-- Artist Management Section -->
+        <div id="artist-management-section" class="form-section d-none glass-effect">
             <h3 class="text-center mb-4"><i class="bi bi-plus-circle icon"></i>Add New Artist</h3>
             <form id="add-artist-form">
                 <div class="mb-3">
@@ -853,8 +990,8 @@
             </form>
         </div>
 
-        <!-- Admin Dashboard Section (Admin only) -->
-        <div id="admin-section" class="form-section d-none">
+        <!-- Admin Dashboard Section -->
+        <div id="admin-section" class="form-section d-none glass-effect">
             <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
             <form id="add-slider-form">
                 <div class="mb-3">
@@ -876,7 +1013,7 @@
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Slider</button>
             </form>
 
-            <hr class="my-4" style="border-color: #00BFFF;">
+            <hr class="my-4" style="border-color: var(--color-red);">
 
             <h3 class="text-center mb-4"><i class="bi bi-person-plus icon"></i>Add Manager</h3>
             <form id="add-manager-form">
@@ -890,7 +1027,7 @@
         </div>
 
         <!-- Music Submission Section -->
-        <div id="submission-section" class="form-section d-none">
+        <div id="submission-section" class="form-section d-none glass-effect">
             <h3 class="text-center mb-4"><i class="bi bi-upload icon"></i>Submit Your Music</h3>
             <form id="submit-music-form">
                 <div class="mb-3">
@@ -911,19 +1048,6 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
             </form>
-        </div>
-
-        <!-- Mobile App Mockups Section -->
-        <div class="form-section">
-            <h3 class="text-center mb-4"><i class="bi bi-phone icon"></i>Mobile App Mockups</h3>
-            <div class="row justify-content-center">
-                <div class="col-md-4">
-                    <img src="https://via.placeholder.com/300x600/000/FFD700?text=App+Mockup+1" alt="Mobile App Mockup 1" class="img-fluid" style="filter: drop-shadow(0 0 10px #00BFFF);">
-                </div>
-                <div class="col-md-4">
-                    <img src="https://via.placeholder.com/300x600/000/FFD700?text=App+Mockup+2" alt="Mobile App Mockup 2" class="img-fluid" style="filter: drop-shadow(0 0 10px #00BFFF);">
-                </div>
-            </div>
         </div>
     </div>
 
@@ -997,8 +1121,13 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer id="footer" class="site-footer">
+        <p>&copy; 2025 SJ Label. All rights reserved.</p>
+        <p><a href="mailto:contact@sjlabel.com">contact@sjlabel.com</a></p>
+    </footer>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-```
