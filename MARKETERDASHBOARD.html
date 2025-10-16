@@ -196,6 +196,7 @@
         });
       }, (error) => {
         console.error("Failed to load products:", error);
+        alert("Error loading products. Please try again.");
       });
       
       onAuthStateChanged(auth, (user) => {
@@ -268,14 +269,22 @@
       });
       
       withdrawBtn.addEventListener("click", () => {
-        const uid = auth.currentUser.uid;
+        const uid = auth.currentUser?.uid;
         const wallet = walletAddress.value;
+        if (!uid) {
+          alert("Please log in to withdraw.");
+          return;
+        }
         if (!wallet) {
           alert("Please enter a wallet address.");
           return;
         }
         const userRef = ref(db, `users/${uid}`);
         get(userRef).then((snapshot) => {
+          if (!snapshot.exists()) {
+            alert("User data not found.");
+            return;
+          }
           const data = snapshot.val();
           const commissions = data.commissions || 0;
           if (commissions <= 0) {
@@ -297,27 +306,29 @@
           }).catch(error => {
             alert(`Failed to withdraw: ${error.message}`);
           });
+        }).catch(error => {
+          console.error("Failed to fetch user data:", error);
+          alert("Error fetching user data.");
         });
       });
       
       confirmOk.addEventListener("click", () => {
         confirmPopup.style.display = 'none';
-        loadAffiliateDashboard(auth.currentUser.uid);
+        loadAffiliateDashboard(auth.currentUser?.uid);
       });
       
       function loadAffiliateDashboard(uid) {
+        if (!uid) return;
         affiliateList.innerHTML = "";
         productPerformance.innerHTML = "";
         transactionsList.innerHTML = "";
         let totalClicks = 0;
         let totalBuyers = 0;
-        let productData = [];
         const affiliateLinksRef = ref(db, "affiliate_links");
         onValue(affiliateLinksRef, (snapshot) => {
           affiliateList.innerHTML = "";
           const t = translations[userData.language] || translations.English;
           if (!snapshot.exists()) {
-            console.warn("No affiliate links found for user:", uid);
             affiliateList.innerHTML = `<p>${t.noLinks}</p>`;
             return;
           }
@@ -411,7 +422,7 @@
         });
         const marketerRef = ref(db, `users/${uid}`);
         onValue(marketerRef, (snapshot) => {
-          const data = snapshot.val();
+          const data = snapshot.val() || {};
           const commissions = data.commissions || 0;
           const t = translations[userData.language] || translations.English;
           commissionsTotal.textContent = `${t.commissions}: ${commissions.toFixed(2)} DH`;
