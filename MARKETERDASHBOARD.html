@@ -49,6 +49,8 @@
       const totalBuyersEl = document.getElementById("total-buyers");
       const conversionRateEl = document.getElementById("conversion-rate");
       const productPerformance = document.getElementById("product-performance-cards");
+      const tabs = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
       
       let products = [];
       let userData = { language: 'English' };
@@ -77,10 +79,15 @@
           tip5: 'Run giveaways to boost engagement.',
           noLinks: 'No affiliate links available.',
           withdrawTitle: 'Withdraw Earnings',
-          transactionHistory: 'Transaction History',
-          withdraw: 'Withdraw',
+          transactionHistory: 'Withdrawal History',
+          withdraw: 'Withdraw Now',
           walletPlaceholder: 'Enter Wallet Address',
-          withdrawalSuccess: 'Withdrawal Successful!'
+          withdrawalSuccess: 'Withdrawal Successful!',
+          overviewTab: 'Overview',
+          referralsTab: 'Referrals',
+          payoutsTab: 'Payouts',
+          settingsTab: 'Settings',
+          trackingTitle: 'Click & Buyer Tracking'
         },
         French: {
           affiliateTitle: 'Tableau de bord affilié',
@@ -104,10 +111,15 @@
           tip5: 'Organisez des concours pour booster l\'engagement.',
           noLinks: 'Aucun lien affilié disponible.',
           withdrawTitle: 'Retirer les gains',
-          transactionHistory: 'Historique des transactions',
-          withdraw: 'Retirer',
+          transactionHistory: 'Historique des retraits',
+          withdraw: 'Retirer Maintenant',
           walletPlaceholder: 'Entrer l\'adresse du portefeuille',
-          withdrawalSuccess: 'Retrait réussi !'
+          withdrawalSuccess: 'Retrait réussi !',
+          overviewTab: 'Aperçu',
+          referralsTab: 'Références',
+          payoutsTab: 'Paiements',
+          settingsTab: 'Paramètres',
+          trackingTitle: 'Suivi des Clics & Acheteurs'
         },
         Arabic: {
           affiliateTitle: 'لوحة تحكم التابع',
@@ -131,10 +143,15 @@
           tip5: 'إجراء مسابقات لتعزيز التفاعل.',
           noLinks: 'لا توجد روابط تابعة متاحة.',
           withdrawTitle: 'سحب الأرباح',
-          transactionHistory: 'سجل المعاملات',
-          withdraw: 'سحب',
+          transactionHistory: 'سجل السحوبات',
+          withdraw: 'سحب الآن',
           walletPlaceholder: 'أدخل عنوان المحفظة',
-          withdrawalSuccess: 'تم السحب بنجاح!'
+          withdrawalSuccess: 'تم السحب بنجاح!',
+          overviewTab: 'نظرة عامة',
+          referralsTab: 'الإحالات',
+          payoutsTab: 'الدفعات',
+          settingsTab: 'الإعدادات',
+          trackingTitle: 'تتبع النقرات والمشترين'
         }
       };
       
@@ -159,13 +176,29 @@
         withdrawBtn.textContent = t.withdraw;
         walletAddress.placeholder = t.walletPlaceholder;
         document.getElementById("confirm-message").textContent = t.withdrawalSuccess;
-        document.getElementById("analytics-title").textContent = 'Analytics Dashboard';
+        document.getElementById("tracking-title").textContent = t.trackingTitle;
         document.getElementById("total-clicks-label").textContent = 'Total Clicks:';
         document.getElementById("total-buyers-label").textContent = 'Total Buyers:';
         document.getElementById("conversion-rate-label").textContent = 'Conversion Rate:';
         document.getElementById("product-performance-title").textContent = 'Product Performance';
+        document.querySelector('[data-tab="overview"]').textContent = t.overviewTab;
+        document.querySelector('[data-tab="referrals"]').textContent = t.referralsTab;
+        document.querySelector('[data-tab="payouts"]').textContent = t.payoutsTab;
+        document.querySelector('[data-tab="settings"]').textContent = t.settingsTab;
         loadAffiliateDashboard(auth.currentUser?.uid);
       }
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          tabContents.forEach(content => content.style.display = 'none');
+          document.getElementById(tab.dataset.tab).style.display = 'block';
+        });
+      });
+      
+      // Default to Overview tab
+      document.querySelector('.tab-btn.active').click();
       
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
@@ -311,7 +344,6 @@
         transactionsList.innerHTML = "";
         let totalClicks = 0;
         let totalBuyers = 0;
-        let productData = [];
         const affiliateLinksRef = ref(db, "affiliate_links");
         onValue(affiliateLinksRef, (snapshot) => {
           affiliateList.innerHTML = "";
@@ -334,7 +366,7 @@
               labels.push(title);
               clicksData.push(data.clicks || 0);
               buyersData.push(data.buyers || 0);
-              // Affiliate item
+              // Affiliate item for Referrals tab
               const div = document.createElement("div");
               div.classList.add("affiliate-item");
               const link = `https://simojibou.github.io/sjcoin25/sjstore13.html?ref=${data.code}&pid=${data.productId}`;
@@ -354,7 +386,7 @@
                 navigator.clipboard.writeText(link).then(() => alert("Link copied!"));
               });
               affiliateList.appendChild(div);
-              // Product performance card
+              // Product performance card for tracking
               const card = document.createElement("div");
               card.classList.add("performance-card");
               card.innerHTML = `
@@ -378,12 +410,15 @@
               datasets: [{
                 label: 'Clicks',
                 data: clicksData,
-                backgroundColor: '#007bff'
+                backgroundColor: '#00BFFF'
               }]
             },
             options: {
               scales: {
-                y: { beginAtZero: true }
+                y: { beginAtZero: true, grid: { color: '#333' } }
+              },
+              plugins: {
+                legend: { labels: { color: '#fff' } }
               }
             }
           });
@@ -395,13 +430,16 @@
               datasets: [{
                 label: 'Buyers',
                 data: buyersData,
-                borderColor: '#007bff',
+                borderColor: '#00BFFF',
                 tension: 0.1
               }]
             },
             options: {
               scales: {
-                y: { beginAtZero: true }
+                y: { beginAtZero: true, grid: { color: '#333' } }
+              },
+              plugins: {
+                legend: { labels: { color: '#fff' } }
               }
             }
           });
@@ -425,7 +463,7 @@
           if (currentBalance) {
             currentBalance.textContent = `${commissions.toFixed(2)} DH`;
           }
-          // Transaction history
+          // Transaction history for Payouts tab
           const transactions = data.transactions || [];
           transactions.forEach(tx => {
             const li = document.createElement("li");
@@ -446,7 +484,7 @@
     }
     body {
       font-family: 'Roboto', sans-serif;
-      background: #000;
+      background: linear-gradient(135deg, #111, #333);
       color: #fff;
       line-height: 1.6;
       min-height: 100vh;
@@ -455,20 +493,22 @@
       align-items: center;
     }
     .modal-content {
-      background: #111;
+      background: #222;
       margin: 5% auto;
       padding: 2rem;
-      border-radius: 0;
+      border-radius: 8px;
       width: 90%;
-      max-width: 800px;
-      border: 1px solid #333;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      max-width: 900px;
+      border: 1px solid #00BFFF;
+      box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
     }
     h2, h3, h4, h5 {
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.1em;
       margin-bottom: 1rem;
+      color: #fff;
+      text-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
     }
     h2 {
       font-size: 1.5rem;
@@ -479,9 +519,10 @@
     #user-profile {
       margin-bottom: 1.5rem;
       padding: 1rem;
-      background: #222;
-      border: 1px solid #333;
-      border-radius: 0;
+      background: #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
     }
     .user-profile-content {
       display: flex;
@@ -493,6 +534,38 @@
       height: 50px;
       border-radius: 50%;
       object-fit: cover;
+      border: 2px solid #00BFFF;
+    }
+    #tab-nav {
+      display: flex;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.75rem;
+      background: #333;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s, box-shadow 0.3s;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .tab-btn.active {
+      background: #00BFFF;
+      color: #000;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+    }
+    .tab-btn:hover {
+      background: #00BFFF;
+      color: #000;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
     }
     #affiliate-list {
       display: flex;
@@ -501,22 +574,23 @@
       margin-bottom: 1.5rem;
     }
     .affiliate-item {
-      background: #222;
+      background: #333;
       padding: 1rem;
-      border-radius: 0;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       gap: 1rem;
-      border: 1px solid #333;
-      transition: transform 0.3s;
+      border: 1px solid #00BFFF;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
     .affiliate-item:hover {
       transform: translateY(-3px);
+      box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
     }
     .affiliate-item img {
       width: 80px;
       height: 80px;
-      border-radius: 0;
+      border-radius: 4px;
       object-fit: cover;
     }
     .affiliate-details {
@@ -530,42 +604,46 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
+      color: #00BFFF;
     }
     .copy-link-btn, #generate-link-btn, #withdraw-btn {
-      background: #fff;
-      color: #000;
+      background: linear-gradient(135deg, #00BFFF, #007bff);
+      color: #fff;
       border: none;
       padding: 0.5rem 1rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.1em;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: box-shadow 0.3s;
+      border-radius: 4px;
     }
     .copy-link-btn:hover, #generate-link-btn:hover, #withdraw-btn:hover {
-      background: #e0e0e0;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
     }
     #commissions-total {
       font-size: 1.25rem;
       font-weight: 700;
       text-align: right;
       margin-top: 1rem;
+      color: #00BFFF;
     }
     #close-marketer-modal {
       background: transparent;
       color: #fff;
-      border: 1px solid #fff;
+      border: 1px solid #00BFFF;
       padding: 0.75rem;
       width: 100%;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.1em;
       cursor: pointer;
       margin-top: 1rem;
-      transition: border-color 0.3s;
+      transition: box-shadow 0.3s;
+      border-radius: 4px;
     }
     #close-marketer-modal:hover {
-      border-color: #ccc;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
     }
     #product-select-form {
       display: flex;
@@ -575,15 +653,15 @@
     #product-select {
       flex: 1;
       padding: 0.75rem;
-      border: 1px solid #333;
-      background: #000;
+      border: 1px solid #00BFFF;
+      background: #333;
       color: #fff;
-      border-radius: 0;
+      border-radius: 4px;
       font-size: 1rem;
-      transition: border-color 0.3s;
+      transition: box-shadow 0.3s;
     }
     #product-select:focus {
-      border-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
       outline: none;
     }
     #motivational-banner {
@@ -594,41 +672,45 @@
       width: 100%;
       max-height: 200px;
       object-fit: cover;
-      border: 1px solid #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
     }
     .slogan {
       font-size: 1.5rem;
       text-align: center;
-      color: #ffd700;
+      color: #00BFFF;
       margin: 1rem 0;
-      text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+      text-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
     }
     #goal-progress {
       margin-bottom: 1.5rem;
       padding: 1rem;
-      background: #222;
-      border: 1px solid #333;
-      border-radius: 0;
+      background: #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
     }
     .progress-container {
-      background: #333;
-      border: 1px solid #444;
+      background: #222;
+      border: 1px solid #00BFFF;
       height: 20px;
       border-radius: 10px;
       overflow: hidden;
     }
     .progress-bar {
-      background: linear-gradient(to right, #4caf50, #8bc34a);
+      background: linear-gradient(to right, #00BFFF, #007bff);
       height: 100%;
       width: 0%;
       transition: width 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
     }
     #tips-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
-      background: #222;
-      border: 1px solid #333;
-      border-radius: 0;
+      background: #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
     }
     #tips-section ul {
       list-style-type: disc;
@@ -640,22 +722,27 @@
     #withdraw-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
-      background: #1a1a1a;
-      border: 1px solid #ffd700;
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+      background: #333;
+      border: 1px solid #00BFFF;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
+      border-radius: 4px;
     }
     #withdraw-btn {
-      background: #ffd700;
-      color: #000;
-      animation: neon-glow 1.5s ease-in-out infinite alternate;
+      background: linear-gradient(135deg, #00BFFF, #007bff);
+      animation: glow 1.5s ease-in-out infinite alternate;
     }
     #wallet-address {
       padding: 0.75rem;
-      border: 1px solid #ffd700;
-      background: #000;
+      border: 1px solid #00BFFF;
+      background: #222;
       color: #fff;
       width: 100%;
       margin-bottom: 1rem;
+      border-radius: 4px;
+      transition: box-shadow 0.3s;
+    }
+    #wallet-address:focus {
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
     }
     #transaction-history ul {
       list-style: none;
@@ -664,7 +751,8 @@
       background: #222;
       padding: 0.5rem;
       margin-bottom: 0.5rem;
-      border: 1px solid #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
     }
     #confirm-popup {
       display: none;
@@ -678,25 +766,28 @@
       align-items: center;
     }
     .popup-content {
-      background: #111;
+      background: #333;
       padding: 2rem;
-      border: 1px solid #ffd700;
+      border: 1px solid #00BFFF;
       text-align: center;
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+      border-radius: 4px;
     }
-    @keyframes neon-glow {
+    @keyframes glow {
       from {
-        box-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700;
+        box-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF;
       }
       to {
-        box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+        box-shadow: 0 0 10px #00BFFF, 0 0 20px #00BFFF;
       }
     }
-    #analytics-section {
+    #tracking-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
-      background: #000;
-      border: 1px solid #333;
+      background: #333;
+      border: 1px solid #00BFFF;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
+      border-radius: 4px;
     }
     .stats {
       display: flex;
@@ -704,31 +795,56 @@
       margin-bottom: 1rem;
     }
     .stat {
-      background: #111;
+      background: #222;
       padding: 1rem;
       flex: 1;
       margin: 0 0.5rem;
       text-align: center;
-      transition: transform 0.3s;
-      color: #007bff;
-      font-weight: bold;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
     }
     .stat:hover {
       transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
+    }
+    .stat span {
+      color: #00BFFF;
+      font-weight: bold;
     }
     .performance-card {
-      background: #111;
+      background: #222;
       padding: 1rem;
       margin-bottom: 1rem;
-      border: 1px solid #333;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
+      transition: box-shadow 0.3s;
+    }
+    .performance-card:hover {
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
     }
     #charts {
       display: flex;
       gap: 1rem;
+      margin-top: 1rem;
     }
     #charts canvas {
       flex: 1;
       height: 200px;
+      background: #222;
+      border: 1px solid #00BFFF;
+      border-radius: 4px;
+    }
+    .icon {
+      margin-right: 0.5rem;
+    }
+    #settings-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #333;
+      border: 1px solid #00BFFF;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
+      border-radius: 4px;
     }
     @media (max-width: 480px) {
       .modal-content {
@@ -759,6 +875,9 @@
       .profile-pic {
         margin-bottom: 0.5rem;
       }
+      #tab-nav {
+        flex-direction: column;
+      }
       .stats {
         flex-direction: column;
       }
@@ -779,56 +898,76 @@
     <div class="slogan">Become a Millionaire with SJ STORE Affiliates!</div>
     <h2 id="profile-title">User Profile</h2>
     <div id="user-profile"></div>
-    <div id="goal-progress">
-      <h3 id="goal-title">Your Goal: 1,000,000 DH</h3>
-      <p id="current-commissions-label">Current Commissions: <span id="current-commissions">0 DH</span></p>
-      <div class="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
+    <nav id="tab-nav">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="referrals">Referrals</button>
+      <button class="tab-btn" data-tab="payouts">Payouts</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+    <div id="overview" class="tab-content" style="display: block;">
+      <div id="goal-progress">
+        <h3 id="goal-title">Your Goal: 1,000,000 DH</h3>
+        <p id="current-commissions-label">Current Commissions: <span id="current-commissions">0 DH</span></p>
+        <div class="progress-container">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
+      <div id="tips-section">
+        <h3 id="tips-title">Tips to Reach 1M DH</h3>
+        <ul>
+          <li id="tip1">Promote products you love and use.</li>
+          <li id="tip2">Build an email list and offer incentives.</li>
+          <li id="tip3">Create high-quality content to drive traffic.</li>
+          <li id="tip4">Focus on high-commission products.</li>
+          <li id="tip5">Run giveaways to boost engagement.</li>
+        </ul>
+      </div>
+      <h2 id="affiliate-dashboard-title">Affiliate Dashboard</h2>
+      <p id="commissions-total">Total Commissions: 0 DH</p>
+      <div id="tracking-section">
+        <h3 id="tracking-title"><span class="icon">📊</span>Click & Buyer Tracking</h3>
+        <div class="stats">
+          <div class="stat"><span class="icon">👆</span><span id="total-clicks-label">Total Clicks:</span> <span id="total-clicks">0</span></div>
+          <div class="stat"><span class="icon">🛒</span><span id="total-buyers-label">Total Buyers:</span> <span id="total-buyers">0</span></div>
+          <div class="stat"><span class="icon">📈</span><span id="conversion-rate-label">Conversion Rate:</span> <span id="conversion-rate">0%</span></div>
+        </div>
+        <div id="product-performance">
+          <h4 id="product-performance-title">Product Performance</h4>
+          <div id="product-performance-cards"></div>
+        </div>
+        <div id="charts">
+          <canvas id="clicks-chart"></canvas>
+          <canvas id="buyers-chart"></canvas>
+        </div>
       </div>
     </div>
-    <div id="tips-section">
-      <h3 id="tips-title">Tips to Reach 1M DH</h3>
-      <ul>
-        <li id="tip1">Promote products you love and use.</li>
-        <li id="tip2">Build an email list and offer incentives.</li>
-        <li id="tip3">Create high-quality content to drive traffic.</li>
-        <li id="tip4">Focus on high-commission products.</li>
-        <li id="tip5">Run giveaways to boost engagement.</li>
-      </ul>
+    <div id="referrals" class="tab-content">
+      <div id="product-select-form">
+        <select id="product-select">
+          <option value="" disabled selected>Select a Product</option>
+        </select>
+        <button id="generate-link-btn">Generate Affiliate Link</button>
+      </div>
+      <div id="affiliate-list"></div>
     </div>
-    <h2 id="affiliate-dashboard-title">Affiliate Dashboard</h2>
-    <div id="product-select-form">
-      <select id="product-select">
-        <option value="" disabled selected>Select a Product</option>
-      </select>
-      <button id="generate-link-btn">Generate Affiliate Link</button>
-    </div>
-    <div id="affiliate-list"></div>
-    <p id="commissions-total">Total Commissions: 0 DH</p>
-    <div id="withdraw-section">
-      <h3 id="withdraw-title">Withdraw Earnings</h3>
-      <p>Current Balance: <span id="current-balance">0 DH</span></p>
-      <input id="wallet-address" placeholder="Enter Wallet Address">
-      <button id="withdraw-btn">Withdraw</button>
-      <div id="transaction-history">
-        <h4 id="transaction-history-title">Transaction History</h4>
-        <ul id="transactions-list"></ul>
+    <div id="payouts" class="tab-content">
+      <div id="withdraw-section">
+        <h3 id="withdraw-title"><span class="icon">💰</span>Withdraw Earnings</h3>
+        <p>Available Balance: <span id="current-balance">0 DH</span></p>
+        <input id="wallet-address" placeholder="Enter Wallet Address">
+        <button id="withdraw-btn">Withdraw Now</button>
+        <div id="transaction-history">
+          <h4 id="transaction-history-title">Withdrawal History</h4>
+          <ul id="transactions-list"></ul>
+        </div>
       </div>
     </div>
-    <div id="analytics-section">
-      <h3 id="analytics-title">Analytics Dashboard</h3>
-      <div class="stats">
-        <div class="stat"><span id="total-clicks-label">Total Clicks:</span> <span id="total-clicks">0</span></div>
-        <div class="stat"><span id="total-buyers-label">Total Buyers:</span> <span id="total-buyers">0</span></div>
-        <div class="stat"><span id="conversion-rate-label">Conversion Rate:</span> <span id="conversion-rate">0%</span></div>
-      </div>
-      <div id="product-performance">
-        <h4 id="product-performance-title">Product Performance</h4>
-        <div id="product-performance-cards"></div>
-      </div>
-      <div id="charts">
-        <canvas id="clicks-chart"></canvas>
-        <canvas id="buyers-chart"></canvas>
+    <div id="settings" class="tab-content">
+      <div id="settings-section">
+        <h3>Settings</h3>
+        <!-- Add settings options here, e.g., language selector -->
+        <p>Language: ${userData.language || 'English'}</p>
+        <!-- More settings can be added -->
       </div>
     </div>
     <button id="close-marketer-modal">Close</button>
