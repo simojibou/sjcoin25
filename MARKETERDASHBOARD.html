@@ -35,6 +35,8 @@
       const productSelect = document.getElementById("product-select");
       const generateLinkBtn = document.getElementById("generate-link-btn");
       const userProfile = document.getElementById("user-profile");
+      const currentCommissions = document.getElementById("current-commissions");
+      const progressBar = document.getElementById("progress-bar");
       
       let products = [];
       let userData = { language: 'English' };
@@ -51,7 +53,16 @@
           clicks: 'Clicks',
           buyers: 'Buyers',
           profile: 'User Profile',
-          email: 'Email'
+          email: 'Email',
+          goalTitle: 'Your Goal: 1,000,000 DH',
+          currentCommissions: 'Current Commissions',
+          tipsTitle: 'Tips to Reach 1M DH',
+          tip1: 'Promote products you love and use.',
+          tip2: 'Build an email list and offer incentives.',
+          tip3: 'Create high-quality content to drive traffic.',
+          tip4: 'Focus on high-commission products.',
+          tip5: 'Run giveaways to boost engagement.',
+          noLinks: 'No affiliate links available.'
         },
         French: {
           affiliateTitle: 'Tableau de bord affilié',
@@ -64,7 +75,16 @@
           clicks: 'Clics',
           buyers: 'Acheteurs',
           profile: 'Profil utilisateur',
-          email: 'Email'
+          email: 'Email',
+          goalTitle: 'Votre objectif : 1 000 000 DH',
+          currentCommissions: 'Commissions actuelles',
+          tipsTitle: 'Conseils pour atteindre 1M DH',
+          tip1: 'Promouvoir les produits que vous aimez et utilisez.',
+          tip2: 'Construisez une liste e-mail et offrez des incitations.',
+          tip3: 'Créez du contenu de haute qualité pour générer du trafic.',
+          tip4: 'Concentrez-vous sur les produits à haute commission.',
+          tip5: 'Organisez des concours pour booster l\'engagement.',
+          noLinks: 'Aucun lien affilié disponible.'
         },
         Arabic: {
           affiliateTitle: 'لوحة تحكم التابع',
@@ -77,18 +97,35 @@
           clicks: 'النقرات',
           buyers: 'المشترين',
           profile: 'ملف المستخدم',
-          email: 'البريد الإلكتروني'
+          email: 'البريد الإلكتروني',
+          goalTitle: 'هدفك: 1,000,000 درهم',
+          currentCommissions: 'العمولات الحالية',
+          tipsTitle: 'نصائح للوصول إلى 1 مليون درهم',
+          tip1: 'روج المنتجات التي تحبها وتستخدمها.',
+          tip2: 'بناء قائمة بريد إلكتروني وعرض حوافز.',
+          tip3: 'إنشاء محتوى عالي الجودة لجذب الحركة.',
+          tip4: 'ركز على المنتجات ذات العمولة العالية.',
+          tip5: 'إجراء مسابقات لتعزيز التفاعل.',
+          noLinks: 'لا توجد روابط تابعة متاحة.'
         }
       };
       
       function applyLanguage(lang) {
         const t = translations[lang] || translations.English;
-        document.querySelector('h2').textContent = t.affiliateTitle;
+        document.querySelector('#affiliate-dashboard-title').textContent = t.affiliateTitle;
         productSelect.firstChild.textContent = t.selectProduct;
         generateLinkBtn.textContent = t.generateLink;
         commissionsTotal.textContent = `${t.commissions}: 0 DH`;
         closeMarketerModal.textContent = t.close;
         document.getElementById("profile-title").textContent = t.profile;
+        document.getElementById("goal-title").textContent = t.goalTitle;
+        document.getElementById("current-commissions-label").textContent = `${t.currentCommissions}: `;
+        document.getElementById("tips-title").textContent = t.tipsTitle;
+        document.getElementById("tip1").textContent = t.tip1;
+        document.getElementById("tip2").textContent = t.tip2;
+        document.getElementById("tip3").textContent = t.tip3;
+        document.getElementById("tip4").textContent = t.tip4;
+        document.getElementById("tip5").textContent = t.tip5;
         loadAffiliateDashboard(auth.currentUser?.uid);
       }
       
@@ -200,7 +237,7 @@
           const t = translations[userData.language] || translations.English;
           if (!snapshot.exists()) {
             console.warn("No affiliate links found for user:", uid);
-            affiliateList.innerHTML = `<p>${t.noLinks || 'No affiliate links available.'}</p>`;
+            affiliateList.innerHTML = `<p>${t.noLinks}</p>`;
             return;
           }
           snapshot.forEach((childSnapshot) => {
@@ -238,6 +275,13 @@
           const commissions = data.commissions || 0;
           const t = translations[userData.language] || translations.English;
           commissionsTotal.textContent = `${t.commissions}: ${commissions.toFixed(2)} DH`;
+          if (currentCommissions) {
+            currentCommissions.textContent = `${commissions.toFixed(2)} DH`;
+          }
+          if (progressBar) {
+            const progress = (commissions / 1000000) * 100;
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+          }
         }, (error) => {
           console.error("Failed to load user data:", error);
         });
@@ -270,7 +314,7 @@
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    h2 {
+    h2, h3 {
       font-size: 1.5rem;
       font-weight: 700;
       text-transform: uppercase;
@@ -387,6 +431,57 @@
       border-color: #fff;
       outline: none;
     }
+    #motivational-banner {
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    #motivational-banner img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border: 1px solid #333;
+    }
+    .slogan {
+      font-size: 1.5rem;
+      text-align: center;
+      color: #ffd700;
+      margin: 1rem 0;
+      text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
+    #goal-progress {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 0;
+    }
+    .progress-container {
+      background: #333;
+      border: 1px solid #444;
+      height: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      background: linear-gradient(to right, #4caf50, #8bc34a);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    #tips-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 0;
+    }
+    #tips-section ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+    }
+    #tips-section li {
+      margin-bottom: 0.5rem;
+    }
     @media (max-width: 480px) {
       .modal-content {
         padding: 1.5rem;
@@ -421,9 +516,30 @@
 </head>
 <body>
   <div class="modal-content">
+    <div id="motivational-banner">
+      <img src="https://m.media-amazon.com/images/I/71N1P3OI8kL._UF894,1000_QL80_.jpg" alt="Motivational Banner">
+    </div>
+    <div class="slogan">Become a Millionaire with SJ STORE Affiliates!</div>
     <h2 id="profile-title">User Profile</h2>
     <div id="user-profile"></div>
-    <h2>Affiliate Dashboard</h2>
+    <div id="goal-progress">
+      <h3 id="goal-title">Your Goal: 1,000,000 DH</h3>
+      <p id="current-commissions-label">Current Commissions: <span id="current-commissions">0 DH</span></p>
+      <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+    <div id="tips-section">
+      <h3 id="tips-title">Tips to Reach 1M DH</h3>
+      <ul>
+        <li id="tip1">Promote products you love and use.</li>
+        <li id="tip2">Build an email list and offer incentives.</li>
+        <li id="tip3">Create high-quality content to drive traffic.</li>
+        <li id="tip4">Focus on high-commission products.</li>
+        <li id="tip5">Run giveaways to boost engagement.</li>
+      </ul>
+    </div>
+    <h2 id="affiliate-dashboard-title">Affiliate Dashboard</h2>
     <div id="product-select-form">
       <select id="product-select">
         <option value="" disabled selected>Select a Product</option>
