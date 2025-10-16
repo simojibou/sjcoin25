@@ -6,6 +6,8 @@
   <title>Marketer Dashboard - SJ STORE</title>
   <!-- Google Fonts - Roboto as Helvetica alternative -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Firebase v12.3.0 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
@@ -37,9 +39,20 @@
       const userProfile = document.getElementById("user-profile");
       const currentCommissions = document.getElementById("current-commissions");
       const progressBar = document.getElementById("progress-bar");
+      const currentBalance = document.getElementById("current-balance");
+      const walletAddress = document.getElementById("wallet-address");
+      const withdrawBtn = document.getElementById("withdraw-btn");
+      const transactionsList = document.getElementById("transactions-list");
+      const confirmPopup = document.getElementById("confirm-popup");
+      const confirmOk = document.getElementById("confirm-ok");
+      const totalClicksEl = document.getElementById("total-clicks");
+      const totalBuyersEl = document.getElementById("total-buyers");
+      const conversionRateEl = document.getElementById("conversion-rate");
+      const productPerformance = document.getElementById("product-performance-cards");
       
       let products = [];
       let userData = { language: 'English' };
+      let clicksChart, buyersChart;
       
       const translations = {
         English: {
@@ -62,7 +75,12 @@
           tip3: 'Create high-quality content to drive traffic.',
           tip4: 'Focus on high-commission products.',
           tip5: 'Run giveaways to boost engagement.',
-          noLinks: 'No affiliate links available.'
+          noLinks: 'No affiliate links available.',
+          withdrawTitle: 'Withdraw Earnings',
+          transactionHistory: 'Transaction History',
+          withdraw: 'Withdraw',
+          walletPlaceholder: 'Enter Wallet Address',
+          withdrawalSuccess: 'Withdrawal Successful!'
         },
         French: {
           affiliateTitle: 'Tableau de bord affilié',
@@ -84,7 +102,12 @@
           tip3: 'Créez du contenu de haute qualité pour générer du trafic.',
           tip4: 'Concentrez-vous sur les produits à haute commission.',
           tip5: 'Organisez des concours pour booster l\'engagement.',
-          noLinks: 'Aucun lien affilié disponible.'
+          noLinks: 'Aucun lien affilié disponible.',
+          withdrawTitle: 'Retirer les gains',
+          transactionHistory: 'Historique des transactions',
+          withdraw: 'Retirer',
+          walletPlaceholder: 'Entrer l\'adresse du portefeuille',
+          withdrawalSuccess: 'Retrait réussi !'
         },
         Arabic: {
           affiliateTitle: 'لوحة تحكم التابع',
@@ -106,7 +129,12 @@
           tip3: 'إنشاء محتوى عالي الجودة لجذب الحركة.',
           tip4: 'ركز على المنتجات ذات العمولة العالية.',
           tip5: 'إجراء مسابقات لتعزيز التفاعل.',
-          noLinks: 'لا توجد روابط تابعة متاحة.'
+          noLinks: 'لا توجد روابط تابعة متاحة.',
+          withdrawTitle: 'سحب الأرباح',
+          transactionHistory: 'سجل المعاملات',
+          withdraw: 'سحب',
+          walletPlaceholder: 'أدخل عنوان المحفظة',
+          withdrawalSuccess: 'تم السحب بنجاح!'
         }
       };
       
@@ -126,6 +154,16 @@
         document.getElementById("tip3").textContent = t.tip3;
         document.getElementById("tip4").textContent = t.tip4;
         document.getElementById("tip5").textContent = t.tip5;
+        document.getElementById("withdraw-title").textContent = t.withdrawTitle;
+        document.getElementById("transaction-history-title").textContent = t.transactionHistory;
+        withdrawBtn.textContent = t.withdraw;
+        walletAddress.placeholder = t.walletPlaceholder;
+        document.getElementById("confirm-message").textContent = t.withdrawalSuccess;
+        document.getElementById("analytics-title").textContent = 'Analytics Dashboard';
+        document.getElementById("total-clicks-label").textContent = 'Total Clicks:';
+        document.getElementById("total-buyers-label").textContent = 'Total Buyers:';
+        document.getElementById("conversion-rate-label").textContent = 'Conversion Rate:';
+        document.getElementById("product-performance-title").textContent = 'Product Performance';
         loadAffiliateDashboard(auth.currentUser?.uid);
       }
       
@@ -229,8 +267,51 @@
         });
       });
       
+      withdrawBtn.addEventListener("click", () => {
+        const uid = auth.currentUser.uid;
+        const wallet = walletAddress.value;
+        if (!wallet) {
+          alert("Please enter a wallet address.");
+          return;
+        }
+        const userRef = ref(db, `users/${uid}`);
+        get(userRef).then((snapshot) => {
+          const data = snapshot.val();
+          const commissions = data.commissions || 0;
+          if (commissions <= 0) {
+            alert("No balance to withdraw.");
+            return;
+          }
+          const newTransaction = {
+            amount: commissions,
+            date: Date.now(),
+            wallet: wallet
+          };
+          const transactions = data.transactions || [];
+          transactions.push(newTransaction);
+          update(userRef, {
+            commissions: 0,
+            transactions: transactions
+          }).then(() => {
+            confirmPopup.style.display = 'flex';
+          }).catch(error => {
+            alert(`Failed to withdraw: ${error.message}`);
+          });
+        });
+      });
+      
+      confirmOk.addEventListener("click", () => {
+        confirmPopup.style.display = 'none';
+        loadAffiliateDashboard(auth.currentUser.uid);
+      });
+      
       function loadAffiliateDashboard(uid) {
         affiliateList.innerHTML = "";
+        productPerformance.innerHTML = "";
+        transactionsList.innerHTML = "";
+        let totalClicks = 0;
+        let totalBuyers = 0;
+        let productData = [];
         const affiliateLinksRef = ref(db, "affiliate_links");
         onValue(affiliateLinksRef, (snapshot) => {
           affiliateList.innerHTML = "";
@@ -240,17 +321,27 @@
             affiliateList.innerHTML = `<p>${t.noLinks}</p>`;
             return;
           }
+          let labels = [];
+          let clicksData = [];
+          let buyersData = [];
           snapshot.forEach((childSnapshot) => {
             const data = childSnapshot.val();
             if (data.marketerId === uid) {
               const product = products.find(p => p.id === data.productId);
+              const title = product ? product.title : 'Unknown';
+              totalClicks += data.clicks || 0;
+              totalBuyers += data.buyers || 0;
+              labels.push(title);
+              clicksData.push(data.clicks || 0);
+              buyersData.push(data.buyers || 0);
+              // Affiliate item
               const div = document.createElement("div");
               div.classList.add("affiliate-item");
               const link = `https://simojibou.github.io/sjcoin25/sjstore13.html?ref=${data.code}&pid=${data.productId}`;
               div.innerHTML = `
-                <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${product ? product.title : 'Product'}">
+                <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${title}">
                 <div class="affiliate-details">
-                  <p><strong>${t.product}:</strong> ${product ? product.title : 'Unknown'}</p>
+                  <p><strong>${t.product}:</strong> ${title}</p>
                   <p><strong>Price:</strong> ${product ? product.price : 'N/A'} DH</p>
                   <p><strong>Category:</strong> ${product ? product.category : 'N/A'}</p>
                   <p><strong>${t.clicks}:</strong> ${data.clicks || 0}</p>
@@ -263,6 +354,55 @@
                 navigator.clipboard.writeText(link).then(() => alert("Link copied!"));
               });
               affiliateList.appendChild(div);
+              // Product performance card
+              const card = document.createElement("div");
+              card.classList.add("performance-card");
+              card.innerHTML = `
+                <h5>${title}</h5>
+                <p>Clicks: ${data.clicks || 0}</p>
+                <p>Buyers: ${data.buyers || 0}</p>
+                <p>Earnings: ${(data.buyers || 0) * (product ? product.price * 0.1 : 0).toFixed(2)} DH</p>
+              `;
+              productPerformance.appendChild(card);
+            }
+          });
+          totalClicksEl.textContent = totalClicks;
+          totalBuyersEl.textContent = totalBuyers;
+          conversionRateEl.textContent = totalClicks > 0 ? (totalBuyers / totalClicks * 100).toFixed(2) + '%' : '0%';
+          // Update charts
+          if (clicksChart) clicksChart.destroy();
+          clicksChart = new Chart(document.getElementById('clicks-chart'), {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Clicks',
+                data: clicksData,
+                backgroundColor: '#007bff'
+              }]
+            },
+            options: {
+              scales: {
+                y: { beginAtZero: true }
+              }
+            }
+          });
+          if (buyersChart) buyersChart.destroy();
+          buyersChart = new Chart(document.getElementById('buyers-chart'), {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Buyers',
+                data: buyersData,
+                borderColor: '#007bff',
+                tension: 0.1
+              }]
+            },
+            options: {
+              scales: {
+                y: { beginAtZero: true }
+              }
             }
           });
         }, (error) => {
@@ -282,6 +422,16 @@
             const progress = (commissions / 1000000) * 100;
             progressBar.style.width = `${Math.min(progress, 100)}%`;
           }
+          if (currentBalance) {
+            currentBalance.textContent = `${commissions.toFixed(2)} DH`;
+          }
+          // Transaction history
+          const transactions = data.transactions || [];
+          transactions.forEach(tx => {
+            const li = document.createElement("li");
+            li.textContent = `Withdrawn ${tx.amount.toFixed(2)} DH to ${tx.wallet} on ${new Date(tx.date).toLocaleString()}`;
+            transactionsList.appendChild(li);
+          });
         }, (error) => {
           console.error("Failed to load user data:", error);
         });
@@ -314,12 +464,17 @@
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
-    h2, h3 {
-      font-size: 1.5rem;
+    h2, h3, h4, h5 {
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+    }
+    h3 {
+      font-size: 1.25rem;
     }
     #user-profile {
       margin-bottom: 1.5rem;
@@ -376,7 +531,7 @@
       text-transform: uppercase;
       letter-spacing: 0.1em;
     }
-    .copy-link-btn, #generate-link-btn {
+    .copy-link-btn, #generate-link-btn, #withdraw-btn {
       background: #fff;
       color: #000;
       border: none;
@@ -387,7 +542,7 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    .copy-link-btn:hover, #generate-link-btn:hover {
+    .copy-link-btn:hover, #generate-link-btn:hover, #withdraw-btn:hover {
       background: #e0e0e0;
     }
     #commissions-total {
@@ -482,6 +637,99 @@
     #tips-section li {
       margin-bottom: 0.5rem;
     }
+    #withdraw-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #1a1a1a;
+      border: 1px solid #ffd700;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+    }
+    #withdraw-btn {
+      background: #ffd700;
+      color: #000;
+      animation: neon-glow 1.5s ease-in-out infinite alternate;
+    }
+    #wallet-address {
+      padding: 0.75rem;
+      border: 1px solid #ffd700;
+      background: #000;
+      color: #fff;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+    #transaction-history ul {
+      list-style: none;
+    }
+    #transaction-history li {
+      background: #222;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #333;
+    }
+    #confirm-popup {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .popup-content {
+      background: #111;
+      padding: 2rem;
+      border: 1px solid #ffd700;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    @keyframes neon-glow {
+      from {
+        box-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700;
+      }
+      to {
+        box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+      }
+    }
+    #analytics-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #000;
+      border: 1px solid #333;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .stat {
+      background: #111;
+      padding: 1rem;
+      flex: 1;
+      margin: 0 0.5rem;
+      text-align: center;
+      transition: transform 0.3s;
+      color: #007bff;
+      font-weight: bold;
+    }
+    .stat:hover {
+      transform: scale(1.05);
+    }
+    .performance-card {
+      background: #111;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid #333;
+    }
+    #charts {
+      display: flex;
+      gap: 1rem;
+    }
+    #charts canvas {
+      flex: 1;
+      height: 200px;
+    }
     @media (max-width: 480px) {
       .modal-content {
         padding: 1.5rem;
@@ -510,6 +758,15 @@
       }
       .profile-pic {
         margin-bottom: 0.5rem;
+      }
+      .stats {
+        flex-direction: column;
+      }
+      .stat {
+        margin: 0.5rem 0;
+      }
+      #charts {
+        flex-direction: column;
       }
     }
   </style>
@@ -548,7 +805,39 @@
     </div>
     <div id="affiliate-list"></div>
     <p id="commissions-total">Total Commissions: 0 DH</p>
+    <div id="withdraw-section">
+      <h3 id="withdraw-title">Withdraw Earnings</h3>
+      <p>Current Balance: <span id="current-balance">0 DH</span></p>
+      <input id="wallet-address" placeholder="Enter Wallet Address">
+      <button id="withdraw-btn">Withdraw</button>
+      <div id="transaction-history">
+        <h4 id="transaction-history-title">Transaction History</h4>
+        <ul id="transactions-list"></ul>
+      </div>
+    </div>
+    <div id="analytics-section">
+      <h3 id="analytics-title">Analytics Dashboard</h3>
+      <div class="stats">
+        <div class="stat"><span id="total-clicks-label">Total Clicks:</span> <span id="total-clicks">0</span></div>
+        <div class="stat"><span id="total-buyers-label">Total Buyers:</span> <span id="total-buyers">0</span></div>
+        <div class="stat"><span id="conversion-rate-label">Conversion Rate:</span> <span id="conversion-rate">0%</span></div>
+      </div>
+      <div id="product-performance">
+        <h4 id="product-performance-title">Product Performance</h4>
+        <div id="product-performance-cards"></div>
+      </div>
+      <div id="charts">
+        <canvas id="clicks-chart"></canvas>
+        <canvas id="buyers-chart"></canvas>
+      </div>
+    </div>
     <button id="close-marketer-modal">Close</button>
+  </div>
+  <div id="confirm-popup">
+    <div class="popup-content">
+      <p id="confirm-message">Withdrawal Successful!</p>
+      <button id="confirm-ok">OK</button>
+    </div>
   </div>
 </body>
 </html>
