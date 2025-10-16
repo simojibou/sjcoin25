@@ -150,7 +150,7 @@
 
       async function loadProduct() {
         const urlParams = new URLSearchParams(window.location.search);
-        const pid = urlParams.get('id'); // Consistent with SJSTORE.html
+        const pid = urlParams.get('id');
         const refCode = urlParams.get('ref');
         const t = translations[userData.language] || translations.English;
 
@@ -162,7 +162,6 @@
 
         console.log('Loading product with ID:', pid);
 
-        // Track affiliate link click if refCode exists
         if (refCode) {
           const affiliateLinksQuery = query(
             ref(db, "affiliate_links"),
@@ -242,7 +241,7 @@
       }
 
       closeProductDetail.addEventListener("click", () => {
-        window.location.href = "SJSTORE.html";
+        window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html";
       });
 
       function generateUniqueCode() {
@@ -273,7 +272,6 @@
         });
       }
 
-      // Fetch exchange rates and load product
       fetchExchangeRates().then(() => {
         console.log('Exchange rates loaded, proceeding to load product');
         loadProduct();
