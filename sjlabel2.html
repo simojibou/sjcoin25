@@ -675,13 +675,7 @@
                     }
                     carouselItem.innerHTML = `
                         ${adminActions}
-                        <div class="d-flex h-100 align-items-center justify-content-center">
-                            <div class="carousel-caption">
-                                <h1>${slide.title || ''}</h1>
-                                <p>${slide.description || ''}</p>
-                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
-                            </div>
-                        </div>
+                     
                     `;
                     headerCarousel.appendChild(carouselItem);
                     active = false;
