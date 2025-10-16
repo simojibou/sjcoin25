@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Product Page - SJ STORE</title>
-  <!-- Google Fonts - Roboto as Helvetica alternative -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Google Fonts - Roboto and Poppins for modern typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <!-- Firebase v12.3.0 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
@@ -37,8 +39,7 @@
       let userData = { currency: 'DH', language: 'English' };
       let exchangeRates = { DH: 1 };
 
-      // Display loading state
-      productDetailContent.innerHTML = `<p class="loading">Loading product...</p>`;
+      productDetailContent.innerHTML = `<div class="loading"><i class="fas fa-spinner fa-spin"></i> ${translations.English.loading}</div>`;
 
       async function fetchExchangeRates() {
         try {
@@ -82,10 +83,10 @@
       const translations = {
         English: {
           orderNow: 'Order Now',
-          contactWhatsApp: '📞 Contact via WhatsApp',
-          addToCart: 'Add to Cart',
-          generateLink: 'Generate Affiliate Link',
-          close: 'Close',
+          contactWhatsApp: '<i class="fab fa-whatsapp"></i> Contact via WhatsApp',
+          addToCart: '<i class="fas fa-cart-plus"></i> Add to Cart',
+          generateLink: '<i class="fas fa-link"></i> Generate Affiliate Link',
+          close: '<i class="fas fa-arrow-left"></i> Back to Store',
           noProduct: 'Product not found.',
           productDetails: 'Product Details',
           loading: 'Loading product...',
@@ -93,10 +94,10 @@
         },
         French: {
           orderNow: 'Commander maintenant',
-          contactWhatsApp: '📞 Contacter via WhatsApp',
-          addToCart: 'Ajouter au panier',
-          generateLink: 'Générer un lien affilié',
-          close: 'Fermer',
+          contactWhatsApp: '<i class="fab fa-whatsapp"></i> Contacter via WhatsApp',
+          addToCart: '<i class="fas fa-cart-plus"></i> Ajouter au panier',
+          generateLink: '<i class="fas fa-link"></i> Générer un lien affilié',
+          close: '<i class="fas fa-arrow-left"></i> Retour au magasin',
           noProduct: 'Produit non trouvé.',
           productDetails: 'Détails du produit',
           loading: 'Chargement du produit...',
@@ -104,10 +105,10 @@
         },
         Arabic: {
           orderNow: 'اطلب الآن',
-          contactWhatsApp: '📞 الاتصال عبر واتساب',
-          addToCart: 'أضف إلى السلة',
-          generateLink: 'إنشاء رابط تابع',
-          close: 'إغلاق',
+          contactWhatsApp: '<i class="fab fa-whatsapp"></i> الاتصال عبر واتساب',
+          addToCart: '<i class="fas fa-cart-plus"></i> أضف إلى السلة',
+          generateLink: '<i class="fas fa-link"></i> إنشاء رابط تابع',
+          close: '<i class="fas fa-arrow-right"></i> العودة إلى المتجر',
           noProduct: 'لم يتم العثور على المنتج.',
           productDetails: 'تفاصيل المنتج',
           loading: 'جاري تحميل المنتج...',
@@ -117,12 +118,14 @@
 
       function applyLanguage(lang) {
         const t = translations[lang] || translations.English;
-        document.querySelector('.modal-content h2').textContent = t.productDetails;
-        closeProductDetail.textContent = t.close;
+        document.querySelector('.modal-content h2').innerHTML = t.productDetails;
+        closeProductDetail.innerHTML = t.close;
         if (lang === 'Arabic') {
           document.body.dir = 'rtl';
+          document.querySelector('.modal-content').classList.add('rtl');
         } else {
           document.body.dir = 'ltr';
+          document.querySelector('.modal-content').classList.remove('rtl');
         }
       }
 
@@ -195,17 +198,19 @@
             console.log('Product data fetched:', product);
             const convertedPrice = getConvertedPrice(product.price, userData.currency);
             const symbol = getCurrencySymbol(userData.currency);
-            let orderButton = product.orderUrl ? `<button class="order-btn">${t.orderNow}</button>` : '';
+            let orderButton = product.orderUrl ? `<button class="order-btn" aria-label="${t.orderNow}">${t.orderNow}</button>` : '';
             productDetailContent.innerHTML = `
               <div class="product-image-wrapper">
-                <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
+                <img src="${product.photo || 'https://via.placeholder.com/400x400/111/fff?text=No+Image'}" alt="${product.title || 'No title'}" loading="lazy">
               </div>
               <h3>${product.title || 'Untitled'}</h3>
               <p class="price">${convertedPrice} ${symbol}</p>
-              <button class="whatsapp-btn">${t.contactWhatsApp}</button>
-              ${orderButton}
-              <button class="add-to-cart-btn">${t.addToCart}</button>
-              <button class="generate-affiliate-btn">${t.generateLink}</button>
+              <div class="button-group">
+                <button class="whatsapp-btn" aria-label="${t.contactWhatsApp.replace(/<[^>]+>/g, '')}">${t.contactWhatsApp}</button>
+                ${orderButton}
+                <button class="add-to-cart-btn" aria-label="${t.addToCart.replace(/<[^>]+>/g, '')}">${t.addToCart}</button>
+                <button class="generate-affiliate-btn" aria-label="${t.generateLink.replace(/<[^>]+>/g, '')}">${t.generateLink}</button>
+              </div>
             `;
             productDetailContent.querySelector(".whatsapp-btn").addEventListener("click", () => {
               const phone = product.des ? product.des.replace(/\D/g, "") : "";
@@ -284,153 +289,260 @@
       padding: 0;
       box-sizing: border-box;
     }
+
     body {
-      font-family: 'Roboto', sans-serif;
-      background: #000;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a, #000);
       color: #fff;
       line-height: 1.6;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
+      padding: 1rem;
     }
+
     .modal-content {
-      background: #111;
-      margin: 5% auto;
-      padding: 2rem;
-      border-radius: 0;
-      width: 90%;
-      max-width: 600px;
-      border: 1px solid #333;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      background: #222;
+      margin: 2rem auto;
+      padding: 2.5rem;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      transition: transform 0.3s ease;
+      position: relative;
     }
+
+    .modal-content.rtl {
+      text-align: right;
+    }
+
     .modal-content h2 {
-      font-size: 1.5rem;
+      font-family: 'Roboto', sans-serif;
+      font-size: 2rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.1em;
       margin-bottom: 1.5rem;
+      color: #fff;
+      text-align: center;
     }
+
     .product-image-wrapper {
       width: 100%;
-      height: 280px;
+      max-height: 400px;
       overflow: hidden;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 8px;
+      background: #111;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
+
     img {
       width: 100%;
-      height: 100%;
+      height: auto;
+      max-height: 400px;
       object-fit: contain;
       object-position: center;
       display: block;
+      transition: transform 0.3s ease;
     }
+
+    img:hover {
+      transform: scale(1.05);
+    }
+
     h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-    }
-    .price {
+      font-family: 'Roboto', sans-serif;
       font-size: 1.5rem;
       font-weight: 700;
-      color: #fff;
       margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #fff;
+      text-align: center;
     }
+
+    .price {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 500;
+      color: #00ff88;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
     .whatsapp-btn, .order-btn, .add-to-cart-btn, .generate-affiliate-btn {
       width: 100%;
-      padding: 0.75rem;
+      padding: 1rem;
       border: none;
-      border-radius: 0;
-      font-size: 0.875rem;
-      font-weight: 700;
+      border-radius: 8px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.3s;
-      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
+
     .whatsapp-btn {
       background: #25D366;
       color: #fff;
     }
+
     .whatsapp-btn:hover {
       background: #1ebe56;
+      transform: translateY(-2px);
     }
+
     .order-btn {
       background: #007BFF;
       color: #fff;
     }
+
     .order-btn:hover {
       background: #0056b3;
+      transform: translateY(-2px);
     }
+
     .add-to-cart-btn {
       background: #fff;
       color: #000;
     }
+
     .add-to-cart-btn:hover {
       background: #e0e0e0;
+      transform: translateY(-2px);
     }
+
     .generate-affiliate-btn {
       background: #ffc107;
       color: #000;
     }
+
     .generate-affiliate-btn:hover {
       background: #e0a800;
+      transform: translateY(-2px);
     }
+
     #close-product-detail {
       background: transparent;
       color: #fff;
-      border: 1px solid #fff;
-      padding: 0.75rem;
+      border: 2px solid #fff;
+      padding: 1rem;
       width: 100%;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      cursor: pointer;
-      margin-top: 1rem;
-      transition: border-color 0.3s;
-    }
-    #close-product-detail:hover {
-      border-color: #ccc;
-    }
-    .loading, .error {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
       font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    #close-product-detail:hover {
+      background: #fff;
+      color: #000;
+      transform: translateY(-2px);
+    }
+
+    .loading, .error {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.2rem;
       text-align: center;
       color: #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
     }
+
+    .loading i {
+      font-size: 1.5rem;
+    }
+
     .error {
       color: #ff4444;
+      background: rgba(255, 68, 68, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
     }
-    @media (max-width: 480px) {
+
+    @media (max-width: 600px) {
       .modal-content {
         padding: 1.5rem;
+        margin: 1rem;
       }
+
+      .modal-content h2 {
+        font-size: 1.5rem;
+      }
+
       .product-image-wrapper {
-        height: 200px;
+        max-height: 250px;
       }
+
+      h3 {
+        font-size: 1.2rem;
+      }
+
+      .price {
+        font-size: 1.5rem;
+      }
+
+      .whatsapp-btn, .order-btn, .add-to-cart-btn, .generate-affiliate-btn, #close-product-detail {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .product-image-wrapper {
+        max-height: 200px;
+      }
+
       h3 {
         font-size: 1rem;
       }
+
       .price {
         font-size: 1.25rem;
       }
+
       .whatsapp-btn, .order-btn, .add-to-cart-btn, .generate-affiliate-btn, #close-product-detail {
-        font-size: 0.75rem;
-        padding: 0.5rem;
+        font-size: 0.8rem;
+        padding: 0.6rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="modal-content">
-    <h2>Product Details</h2>
+  <div class="modal-content" role="dialog" aria-labelledby="product-details-title">
+    <h2 id="product-details-title">Product Details</h2>
     <div id="product-detail-content"></div>
-    <button id="close-product-detail">Close</button>
+    <button id="close-product-detail" aria-label="Back to store">Close</button>
   </div>
 </body>
 </html>
