@@ -11,6 +11,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getDatabase, ref, onValue, set, push, get, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -21,18 +22,23 @@
       appId: "1:426335553508:web:248f76772f6f78419ca9f1",
       measurementId: "G-YQTVZQWXGB"
     };
+    
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
+    
     document.addEventListener("DOMContentLoaded", () => {
       const affiliateList = document.getElementById("affiliate-list");
       const commissionsTotal = document.getElementById("commissions-total");
       const closeMarketerModal = document.getElementById("close-marketer-modal");
       const productSelect = document.getElementById("product-select");
       const generateLinkBtn = document.getElementById("generate-link-btn");
+      const userProfile = document.getElementById("user-profile");
+      
       let products = [];
       let userData = { language: 'English' };
+      
       const translations = {
         English: {
           affiliateTitle: 'Affiliate Dashboard',
@@ -43,7 +49,9 @@
           close: 'Close',
           product: 'Product',
           clicks: 'Clicks',
-          buyers: 'Buyers'
+          buyers: 'Buyers',
+          profile: 'User Profile',
+          email: 'Email'
         },
         French: {
           affiliateTitle: 'Tableau de bord affilié',
@@ -54,7 +62,9 @@
           close: 'Fermer',
           product: 'Produit',
           clicks: 'Clics',
-          buyers: 'Acheteurs'
+          buyers: 'Acheteurs',
+          profile: 'Profil utilisateur',
+          email: 'Email'
         },
         Arabic: {
           affiliateTitle: 'لوحة تحكم التابع',
@@ -65,9 +75,12 @@
           close: 'إغلاق',
           product: 'المنتج',
           clicks: 'النقرات',
-          buyers: 'المشترين'
+          buyers: 'المشترين',
+          profile: 'ملف المستخدم',
+          email: 'البريد الإلكتروني'
         }
       };
+      
       function applyLanguage(lang) {
         const t = translations[lang] || translations.English;
         document.querySelector('h2').textContent = t.affiliateTitle;
@@ -75,8 +88,10 @@
         generateLinkBtn.textContent = t.generateLink;
         commissionsTotal.textContent = `${t.commissions}: 0 DH`;
         closeMarketerModal.textContent = t.close;
+        document.getElementById("profile-title").textContent = t.profile;
         loadAffiliateDashboard(auth.currentUser?.uid);
       }
+      
       const productRef = ref(db, "Product");
       onValue(productRef, (snapshot) => {
         products = [];
@@ -93,13 +108,16 @@
             userId: data.id,
             category: data.category || "Uncategorized"
           };
-          products.push(product);
-          const option = document.createElement("option");
-          option.value = product.id;
-          option.textContent = product.title;
-          productSelect.appendChild(option);
+          if (!products.some(p => p.id === product.id)) {
+            products.push(product);
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = product.title;
+            productSelect.appendChild(option);
+          }
         });
       });
+      
       onAuthStateChanged(auth, (user) => {
         if (!user) {
           alert("Please log in to access the dashboard.");
@@ -109,16 +127,30 @@
           get(userRef).then((snapshot) => {
             userData = snapshot.val() || { language: 'English' };
             applyLanguage(userData.language);
+            // Update user profile section
+            const t = translations[userData.language] || translations.English;
+            userProfile.innerHTML = `
+              <div class="user-profile-content">
+                <img src="${user.photoURL || 'https://via.placeholder.com/50'}" alt="Profile Picture" class="profile-pic">
+                <div>
+                  <p><strong>${t.profile}:</strong> ${user.displayName || 'Anonymous'}</p>
+                  <p><strong>${t.email}:</strong> ${user.email || 'N/A'}</p>
+                </div>
+              </div>
+            `;
             loadAffiliateDashboard(user.uid);
           });
         }
       });
+      
       closeMarketerModal.addEventListener("click", () => {
         window.location.href = "SJSTORE.html";
       });
+      
       function generateUniqueCode() {
         return Math.random().toString(36).substr(2, 9);
       }
+      
       generateLinkBtn.addEventListener("click", () => {
         const productId = productSelect.value;
         if (!productId) {
@@ -129,8 +161,13 @@
           alert("Please log in to generate a link.");
           return;
         }
+        const product = products.find(p => p.id === productId);
+        if (!product) {
+          alert("Selected product not found.");
+          return;
+        }
         const code = generateUniqueCode();
-        const link = `${window.location.origin}/SJSTORE.html?ref=${code}&pid=${productId}`;
+        const link = `${product.orderUrl}?ref=${code}&pid=${productId}`;
         const affiliateRef = push(ref(db, "affiliate_links"));
         set(affiliateRef, {
           code,
@@ -146,6 +183,7 @@
           alert(`Failed to generate affiliate link: ${error.message}`);
         });
       });
+      
       function loadAffiliateDashboard(uid) {
         affiliateList.innerHTML = "";
         const affiliateLinksRef = ref(db, "affiliate_links");
@@ -158,7 +196,7 @@
               const product = products.find(p => p.id === data.productId);
               const div = document.createElement("div");
               div.classList.add("affiliate-item");
-              const link = `${window.location.origin}/SJSTORE.html?ref=${data.code}&pid=${data.productId}`;
+              const link = `${product ? product.orderUrl : window.location.origin + '/SJSTORE.html'}?ref=${data.code}&pid=${data.productId}`;
               div.innerHTML = `
                 <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${product ? product.title : 'Product'}">
                 <div class="affiliate-details">
@@ -220,6 +258,24 @@
       text-transform: uppercase;
       letter-spacing: 0.18em;
       margin-bottom: 1.5rem;
+    }
+    #user-profile {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 0;
+    }
+    .user-profile-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .profile-pic {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
     }
     #affiliate-list {
       display: flex;
@@ -335,11 +391,20 @@
       #generate-link-btn {
         width: 100%;
       }
+      .user-profile-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .profile-pic {
+        margin-bottom: 0.5rem;
+      }
     }
   </style>
 </head>
 <body>
   <div class="modal-content">
+    <h2 id="profile-title">User Profile</h2>
+    <div id="user-profile"></div>
     <h2>Affiliate Dashboard</h2>
     <div id="product-select-form">
       <select id="product-select">
