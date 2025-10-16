@@ -167,7 +167,8 @@
           return;
         }
         const code = generateUniqueCode();
-        const link = `${product.orderUrl}?ref=${code}&pid=${productId}`;
+        const baseUrl = "https://simojibou.github.io/sjcoin25/sjstore13.html";
+        const link = `${baseUrl}?ref=${code}&pid=${productId}`;
         const affiliateRef = push(ref(db, "affiliate_links"));
         set(affiliateRef, {
           code,
@@ -196,7 +197,7 @@
               const product = products.find(p => p.id === data.productId);
               const div = document.createElement("div");
               div.classList.add("affiliate-item");
-              const link = `${product ? product.orderUrl : window.location.origin + '/SJSTORE.html'}?ref=${data.code}&pid=${data.productId}`;
+              const link = `https://simojibou.github.io/sjcoin25/sjstore13.html?ref=${data.code}&pid=${data.productId}`;
               div.innerHTML = `
                 <img src="${product ? product.photo : 'https://via.placeholder.com/80'}" alt="${product ? product.title : 'Product'}">
                 <div class="affiliate-details">
