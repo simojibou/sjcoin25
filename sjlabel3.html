@@ -68,6 +68,19 @@
             height: 300px;
             margin: var(--space-2) auto;
         }
+        .progress-bar-container {
+            margin: var(--space-2) 0;
+        }
+        .progress {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: var(--color-red);
+            transition: width 0.5s ease;
+        }
 
         /* Top social bar */
         .top-social-bar {
@@ -597,6 +610,9 @@
             .chart-container {
                 height: 250px;
             }
+            .progress {
+                height: 15px;
+            }
         }
 
         @media (max-width: 576px) {
@@ -623,13 +639,16 @@
             .chart-container {
                 height: 200px;
             }
+            .progress {
+                height: 12px;
+            }
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where, setDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         // Firebase config
@@ -704,6 +723,19 @@
             return params.get(name);
         }
 
+        // Log Artist Page View
+        async function logArtistView(artistId) {
+            try {
+                const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
+                await setDoc(statsRef, {
+                    views: increment(1),
+                    lastUpdated: serverTimestamp()
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error logging view:', error);
+            }
+        }
+
         // Login with Google
         loginBtn.addEventListener('click', () => {
             signInWithPopup(auth, provider).catch(error => console.error(error));
@@ -715,7 +747,7 @@
         });
 
         // Auth State Listener
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(auth, async user => {
             currentUser = user;
             if (user) {
                 loginBtn.classList.add('d-none');
@@ -728,14 +760,13 @@
                     artistManagementSection.classList.remove('d-none');
                     loadManagers();
                     loadSubmissions();
-                    loadAnalytics(); // Load analytics for admin
+                    loadAdminAnalytics();
                 } else {
                     const q = query(collection(db, 'managers'), where('email', '==', user.email));
-                    getDocs(q).then(snap => {
-                        if (!snap.empty) {
-                            artistManagementSection.classList.remove('d-none');
-                        }
-                    }).catch(err => console.error(err));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        artistManagementSection.classList.remove('d-none');
+                    }
                 }
             } else {
                 loginBtn.classList.remove('d-none');
@@ -747,6 +778,7 @@
             }
             const artistId = getQueryParam('artist');
             if (artistId) {
+                await logArtistView(artistId);
                 loadSingleArtist(artistId);
             } else {
                 loadArtists();
@@ -754,8 +786,8 @@
             }
         });
 
-        // Load Analytics (Admin Only)
-        async function loadAnalytics() {
+        // Load Admin Analytics (Updated for Traffic and Earnings)
+        async function loadAdminAnalytics() {
             const analyticsSection = document.getElementById('analytics-section');
             if (!analyticsSection) return;
 
@@ -766,55 +798,85 @@
                 const artistCount = artistsSnap.size;
                 const submissionCount = submissionsSnap.size;
 
-                // Fetch submission data for chart
-                const submissionsQuery = query(collection(db, 'submissions'), orderBy('timestamp', 'asc'));
-                const submissions = await getDocs(submissionsQuery);
-                const submissionData = {};
-                submissions.forEach(doc => {
-                    const submission = doc.data();
-                    const date = submission.timestamp ? new Date(submission.timestamp.toDate()).toLocaleDateString() : 'Unknown';
-                    submissionData[date] = (submissionData[date] || 0) + 1;
-                });
+                // Fetch traffic and earnings data
+                let totalViews = 0;
+                let totalEarnings = 0;
+                const trafficData = [];
+                for (const doc of artistsSnap.docs) {
+                    const artistId = doc.id;
+                    const artist = doc.data();
+                    const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
+                    const statsSnap = await getDoc(statsRef);
+                    const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
+                    totalViews += stats.views || 0;
+                    totalEarnings += stats.earnings || 0;
+                    trafficData.push({
+                        name: artist.name,
+                        views: stats.views || 0,
+                        earnings: stats.earnings || 0
+                    });
+                }
 
                 // Prepare chart data
-                const labels = Object.keys(submissionData);
-                const data = Object.values(submissionData);
+                const labels = trafficData.map(item => item.name);
+                const views = trafficData.map(item => item.views);
+                const earnings = trafficData.map(item => item.earnings);
 
                 analyticsSection.innerHTML = `
-                    <h3 class="text-center mb-4"><i class="bi bi-graph-up icon"></i>Analytics Dashboard</h3>
+                    <h3 class="text-center mb-4"><i class="bi bi-graph-up icon"></i>Admin Analytics Dashboard</h3>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="analytics-card glass-effect">
                                 <h4>Total Artists</h4>
                                 <p>${artistCount}</p>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="analytics-card glass-effect">
                                 <h4>Total Submissions</h4>
                                 <p>${submissionCount}</p>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="analytics-card glass-effect">
+                                <h4>Total Views</h4>
+                                <p>${totalViews}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="analytics-card glass-effect">
+                                <h4>Total Earnings</h4>
+                                <p>$${totalEarnings.toFixed(2)}</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="chart-container glass-effect">
-                        <canvas id="submissionsChart"></canvas>
+                        <canvas id="trafficChart"></canvas>
                     </div>
                 `;
 
-                // Initialize Chart.js
-                const ctx = document.getElementById('submissionsChart').getContext('2d');
+                // Initialize Chart.js for traffic
+                const ctx = document.getElementById('trafficChart').getContext('2d');
                 new Chart(ctx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
                         labels: labels,
-                        datasets: [{
-                            label: 'Submissions Over Time',
-                            data: data,
-                            borderColor: 'rgba(255, 0, 0, 0.8)',
-                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                            fill: true,
-                            tension: 0.4
-                        }]
+                        datasets: [
+                            {
+                                label: 'Views',
+                                data: views,
+                                backgroundColor: 'rgba(255, 0, 0, 0.5)',
+                                borderColor: 'rgba(255, 0, 0, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Earnings ($)',
+                                data: earnings,
+                                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                                borderColor: 'rgba(255, 255, 255, 1)',
+                                borderWidth: 1
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
@@ -824,12 +886,11 @@
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Number of Submissions',
+                                    text: 'Value',
                                     color: 'rgba(255, 255, 255, 0.9)'
                                 },
                                 ticks: {
-                                    color: 'rgba(255, 255, 255, 0.9)',
-                                    stepSize: 1
+                                    color: 'rgba(255, 255, 255, 0.9)'
                                 },
                                 grid: {
                                     color: 'rgba(255, 255, 255, 0.1)'
@@ -838,7 +899,7 @@
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Date',
+                                    text: 'Artists',
                                     color: 'rgba(255, 255, 255, 0.9)'
                                 },
                                 ticks: {
@@ -866,7 +927,7 @@
                     });
                 }, 100);
             } catch (error) {
-                console.error('Analytics load error:', error);
+                console.error('Admin analytics load error:', error);
                 analyticsSection.innerHTML = '<p class="text-center text-muted">Error loading analytics.</p>';
             }
         }
@@ -993,20 +1054,40 @@
         // Load Single Artist
         async function loadSingleArtist(id) {
             const artistRef = doc(db, 'artists', id);
-            const docSnap = await getDoc(artistRef);
+            const statsRef = doc(db, `artists/${id}/stats/traffic`);
+            const [docSnap, statsSnap] = await Promise.all([getDoc(artistRef), getDoc(statsRef)]);
             if (docSnap.exists()) {
                 const artist = docSnap.data();
+                const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
                 artistsList.innerHTML = '';
                 let adminActions = '';
+                let dashboardSection = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
                         <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
                             <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                }
+                if (currentUser && (currentUser.email === artist.email || currentUser.email === ADMIN_EMAIL)) {
+                    const maxViews = 10000; // Arbitrary max for progress bar
+                    const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
+                    dashboardSection = `
+                        <div class="analytics-card glass-effect">
+                            <h4>Artist Dashboard</h4>
+                            <p>Total Views: ${stats.views}</p>
+                            <p>Estimated Earnings: $${stats.earnings.toFixed(2)}</p>
+                            <div class="progress-bar-container">
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: ${progressPercentage}%;" aria-valuenow="${progressPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small>Traffic Progress (Up to ${maxViews} views)</small>
+                            </div>
                         </div>
                     `;
                 }
@@ -1026,6 +1107,7 @@
                         <div id="ad-container"></div>
                     </div>
                     <div class="container">
+                        ${dashboardSection}
                         <div class="artist-bio glass-effect stagger-item">
                             <h3>Biography</h3>
                             <p>${artist.description || 'Emerging talent in the music scene.'}</p>
@@ -1120,7 +1202,7 @@
 
         // Global functions
         window.editArtist = function(artistId) {
-            editingArtistId = artifact_id;
+            editingArtistId = artistId;
             const artistRef = doc(db, 'artists', artistId);
             getDoc(artistRef).then(docSnap => {
                 if (docSnap.exists()) {
@@ -1140,7 +1222,7 @@
                 deleteDoc(artistRef).then(() => {
                     alert('Artist deleted!');
                     loadArtists();
-                    loadAnalytics(); // Refresh analytics
+                    loadAdminAnalytics();
                 }).catch(error => console.error(error));
             }
         };
@@ -1185,8 +1267,9 @@
             const instagram = document.getElementById('artist-instagram').value;
             const spotify = document.getElementById('artist-spotify').value;
             const imageFile = document.getElementById('artist-image').files[0];
+            const email = document.getElementById('artist-email').value;
 
-            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
+            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
 
             try {
                 if (imageFile) {
@@ -1200,11 +1283,17 @@
                     const url = await getDownloadURL(snapshot.ref);
                     artistData.imageUrl = url;
                 }
-                await addDoc(collection(db, 'artists'), artistData);
+                const docRef = await addDoc(collection(db, 'artists'), artistData);
+                // Initialize stats document
+                await setDoc(doc(db, `artists/${docRef.id}/stats/traffic`), {
+                    views: 0,
+                    earnings: 0,
+                    lastUpdated: serverTimestamp()
+                });
                 alert('Artist added!');
                 addArtistForm.reset();
                 loadArtists();
-                loadAnalytics(); // Refresh analytics
+                loadAdminAnalytics();
             } catch (error) {
                 console.error(error);
                 alert('Error adding artist: ' + (error.message || error));
@@ -1218,10 +1307,11 @@
             const description = document.getElementById('edit-artist-description').value;
             const instagram = document.getElementById('edit-artist-instagram').value;
             const spotify = document.getElementById('edit-artist-spotify').value;
+            const email = document.getElementById('edit-artist-email').value;
             const imageFile = document.getElementById('edit-artist-image').files[0];
 
             const artistRef = doc(db, 'artists', editingArtistId);
-            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
+            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
 
             try {
                 if (imageFile) {
@@ -1243,7 +1333,7 @@
                     loadSingleArtist(artistId);
                 } else {
                     loadArtists();
-                    loadAnalytics(); // Refresh analytics
+                    loadAdminAnalytics();
                 }
             } catch (error) {
                 console.error(error);
@@ -1361,7 +1451,7 @@
                 });
                 alert('Submission successful!');
                 submitMusicForm.reset();
-                loadAnalytics(); // Refresh analytics
+                loadAdminAnalytics();
             } catch (error) {
                 console.error(error);
                 alert('Error submitting music: ' + (error.message || error));
@@ -1488,6 +1578,10 @@
                     <input type="text" class="form-control" id="artist-name" required>
                 </div>
                 <div class="mb-3">
+                    <label for="artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
+                    <input type="email" class="form-control" id="artist-email">
+                </div>
+                <div class="mb-3">
                     <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
                     <textarea class="form-control" id="artist-description" rows="3"></textarea>
                 </div>
@@ -1587,6 +1681,10 @@
                         <div class="mb-3">
                             <label for="edit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
                             <input type="text" class="form-control" id="edit-artist-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
+                            <input type="email" class="form-control" id="edit-artist-email">
                         </div>
                         <div class="mb-3">
                             <label for="edit-artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
