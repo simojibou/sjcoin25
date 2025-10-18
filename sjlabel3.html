@@ -205,6 +205,7 @@
             position: relative;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             overflow: hidden;
+            cursor: pointer;
         }
         .artist-card:hover {
             transform: translateY(-10px);
@@ -830,7 +831,7 @@
                         `;
                     }
                     card.innerHTML = `
-                        <div class="artist-card stagger-item">
+                        <div class="artist-card stagger-item" data-artist-id="${artistId}">
                             <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
                             ${adminActions}
                             <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
@@ -839,10 +840,18 @@
                                 ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                                 ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
-                            <a href="https://simojibou.github.io/sjcoin25/index.html?artist=${artistId}" class="stretched-link"></a>
                         </div>
                     `;
                     artistsList.appendChild(card);
+                });
+                // Add click event listeners to artist cards
+                document.querySelectorAll('.artist-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        // Prevent navigation if clicking admin action buttons
+                        if (e.target.closest('.admin-actions')) return;
+                        const artistId = card.getAttribute('data-artist-id');
+                        window.location.href = `https://simojibou.github.io/sjcoin25/index.html?artist=${artistId}`;
+                    });
                 });
                 // Trigger stagger animation
                 setTimeout(() => {
@@ -859,10 +868,12 @@
         // Load Single Artist
         async function loadSingleArtist(id) {
             try {
+                console.log(`Loading artist with ID: ${id}`);
                 const artistRef = doc(db, 'artists', id);
                 const docSnap = await getDoc(artistRef);
                 if (docSnap.exists()) {
                     const artist = docSnap.data();
+                    console.log('Artist data:', artist);
 
                     // Increment view count
                     let viewCount = 0;
@@ -875,6 +886,7 @@
                         });
                         const updatedViewSnap = await getDoc(viewRef);
                         viewCount = updatedViewSnap.data().viewCount;
+                        console.log(`Updated view count: ${viewCount}`);
                     } else {
                         await addDoc(collection(db, 'views'), {
                             artistId: id,
@@ -882,6 +894,7 @@
                             lastViewed: serverTimestamp()
                         });
                         viewCount = 1;
+                        console.log('Initialized view count: 1');
                     }
 
                     document.querySelector('.hero-section').style.display = 'none';
@@ -941,11 +954,20 @@
                         });
                     }, 100);
                 } else {
+                    console.warn(`Artist with ID ${id} not found`);
                     artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+                    // Redirect to home page after a brief delay
+                    setTimeout(() => {
+                        window.location.href = 'https://simojibou.github.io/sjcoin25/index.html';
+                    }, 2000);
                 }
             } catch (error) {
                 console.error('Error loading artist:', error);
                 artistsList.innerHTML = `<h2 class="text-center">Error loading artist: ${error.message}</h2>`;
+                // Redirect to home page after a brief delay
+                setTimeout(() => {
+                    window.location.href = 'https://simojibou.github.io/sjcoin25/index.html';
+                }, 2000);
             }
         }
 
