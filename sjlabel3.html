@@ -308,6 +308,24 @@
             line-height: 1.6;
             opacity: 0.9;
         }
+        /* Artist Stats Section */
+        .artist-stats {
+            max-width: 90%;
+            margin: 0 auto;
+            padding: var(--space-3);
+            border-radius: 20px;
+            margin-bottom: var(--space-3);
+        }
+        .artist-stats h3 {
+            font-size: 1.5rem;
+            color: var(--color-red);
+            margin-bottom: var(--space-2);
+        }
+        .artist-stats p {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
 
         /* Admin Submissions Section */
         .submissions-table {
@@ -508,11 +526,11 @@
             .artist-hero .social-links {
                 font-size: 1.5rem;
             }
-            .artist-bio {
+            .artist-bio, .artist-stats {
                 padding: var(--space-2);
                 max-width: 95%;
             }
-            .artist-bio p {
+            .artist-bio p, .artist-stats p {
                 font-size: 0.9rem;
             }
             .artist-card {
@@ -592,7 +610,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         // Firebase config
@@ -841,6 +859,27 @@
             const docSnap = await getDoc(artistRef);
             if (docSnap.exists()) {
                 const artist = docSnap.data();
+
+                // Increment view count
+                const viewRef = doc(db, 'views', id);
+                const viewSnap = await getDoc(viewRef);
+                if (viewSnap.exists()) {
+                    await updateDoc(viewRef, {
+                        viewCount: increment(1),
+                        lastViewed: serverTimestamp()
+                    });
+                } else {
+                    await addDoc(collection(db, 'views'), {
+                        artistId: id,
+                        viewCount: 1,
+                        lastViewed: serverTimestamp()
+                    });
+                }
+
+                // Get view count for display
+                const updatedViewSnap = await getDoc(viewRef);
+                const viewCount = updatedViewSnap.exists() ? updatedViewSnap.data().viewCount : 0;
+
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
@@ -852,6 +891,15 @@
                         <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
                             <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                }
+                let statsSection = '';
+                if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                    statsSection = `
+                        <div class="artist-stats glass-effect stagger-item">
+                            <h3><i class="bi bi-graph-up icon"></i>Profile Statistics</h3>
+                            <p>Total Views: ${viewCount}</p>
                         </div>
                     `;
                 }
@@ -871,6 +919,7 @@
                         <div id="ad-container"></div>
                     </div>
                     <div class="container">
+                        ${statsSection}
                         <div class="artist-bio glass-effect stagger-item">
                             <h3>Biography</h3>
                             <p>${artist.description || 'Emerging talent in the music scene.'}</p>
