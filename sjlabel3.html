@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ Label - Artist Management</title>
+    <title>SJ X N41 music - Artist Management</title>
     <!-- Bootstrap CSS for responsive layout -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS adapted from ElGrandeToto's design with enhanced mobile slider -->
+    <!-- Custom CSS adapted from ElGrandeToto's design with enhanced mobile slider and artist page -->
     <style>
         :root {
             --color-red: #ff0000;
@@ -256,6 +256,86 @@
             color: var(--color-red);
         }
 
+        /* Single Artist Page */
+        .artist-hero {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 1;
+            margin-bottom: var(--space-3);
+        }
+        .artist-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
+            z-index: -1;
+        }
+        .artist-hero-content {
+            padding: var(--space-2);
+        }
+        .artist-hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: var(--color-red);
+            text-transform: uppercase;
+            margin-bottom: var(--space-1);
+            animation: fadeInUp 1s ease;
+        }
+        .artist-hero .social-links {
+            font-size: 2rem;
+        }
+        .artist-bio {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-3);
+            border-radius: 20px;
+        }
+        .artist-bio p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        /* Admin Submissions Section */
+        .submissions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-2);
+        }
+        .submissions-table th, .submissions-table td {
+            padding: var(--space-1);
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .submissions-table th {
+            color: var(--color-red);
+            font-weight: 600;
+        }
+        .submissions-table img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        .submissions-table a {
+            color: var(--color-red);
+            text-decoration: none;
+        }
+        .submissions-table a:hover {
+            color: var(--color-white);
+        }
+
         /* Forms */
         .form-section {
             margin: var(--space-3) auto;
@@ -345,6 +425,16 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-20px); }
         }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
         .stagger-item {
             opacity: 0;
             transform: translateY(20px);
@@ -358,10 +448,10 @@
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             .hero-section {
-                height: 90vh; /* Increased for bigger mobile slider */
+                height: 90vh;
             }
             .carousel-item {
-                height: 90vh; /* Match hero-section height */
+                height: 90vh;
             }
             .carousel-caption {
                 padding: var(--space-2);
@@ -369,18 +459,27 @@
                 border-radius: 15px;
             }
             .carousel-caption h1 {
-                font-size: 2.5rem; /* Larger font for mobile */
+                font-size: 2.5rem;
             }
             .carousel-caption p {
                 font-size: 1.1rem;
             }
             .music-platforms-bar {
-                bottom: 3%; /* Adjusted to avoid overlap */
+                bottom: 3%;
                 gap: var(--space-1);
                 padding: 8px 16px;
             }
             .music-platforms-bar a {
-                font-size: 1.5rem; /* Slightly smaller icons */
+                font-size: 1.5rem;
+            }
+            .artist-hero {
+                height: 50vh;
+            }
+            .artist-hero h1 {
+                font-size: 2.5rem;
+            }
+            .artist-bio {
+                padding: var(--space-2);
             }
             .artist-card {
                 margin: var(--space-1) 0;
@@ -393,6 +492,13 @@
                 position: static;
                 opacity: 1;
                 margin-top: var(--space-1);
+            }
+            .submissions-table img {
+                width: 40px;
+                height: 40px;
+            }
+            .submissions-table th, .submissions-table td {
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -498,6 +604,7 @@
                     adminSection.classList.remove('d-none');
                     artistManagementSection.classList.remove('d-none');
                     loadManagers();
+                    loadSubmissions();
                 } else {
                     const q = query(collection(db, 'managers'), where('email', '==', user.email));
                     getDocs(q).then(snap => {
@@ -539,7 +646,7 @@
                     defaultSlide.innerHTML = `
                         <div class="d-flex h-100 align-items-center justify-content-center">
                             <div class="carousel-caption">
-                                <h1>Welcome to SJ Label</h1>
+                                <h1>Welcome to SJ x N41 music</h1>
                                 <p>Discover the future of music.</p>
                             </div>
                         </div>
@@ -568,13 +675,7 @@
                     }
                     carouselItem.innerHTML = `
                         ${adminActions}
-                        <div class="d-flex h-100 align-items-center justify-content-center">
-                            <div class="carousel-caption">
-                                <h1>${slide.title || ''}</h1>
-                                <p>${slide.description || ''}</p>
-                                ${slide.link ? `<a href="${slide.link}" target="_blank">Learn More <i class="bi bi-arrow-right"></i></a>` : ''}
-                            </div>
-                        </div>
+                     
                     `;
                     headerCarousel.appendChild(carouselItem);
                     active = false;
@@ -663,27 +764,46 @@
                     `;
                 }
                 const fullPage = document.createElement('div');
-                fullPage.className = 'container my-5';
                 fullPage.innerHTML = `
-                    <div class="row justify-content-center">
-                        <div class="col-md-8">
-                            <div class="artist-card glass-effect" style="padding: 40px;">
-                                ${adminActions}
-                                <img src="${artist.imageUrl || 'https://via.placeholder.com/800x400/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}" style="width: 100%; height: auto; border-radius: 15px; margin-bottom: 20px;">
-                                <h2 style="color: var(--color-red);"><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h2>
-                                <p style="font-size: 1.1rem;">${artist.description || 'Emerging talent in the music scene.'}</p>
-                                <div class="social-links" style="font-size: 2rem;">
-                                    ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                    ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
-                                </div>
+                    <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                        <div class="artist-hero-content">
+                            ${adminActions}
+                            <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
+                            <div class="social-links">
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
                         </div>
                     </div>
-                    <div class="text-center mt-4">
-                        <a href="/" class="btn btn-secondary">Back to Home</a>
+                    <div class="container">
+                        <div class="artist-bio glass-effect stagger-item">
+                            <h3>Biography</h3>
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                        </div>
+                        <div class="text-center mt-4">
+                            <a href="/" class="btn btn-secondary">Back to Home</a>
+                        </div>
+                        <div class="ad-container text-center mt-4">
+                            <script type="text/javascript">
+                                atOptions = {
+                                    'key' : '6819d716a99f588efc7f8dacfbc474bb',
+                                    'format' : 'iframe',
+                                    'height' : 60,
+                                    'width' : 468,
+                                    'params' : {}
+                                };
+                            </script>
+                            <script type="text/javascript" src="//www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js"></script>
+                        </div>
                     </div>
                 `;
                 artistsList.appendChild(fullPage);
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
             } else {
                 artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
             }
@@ -708,6 +828,55 @@
                     `;
                     managersList.appendChild(div);
                 });
+            }).catch(error => console.error(error));
+        }
+
+        // Load Music Submissions (Admin Only)
+        function loadSubmissions() {
+            const submissionsList = document.getElementById('submissions-list');
+            submissionsList.innerHTML = '<h4 class="mb-3"><i class="bi bi-music-note-list icon"></i>Music Submissions</h4>';
+            const q = query(collection(db, 'submissions'), orderBy('timestamp', 'desc'));
+            getDocs(q).then(snapshot => {
+                if (snapshot.empty) {
+                    submissionsList.innerHTML += '<p class="text-muted">No submissions yet.</p>';
+                    return;
+                }
+                const table = document.createElement('table');
+                table.className = 'submissions-table glass-effect';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Artist</th>
+                            <th>Track</th>
+                            <th>Cover</th>
+                            <th>SoundCloud</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                `;
+                const tbody = table.querySelector('tbody');
+                snapshot.forEach(doc => {
+                    const submission = doc.data();
+                    const row = document.createElement('tr');
+                    row.className = 'stagger-item';
+                    const date = submission.timestamp ? new Date(submission.timestamp.toDate()).toLocaleDateString() : 'N/A';
+                    row.innerHTML = `
+                        <td>${submission.artistName}</td>
+                        <td>${submission.trackName}</td>
+                        <td><img src="${submission.coverUrl}" alt="Cover"></td>
+                        <td><a href="${submission.soundcloudLink}" target="_blank">Listen</a></td>
+                        <td>${date}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                submissionsList.appendChild(table);
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
             }).catch(error => console.error(error));
         }
 
@@ -987,7 +1156,7 @@
     </script>
 </head>
 <body>
-    <!-- Top Social Bar -->
+    <!-- Top Social Bar 
     <div class="top-social-bar">
         <div class="container">
             <div class="top-social-container">
@@ -998,7 +1167,7 @@
                     <a href="https://facebook.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- Big Slider (Hero Section) -->
@@ -1017,12 +1186,12 @@
                 <span class="visually-hidden">Next</span>
             </button>
         </div>
-        <!-- Music Platforms Bar -->
+        <!-- Music Platforms Bar 
         <div class="music-platforms-bar">
             <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
             <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-        </div>
+        </div> -->
     </section>
 
     <!-- Particles -->
@@ -1105,6 +1274,10 @@
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Manager</button>
             </form>
             <div id="managers-list"></div>
+
+            <hr class="my-4" style="border-color: var(--color-red);">
+
+            <div id="submissions-list"></div>
         </div>
 
         <!-- Music Submission Section -->
@@ -1204,11 +1377,11 @@
 
     <!-- Footer -->
     <footer id="footer" class="site-footer">
-        <p>&copy; 2025 SJ Label. All rights reserved.</p>
-        <p><a href="mailto:contact@sjlabel.com">contact@sjlabel.com</a></p>
+        <p>&copy; 2025 SJ x N41 music. All rights reserved.</p>
+        <p><a href="mailto:simo.jibou@gmail.com">simo.jibou@gmail.com</a></p>
     </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+    </html>
