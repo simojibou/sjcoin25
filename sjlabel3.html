@@ -292,6 +292,17 @@
             cursor: pointer;
             font-size: 1.2rem;
         }
+        .artist-card:hover .admin-actions {
+            opacity: 1;
+        }
+        .admin-actions button {
+            background: none;
+            border: none;
+            color: var(--color-white);
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
         .admin-actions button:hover {
             color: var(--color-red);
         }
@@ -786,7 +797,7 @@
             }
         });
 
-        // Load Admin Analytics (Updated for Traffic and Earnings)
+        // Load Admin Analytics
         async function loadAdminAnalytics() {
             const analyticsSection = document.getElementById('analytics-section');
             if (!analyticsSection) return;
@@ -1051,21 +1062,42 @@
             }).catch(error => console.error(error));
         }
 
-        // Load Single Artist
+        // Load Single Artist (Fixed)
         async function loadSingleArtist(id) {
-            const artistRef = doc(db, 'artists', id);
-            const statsRef = doc(db, `artists/${id}/stats/traffic`);
-            const [docSnap, statsSnap] = await Promise.all([getDoc(artistRef), getDoc(statsRef)]);
-            if (docSnap.exists()) {
-                const artist = docSnap.data();
-                const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
+            try {
+                // Clear existing content
+                artistsList.innerHTML = '';
+                
+                // Hide other sections
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
-                artistsList.innerHTML = '';
+
+                // Fetch artist data
+                const artistRef = doc(db, 'artists', id);
+                const statsRef = doc(db, `artists/${id}/stats/traffic`);
+                const [docSnap, statsSnap] = await Promise.all([getDoc(artistRef), getDoc(statsRef)]);
+
+                if (!docSnap.exists()) {
+                    artistsList.innerHTML = '<h2 class="text-center text-muted">Artist not found</h2>';
+                    console.error(`Artist with ID ${id} not found`);
+                    return;
+                }
+
+                const artist = docSnap.data();
+                const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
+
+                // Ensure all fields have default values
+                const artistName = artist.name || 'Unknown Artist';
+                const artistDescription = artist.description || 'No description available.';
+                const artistImage = artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo';
+                const artistInstagram = artist.instagram || '';
+                const artistSpotify = artist.spotify || '';
+                const artistEmail = artist.email || '';
+
+                // Admin actions
                 let adminActions = '';
-                let dashboardSection = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
                         <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
@@ -1074,14 +1106,17 @@
                         </div>
                     `;
                 }
-                if (currentUser && (currentUser.email === artist.email || currentUser.email === ADMIN_EMAIL)) {
+
+                // Artist dashboard (for artist or admin)
+                let dashboardSection = '';
+                if (currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL)) {
                     const maxViews = 10000; // Arbitrary max for progress bar
                     const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
                     dashboardSection = `
                         <div class="analytics-card glass-effect">
                             <h4>Artist Dashboard</h4>
-                            <p>Total Views: ${stats.views}</p>
-                            <p>Estimated Earnings: $${stats.earnings.toFixed(2)}</p>
+                            <p>Total Views: ${stats.views || 0}</p>
+                            <p>Estimated Earnings: $${(stats.earnings || 0).toFixed(2)}</p>
                             <div class="progress-bar-container">
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" style="width: ${progressPercentage}%;" aria-valuenow="${progressPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -1091,15 +1126,17 @@
                         </div>
                     `;
                 }
+
+                // Build artist page
                 const fullPage = document.createElement('div');
                 fullPage.innerHTML = `
-                    <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                    <div class="artist-hero" style="background-image: url('${artistImage}');">
                         <div class="artist-hero-content">
                             ${adminActions}
-                            <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
+                            <h1><i class="bi bi-music-note-beamed icon"></i>${artistName}</h1>
                             <div class="social-links">
-                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                                ${artistInstagram ? `<a href="${artistInstagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artistSpotify ? `<a href="${artistSpotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1110,22 +1147,25 @@
                         ${dashboardSection}
                         <div class="artist-bio glass-effect stagger-item">
                             <h3>Biography</h3>
-                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                            <p>${artistDescription}</p>
+                            ${artistEmail ? `<p><strong>Email:</strong> ${artistEmail}</p>` : ''}
                         </div>
                         <div class="text-center mt-4">
-                            <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
+                            <a href="/index.html" class="btn btn-secondary">Back to Home</a>
                         </div>
                     </div>
                 `;
                 artistsList.appendChild(fullPage);
+
                 // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
                     });
                 }, 100);
-            } else {
-                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+            } catch (error) {
+                console.error('Error loading artist page:', error);
+                artistsList.innerHTML = '<h2 class="text-center text-muted">Error loading artist information</h2>';
             }
         }
 
@@ -1211,6 +1251,7 @@
                     document.getElementById('edit-artist-description').value = artist.description || '';
                     document.getElementById('edit-artist-instagram').value = artist.instagram || '';
                     document.getElementById('edit-artist-spotify').value = artist.spotify || '';
+                    document.getElementById('edit-artist-email').value = artist.email || '';
                     editModal.show();
                 }
             });
