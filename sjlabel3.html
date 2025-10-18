@@ -1,26 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-
-
-
-<script type="text/javascript">
-	atOptions = {
-		'key' : '6819d716a99f588efc7f8dacfbc474bb',
-		'format' : 'iframe',
-		'height' : 60,
-		'width' : 468,
-		'params' : {}
-	};
-</script>
-<script type="text/javascript" src="//www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js"></script>
-
-
-
-
-
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SJ X N41 music - Artist Management</title>
@@ -465,6 +445,16 @@
             transform: translateY(0);
         }
 
+        /* Ad Container */
+        #ad-container {
+            display: block;
+            margin: var(--space-2) auto;
+            text-align: center;
+            width: 468px;
+            height: 60px;
+            max-width: 100%;
+        }
+
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             .hero-section {
@@ -519,6 +509,10 @@
             }
             .submissions-table th, .submissions-table td {
                 font-size: 0.9rem;
+            }
+            #ad-container {
+                width: 100%;
+                height: auto;
             }
         }
     </style>
@@ -695,7 +689,13 @@
                     }
                     carouselItem.innerHTML = `
                         ${adminActions}
-                     
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${slide.title || 'Welcome to SJ x N41 music'}</h1>
+                                <p>${slide.description || 'Discover the future of music.'}</p>
+                                ${slide.link ? `<a href="${slide.link}" target="_blank" rel="noopener noreferrer">Learn More</a>` : ''}
+                            </div>
+                        </div>
                     `;
                     headerCarousel.appendChild(carouselItem);
                     active = false;
@@ -1164,7 +1164,7 @@
     </script>
 </head>
 <body>
-    <!-- Top Social Bar 
+    <!-- Top Social Bar -->
     <div class="top-social-bar">
         <div class="container">
             <div class="top-social-container">
@@ -1175,7 +1175,7 @@
                     <a href="https://facebook.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
                 </div>
             </div>
-        </div> -->
+        </div>
     </div>
 
     <!-- Big Slider (Hero Section) -->
@@ -1194,13 +1194,36 @@
                 <span class="visually-hidden">Next</span>
             </button>
         </div>
-        <!-- Music Platforms Bar 
+        <!-- Music Platforms Bar -->
         <div class="music-platforms-bar">
             <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
             <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-        </div> -->
+        </div>
     </section>
+
+    <!-- Ad Container -->
+    <div id="ad-container"></div>
+
+    <!-- Ad Script -->
+    <script type="text/javascript">
+        atOptions = {
+            'key': '6819d716a99f588efc7f8dacfbc474bb',
+            'format': 'iframe',
+            'height': 60,
+            'width': 468,
+            'params': {}
+        };
+        document.addEventListener('DOMContentLoaded', function () {
+            const adContainer = document.getElementById('ad-container');
+            if (adContainer) {
+                const script = document.createElement('script');
+                script.src = 'https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js';
+                script.async = true;
+                adContainer.appendChild(script);
+            }
+        });
+    </script>
 
     <!-- Particles -->
     <div class="particles"></div>
