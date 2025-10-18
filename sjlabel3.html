@@ -427,10 +427,12 @@
         }
 
         /* Ad Container */
-        #ad-container {
-            display: block;
+        .ad-container-wrapper {
+            display: flex;
+            justify-content: center;
             margin: var(--space-2) auto;
-            text-align: center;
+        }
+        #ad-container {
             width: 468px;
             height: 60px;
             max-width: 100%;
@@ -557,10 +559,12 @@
                 font-size: 0.85rem;
                 padding: 8px;
             }
+            .ad-container-wrapper {
+                margin: var(--space-1) auto;
+            }
             #ad-container {
                 width: 100%;
                 height: auto;
-                margin: var(--space-1) auto;
             }
         }
 
@@ -838,7 +842,6 @@
             if (docSnap.exists()) {
                 const artist = docSnap.data();
                 document.querySelector('.hero-section').style.display = 'none';
-                document.getElementById('ad-container').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
@@ -863,6 +866,9 @@
                                 ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
                         </div>
+                    </div>
+                    <div class="ad-container-wrapper">
+                        <div id="ad-container"></div>
                     </div>
                     <div class="container">
                         <div class="artist-bio glass-effect stagger-item">
@@ -1272,7 +1278,9 @@
     </section>
 
     <!-- Ad Container -->
-    <div id="ad-container"></div>
+    <div class="ad-container-wrapper">
+        <div id="ad-container"></div>
+    </div>
 
     <!-- Ad Script -->
     <script type="text/javascript">
