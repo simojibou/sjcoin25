@@ -502,33 +502,11 @@
             }
         }
 
-        /* Responsive Ad Styling */
+        /* Ad Styles */
         .ad-container {
-            max-width: 468px;
-            margin: 0 auto;
             text-align: center;
-        }
-
-        .responsive-ad {
-            position: relative;
-            width: 100%;
-            padding-top: calc(60 / 468 * 100%);
-            overflow: hidden;
-        }
-
-        .responsive-ad iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        @media (max-width: 500px) {
-            .ad-container {
-                max-width: 100%;
-            }
+            margin: var(--space-3) auto;
+            max-width: 468px;
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
@@ -809,22 +787,20 @@
                             <h3>Biography</h3>
                             <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                         </div>
+                        <div class="ad-container">
+                            <script type="text/javascript">
+                                atOptions = {
+                                    'key' : '6819d716a99f588efc7f8dacfbc474bb',
+                                    'format' : 'iframe',
+                                    'height' : 60,
+                                    'width' : 468,
+                                    'params' : {}
+                                };
+                            </script>
+                            <script type="text/javascript" src="//www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js"></script>
+                        </div>
                         <div class="text-center mt-4">
                             <a href="/" class="btn btn-secondary">Back to Home</a>
-                        </div>
-                        <div class="ad-container text-center mt-4">
-                            <div class="responsive-ad">
-                                <script type="text/javascript">
-                                    atOptions = {
-                                        'key' : '6819d716a99f588efc7f8dacfbc474bb',
-                                        'format' : 'iframe',
-                                        'height' : 60,
-                                        'width' : 468,
-                                        'params' : {}
-                                    };
-                                </script>
-                                <script type="text/javascript" src="//www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js"></script>
-                            </div>
                         </div>
                     </div>
                 `;
@@ -1415,4 +1391,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-                                </html>
+            </html>
