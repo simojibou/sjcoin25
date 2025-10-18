@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SJ X N41 music - Artist Management</title>
     <!-- Bootstrap CSS for responsive layout -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS adapted from ElGrandeToto's design with enhanced mobile slider and artist page -->
+    <!-- Custom CSS with enhanced mobile design -->
     <style>
         :root {
             --color-red: #ff0000;
@@ -21,6 +21,7 @@
             --space-1: calc(1 * var(--space-unit));
             --space-2: calc(2 * var(--space-unit));
             --space-3: calc(3 * var(--space-unit));
+            --space-4: calc(4 * var(--space-unit));
         }
 
         body {
@@ -121,7 +122,7 @@
             backdrop-filter: blur(15px);
             border-radius: 20px;
             padding: var(--space-3);
-            max-width: 600px;
+            max-width: 80%;
             text-align: center;
             transform: translateY(20px);
             opacity: 0;
@@ -132,13 +133,13 @@
             transform: translateY(0);
         }
         .carousel-caption h1 {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             margin-bottom: var(--space-1);
         }
         .carousel-caption p {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             opacity: 0.9;
         }
         .carousel-caption a {
@@ -165,7 +166,7 @@
         /* Music platforms bar */
         .music-platforms-bar {
             position: absolute;
-            bottom: 10%;
+            bottom: 8%;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -178,14 +179,14 @@
         }
         .music-platforms-bar a {
             color: var(--color-white);
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             transition: transform 0.3s ease;
         }
         .music-platforms-bar a:hover {
             transform: scale(1.2);
         }
 
-        /* Artist cards styled as tour cards */
+        /* Artist cards */
         .artist-section {
             position: relative;
             padding: var(--space-3) 0;
@@ -220,6 +221,7 @@
             color: var(--color-red);
             font-weight: 600;
             letter-spacing: 1px;
+            font-size: 1.3rem;
         }
         .artist-card p {
             opacity: 0.8;
@@ -228,7 +230,7 @@
         .social-links a {
             color: var(--color-white);
             margin-right: var(--space-1);
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             transition: color 0.3s ease;
         }
         .social-links a:hover {
@@ -284,25 +286,25 @@
             padding: var(--space-2);
         }
         .artist-hero h1 {
-            font-size: 4rem;
+            font-size: 3rem;
             font-weight: 800;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             color: var(--color-red);
             text-transform: uppercase;
             margin-bottom: var(--space-1);
             animation: fadeInUp 1s ease;
         }
         .artist-hero .social-links {
-            font-size: 2rem;
+            font-size: 1.8rem;
         }
         .artist-bio {
-            max-width: 800px;
+            max-width: 90%;
             margin: 0 auto;
             padding: var(--space-3);
             border-radius: 20px;
         }
         .artist-bio p {
-            font-size: 1.1rem;
+            font-size: 1rem;
             line-height: 1.6;
             opacity: 0.9;
         }
@@ -339,7 +341,7 @@
         /* Forms */
         .form-section {
             margin: var(--space-3) auto;
-            max-width: 600px;
+            max-width: 90%;
             padding: var(--space-2);
         }
         .form-control, .form-control:focus {
@@ -347,6 +349,8 @@
             border: 1px solid var(--color-red);
             color: var(--color-white);
             border-radius: 10px;
+            padding: 12px;
+            font-size: 1rem;
         }
         .form-control::placeholder {
             color: rgba(255, 255, 255, 0.5);
@@ -355,8 +359,9 @@
             background: linear-gradient(135deg, var(--color-red) 0%, #cc0000 100%);
             border: none;
             border-radius: 25px;
-            padding: 12px 30px;
+            padding: 14px 30px;
             font-weight: 600;
+            font-size: 1rem;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
@@ -369,7 +374,8 @@
             background: rgba(255, 255, 255, 0.1);
             border: none;
             border-radius: 25px;
-            padding: 12px 30px;
+            padding: 14px 30px;
+            font-size: 1rem;
         }
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.2);
@@ -420,6 +426,16 @@
             border-radius: 50%;
         }
 
+        /* Ad Container */
+        #ad-container {
+            display: block;
+            margin: var(--space-2) auto;
+            text-align: center;
+            width: 468px;
+            height: 60px;
+            max-width: 100%;
+        }
+
         /* Animations */
         @keyframes float {
             0%, 100% { transform: translateY(0); }
@@ -445,23 +461,13 @@
             transform: translateY(0);
         }
 
-        /* Ad Container */
-        #ad-container {
-            display: block;
-            margin: var(--space-2) auto;
-            text-align: center;
-            width: 468px;
-            height: 60px;
-            max-width: 100%;
-        }
-
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             .hero-section {
-                height: 90vh;
+                height: 80vh;
             }
             .carousel-item {
-                height: 90vh;
+                height: 80vh;
             }
             .carousel-caption {
                 padding: var(--space-2);
@@ -469,50 +475,112 @@
                 border-radius: 15px;
             }
             .carousel-caption h1 {
-                font-size: 2.5rem;
+                font-size: 1.8rem;
+                letter-spacing: 1px;
             }
             .carousel-caption p {
-                font-size: 1.1rem;
+                font-size: 0.9rem;
+            }
+            .carousel-control-prev, .carousel-control-next {
+                width: 15%;
             }
             .music-platforms-bar {
-                bottom: 3%;
+                bottom: 5%;
                 gap: var(--space-1);
-                padding: 8px 16px;
+                padding: 10px 20px;
             }
             .music-platforms-bar a {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
+            }
+            .top-social-links a {
+                font-size: 1.3rem;
+                margin: 0 10px;
             }
             .artist-hero {
                 height: 50vh;
             }
             .artist-hero h1 {
-                font-size: 2.5rem;
+                font-size: 2rem;
+                letter-spacing: 1.5px;
+            }
+            .artist-hero .social-links {
+                font-size: 1.5rem;
             }
             .artist-bio {
                 padding: var(--space-2);
+                max-width: 95%;
+            }
+            .artist-bio p {
+                font-size: 0.9rem;
             }
             .artist-card {
                 margin: var(--space-1) 0;
+                padding: var(--space-1);
+            }
+            .artist-card img {
+                height: 180px;
+            }
+            .artist-card h5 {
+                font-size: 1.2rem;
+            }
+            .artist-card p {
+                font-size: 0.9rem;
+            }
+            .social-links a {
+                font-size: 1.3rem;
             }
             .form-section {
                 margin: var(--space-2);
                 padding: var(--space-1);
+                max-width: 95%;
+            }
+            .form-control {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 12px 25px;
+                font-size: 0.9rem;
             }
             .admin-actions {
                 position: static;
                 opacity: 1;
                 margin-top: var(--space-1);
+                display: flex;
+                justify-content: flex-end;
             }
             .submissions-table img {
                 width: 40px;
                 height: 40px;
             }
             .submissions-table th, .submissions-table td {
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+                padding: 8px;
             }
             #ad-container {
                 width: 100%;
                 height: auto;
+                margin: var(--space-1) auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .carousel-caption h1 {
+                font-size: 1.5rem;
+            }
+            .carousel-caption p {
+                font-size: 0.85rem;
+            }
+            .artist-hero h1 {
+                font-size: 1.8rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.85rem;
+            }
+            .top-social-links a {
+                font-size: 1.2rem;
+                margin: 0 8px;
             }
         }
     </style>
@@ -770,6 +838,7 @@
             if (docSnap.exists()) {
                 const artist = docSnap.data();
                 document.querySelector('.hero-section').style.display = 'none';
+                document.getElementById('ad-container').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
@@ -1233,7 +1302,7 @@
         <div id="auth-section" class="text-center my-4 glass-effect">
             <button id="login-btn" class="btn btn-primary"><i class="bi bi-google icon"></i>Login with Google</button>
             <button id="logout-btn" class="btn btn-secondary d-none"><i class="bi bi-box-arrow-right icon"></i>Logout</button>
-            <div id="user-info" class="user-info d-inline-block"></div>
+            <div id="user-info" class="user-info d-inline-block mt-2"></div>
         </div>
 
         <!-- Artists Showcase Section -->
