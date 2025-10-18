@@ -1,0 +1,45 @@
+<!--
+  ad_page.html
+  صفحة HTML جاهزة تضم الإعلان المطلوب.
+  ملاحظة: بعض مزوّدي الإعلانات يتطلبون تشغيل الصفحة عبر http/https (ليس file://) حتى يعمل iframe بشكل صحيح.
+--><!doctype html>
+
+<html lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>صفحة مع إعلان</title>
+  <style>
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 0; padding: 1rem; background: #f7f7f9; color: #111; }
+    .container { max-width: 900px; margin: 2rem auto; background: #fff; padding: 1.25rem; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+    header { margin-bottom: 1rem; }
+    .ad-wrapper { display: flex; justify-content: center; align-items: center; padding: 0.5rem 0; }
+    .content { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>صفحة تجريبية مع إعلان</h1>
+    </header><section class="ad-wrapper" aria-label="إعلان">
+  <!-- إعلان: لا تغيّر الأسطر بين التعليقات إذا أردت أن يعمل الإعلان كما وُزع -->
+  <script type="text/javascript">
+atOptions = {
+	'key' : '6819d716a99f588efc7f8dacfbc474bb',
+	'format' : 'iframe',
+	'height' : 60,
+	'width' : 468,
+	'params' : {}
+};
+  </script>
+  <script type="text/javascript" src="//www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js"></script>
+  <!-- نهاية الإعلان -->
+</section>
+
+<section class="content">
+  <p>هذه صفحة بسيطة توضح مكان الإعلان داخل صفحة HTML. عدّل المحتوى أو التصميم كما تريد.</p>
+</section>
+
+  </div>
+</body>
+</html>
