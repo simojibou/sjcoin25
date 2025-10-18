@@ -839,7 +839,7 @@
                                 ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                                 ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
-                            <a href="?artist=${artistId}" class="stretched-link"></a>
+                            <a href="https://simojibou.github.io/sjcoin25/index.html?artist=${artistId}" class="stretched-link"></a>
                         </div>
                     `;
                     artistsList.appendChild(card);
@@ -850,94 +850,102 @@
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
                     });
                 }, 100);
-            }).catch(error => console.error(error));
+            }).catch(error => {
+                console.error('Error loading artists:', error);
+                artistsList.innerHTML += `<p class="text-center text-muted">Error loading artists: ${error.message}</p>`;
+            });
         }
 
         // Load Single Artist
         async function loadSingleArtist(id) {
-            const artistRef = doc(db, 'artists', id);
-            const docSnap = await getDoc(artistRef);
-            if (docSnap.exists()) {
-                const artist = docSnap.data();
+            try {
+                const artistRef = doc(db, 'artists', id);
+                const docSnap = await getDoc(artistRef);
+                if (docSnap.exists()) {
+                    const artist = docSnap.data();
 
-                // Increment view count
-                const viewRef = doc(db, 'views', id);
-                const viewSnap = await getDoc(viewRef);
-                if (viewSnap.exists()) {
-                    await updateDoc(viewRef, {
-                        viewCount: increment(1),
-                        lastViewed: serverTimestamp()
-                    });
-                } else {
-                    await addDoc(collection(db, 'views'), {
-                        artistId: id,
-                        viewCount: 1,
-                        lastViewed: serverTimestamp()
-                    });
-                }
+                    // Increment view count
+                    let viewCount = 0;
+                    const viewRef = doc(db, 'views', id);
+                    const viewSnap = await getDoc(viewRef);
+                    if (viewSnap.exists()) {
+                        await updateDoc(viewRef, {
+                            viewCount: increment(1),
+                            lastViewed: serverTimestamp()
+                        });
+                        const updatedViewSnap = await getDoc(viewRef);
+                        viewCount = updatedViewSnap.data().viewCount;
+                    } else {
+                        await addDoc(collection(db, 'views'), {
+                            artistId: id,
+                            viewCount: 1,
+                            lastViewed: serverTimestamp()
+                        });
+                        viewCount = 1;
+                    }
 
-                // Get view count for display
-                const updatedViewSnap = await getDoc(viewRef);
-                const viewCount = updatedViewSnap.exists() ? updatedViewSnap.data().viewCount : 0;
-
-                document.querySelector('.hero-section').style.display = 'none';
-                document.getElementById('submission-section').style.display = 'none';
-                document.getElementById('admin-section').style.display = 'none';
-                document.getElementById('artist-management-section').style.display = 'none';
-                artistsList.innerHTML = '';
-                let adminActions = '';
-                if (currentUser && currentUser.email === ADMIN_EMAIL) {
-                    adminActions = `
-                        <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
-                            <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
-                            <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
-                        </div>
-                    `;
-                }
-                let statsSection = '';
-                if (currentUser && currentUser.email === ADMIN_EMAIL) {
-                    statsSection = `
-                        <div class="artist-stats glass-effect stagger-item">
-                            <h3><i class="bi bi-graph-up icon"></i>Profile Statistics</h3>
-                            <p>Total Views: ${viewCount}</p>
-                        </div>
-                    `;
-                }
-                const fullPage = document.createElement('div');
-                fullPage.innerHTML = `
-                    <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
-                        <div class="artist-hero-content">
-                            ${adminActions}
-                            <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
-                            <div class="social-links">
-                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                    document.querySelector('.hero-section').style.display = 'none';
+                    document.getElementById('submission-section').style.display = 'none';
+                    document.getElementById('admin-section').style.display = 'none';
+                    document.getElementById('artist-management-section').style.display = 'none';
+                    artistsList.innerHTML = '';
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
+                                <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `;
+                    }
+                    let statsSection = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        statsSection = `
+                            <div class="artist-stats glass-effect stagger-item">
+                                <h3><i class="bi bi-graph-up icon"></i>Profile Statistics</h3>
+                                <p>Total Views: ${viewCount}</p>
+                            </div>
+                        `;
+                    }
+                    const fullPage = document.createElement('div');
+                    fullPage.innerHTML = `
+                        <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                            <div class="artist-hero-content">
+                                ${adminActions}
+                                <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
+                                <div class="social-links">
+                                    ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                    ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="ad-container-wrapper">
-                        <div id="ad-container"></div>
-                    </div>
-                    <div class="container">
-                        ${statsSection}
-                        <div class="artist-bio glass-effect stagger-item">
-                            <h3>Biography</h3>
-                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                        <div class="ad-container-wrapper">
+                            <div id="ad-container"></div>
                         </div>
-                        <div class="text-center mt-4">
-                            <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
+                        <div class="container">
+                            ${statsSection}
+                            <div class="artist-bio glass-effect stagger-item">
+                                <h3>Biography</h3>
+                                <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                            </div>
+                            <div class="text-center mt-4">
+                                <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
+                            </div>
                         </div>
-                    </div>
-                `;
-                artistsList.appendChild(fullPage);
-                // Trigger stagger animation
-                setTimeout(() => {
-                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
-                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
-                    });
-                }, 100);
-            } else {
-                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+                    `;
+                    artistsList.appendChild(fullPage);
+                    // Trigger stagger animation
+                    setTimeout(() => {
+                        document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                            setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                        });
+                    }, 100);
+                } else {
+                    artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+                }
+            } catch (error) {
+                console.error('Error loading artist:', error);
+                artistsList.innerHTML = `<h2 class="text-center">Error loading artist: ${error.message}</h2>`;
             }
         }
 
