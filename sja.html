@@ -185,7 +185,7 @@
                             balance: 0,
                             clicks: 0,
                             referrals: [],
-                            affiliateLink: window.location.origin + '/?ref=' + user.uid
+                            affiliateLink: 'https://simojibou.github.io/sjcoin25/sja.html?ref=' + user.uid
                         };
                         await setDoc(userRef, userData);
                     } else {
@@ -195,7 +195,7 @@
                             userData.paid = true;
                         }
                         if (!userData.affiliateLink) {
-                            userData.affiliateLink = window.location.origin + '/?ref=' + user.uid;
+                            userData.affiliateLink = 'https://simojibou.github.io/sjcoin25/sja.html?ref=' + user.uid;
                             await updateDoc(userRef, { affiliateLink: userData.affiliateLink });
                         }
                     }
