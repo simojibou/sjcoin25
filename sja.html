@@ -1,4 +1,4 @@
-```html
+`
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -228,12 +228,12 @@
         // Load and populate dashboard data
         function loadDashboard(user, data) {
             document.getElementById('avatar').src = user.photoURL || '';
-            document.getElementById('affLink').value = data.affiliateLink;
-            document.getElementById('clicks').textContent = data.clicks;
-            document.getElementById('referrals').textContent = data.referrals.length;
-            document.getElementById('earnings').textContent = data.balance;
+            document.getElementById('affLink').value = data.affiliateLink || '';
+            document.getElementById('clicks').textContent = data.clicks || 0;
+            document.getElementById('referrals').textContent = (data.referrals || []).length;
+            document.getElementById('earnings').textContent = data.balance || 0;
             document.getElementById('copyBtn').addEventListener('click', () => {
-                navigator.clipboard.writeText(data.affiliateLink);
+                navigator.clipboard.writeText(data.affiliateLink || '');
                 alert('Copied!');
             });
         }
@@ -334,11 +334,11 @@
                 usersQuery.forEach((docSnap) => {
                     const data = docSnap.data();
                     const row = `<tr class="border-b border-gray-700">
-                        <td class="py-2">${data.name}</td>
-                        <td>${data.email}</td>
-                        <td>${data.clicks}</td>
-                        <td>${data.referrals.length}</td>
-                        <td>$${data.balance}</td>
+                        <td class="py-2">${data.name || ''}</td>
+                        <td>${data.email || ''}</td>
+                        <td>${data.clicks || 0}</td>
+                        <td>${(data.referrals || []).length}</td>
+                        <td>$${data.balance || 0}</td>
                     </tr>`;
                     usersTbody.innerHTML += row;
                 });
@@ -357,8 +357,8 @@
                     const data = docSnap.data();
                     const row = `<tr class="border-b border-gray-700">
                         <td class="py-2">${rank}</td>
-                        <td>${data.name}</td>
-                        <td>$${data.balance}</td>
+                        <td>${data.name || ''}</td>
+                        <td>$${data.balance || 0}</td>
                     </tr>`;
                     leaderTbody.innerHTML += row;
                     rank++;
