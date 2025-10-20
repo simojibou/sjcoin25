@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SJ Affiliate Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js"></script>
     <script src="https://www.paypal.com/sdk/js?client-id=YOUR_SANDBOX_CLIENT_ID&currency=USD"></script>
 </head>
 <body class="bg-[#141414] text-white font-sans min-h-screen">
@@ -116,7 +113,11 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, getDocs, orderBy, limit, query, arrayUnion, increment, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -129,9 +130,9 @@
         };
 
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth(app);
-        const db = firebase.firestore(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
         // Extract referral ID from URL early
         const urlParams = new URLSearchParams(window.location.search);
@@ -158,22 +159,25 @@
         }
 
         // Handle login button click
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => {
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
                 console.error(error);
                 alert('Login failed: ' + error.message);
-            });
+            }
         });
 
         // Monitor authentication state changes
-        auth.onAuthStateChanged(user => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 hideElement('login');
-                const userRef = db.collection('users').doc(user.uid);
-                userRef.get().then(doc => {
-                    let userData = doc.data();
-                    if (!doc.exists) {
+                const userRef = doc(db, 'users', user.uid);
+                try {
+                    const docSnap = await getDoc(userRef);
+                    let userData;
+                    if (!docSnap.exists()) {
                         userData = {
                             name: user.displayName,
                             email: user.email,
@@ -183,13 +187,16 @@
                             referrals: [],
                             affiliateLink: window.location.origin + '/?ref=' + user.uid
                         };
-                        userRef.set(userData);
+                        await setDoc(userRef, userData);
+                    } else {
+                        userData = docSnap.data();
                     }
                     // Increment clicks for referrer if refId is present and not self
                     if (refId && refId !== user.uid) {
-                        db.collection('users').doc(refId).update({
-                            clicks: firebase.firestore.FieldValue.increment(1)
-                        }).catch(console.error);
+                        const refRef = doc(db, 'users', refId);
+                        await updateDoc(refRef, {
+                            clicks: increment(1)
+                        });
                     }
                     // Clear query params from URL
                     history.replaceState(null, '', window.location.pathname);
@@ -201,12 +208,13 @@
                         showElement('payment');
                     }
                     if (user.email === 'simo.jibou@gmail.com') {
-                        loadAdmin();
+                        await loadAdmin();
                         showElement('admin');
                     }
-                }).catch(error => {
+                } catch (error) {
                     console.error(error);
-                });
+                    alert('Error loading user data: ' + error.message);
+                }
             } else {
                 showElement('login');
             }
@@ -238,33 +246,41 @@
                         }]
                     });
                 },
-                onApprove: (data, actions) => {
-                    return actions.order.capture().then(details => {
-                        handlePaymentSuccess(user, 'paypal');
-                    });
+                onApprove: async (data, actions) => {
+                    try {
+                        const details = await actions.order.capture();
+                        await handlePaymentSuccess(user, 'paypal');
+                    } catch (err) {
+                        console.error(err);
+                        alert('Payment capture error: ' + err.message);
+                    }
                 },
                 onError: (err) => {
                     console.error(err);
-                    alert('Payment error');
+                    alert('Payment error: ' + err.message);
                 }
             }).render('#paypal-button-container');
 
             // Handle code submission
-            document.getElementById('codeBtn').addEventListener('click', () => {
+            document.getElementById('codeBtn').addEventListener('click', async () => {
                 const code = document.getElementById('codeInput').value.trim();
                 if (code) {
-                    const codeRef = db.collection('codes').doc(code);
-                    codeRef.get().then(doc => {
-                        if (doc.exists && doc.data().valid && !doc.data().usedBy) {
-                            codeRef.update({
+                    const codeRef = doc(db, 'codes', code);
+                    try {
+                        const docSnap = await getDoc(codeRef);
+                        if (docSnap.exists() && docSnap.data().valid && !docSnap.data().usedBy) {
+                            await updateDoc(codeRef, {
                                 valid: false,
                                 usedBy: user.uid
                             });
-                            handlePaymentSuccess(user, 'code');
+                            await handlePaymentSuccess(user, 'code');
                         } else {
                             alert('Invalid or used code');
                         }
-                    }).catch(console.error);
+                    } catch (error) {
+                        console.error(error);
+                        alert('Error validating code: ' + error.message);
+                    }
                 } else {
                     alert('Enter a code');
                 }
@@ -272,41 +288,46 @@
         }
 
         // Handle successful payment (common for PayPal and code)
-        function handlePaymentSuccess(user, method) {
-            const userRef = db.collection('users').doc(user.uid);
-            db.collection('payments').add({
-                amount: 20,
-                userId: user.uid,
-                method: method,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            }).catch(console.error);
-            userRef.update({
-                paid: true
-            }).then(() => {
+        async function handlePaymentSuccess(user, method) {
+            const userRef = doc(db, 'users', user.uid);
+            try {
+                await addDoc(collection(db, 'payments'), {
+                    amount: 20,
+                    userId: user.uid,
+                    method: method,
+                    timestamp: serverTimestamp()
+                });
+                await updateDoc(userRef, {
+                    paid: true
+                });
                 // Credit referrer if applicable (only on first payment)
                 if (refId && refId !== user.uid) {
-                    db.collection('users').doc(refId).update({
-                        balance: firebase.firestore.FieldValue.increment(10),
-                        referrals: firebase.firestore.FieldValue.arrayUnion(user.uid)
-                    }).catch(console.error);
+                    const refRef = doc(db, 'users', refId);
+                    await updateDoc(refRef, {
+                        balance: increment(10),
+                        referrals: arrayUnion(user.uid)
+                    });
                 }
                 // Reload data and switch to dashboard
-                userRef.get().then(doc => {
-                    hideElement('payment');
-                    loadDashboard(user, doc.data());
-                    showElement('dashboard');
-                });
-            }).catch(console.error);
+                const docSnap = await getDoc(userRef);
+                hideElement('payment');
+                loadDashboard(user, docSnap.data());
+                showElement('dashboard');
+            } catch (error) {
+                console.error(error);
+                alert('Error processing payment: ' + error.message);
+            }
         }
 
         // Load admin panel data
-        function loadAdmin() {
+        async function loadAdmin() {
             // Populate users table
             const usersTbody = document.querySelector('#usersTable tbody');
-            db.collection('users').get().then(query => {
+            try {
+                const usersQuery = await getDocs(collection(db, 'users'));
                 usersTbody.innerHTML = '';
-                query.forEach(doc => {
-                    const data = doc.data();
+                usersQuery.forEach((docSnap) => {
+                    const data = docSnap.data();
                     const row = `<tr class="border-b border-gray-700">
                         <td class="py-2">${data.name}</td>
                         <td>${data.email}</td>
@@ -316,15 +337,19 @@
                     </tr>`;
                     usersTbody.innerHTML += row;
                 });
-            }).catch(console.error);
+            } catch (error) {
+                console.error(error);
+            }
 
             // Populate leaderboard
             const leaderTbody = document.querySelector('#leaderboard tbody');
-            db.collection('users').orderBy('balance', 'desc').limit(10).get().then(query => {
+            try {
+                const leaderQuery = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(10));
+                const leaderDocs = await getDocs(leaderQuery);
                 leaderTbody.innerHTML = '';
                 let rank = 1;
-                query.forEach(doc => {
-                    const data = doc.data();
+                leaderDocs.forEach((docSnap) => {
+                    const data = docSnap.data();
                     const row = `<tr class="border-b border-gray-700">
                         <td class="py-2">${rank}</td>
                         <td>${data.name}</td>
@@ -333,58 +358,72 @@
                     leaderTbody.innerHTML += row;
                     rank++;
                 });
-            }).catch(console.error);
+            } catch (error) {
+                console.error(error);
+            }
 
             // Calculate total system earnings
-            db.collection('payments').get().then(query => {
+            try {
+                const paymentsQuery = await getDocs(collection(db, 'payments'));
                 let total = 0;
-                query.forEach(doc => {
-                    total += doc.data().amount || 0;
+                paymentsQuery.forEach((docSnap) => {
+                    total += docSnap.data().amount || 0;
                 });
                 document.getElementById('totalEarnings').textContent = total;
-            }).catch(console.error);
+            } catch (error) {
+                console.error(error);
+            }
 
             // Function to load payment codes
             const codesTbody = document.querySelector('#codesTable tbody');
-            function loadCodes() {
-                db.collection('codes').get().then(query => {
+            async function loadCodes() {
+                try {
+                    const codesQuery = await getDocs(collection(db, 'codes'));
                     codesTbody.innerHTML = '';
-                    query.forEach(doc => {
-                        const data = doc.data();
+                    codesQuery.forEach((docSnap) => {
+                        const data = docSnap.data();
                         const valid = data.valid ? 'Yes' : 'No';
                         const usedBy = data.usedBy || '-';
                         const row = `<tr class="border-b border-gray-700">
-                            <td class="py-2">${doc.id}</td>
+                            <td class="py-2">${docSnap.id}</td>
                             <td>${valid}</td>
                             <td>${usedBy}</td>
-                            <td><button class="deleteCode bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded" data-code="${doc.id}">Delete</button></td>
+                            <td><button class="deleteCode bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded" data-code="${docSnap.id}">Delete</button></td>
                         </tr>`;
                         codesTbody.innerHTML += row;
                     });
                     // Attach delete button listeners
                     document.querySelectorAll('.deleteCode').forEach(btn => {
-                        btn.addEventListener('click', () => {
+                        btn.addEventListener('click', async () => {
                             const code = btn.dataset.code;
-                            db.collection('codes').doc(code).delete().then(() => {
-                                loadCodes();
-                            }).catch(console.error);
+                            try {
+                                await deleteDoc(doc(db, 'codes', code));
+                                await loadCodes();
+                            } catch (error) {
+                                console.error(error);
+                            }
                         });
                     });
-                }).catch(console.error);
+                } catch (error) {
+                    console.error(error);
+                }
             }
-            loadCodes();
+            await loadCodes();
 
             // Handle adding new payment code
-            document.getElementById('addCodeBtn').addEventListener('click', () => {
+            document.getElementById('addCodeBtn').addEventListener('click', async () => {
                 const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-                db.collection('codes').doc(code).set({
-                    valid: true,
-                    usedBy: null
-                }).then(() => {
-                    loadCodes();
-                }).catch(console.error);
+                try {
+                    await setDoc(doc(db, 'codes', code), {
+                        valid: true,
+                        usedBy: null
+                    });
+                    await loadCodes();
+                } catch (error) {
+                    console.error(error);
+                }
             });
         }
     </script>
 </body>
-</html>
+    </html>
