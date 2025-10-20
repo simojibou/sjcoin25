@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SJ Affiliate Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_SANDBOX_CLIENT_ID&currency=USD"></script>
 </head>
 <body class="bg-[#141414] text-white font-sans min-h-screen">
     <div id="login" class="flex items-center justify-center min-h-screen transition-opacity duration-500 opacity-100">
@@ -18,18 +16,9 @@
 
     <div id="payment" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50 transition-opacity duration-500 opacity-0">
         <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
-            <h2 class="text-3xl font-bold mb-6 text-center">Choose Payment Method</h2>
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">Pay $20 via PayPal</h3>
-                    <div id="paypal-button-container" class="w-full"></div>
-                </div>
-                <div class="border-t border-gray-600 pt-4">
-                    <h3 class="text-xl font-semibold mb-2">Or Enter Payment Code</h3>
-                    <input id="codeInput" type="text" placeholder="Enter Payment Code" class="bg-gray-800 text-white p-3 rounded w-full mb-4">
-                    <button id="codeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-3 px-6 rounded w-full transition">Submit Code</button>
-                </div>
-            </div>
+            <h2 class="text-3xl font-bold mb-6 text-center">Enter Payment Code</h2>
+            <input id="codeInput" type="text" placeholder="Enter Payment Code" class="bg-gray-800 text-white p-3 rounded w-full mb-4">
+            <button id="codeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-3 px-6 rounded w-full transition">Submit Code</button>
         </div>
     </div>
 
@@ -256,31 +245,8 @@
             };
         }
 
-        // Load payment screen
+        // Load payment screen (code only)
         function loadPayment(user) {
-            // PayPal button
-            if (window.paypal && window.paypal.Buttons) {
-                window.paypal.Buttons({
-                    createOrder: (data, actions) => actions.order.create({
-                        purchase_units: [{ amount: { value: '20.00' } }]
-                    }),
-                    onApprove: async (data, actions) => {
-                        try {
-                            const details = await actions.order.capture();
-                            console.log('Payment success:', details);
-                            await handlePaymentSuccess(user, 'paypal');
-                        } catch (err) {
-                            console.error('Capture error:', err);
-                            alert('Payment capture failed: ' + err.message);
-                        }
-                    },
-                    onError: (err) => {
-                        console.error('PayPal error:', err);
-                        alert('Payment failed: ' + (err.message || 'Unknown error'));
-                    }
-                }).render('#paypal-button-container');
-            }
-
             // Code submission
             const codeBtn = document.getElementById('codeBtn');
             codeBtn.onclick = async () => {
@@ -313,7 +279,7 @@
             };
         }
 
-        // Handle payment success
+        // Handle payment success (code only)
         async function handlePaymentSuccess(user, method) {
             const userRef = doc(db, 'users', user.uid);
             try {
@@ -345,10 +311,10 @@
                     showElement('admin');
                     await loadAdmin();
                 }
-                alert('Payment successful! Welcome to the dashboard.');
+                alert('Code accepted! Welcome to the dashboard.');
             } catch (error) {
                 console.error('Payment processing error:', error);
-                alert('Error processing payment: ' + error.message);
+                alert('Error processing code: ' + error.message);
             }
         }
 
@@ -459,4 +425,3 @@
     </script>
 </body>
 </html>
-```
