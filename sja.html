@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -185,7 +186,7 @@
                             balance: 0,
                             clicks: 0,
                             referrals: [],
-                            affiliateLink: 'https://simojibou.github.io/sjcoin25/?ref=' + user.uid
+                            affiliateLink: 'https://simojibou.github.io/sjcoin25/sja.html/?ref=' + user.uid
                         };
                         await setDoc(userRef, userData);
                     } else {
@@ -194,7 +195,7 @@
                             await updateDoc(userRef, { paid: true });
                             userData.paid = true;
                         }
-                        const newAffLink = 'https://simojibou.github.io/sjcoin25/?ref=' + user.uid;
+                        const newAffLink = 'https://simojibou.github.io/sjcoin25/sja.html/?ref=' + user.uid;
                         if (userData.affiliateLink !== newAffLink) {
                             userData.affiliateLink = newAffLink;
                             await updateDoc(userRef, { affiliateLink: newAffLink });
@@ -436,3 +437,4 @@
     </script>
 </body>
 </html>
+```
