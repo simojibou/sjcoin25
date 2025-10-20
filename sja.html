@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJ Affiliate Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_SANDBOX_CLIENT_ID&currency=USD"></script>
+</head>
+<body class="bg-[#141414] text-white font-sans min-h-screen">
+    <div id="login" class="flex items-center justify-center min-h-screen transition-opacity duration-500 opacity-100">
+        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full">
+            <h1 class="text-4xl font-bold mb-6 text-center">Login with Google to Start</h1>
+            <button id="loginBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-3 px-6 rounded w-full transition">Sign in with Google</button>
+        </div>
+    </div>
+
+    <div id="payment" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50 transition-opacity duration-500 opacity-0">
+        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full">
+            <h2 class="text-3xl font-bold mb-6 text-center">Choose Payment Method</h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Pay $20 via PayPal</h3>
+                    <div id="paypal-button-container" class="w-full"></div>
+                </div>
+                <div class="border-t border-gray-600 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">Or Enter Payment Code</h3>
+                    <input id="codeInput" type="text" placeholder="Enter Payment Code" class="bg-gray-800 text-white p-3 rounded w-full mb-4">
+                    <button id="codeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-3 px-6 rounded w-full transition">Submit Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden p-4 transition-opacity duration-500 opacity-0">
+        <header class="bg-black/50 backdrop-blur-md p-4 flex justify-between items-center rounded-xl mb-6 shadow-lg">
+            <h1 class="text-2xl font-bold">SJ Affiliate Dashboard</h1>
+            <img id="avatar" src="" alt="Avatar" class="w-10 h-10 rounded-full">
+        </header>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-2">Affiliate Link</h2>
+                <div class="flex">
+                    <input id="affLink" type="text" readonly class="bg-gray-800 p-2 rounded-l w-full">
+                    <button id="copyBtn" class="bg-[#E50914] hover:bg-[#f6121d] p-2 rounded-r">Copy</button>
+                </div>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-2">Clicks</h2>
+                <p class="text-3xl" id="clicks">0</p>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-2">Referrals</h2>
+                <p class="text-3xl" id="referrals">0</p>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-2">Earnings</h2>
+                <p class="text-3xl">$<span id="earnings">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin" class="hidden p-4 transition-opacity duration-500 opacity-0">
+        <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">All Users</h2>
+                <table class="w-full text-left" id="usersTable">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="py-2">Name</th>
+                            <th>Email</th>
+                            <th>Clicks</th>
+                            <th>Referrals</th>
+                            <th>Earnings</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Leaderboard (Top 10 by Earnings)</h2>
+                <table class="w-full text-left" id="leaderboard">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="py-2">Rank</th>
+                            <th>Name</th>
+                            <th>Earnings</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Payment Codes</h2>
+                <button id="addCodeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-2 px-4 rounded mb-4">Add New Code</button>
+                <table class="w-full text-left" id="codesTable">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="py-2">Code</th>
+                            <th>Valid</th>
+                            <th>Used By</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Total System Earnings</h2>
+                <p class="text-4xl">$<span id="totalEarnings">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Placeholder for Firebase configuration - replace with your actual config
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(app);
+        const db = firebase.firestore(app);
+
+        // Extract referral ID from URL early
+        const urlParams = new URLSearchParams(window.location.search);
+        let refId = urlParams.get('ref');
+
+        // Function to show an element with fade-in transition
+        function showElement(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            setTimeout(() => {
+                el.classList.remove('opacity-0');
+                el.classList.add('opacity-100');
+            }, 10);
+        }
+
+        // Function to hide an element with fade-out transition
+        function hideElement(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('opacity-100');
+            el.classList.add('opacity-0');
+            setTimeout(() => {
+                el.classList.add('hidden');
+            }, 500);
+        }
+
+        // Handle login button click
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                console.error(error);
+                alert('Login failed: ' + error.message);
+            });
+        });
+
+        // Monitor authentication state changes
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                hideElement('login');
+                const userRef = db.collection('users').doc(user.uid);
+                userRef.get().then(doc => {
+                    let userData = doc.data();
+                    if (!doc.exists) {
+                        userData = {
+                            name: user.displayName,
+                            email: user.email,
+                            paid: false,
+                            balance: 0,
+                            clicks: 0,
+                            referrals: [],
+                            affiliateLink: window.location.origin + '/?ref=' + user.uid
+                        };
+                        userRef.set(userData);
+                    }
+                    // Increment clicks for referrer if refId is present and not self
+                    if (refId && refId !== user.uid) {
+                        db.collection('users').doc(refId).update({
+                            clicks: firebase.firestore.FieldValue.increment(1)
+                        }).catch(console.error);
+                    }
+                    // Clear query params from URL
+                    history.replaceState(null, '', window.location.pathname);
+                    if (userData.paid) {
+                        loadDashboard(user, userData);
+                        showElement('dashboard');
+                    } else {
+                        loadPayment(user);
+                        showElement('payment');
+                    }
+                    if (user.email === 'simo.jibou@gmail.com') {
+                        loadAdmin();
+                        showElement('admin');
+                    }
+                }).catch(error => {
+                    console.error(error);
+                });
+            } else {
+                showElement('login');
+            }
+        });
+
+        // Load and populate dashboard data
+        function loadDashboard(user, data) {
+            document.getElementById('avatar').src = user.photoURL || '';
+            document.getElementById('affLink').value = data.affiliateLink;
+            document.getElementById('clicks').textContent = data.clicks;
+            document.getElementById('referrals').textContent = data.referrals.length;
+            document.getElementById('earnings').textContent = data.balance;
+            document.getElementById('copyBtn').addEventListener('click', () => {
+                navigator.clipboard.writeText(data.affiliateLink);
+                alert('Copied!');
+            });
+        }
+
+        // Setup payment options (PayPal and code)
+        function loadPayment(user) {
+            // Initialize PayPal button
+            paypal.Buttons({
+                createOrder: (data, actions) => {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: '20.00'
+                            }
+                        }]
+                    });
+                },
+                onApprove: (data, actions) => {
+                    return actions.order.capture().then(details => {
+                        handlePaymentSuccess(user, 'paypal');
+                    });
+                },
+                onError: (err) => {
+                    console.error(err);
+                    alert('Payment error');
+                }
+            }).render('#paypal-button-container');
+
+            // Handle code submission
+            document.getElementById('codeBtn').addEventListener('click', () => {
+                const code = document.getElementById('codeInput').value.trim();
+                if (code) {
+                    const codeRef = db.collection('codes').doc(code);
+                    codeRef.get().then(doc => {
+                        if (doc.exists && doc.data().valid && !doc.data().usedBy) {
+                            codeRef.update({
+                                valid: false,
+                                usedBy: user.uid
+                            });
+                            handlePaymentSuccess(user, 'code');
+                        } else {
+                            alert('Invalid or used code');
+                        }
+                    }).catch(console.error);
+                } else {
+                    alert('Enter a code');
+                }
+            });
+        }
+
+        // Handle successful payment (common for PayPal and code)
+        function handlePaymentSuccess(user, method) {
+            const userRef = db.collection('users').doc(user.uid);
+            db.collection('payments').add({
+                amount: 20,
+                userId: user.uid,
+                method: method,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(console.error);
+            userRef.update({
+                paid: true
+            }).then(() => {
+                // Credit referrer if applicable (only on first payment)
+                if (refId && refId !== user.uid) {
+                    db.collection('users').doc(refId).update({
+                        balance: firebase.firestore.FieldValue.increment(10),
+                        referrals: firebase.firestore.FieldValue.arrayUnion(user.uid)
+                    }).catch(console.error);
+                }
+                // Reload data and switch to dashboard
+                userRef.get().then(doc => {
+                    hideElement('payment');
+                    loadDashboard(user, doc.data());
+                    showElement('dashboard');
+                });
+            }).catch(console.error);
+        }
+
+        // Load admin panel data
+        function loadAdmin() {
+            // Populate users table
+            const usersTbody = document.querySelector('#usersTable tbody');
+            db.collection('users').get().then(query => {
+                usersTbody.innerHTML = '';
+                query.forEach(doc => {
+                    const data = doc.data();
+                    const row = `<tr class="border-b border-gray-700">
+                        <td class="py-2">${data.name}</td>
+                        <td>${data.email}</td>
+                        <td>${data.clicks}</td>
+                        <td>${data.referrals.length}</td>
+                        <td>$${data.balance}</td>
+                    </tr>`;
+                    usersTbody.innerHTML += row;
+                });
+            }).catch(console.error);
+
+            // Populate leaderboard
+            const leaderTbody = document.querySelector('#leaderboard tbody');
+            db.collection('users').orderBy('balance', 'desc').limit(10).get().then(query => {
+                leaderTbody.innerHTML = '';
+                let rank = 1;
+                query.forEach(doc => {
+                    const data = doc.data();
+                    const row = `<tr class="border-b border-gray-700">
+                        <td class="py-2">${rank}</td>
+                        <td>${data.name}</td>
+                        <td>$${data.balance}</td>
+                    </tr>`;
+                    leaderTbody.innerHTML += row;
+                    rank++;
+                });
+            }).catch(console.error);
+
+            // Calculate total system earnings
+            db.collection('payments').get().then(query => {
+                let total = 0;
+                query.forEach(doc => {
+                    total += doc.data().amount || 0;
+                });
+                document.getElementById('totalEarnings').textContent = total;
+            }).catch(console.error);
+
+            // Function to load payment codes
+            const codesTbody = document.querySelector('#codesTable tbody');
+            function loadCodes() {
+                db.collection('codes').get().then(query => {
+                    codesTbody.innerHTML = '';
+                    query.forEach(doc => {
+                        const data = doc.data();
+                        const valid = data.valid ? 'Yes' : 'No';
+                        const usedBy = data.usedBy || '-';
+                        const row = `<tr class="border-b border-gray-700">
+                            <td class="py-2">${doc.id}</td>
+                            <td>${valid}</td>
+                            <td>${usedBy}</td>
+                            <td><button class="deleteCode bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded" data-code="${doc.id}">Delete</button></td>
+                        </tr>`;
+                        codesTbody.innerHTML += row;
+                    });
+                    // Attach delete button listeners
+                    document.querySelectorAll('.deleteCode').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const code = btn.dataset.code;
+                            db.collection('codes').doc(code).delete().then(() => {
+                                loadCodes();
+                            }).catch(console.error);
+                        });
+                    });
+                }).catch(console.error);
+            }
+            loadCodes();
+
+            // Handle adding new payment code
+            document.getElementById('addCodeBtn').addEventListener('click', () => {
+                const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+                db.collection('codes').doc(code).set({
+                    valid: true,
+                    usedBy: null
+                }).then(() => {
+                    loadCodes();
+                }).catch(console.error);
+            });
+        }
+    </script>
+</body>
+</html>
