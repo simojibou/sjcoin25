@@ -10,14 +10,14 @@
 </head>
 <body class="bg-[#141414] text-white font-sans min-h-screen">
     <div id="login" class="flex items-center justify-center min-h-screen transition-opacity duration-500 opacity-100">
-        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full">
+        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
             <h1 class="text-4xl font-bold mb-6 text-center">Login with Google to Start</h1>
             <button id="loginBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-3 px-6 rounded w-full transition">Sign in with Google</button>
         </div>
     </div>
 
     <div id="payment" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50 transition-opacity duration-500 opacity-0">
-        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full">
+        <div class="bg-black/70 backdrop-blur-md p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
             <h2 class="text-3xl font-bold mb-6 text-center">Choose Payment Method</h2>
             <div class="space-y-6">
                 <div>
@@ -63,49 +63,55 @@
 
     <div id="admin" class="hidden p-4 transition-opacity duration-500 opacity-0">
         <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold mb-4">All Users</h2>
-                <table class="w-full text-left" id="usersTable">
-                    <thead>
-                        <tr class="border-b border-gray-600">
-                            <th class="py-2">Name</th>
-                            <th>Email</th>
-                            <th>Clicks</th>
-                            <th>Referrals</th>
-                            <th>Earnings</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="usersTable">
+                        <thead>
+                            <tr class="border-b border-gray-600">
+                                <th class="py-2">Name</th>
+                                <th>Email</th>
+                                <th>Clicks</th>
+                                <th>Referrals</th>
+                                <th>Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
             <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold mb-4">Leaderboard (Top 10 by Earnings)</h2>
-                <table class="w-full text-left" id="leaderboard">
-                    <thead>
-                        <tr class="border-b border-gray-600">
-                            <th class="py-2">Rank</th>
-                            <th>Name</th>
-                            <th>Earnings</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="leaderboard">
+                        <thead>
+                            <tr class="border-b border-gray-600">
+                                <th class="py-2">Rank</th>
+                                <th>Name</th>
+                                <th>Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
             <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold mb-4">Payment Codes</h2>
-                <button id="addCodeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-2 px-4 rounded mb-4">Add New Code</button>
-                <table class="w-full text-left" id="codesTable">
-                    <thead>
-                        <tr class="border-b border-gray-600">
-                            <th class="py-2">Code</th>
-                            <th>Valid</th>
-                            <th>Used By</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <button id="addCodeBtn" class="bg-[#E50914] hover:bg-[#f6121d] text-white font-bold py-2 px-4 rounded mb-4 transition">Add New Code</button>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="codesTable">
+                        <thead>
+                            <tr class="border-b border-gray-600">
+                                <th class="py-2">Code</th>
+                                <th>Valid</th>
+                                <th>Used By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
             <div class="bg-black/50 backdrop-blur-md p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold mb-4">Total System Earnings</h2>
@@ -137,22 +143,18 @@
 
         // Extract referral ID from URL early
         const urlParams = new URLSearchParams(window.location.search);
-        let refId = urlParams.get('ref');
+        const refId = urlParams.get('ref');
 
         // Function to show an element with fade-in transition
         function showElement(id) {
             const el = document.getElementById(id);
-            el.classList.remove('hidden');
-            setTimeout(() => {
-                el.classList.remove('opacity-0');
-                el.classList.add('opacity-100');
-            }, 10);
+            el.classList.remove('hidden', 'opacity-0');
+            el.classList.add('opacity-100');
         }
 
         // Function to hide an element with fade-out transition
         function hideElement(id) {
             const el = document.getElementById(id);
-            el.classList.remove('opacity-100');
             el.classList.add('opacity-0');
             setTimeout(() => {
                 el.classList.add('hidden');
@@ -165,7 +167,7 @@
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
-                console.error(error);
+                console.error('Login error:', error);
                 alert('Login failed: ' + error.message);
             }
         });
@@ -177,140 +179,154 @@
                 const userRef = doc(db, 'users', user.uid);
                 try {
                     const docSnap = await getDoc(userRef);
-                    let userData;
+                    let userData = docSnap.data();
+                    const baseAffLink = 'https://simojibou.github.io/sjcoin25/sja.html?ref=' + user.uid;
                     if (!docSnap.exists()) {
                         userData = {
-                            name: user.displayName,
-                            email: user.email,
+                            name: user.displayName || '',
+                            email: user.email || '',
                             paid: user.email === 'simo.jibou@gmail.com',
                             balance: 0,
                             clicks: 0,
                             referrals: [],
-                            affiliateLink: 'https://simojibou.github.io/sjcoin25/sja.html/?ref=' + user.uid
+                            affiliateLink: baseAffLink
                         };
                         await setDoc(userRef, userData);
                     } else {
-                        userData = docSnap.data();
                         if (user.email === 'simo.jibou@gmail.com' && !userData.paid) {
                             await updateDoc(userRef, { paid: true });
                             userData.paid = true;
                         }
-                        const newAffLink = 'https://simojibou.github.io/sjcoin25/sja.html/?ref=' + user.uid;
-                        if (userData.affiliateLink !== newAffLink) {
-                            userData.affiliateLink = newAffLink;
-                            await updateDoc(userRef, { affiliateLink: newAffLink });
+                        if (userData.affiliateLink !== baseAffLink) {
+                            await updateDoc(userRef, { affiliateLink: baseAffLink });
+                            userData.affiliateLink = baseAffLink;
                         }
                     }
-                    // Increment clicks for referrer if refId is present and not self
+                    // Increment referrer's clicks if refId present and not self
                     if (refId && refId !== user.uid) {
                         const refRef = doc(db, 'users', refId);
-                        await updateDoc(refRef, {
-                            clicks: increment(1)
-                        });
+                        await updateDoc(refRef, { clicks: increment(1) });
                     }
-                    // Clear query params from URL
-                    history.replaceState(null, '', window.location.pathname);
+                    // Clear URL params
+                    if (window.history.replaceState) {
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
                     if (userData.paid) {
-                        loadDashboard(user, userData);
                         showElement('dashboard');
+                        loadDashboard(user, userData);
+                        if (user.email === 'simo.jibou@gmail.com') {
+                            showElement('admin');
+                            await loadAdmin();
+                        }
                     } else {
-                        loadPayment(user);
                         showElement('payment');
-                    }
-                    if (user.email === 'simo.jibou@gmail.com') {
-                        await loadAdmin();
-                        showElement('admin');
+                        loadPayment(user);
                     }
                 } catch (error) {
-                    console.error(error);
+                    console.error('User data error:', error);
                     alert('Error loading user data: ' + error.message);
                 }
             } else {
                 showElement('login');
+                hideElement('dashboard');
+                hideElement('payment');
+                hideElement('admin');
             }
         });
 
-        // Load and populate dashboard data
+        // Load dashboard
         function loadDashboard(user, data) {
             document.getElementById('avatar').src = user.photoURL || '';
-            document.getElementById('affLink').value = data.affiliateLink || '';
+            const affInput = document.getElementById('affLink');
+            affInput.value = data.affiliateLink || '';
             document.getElementById('clicks').textContent = data.clicks || 0;
             document.getElementById('referrals').textContent = (data.referrals || []).length;
             document.getElementById('earnings').textContent = data.balance || 0;
-            document.getElementById('copyBtn').addEventListener('click', () => {
-                navigator.clipboard.writeText(data.affiliateLink || '');
-                alert('Copied!');
-            });
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.onclick = async () => {
+                try {
+                    await navigator.clipboard.writeText(affInput.value);
+                    alert('Copied to clipboard!');
+                } catch (err) {
+                    console.error('Copy error:', err);
+                    affInput.select();
+                    document.execCommand('copy');
+                    alert('Copied to clipboard!');
+                }
+            };
         }
 
-        // Setup payment options (PayPal and code)
+        // Load payment screen
         function loadPayment(user) {
-            // Initialize PayPal button
-            paypal.Buttons({
-                createOrder: (data, actions) => {
-                    return actions.order.create({
-                        purchase_units: [{
-                            amount: {
-                                value: '20.00'
-                            }
-                        }]
-                    });
-                },
-                onApprove: async (data, actions) => {
-                    try {
-                        const details = await actions.order.capture();
-                        await handlePaymentSuccess(user, 'paypal');
-                    } catch (err) {
-                        console.error(err);
-                        alert('Payment capture error: ' + err.message);
+            // PayPal button
+            if (window.paypal && window.paypal.Buttons) {
+                window.paypal.Buttons({
+                    createOrder: (data, actions) => actions.order.create({
+                        purchase_units: [{ amount: { value: '20.00' } }]
+                    }),
+                    onApprove: async (data, actions) => {
+                        try {
+                            const details = await actions.order.capture();
+                            console.log('Payment success:', details);
+                            await handlePaymentSuccess(user, 'paypal');
+                        } catch (err) {
+                            console.error('Capture error:', err);
+                            alert('Payment capture failed: ' + err.message);
+                        }
+                    },
+                    onError: (err) => {
+                        console.error('PayPal error:', err);
+                        alert('Payment failed: ' + (err.message || 'Unknown error'));
                     }
-                },
-                onError: (err) => {
-                    console.error(err);
-                    alert('Payment error: ' + err.message);
-                }
-            }).render('#paypal-button-container');
+                }).render('#paypal-button-container');
+            }
 
-            // Handle code submission
-            document.getElementById('codeBtn').addEventListener('click', async () => {
-                const code = document.getElementById('codeInput').value.trim();
-                if (code) {
-                    const codeRef = doc(db, 'codes', code);
-                    try {
-                        const docSnap = await getDoc(codeRef);
-                        if (docSnap.exists() && docSnap.data().valid && !docSnap.data().usedBy) {
+            // Code submission
+            const codeBtn = document.getElementById('codeBtn');
+            codeBtn.onclick = async () => {
+                const code = document.getElementById('codeInput').value.trim().toUpperCase();
+                if (!code) {
+                    alert('Please enter a code');
+                    return;
+                }
+                const codeRef = doc(db, 'codes', code);
+                try {
+                    const docSnap = await getDoc(codeRef);
+                    if (docSnap.exists()) {
+                        const codeData = docSnap.data();
+                        if (codeData.valid && !codeData.usedBy) {
                             await updateDoc(codeRef, {
                                 valid: false,
                                 usedBy: user.uid
                             });
                             await handlePaymentSuccess(user, 'code');
                         } else {
-                            alert('Invalid or used code');
+                            alert('Invalid or already used code');
                         }
-                    } catch (error) {
-                        console.error(error);
-                        alert('Error validating code: ' + error.message);
+                    } else {
+                        alert('Invalid code');
                     }
-                } else {
-                    alert('Enter a code');
+                } catch (error) {
+                    console.error('Code validation error:', error);
+                    alert('Error validating code: ' + error.message);
                 }
-            });
+            };
         }
 
-        // Handle successful payment (common for PayPal and code)
+        // Handle payment success
         async function handlePaymentSuccess(user, method) {
             const userRef = doc(db, 'users', user.uid);
             try {
+                // Record payment
                 await addDoc(collection(db, 'payments'), {
                     amount: 20,
                     userId: user.uid,
-                    method: method,
+                    method,
                     timestamp: serverTimestamp()
                 });
-                await updateDoc(userRef, {
-                    paid: true
-                });
-                // Credit referrer if applicable (only on first payment)
+                // Update user paid status
+                await updateDoc(userRef, { paid: true });
+                // Credit referrer if applicable
                 if (refId && refId !== user.uid) {
                     const refRef = doc(db, 'users', refId);
                     await updateDoc(refRef, {
@@ -318,123 +334,128 @@
                         referrals: arrayUnion(user.uid)
                     });
                 }
-                // Reload data and switch to dashboard
-                const docSnap = await getDoc(userRef);
+                // Reload user data
+                const updatedSnap = await getDoc(userRef);
+                const updatedData = updatedSnap.data();
+                // Switch to dashboard
                 hideElement('payment');
-                loadDashboard(user, docSnap.data());
                 showElement('dashboard');
+                loadDashboard(user, updatedData);
+                if (user.email === 'simo.jibou@gmail.com') {
+                    showElement('admin');
+                    await loadAdmin();
+                }
+                alert('Payment successful! Welcome to the dashboard.');
             } catch (error) {
-                console.error(error);
+                console.error('Payment processing error:', error);
                 alert('Error processing payment: ' + error.message);
             }
         }
 
-        // Load admin panel data
+        // Load admin panel
         async function loadAdmin() {
-            // Populate users table
-            const usersTbody = document.querySelector('#usersTable tbody');
             try {
+                // Users table
                 const usersQuery = await getDocs(collection(db, 'users'));
+                const usersTbody = document.querySelector('#usersTable tbody');
                 usersTbody.innerHTML = '';
                 usersQuery.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const row = `<tr class="border-b border-gray-700">
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-700';
+                    row.innerHTML = `
                         <td class="py-2">${data.name || ''}</td>
                         <td>${data.email || ''}</td>
                         <td>${data.clicks || 0}</td>
                         <td>${(data.referrals || []).length}</td>
                         <td>$${data.balance || 0}</td>
-                    </tr>`;
-                    usersTbody.innerHTML += row;
+                    `;
+                    usersTbody.appendChild(row);
                 });
-            } catch (error) {
-                console.error(error);
-            }
 
-            // Populate leaderboard
-            const leaderTbody = document.querySelector('#leaderboard tbody');
-            try {
-                const leaderQuery = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(10));
-                const leaderDocs = await getDocs(leaderQuery);
+                // Leaderboard
+                const leaderQ = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(10));
+                const leaderQuery = await getDocs(leaderQ);
+                const leaderTbody = document.querySelector('#leaderboard tbody');
                 leaderTbody.innerHTML = '';
                 let rank = 1;
-                leaderDocs.forEach((docSnap) => {
+                leaderQuery.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const row = `<tr class="border-b border-gray-700">
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-700';
+                    row.innerHTML = `
                         <td class="py-2">${rank}</td>
                         <td>${data.name || ''}</td>
                         <td>$${data.balance || 0}</td>
-                    </tr>`;
-                    leaderTbody.innerHTML += row;
+                    `;
+                    leaderTbody.appendChild(row);
                     rank++;
                 });
-            } catch (error) {
-                console.error(error);
-            }
 
-            // Calculate total system earnings
-            try {
+                // Total earnings
                 const paymentsQuery = await getDocs(collection(db, 'payments'));
                 let total = 0;
                 paymentsQuery.forEach((docSnap) => {
                     total += docSnap.data().amount || 0;
                 });
                 document.getElementById('totalEarnings').textContent = total;
+
+                // Load codes
+                await loadCodes();
             } catch (error) {
-                console.error(error);
+                console.error('Admin load error:', error);
             }
+        }
 
-            // Function to load payment codes
+        // Load codes table
+        async function loadCodes() {
+            const codesQuery = await getDocs(collection(db, 'codes'));
             const codesTbody = document.querySelector('#codesTable tbody');
-            async function loadCodes() {
-                try {
-                    const codesQuery = await getDocs(collection(db, 'codes'));
-                    codesTbody.innerHTML = '';
-                    codesQuery.forEach((docSnap) => {
-                        const data = docSnap.data();
-                        const valid = data.valid ? 'Yes' : 'No';
-                        const usedBy = data.usedBy || '-';
-                        const row = `<tr class="border-b border-gray-700">
-                            <td class="py-2">${docSnap.id}</td>
-                            <td>${valid}</td>
-                            <td>${usedBy}</td>
-                            <td><button class="deleteCode bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded" data-code="${docSnap.id}">Delete</button></td>
-                        </tr>`;
-                        codesTbody.innerHTML += row;
-                    });
-                    // Attach delete button listeners
-                    document.querySelectorAll('.deleteCode').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const code = btn.dataset.code;
-                            try {
-                                await deleteDoc(doc(db, 'codes', code));
-                                await loadCodes();
-                            } catch (error) {
-                                console.error(error);
-                            }
-                        });
-                    });
-                } catch (error) {
-                    console.error(error);
-                }
-            }
-            await loadCodes();
-
-            // Handle adding new payment code
-            document.getElementById('addCodeBtn').addEventListener('click', async () => {
-                const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-                const code = 'SJ' + randomCode;
-                try {
-                    await setDoc(doc(db, 'codes', code), {
-                        valid: true,
-                        usedBy: null
-                    });
-                    await loadCodes();
-                } catch (error) {
-                    console.error(error);
-                }
+            codesTbody.innerHTML = '';
+            codesQuery.forEach((docSnap) => {
+                const data = docSnap.data();
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700';
+                const valid = data.valid ? 'Yes' : 'No';
+                const usedBy = data.usedBy || '-';
+                row.innerHTML = `
+                    <td class="py-2">${docSnap.id}</td>
+                    <td>${valid}</td>
+                    <td>${usedBy}</td>
+                    <td><button class="deleteCode bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded text-sm" data-code="${docSnap.id}">Delete</button></td>
+                `;
+                codesTbody.appendChild(row);
+            });
+            // Attach delete listeners
+            document.querySelectorAll('.deleteCode').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const code = e.target.dataset.code;
+                    try {
+                        await deleteDoc(doc(db, 'codes', code));
+                        await loadCodes();
+                    } catch (error) {
+                        console.error('Delete error:', error);
+                    }
+                });
             });
         }
+
+        // Add new code button
+        document.getElementById('addCodeBtn').addEventListener('click', async () => {
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const code = 'SJ' + randomPart;
+            try {
+                await setDoc(doc(db, 'codes', code), {
+                    valid: true,
+                    usedBy: null
+                });
+                await loadCodes();
+                alert(`New code generated: ${code}`);
+            } catch (error) {
+                console.error('Add code error:', error);
+                alert('Failed to generate code: ' + error.message);
+            }
+        });
     </script>
 </body>
 </html>
