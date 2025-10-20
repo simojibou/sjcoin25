@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -194,9 +195,10 @@
                             await updateDoc(userRef, { paid: true });
                             userData.paid = true;
                         }
-                        if (!userData.affiliateLink) {
-                            userData.affiliateLink = 'https://simojibou.github.io/sjcoin25/?ref=' + user.uid;
-                            await updateDoc(userRef, { affiliateLink: userData.affiliateLink });
+                        const newAffLink = 'https://simojibou.github.io/sjcoin25/?ref=' + user.uid;
+                        if (userData.affiliateLink !== newAffLink) {
+                            userData.affiliateLink = newAffLink;
+                            await updateDoc(userRef, { affiliateLink: newAffLink });
                         }
                     }
                     // Increment clicks for referrer if refId is present and not self
@@ -435,3 +437,4 @@
     </script>
 </body>
 </html>
+```
