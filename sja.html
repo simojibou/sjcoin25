@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -116,7 +117,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js';
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
-        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, getDocs, orderBy, limit, query, arrayUnion, increment, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, getDocs, orderBy, limit, query, arrayUnion, increment, serverTimestamp, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -181,7 +182,7 @@
                         userData = {
                             name: user.displayName,
                             email: user.email,
-                            paid: false,
+                            paid: user.email === 'simo.jibou@gmail.com',
                             balance: 0,
                             clicks: 0,
                             referrals: [],
@@ -190,6 +191,10 @@
                         await setDoc(userRef, userData);
                     } else {
                         userData = docSnap.data();
+                        if (user.email === 'simo.jibou@gmail.com' && !userData.paid) {
+                            await updateDoc(userRef, { paid: true });
+                            userData.paid = true;
+                        }
                     }
                     // Increment clicks for referrer if refId is present and not self
                     if (refId && refId !== user.uid) {
@@ -426,4 +431,5 @@
         }
     </script>
 </body>
-    </html>
+</html>
+```
