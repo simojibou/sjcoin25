@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -174,7 +175,7 @@
                         userData = {
                             name: user.displayName || '',
                             email: user.email || '',
-                            paid: user.email === 'simo.jibou@gmail.com',
+                            paid: user.email === 'simo.jibou@gmail.com',  // Admin auto-paid
                             balance: 0,
                             clicks: 0,
                             referrals: [],
@@ -191,10 +192,17 @@
                             userData.affiliateLink = baseAffLink;
                         }
                     }
-                    // Increment referrer's clicks if refId present and not self
+                    // Increment referrer's clicks if refId present and not self (with existence check)
                     if (refId && refId !== user.uid) {
-                        const refRef = doc(db, 'users', refId);
-                        await updateDoc(refRef, { clicks: increment(1) });
+                        try {
+                            const refRef = doc(db, 'users', refId);
+                            const refSnap = await getDoc(refRef);  // Check if referrer exists
+                            if (refSnap.exists()) {
+                                await updateDoc(refRef, { clicks: increment(1) });
+                            }
+                        } catch (refError) {
+                            console.warn('Referrer increment failed (may not exist):', refError);
+                        }
                     }
                     // Clear URL params
                     if (window.history.replaceState) {
@@ -213,7 +221,12 @@
                     }
                 } catch (error) {
                     console.error('User data error:', error);
-                    alert('Error loading user data: ' + error.message);
+                    // More specific error handling
+                    if (error.code === 'permission-denied') {
+                        alert('Permissions error: Update your Firestore rules to allow access.');
+                    } else {
+                        alert('Error loading user data: ' + error.message);
+                    }
                 }
             } else {
                 showElement('login');
@@ -274,7 +287,11 @@
                     }
                 } catch (error) {
                     console.error('Code validation error:', error);
-                    alert('Error validating code: ' + error.message);
+                    if (error.code === 'permission-denied') {
+                        alert('Permissions error: Cannot validate code. Check Firestore rules.');
+                    } else {
+                        alert('Error validating code: ' + error.message);
+                    }
                 }
             };
         }
@@ -294,11 +311,18 @@
                 await updateDoc(userRef, { paid: true });
                 // Credit referrer if applicable
                 if (refId && refId !== user.uid) {
-                    const refRef = doc(db, 'users', refId);
-                    await updateDoc(refRef, {
-                        balance: increment(10),
-                        referrals: arrayUnion(user.uid)
-                    });
+                    try {
+                        const refRef = doc(db, 'users', refId);
+                        const refSnap = await getDoc(refRef);
+                        if (refSnap.exists() && !refSnap.data().referrals.includes(user.uid)) {  // Avoid double-credit
+                            await updateDoc(refRef, {
+                                balance: increment(10),
+                                referrals: arrayUnion(user.uid)
+                            });
+                        }
+                    } catch (refError) {
+                        console.warn('Referrer credit failed:', refError);
+                    }
                 }
                 // Reload user data
                 const updatedSnap = await getDoc(userRef);
@@ -314,7 +338,11 @@
                 alert('Code accepted! Welcome to the dashboard.');
             } catch (error) {
                 console.error('Payment processing error:', error);
-                alert('Error processing code: ' + error.message);
+                if (error.code === 'permission-denied') {
+                    alert('Permissions error: Cannot process payment. Check Firestore rules.');
+                } else {
+                    alert('Error processing code: ' + error.message);
+                }
             }
         }
 
@@ -370,6 +398,9 @@
                 await loadCodes();
             } catch (error) {
                 console.error('Admin load error:', error);
+                if (error.code === 'permission-denied') {
+                    alert('Admin permissions error: Ensure rules allow admin access.');
+                }
             }
         }
 
@@ -401,6 +432,9 @@
                         await loadCodes();
                     } catch (error) {
                         console.error('Delete error:', error);
+                        if (error.code === 'permission-denied') {
+                            alert('Delete failed: Admin permissions required.');
+                        }
                     }
                 });
             });
@@ -419,9 +453,14 @@
                 alert(`New code generated: ${code}`);
             } catch (error) {
                 console.error('Add code error:', error);
-                alert('Failed to generate code: ' + error.message);
+                if (error.code === 'permission-denied') {
+                    alert('Add failed: Admin permissions required.');
+                } else {
+                    alert('Failed to generate code: ' + error.message);
+                }
             }
         });
     </script>
 </body>
 </html>
+```
