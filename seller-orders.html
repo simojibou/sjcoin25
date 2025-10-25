@@ -1,0 +1,505 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Orders - SJ STORE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #000;
+      color: #fff;
+      line-height: 1.6;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #000;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid #333;
+    }
+    .logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 0;
+    }
+    #logout-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    #logout-btn:hover {
+      border-color: #ccc;
+      background-color: #222;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .stats-card {
+      background: #111;
+      padding: 1.5rem;
+      border: 1px solid #333;
+      border-radius: 0;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .stats-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    #search-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #333;
+      background: #000;
+      color: #fff;
+      margin-bottom: 1rem;
+      border-radius: 0;
+    }
+    #search-input::placeholder {
+      color: #666;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #111;
+      border: 1px solid #333;
+    }
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+    th {
+      background: #222;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .status {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0;
+      font-weight: 700;
+    }
+    .status.pending { background: #ffc107; color: #000; }
+    .status.processing { background: #007BFF; color: #fff; }
+    .status.shipped { background: #28a745; color: #fff; }
+    .status.delivered { background: #17a2b8; color: #fff; }
+    .status.cancelled { background: #dc3545; color: #fff; }
+    .action-btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .action-btn:hover {
+      background: #e0e0e0;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .pagination button {
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    .pagination button:hover {
+      background: #555;
+    }
+    .pagination button:disabled {
+      background: #222;
+      cursor: not-allowed;
+    }
+    #export-btn {
+      background: #28a745;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    #export-btn:hover {
+      background: #218838;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1001;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+    }
+    .modal-content {
+      background: #111;
+      margin: 15% auto;
+      padding: 2rem;
+      border: 1px solid #333;
+      width: 90%;
+      max-width: 400px;
+    }
+    .modal-content select {
+      width: 100%;
+      padding: 0.75rem;
+      background: #000;
+      color: #fff;
+      border: 1px solid #333;
+      margin-bottom: 1rem;
+    }
+    .modal-content button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    .save-btn {
+      background: #28a745;
+      color: #fff;
+      border: none;
+    }
+    .close-btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+    /* Mobile Cards */
+    @media (max-width: 768px) {
+      .container table, .container thead, .container tbody, .container th, .container td, .container tr {
+        display: block;
+      }
+      .container thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      .container tr {
+        border: 1px solid #333;
+        margin-bottom: 1rem;
+        padding: 1rem;
+      }
+      .container td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+      }
+      .container td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: 700;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" alt="SJ LOGO" class="logo">
+      <h1 style="margin-left: 1rem;">Seller Dashboard</h1>
+    </div>
+    <button id="logout-btn">Logout</button>
+  </div>
+
+  <div class="container">
+    <div class="stats-card">
+      <h2 id="earnings-total">Total Earnings: 0 DH</h2>
+    </div>
+
+    <button id="export-btn">Export to CSV</button>
+    <input type="text" id="search-input" placeholder="Search by Order ID or Customer...">
+
+    <table id="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Customer</th>
+          <th>Items</th>
+          <th>Total (DH)</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="orders-body">
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prev-page">Previous</button>
+      <span id="page-info"></span>
+      <button id="next-page">Next</button>
+    </div>
+  </div>
+
+  <div id="status-modal" class="modal">
+    <div class="modal-content">
+      <h2>Change Order Status</h2>
+      <select id="status-select">
+        <option value="Pending">Pending</option>
+        <option value="Processing">Processing</option>
+        <option value="Shipped">Shipped</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+      <button class="save-btn" id="save-status">Save</button>
+      <button class="close-btn" id="close-status-modal">Close</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, update, query, orderByChild, equalTo, get } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+      authDomain: "sj-one.firebaseapp.com",
+      databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+      projectId: "sj-one",
+      storageBucket: "sj-one.appspot.com",
+      messagingSenderId: "426335553508",
+      appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+      measurementId: "G-YQTVZQWXGB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    let currentUser = null;
+    let sellerProductIds = new Set();
+    let allOrders = [];
+    let filteredOrders = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentOrderId = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (!user) {
+          window.location.href = "index.html";
+          return;
+        }
+        checkIfSeller();
+        loadOrders();
+      });
+
+      document.getElementById("logout-btn").addEventListener("click", () => {
+        signOut(auth).then(() => {
+          window.location.href = "index.html";
+        });
+      });
+
+      document.getElementById("search-input").addEventListener("input", (e) => {
+        filterOrders(e.target.value);
+      });
+
+      document.getElementById("prev-page").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderOrders();
+        }
+      });
+
+      document.getElementById("next-page").addEventListener("click", () => {
+        if (currentPage < Math.ceil(filteredOrders.length / itemsPerPage)) {
+          currentPage++;
+          renderOrders();
+        }
+      });
+
+      document.getElementById("export-btn").addEventListener("click", downloadCSV);
+
+      document.getElementById("save-status").addEventListener("click", () => {
+        const newStatus = document.getElementById("status-select").value;
+        if (currentOrderId) {
+          changeStatus(currentOrderId, newStatus);
+        }
+      });
+
+      document.getElementById("close-status-modal").addEventListener("click", () => {
+        document.getElementById("status-modal").style.display = "none";
+      });
+
+      window.addEventListener("click", (e) => {
+        if (e.target === document.getElementById("status-modal")) {
+          document.getElementById("status-modal").style.display = "none";
+        }
+      });
+    });
+
+    async function checkIfSeller() {
+      const productsQuery = query(ref(db, "Product"), orderByChild("id"), equalTo(currentUser.uid));
+      const snapshot = await get(productsQuery);
+      if (!snapshot.exists()) {
+        document.body.innerHTML = "<h1 style='text-align: center; margin-top: 2rem;'>You are not a seller. <a href='index.html'>Go back</a></h1>";
+        return false;
+      }
+      snapshot.forEach((child) => {
+        sellerProductIds.add(child.key);
+      });
+      return true;
+    }
+
+    function loadOrders() {
+      const ordersRef = ref(db, "Orders");
+      onValue(ordersRef, (snapshot) => {
+        allOrders = [];
+        snapshot.forEach((child) => {
+          const order = { id: child.key, ...child.val() };
+          // Filter orders that have at least one item belonging to seller
+          if (order.items && order.items.some(item => sellerProductIds.has(item.productId))) {
+            allOrders.push(order);
+          }
+        });
+        filteredOrders = [...allOrders];
+        calculateEarnings();
+        renderOrders();
+      });
+    }
+
+    function filterOrders(searchTerm) {
+      filteredOrders = allOrders.filter(order =>
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      currentPage = 1;
+      renderOrders();
+    }
+
+    function renderOrders() {
+      const tbody = document.getElementById("orders-body");
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageOrders = filteredOrders.slice(start, end);
+
+      tbody.innerHTML = "";
+      pageOrders.forEach((order) => {
+        const row = document.createElement("tr");
+        const itemsList = order.items
+          .filter(item => sellerProductIds.has(item.productId))
+          .map(item => `${item.title} (x${item.quantity || 1})`)
+          .join(", ");
+        const date = new Date(order.createdAt).toLocaleDateString();
+        const statusClass = `status ${order.status.toLowerCase()}`;
+        row.innerHTML = `
+          <td data-label="Order ID">${order.id}</td>
+          <td data-label="Customer">${order.fullName}</td>
+          <td data-label="Items">${itemsList}</td>
+          <td data-label="Total (DH)">${order.total.toFixed(2)}</td>
+          <td data-label="Status"><span class="${statusClass}">${order.status}</span></td>
+          <td data-label="Date">${date}</td>
+          <td data-label="Action"><button class="action-btn" onclick="openStatusModal('${order.id}', '${order.status}')">Change Status</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.getElementById("page-info").textContent = `Page ${currentPage} of ${Math.ceil(filteredOrders.length / itemsPerPage)}`;
+      document.getElementById("prev-page").disabled = currentPage === 1;
+      document.getElementById("next-page").disabled = currentPage === Math.ceil(filteredOrders.length / itemsPerPage);
+    }
+
+    function openStatusModal(orderId, currentStatus) {
+      currentOrderId = orderId;
+      document.getElementById("status-select").value = currentStatus;
+      document.getElementById("status-modal").style.display = "block";
+    }
+
+    async function changeStatus(orderId, newStatus) {
+      try {
+        await update(ref(db, `Orders/${orderId}`), { status: newStatus });
+        Toastify({
+          text: "Status updated successfully!",
+          duration: 3000,
+          gravity: "top",
+          position: "right",
+          backgroundColor: "#28a745",
+        }).showToast();
+        document.getElementById("status-modal").style.display = "none";
+        loadOrders(); // Reload to update earnings
+      } catch (error) {
+        Toastify({
+          text: "Failed to update status: " + error.message,
+          duration: 3000,
+          gravity: "top",
+          position: "right",
+          backgroundColor: "#dc3545",
+        }).showToast();
+      }
+    }
+
+    function calculateEarnings() {
+      const earnings = allOrders
+        .filter(order => order.status === "Delivered")
+        .reduce((sum, order) => sum + order.total, 0);
+      document.getElementById("earnings-total").textContent = `Total Earnings: ${earnings.toFixed(2)} DH`;
+    }
+
+    function downloadCSV() {
+      const headers = ["Order ID", "Customer", "Items", "Total (DH)", "Status", "Date"];
+      const csvContent = [
+        headers.join(","),
+        ...filteredOrders.map(order => {
+          const itemsList = order.items
+            .filter(item => sellerProductIds.has(item.productId))
+            .map(item => `${item.title} (x${item.quantity || 1})`)
+            .join("; ");
+          const date = new Date(order.createdAt).toLocaleDateString();
+          return [order.id, order.fullName, itemsList, order.total, order.status, date].join(",");
+        })
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "seller-orders.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.openStatusModal = openStatusModal;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+</body>
+</html>
+```
