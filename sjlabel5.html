@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -665,9 +664,9 @@
                     loadSubmissions();
                     loadAdminAnalytics();
                 } else {
-                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
+                    const managerRef = doc(db, 'managers', user.email);
+                    const managerSnap = await getDoc(managerRef);
+                    if (managerSnap.exists()) {
                         artistManagementSection.classList.remove('d-none');
                     }
                 }
@@ -954,9 +953,9 @@
                 // Check if user is a manager
                 let isManager = false;
                 if (currentUser && currentUser.email !== ADMIN_EMAIL) {
-                    const q = query(collection(db, 'managers'), where('email', '==', currentUser.email));
-                    const snap = await getDocs(q);
-                    isManager = !snap.empty;
+                    const managerRef = doc(db, 'managers', currentUser.email);
+                    const managerSnap = await getDoc(managerRef);
+                    isManager = managerSnap.exists();
                 }
 
                 const artistEmail = artist.email || '';
@@ -1071,7 +1070,7 @@
                     div.className = 'manager-item glass-effect';
                     div.innerHTML = `
                         <span>${data.email}</span>
-                        <button class="btn btn-danger btn-sm" onclick="removeManager('${doc.id}')">Remove</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeManager('${data.email}')">Remove</button>
                     `;
                     managersList.appendChild(div);
                 });
@@ -1178,9 +1177,9 @@
             }
         };
 
-        window.removeManager = function(id) {
+        window.removeManager = function(email) {
             if (confirm('Are you sure you want to remove this manager?')) {
-                deleteDoc(doc(db, 'managers', id)).then(() => {
+                deleteDoc(doc(db, 'managers', email)).then(() => {
                     loadManagers();
                 }).catch(error => console.error(error));
             }
@@ -1330,14 +1329,17 @@
         });
 
         // Add Manager
-        addManagerForm.addEventListener('submit', (e) => {
+        addManagerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('manager-email').value;
-            addDoc(collection(db, 'managers'), { email }).then(() => {
+            try {
+                await setDoc(doc(db, 'managers', email), { email });
                 alert('Manager added!');
                 addManagerForm.reset();
                 loadManagers();
-            }).catch(error => console.error(error));
+            } catch (error) {
+                console.error(error);
+            }
         });
 
         // Submit Music
@@ -1669,4 +1671,3 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-```
