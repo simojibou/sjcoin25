@@ -46,20 +46,6 @@
             border-radius: 20px;
         }
 
-        /* Permission table */
-        .permission-table th,
-        .permission-table td {
-            text-align: center;
-            vertical-align: middle;
-            padding: var(--space-1);
-        }
-        .permission-table th {
-            background: rgba(255,0,0,0.2);
-            color: var(--color-white);
-        }
-        .permission-table .yes { color: #0f0; }
-        .permission-table .no  { color: #f55; }
-
         /* Analytics Dashboard */
         .analytics-card {
             padding: var(--space-2);
@@ -222,7 +208,7 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: var(--space-:2);
+            gap: var(--space-2);
             padding: var(--space-1) var(--space-2);
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
@@ -260,7 +246,7 @@
         }
         .artist-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
         }
         .artist-card img {
             width: 100%;
@@ -294,6 +280,17 @@
             right: var(--space-1);
             opacity: 0;
             transition: opacity 0.3s ease;
+        }
+        .artist-card:hover .admin-actions {
+            opacity: 1;
+        }
+        .admin-actions button {
+            background: none;
+            border: none;
+            color: var(--color-white);
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
         }
         .artist-card:hover .admin-actions {
             opacity: 1;
@@ -415,11 +412,11 @@
             font-weight: 600;
             font-size: 1rem;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
             background: linear-gradient(135deg, #cc0000 0%, var(--color-red) 100%);
         }
         .btn-secondary {
@@ -517,47 +514,160 @@
 
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
-            .hero-section { height: 80vh; }
-            .carousel-item { height: 80vh; }
-            .carousel-caption { padding: var(--space-2); max-width: 90%; border-radius: 15px; }
-            .carousel-caption h1 { font-size: 1.8rem; letter-spacing: 1px; }
-            .carousel-caption p { font-size: 0.9rem; }
-            .carousel-control-prev, .carousel-control-next { width: 15%; }
-            .music-platforms-bar { bottom: 5%; gap: var(--space-1); padding: 10px 20px; }
-            .music-platforms-bar a { font-size: 1.4rem; }
-            .top-social-links a { font-size: 1.3rem; margin: 0 10px; }
-            .artist-hero { height: 50vh; }
-            .artist-hero h1 { font-size: 2rem; letter-spacing: 1.5px; }
-            .artist-hero .social-links { font-size: 1.5rem; }
-            .artist-bio { padding: var(--space-2); max-width: 95%; }
-            .artist-bio p { font-size: 0.9rem; }
-            .artist-card { margin: var(--space-1) 0; padding: var(--space-1); }
-            .artist-card img { height: 180px; }
-            .artist-card h5 { font-size: 1.2rem; }
-            .artist-card p { font-size: 0.9rem; }
-            .social-links a { font-size: 1.3rem; }
-            .form-section { margin: var(--space-2); padding: var(--space-1); max-width: 95%; }
-            .form-control { padding: 10px; font-size: 0.9rem; }
-            .btn-primary, .btn-secondary { padding: 12px 25px; font-size: 0.9rem; }
-            .admin-actions { position: static; opacity: 1; margin-top: var(--space-1); display: flex; justify-content: flex-end; }
-            .submissions-table img { width: 40px; height: 40px; }
-            .submissions-table th, .submissions-table td { font-size: 0.85rem; padding: 8px; }
-            .ad-container-wrapper { margin: var(--space-1) auto; }
-            #ad-container { width: 100%; height: auto; }
-            .analytics-card p { font-size: 1.5rem; }
-            .chart-container { height: 250px; }
-            .progress { height: 15px; }
+            .hero-section {
+                height: 80vh;
+            }
+            .carousel-item {
+                height: 80vh;
+            }
+            .carousel-caption {
+                padding: var(--space-2);
+                max-width: 90%;
+                border-radius: 15px;
+            }
+            .carousel-caption h1 {
+                font-size: 1.8rem;
+                letter-spacing: 1px;
+            }
+            .carousel-caption p {
+                font-size: 0.9rem;
+            }
+            .carousel-control-prev, .carousel-control-next {
+                width: 15%;
+            }
+            .music-platforms-bar {
+                bottom: 5%;
+                gap: var(--space-1);
+                padding: 10px 20px;
+            }
+            .music-platforms-bar a {
+                font-size: 1.4rem;
+            }
+            .top-social-links a {
+                font-size: 1.3rem;
+                margin: 0 10px;
+            }
+            .artist-hero {
+                height: 50vh;
+            }
+            .artist-hero h1 {
+                font-size: 2rem;
+                letter-spacing: 1.5px;
+            }
+            .artist-hero .social-links {
+                font-size: 1.5rem;
+            }
+            .artist-bio {
+                padding: var(--space-2);
+                max-width: 95%;
+            }
+            .artist-bio p {
+                font-size: 0.9rem;
+            }
+            .artist-card {
+                margin: var(--space-1) 0;
+                padding: var(--space-1);
+            }
+            .artist-card img {
+                height: 180px;
+            }
+            .artist-card h5 {
+                font-size: 1.2rem;
+            }
+            .artist-card p {
+                font-size: 0.9rem;
+            }
+            .social-links a {
+                font-size: 1.3rem;
+            }
+            .form-section {
+                margin: var(--space-2);
+                padding: var(--space-1);
+                max-width: 95%;
+            }
+            .form-control {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 12px 25px;
+                font-size: 0.9rem;
+            }
+            .admin-actions {
+                position: static;
+                opacity: 1;
+                margin-top: var(--space-1);
+                display: flex;
+                justify-content: flex-end;
+            }
+            .submissions-table img {
+                width: 40px;
+                height: 40px;
+            }
+            .submissions-table th, .submissions-table td {
+                font-size: 0.85rem;
+                padding: 8px;
+            }
+            .ad-container-wrapper {
+                margin: var(--space-1) auto;
+            }
+            #ad-container {
+                width: 100%;
+                height: auto;
+            }
+            .analytics-card p {
+                font-size: 1.5rem;
+            }
+            .chart-container {
+                height: 250px;
+            }
+            .progress {
+                height: 15px;
+            }
         }
 
         @media (max-width: 576px) {
-            .carousel-caption h1 { font-size: 1.5rem; }
-            .carousel-caption p { font-size: 0.85rem; }
-            .artist-hero h1 { font-size: 1.8rem; }
-            .btn-primary, .btn-secondary { padding: 10px 20px; font-size: 0.85rem; }
-            .top-social-links a { font-size: 1.2rem; margin: 0 8px; }
-            .analytics-card p { font-size: 1.2rem; }
-            .chart-container { height: 200px; }
-            .progress { height: 12px; }
+            .carousel-caption h1 {
+                font-size: 1.5rem;
+            }
+            .carousel-caption p {
+                font-size: 0.85rem;
+            }
+            .artist-hero h1 {
+                font-size: 1.8rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.85rem;
+            }
+            .top-social-links a {
+                font-size: 1.2rem;
+                margin: 0 8px;
+            }
+            .analytics-card p {
+                font-size: 1.2rem;
+            }
+            .chart-container {
+                height: 200px;
+            }
+            .progress {
+                height: 12px;
+            }
+        }
+
+        /* Permission Table Styles */
+        .permission-table th {
+            background: rgba(255,0,0,0.2);
+            text-align: center;
+        }
+        .permission-table td {
+            text-align: center;
+        }
+        .yes {
+            color: #0f0;
+        }
+        .no {
+            color: #f55;
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
@@ -603,7 +713,7 @@
         const addSliderForm = document.getElementById('add-slider-form');
         const addManagerForm = document.getElementById('add-manager-form');
         const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-        const   editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
+        const editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
 
         // Google Auth Provider
         const provider = new GoogleAuthProvider();
@@ -702,15 +812,44 @@
             }
         });
 
-        // Load Admin Analytics (now includes permission matrix)
+        // Load Admin Analytics
         async function loadAdminAnalytics() {
             const analyticsSection = document.getElementById('analytics-section');
             if (!analyticsSection) return;
 
             try {
-                // ---- Permission Matrix (hard-coded) ----
-                const permissionHTML = `
-                    <h4 class="text-center mb-3"><i class="bi bi-shield-lock icon"></i> Permission Matrix</h4>
+                // Fetch artist and submission counts
+                const artistsSnap = await getDocs(collection(db, 'artists'));
+                const submissionsSnap = await getDocs(collection(db, 'submissions'));
+                const artistCount = artistsSnap.size;
+                const submissionCount = submissionsSnap.size;
+
+                // Fetch traffic and earnings data
+                let totalViews = 0;
+                let totalEarnings = 0;
+                const trafficData = [];
+                for (const doc of artistsSnap.docs) {
+                    const artistId = doc.id;
+                    const artist = doc.data();
+                    const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
+                    const statsSnap = await getDoc(statsRef);
+                    const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
+                    totalViews += stats.views || 0;
+                    totalEarnings += stats.earnings || 0;
+                    trafficData.push({
+                        name: artist.name,
+                        views: stats.views || 0,
+                        earnings: stats.earnings || 0
+                    });
+                }
+
+                // Prepare chart data
+                const labels = trafficData.map(item => item.name);
+                const views = trafficData.map(item => item.views);
+                const earnings = trafficData.map(item => item.earnings);
+
+                // Permission matrix table HTML
+                const permissionTable = `
                     <div class="table-responsive">
                         <table class="table permission-table glass-effect">
                             <thead>
@@ -761,39 +900,11 @@
                             </tbody>
                         </table>
                     </div>
-                    <hr class="my-4" style="border-color: var(--color-red);">
                 `;
 
-                // ---- Rest of analytics (unchanged) ----
-                const artistsSnap = await getDocs(collection(db, 'artists'));
-                const submissionsSnap = await getDocs(collection(db, 'submissions'));
-                const artistCount = artistsSnap.size;
-                const submissionCount = submissionsSnap.size;
-
-                let totalViews = 0;
-                let totalEarnings = 0;
-                const trafficData = [];
-                for (const doc of artistsSnap.docs) {
-                    const artistId = doc.id;
-                    const artist = doc.data();
-                    const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
-                    const statsSnap = await getDoc(statsRef);
-                    const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
-                    totalViews += stats.views || 0;
-                    totalEarnings += stats.earnings || 0;
-                    trafficData.push({
-                        name: artist.name,
-                        views: stats.views || 0,
-                        earnings: stats.earnings || 0
-                    });
-                }
-
-                const labels = trafficData.map(item => item.name);
-                const views = trafficData.map(item => item.views);
-                const earnings = trafficData.map(item => item.earnings);
-
-                analyticsSection.innerHTML = permissionHTML + `
+                analyticsSection.innerHTML = `
                     <h3 class="text-center mb-4"><i class="bi bi-graph-up icon"></i>Admin Analytics Dashboard</h3>
+                    ${permissionTable}
                     <div class="row">
                         <div class="col-md-4">
                             <div class="analytics-card glass-effect">
@@ -825,6 +936,7 @@
                     </div>
                 `;
 
+                // Initialize Chart.js for traffic
                 const ctx = document.getElementById('trafficChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'bar',
@@ -853,22 +965,43 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                title: { display: true, text: 'Value', color: 'rgba(255,255,255,0.9)' },
-                                ticks: { color: 'rgba(255,255,255,0.9)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
+                                title: {
+                                    display: true,
+                                    text: 'Value',
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
                             },
                             x: {
-                                title: { display: true, text: 'Artists', color: 'rgba(255,255,255,0.9)' },
-                                ticks: { color: 'rgba(255,255,255,0.9)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
+                                title: {
+                                    display: true,
+                                    text: 'Artists',
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
                             }
                         },
                         plugins: {
-                            legend: { labels: { color: 'rgba(255,255,255,0.9)' } }
+                            legend: {
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                }
+                            }
                         }
                     }
                 });
 
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -880,11 +1013,7 @@
             }
         }
 
-        /* ------------------------------------------------------------------ */
-        /* The rest of the original script (loadSlider, loadArtists, etc.)   */
-        /* ------------------------------------------------------------------ */
-        /* (unchanged – only the analytics part above was edited)            */
-
+        // Load Slider from Firestore
         function loadSlider() {
             const sliderCol = collection(db, 'sliders');
             const q = query(sliderCol, orderBy('createdAt'));
@@ -915,7 +1044,9 @@
                     const carouselItem = document.createElement('div');
                     carouselItem.className = `carousel-item ${active ? 'active' : ''} stagger-item`;
                     carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
-                    if (active) heroBg.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    if (active) {
+                        heroBg.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    }
                     let adminActions = '';
                     if (currentUser && currentUser.email === ADMIN_EMAIL) {
                         adminActions = `
@@ -938,11 +1069,13 @@
                     headerCarousel.appendChild(carouselItem);
                     active = false;
                 });
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 200);
                     });
                 }, 100);
+                // Update hero background on slide change
                 const carousel = document.getElementById('headerCarousel');
                 carousel.addEventListener('slid.bs.carousel', (event) => {
                     const activeSlide = event.relatedTarget;
@@ -952,6 +1085,7 @@
             }).catch(error => console.error(error));
         }
 
+        // Load Artists from Firestore
         function loadArtists() {
             artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>';
             const artistsCol = collection(db, 'artists');
@@ -989,6 +1123,7 @@
                     `;
                     artistsList.appendChild(card);
                 });
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -997,26 +1132,33 @@
             }).catch(error => console.error(error));
         }
 
+        // Load Single Artist (Fixed)
         async function loadSingleArtist(id) {
             try {
+                // Clear existing content
                 artistsList.innerHTML = '';
+                
+                // Hide other sections
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
 
+                // Fetch artist data
                 const artistRef = doc(db, 'artists', id);
                 const statsRef = doc(db, `artists/${id}/stats/traffic`);
                 const [docSnap, statsSnap] = await Promise.all([getDoc(artistRef), getDoc(statsRef)]);
 
                 if (!docSnap.exists()) {
                     artistsList.innerHTML = '<h2 class="text-center text-muted">Artist not found</h2>';
+                    console.error(`Artist with ID ${id} not found`);
                     return;
                 }
 
                 const artist = docSnap.data();
                 const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
 
+                // Ensure all fields have default values
                 const artistName = artist.name || 'Unknown Artist';
                 const artistDescription = artist.description || 'No description available.';
                 const artistImage = artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo';
@@ -1024,6 +1166,7 @@
                 const artistSpotify = artist.spotify || '';
                 const artistEmail = artist.email || '';
 
+                // Admin actions
                 let adminActions = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
@@ -1034,9 +1177,10 @@
                     `;
                 }
 
+                // Artist dashboard (for artist or admin)
                 let dashboardSection = '';
                 if (currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL)) {
-                    const maxViews = 10000;
+                    const maxViews = 10000; // Arbitrary max for progress bar
                     const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
                     dashboardSection = `
                         <div class="analytics-card glass-effect">
@@ -1053,6 +1197,7 @@
                     `;
                 }
 
+                // Build artist page
                 const fullPage = document.createElement('div');
                 fullPage.innerHTML = `
                     <div class="artist-hero" style="background-image: url('${artistImage}');">
@@ -1082,6 +1227,7 @@
                 `;
                 artistsList.appendChild(fullPage);
 
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1093,6 +1239,7 @@
             }
         }
 
+        // Load Managers
         function loadManagers() {
             const managersList = document.getElementById('managers-list');
             managersList.innerHTML = '<h4 class="mb-3"><i class="bi bi-people icon"></i>Current Managers</h4>';
@@ -1114,6 +1261,7 @@
             }).catch(error => console.error(error));
         }
 
+        // Load Music Submissions (Admin Only)
         function loadSubmissions() {
             const submissionsList = document.getElementById('submissions-list');
             submissionsList.innerHTML = '<h4 class="mb-3"><i class="bi bi-music-note-list icon"></i>Music Submissions</h4>';
@@ -1153,6 +1301,7 @@
                     tbody.appendChild(row);
                 });
                 submissionsList.appendChild(table);
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1161,20 +1310,264 @@
             }).catch(error => console.error(error));
         }
 
-        /* Global functions (editArtist, deleteArtist, etc.) – unchanged */
-        window.editArtist = function(artistId) { /* ... */ };
-        window.deleteArtist = function(artistId) { /* ... */ };
-        window.editSlider = function(sliderId) { /* ... */ };
-        window.deleteSlider = function(sliderId) { /* ... */ };
-        window.removeManager = function(id) { /* ... */ };
+        // Global functions
+        window.editArtist = function(artistId) {
+            editingArtistId = artistId;
+            const artistRef = doc(db, 'artists', artistId);
+            getDoc(artistRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const artist = docSnap.data();
+                    document.getElementById('edit-artist-name').value = artist.name || '';
+                    document.getElementById('edit-artist-description').value = artist.description || '';
+                    document.getElementById('edit-artist-instagram').value = artist.instagram || '';
+                    document.getElementById('edit-artist-spotify').value = artist.spotify || '';
+                    document.getElementById('edit-artist-email').value = artist.email || '';
+                    editModal.show();
+                }
+            });
+        };
 
-        // Forms listeners – unchanged
-        addArtistForm.addEventListener('submit', async (e) => { /* ... */ });
-        document.getElementById('edit-artist-form').addEventListener('submit', async (e) => { /* ... */ });
-        addSliderForm.addEventListener('submit', async (e) => { /* ... */ });
-        document.getElementById('edit-slider-form').addEventListener('submit', async (e) => { /* ... */ });
-        addManagerForm.addEventListener('submit', (e) => { /* ... */ });
-        submitMusicForm.addEventListener('submit', async (e) => { /* ... */ });
+        window.deleteArtist = function(artistId) {
+            if (confirm('Are you sure you want to delete this artist?')) {
+                const artistRef = doc(db, 'artists', artistId);
+                deleteDoc(artistRef).then(() => {
+                    alert('Artist deleted!');
+                    loadArtists();
+                    loadAdminAnalytics();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.editSlider = function(sliderId) {
+            editingSliderId = sliderId;
+            const sliderRef = doc(db, 'sliders', sliderId);
+            getDoc(sliderRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const slider = docSnap.data();
+                    document.getElementById('edit-slider-title').value = slider.title || '';
+                    document.getElementById('edit-slider-description').value = slider.description || '';
+                    document.getElementById('edit-slider-link').value = slider.link || '';
+                    editSliderModal.show();
+                }
+            });
+        };
+
+        window.deleteSlider = function(sliderId) {
+            if (confirm('Are you sure you want to delete this slider?')) {
+                const sliderRef = doc(db, 'sliders', sliderId);
+                deleteDoc(sliderRef).then(() => {
+                    alert('Slider deleted!');
+                    loadSlider();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.removeManager = function(id) {
+            if (confirm('Are you sure you want to remove this manager?')) {
+                deleteDoc(doc(db, 'managers', id)).then(() => {
+                    loadManagers();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        // Add Artist
+        addArtistForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('artist-name').value;
+            const description = document.getElementById('artist-description').value;
+            const instagram = document.getElementById('artist-instagram').value;
+            const spotify = document.getElementById('artist-spotify').value;
+            const imageFile = document.getElementById('artist-image').files[0];
+            const email = document.getElementById('artist-email').value;
+
+            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    artistData.imageUrl = url;
+                }
+                const docRef = await addDoc(collection(db, 'artists'), artistData);
+                // Initialize stats document
+                await setDoc(doc(db, `artists/${docRef.id}/stats/traffic`), {
+                    views: 0,
+                    earnings: 0,
+                    lastUpdated: serverTimestamp()
+                });
+                alert('Artist added!');
+                addArtistForm.reset();
+                loadArtists();
+                loadAdminAnalytics();
+            } catch (error) {
+                console.error(error);
+                alert('Error adding artist: ' + (error.message || error));
+            }
+        });
+
+        // Edit Artist
+        document.getElementById('edit-artist-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('edit-artist-name').value;
+            const description = document.getElementById('edit-artist-description').value;
+            const instagram = document.getElementById('edit-artist-instagram').value;
+            const spotify = document.getElementById('edit-artist-spotify').value;
+            const email = document.getElementById('edit-artist-email').value;
+            const imageFile = document.getElementById('edit-artist-image').files[0];
+
+            const artistRef = doc(db, 'artists', editingArtistId);
+            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = url;
+                }
+                await updateDoc(artistRef, updateData);
+                alert('Artist updated!');
+                editModal.hide();
+                const artistId = getQueryParam('artist');
+                if (artistId) {
+                    loadSingleArtist(artistId);
+                } else {
+                    loadArtists();
+                    loadAdminAnalytics();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error updating artist: ' + (error.message || error));
+            }
+        });
+
+        // Add Slider
+        addSliderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('slider-title').value;
+            const description = document.getElementById('slider-description').value;
+            const link = document.getElementById('slider-link').value;
+            const imageFile = document.getElementById('slider-image').files[0];
+
+            if (!imageFile) {
+                alert('Please select an image for the slider.');
+                return;
+            }
+            if (!imageFile.type.startsWith('image/')) {
+                alert('Please select an image file only.');
+                return;
+            }
+
+            try {
+                const compressed = await compressImage(imageFile, 1920, 0.7);
+                const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const imageUrl = await getDownloadURL(snapshot.ref);
+                await addDoc(collection(db, 'sliders'), {
+                    title: title || '',
+                    description: description || '',
+                    link: link || '',
+                    imageUrl,
+                    createdAt: serverTimestamp()
+                });
+                alert('Slider added successfully!');
+                addSliderForm.reset();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider add error:', error);
+                alert('Error adding slider: ' + (error.message || error));
+            }
+        });
+
+        // Edit Slider
+        document.getElementById('edit-slider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('edit-slider-title').value;
+            const description = document.getElementById('edit-slider-description').value;
+            const link = document.getElementById('edit-slider-link').value;
+            const imageFile = document.getElementById('edit-slider-image').files[0];
+
+            const sliderRef = doc(db, 'sliders', editingSliderId);
+            const updateData = { title: title || '', description: description || '', link: link || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile, 1920, 0.7);
+                    const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const imageUrl = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = imageUrl;
+                }
+                await updateDoc(sliderRef, updateData);
+                alert('Slider updated!');
+                editSliderModal.hide();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider edit error:', error);
+                alert('Error updating slider: ' + (error.message || error));
+            }
+        });
+
+        // Add Manager
+        addManagerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('manager-email').value;
+            addDoc(collection(db, 'managers'), { email }).then(() => {
+                alert('Manager added!');
+                addManagerForm.reset();
+                loadManagers();
+            }).catch(error => console.error(error));
+        });
+
+        // Submit Music
+        submitMusicForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const artistName = document.getElementById('submit-artist-name').value;
+            const trackName = document.getElementById('track-name').value;
+            const soundcloudLink = document.getElementById('soundcloud-link').value;
+            const coverFile = document.getElementById('cover-upload').files[0];
+
+            if (!coverFile.type.startsWith('image/')) {
+                alert('Please select an image file only for cover art.');
+                return;
+            }
+
+            try {
+                const compressed = await compressImage(coverFile);
+                const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const url = await getDownloadURL(snapshot.ref);
+                await addDoc(collection(db, 'submissions'), {
+                    artistName,
+                    trackName,
+                    coverUrl: url,
+                    soundcloudLink,
+                    submittedBy: auth.currentUser.email,
+                    timestamp: serverTimestamp()
+                });
+                alert('Submission successful!');
+                submitMusicForm.reset();
+                loadAdminAnalytics();
+            } catch (error) {
+                console.error(error);
+                alert('Error submitting music: ' + (error.message || error));
+            }
+        });
 
         // Scroll-based social bar hide
         let lastScrollY = 0;
@@ -1213,7 +1606,7 @@
                 <div class="top-social-links">
                     <a href="https://instagram.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
                     <a href="https://twitter.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
-                    <a disclaimer="TikTok"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://tiktok.com/@sjlabel" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
                     <a href="https://facebook.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
                 </div>
             </div>
@@ -1291,7 +1684,31 @@
         <div id="artist-management-section" class="form-section d-none glass-effect">
             <h3 class="text-center mb-4"><i class="bi bi-plus-circle icon"></i>Add New Artist</h3>
             <form id="add-artist-form">
-                <!-- form fields unchanged -->
+                <div class="mb-3">
+                    <label for="artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
+                    <input type="email" class="form-control" id="artist-email">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <textarea class="form-control" id="artist-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image</label>
+                    <input type="file" class="form-control" id="artist-image" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                    <input type="url" class="form-control" id="artist-instagram" placeholder="https://instagram.com/artist">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                    <input type="url" class="form-control" id="artist-spotify" placeholder="https://open.spotify.com/artist">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Artist</button>
             </form>
         </div>
 
@@ -1301,14 +1718,34 @@
             <hr class="my-4" style="border-color: var(--color-red);">
             <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
             <form id="add-slider-form">
-                <!-- form fields unchanged -->
+                <div class="mb-3">
+                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                    <input type="text" class="form-control" id="slider-title" placeholder="Slide Title">
+                </div>
+                <div class="mb-3">
+                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                    <textarea class="form-control" id="slider-description" rows="2" placeholder="Slide Description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (required)</label>
+                    <input type="file" class="form-control" id="slider-image" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                    <input type="url" class="form-control" id="slider-link" placeholder="https://example.com">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Slider</button>
             </form>
 
             <hr class="my-4" style="border-color: var(--color-red);">
 
             <h3 class="text-center mb-4"><i class="bi bi-person-plus icon"></i>Add Manager</h3>
             <form id="add-manager-form">
-                <!-- form fields unchanged -->
+                <div class="mb-3">
+                    <label for="manager-email" class="form-label"><i class="bi bi-envelope icon"></i>Manager Email</label>
+                    <input type="email" class="form-control" id="manager-email" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Manager</button>
             </form>
             <div id="managers-list"></div>
 
@@ -1321,13 +1758,106 @@
         <div id="submission-section" class="form-section d-none glass-effect">
             <h3 class="text-center mb-4"><i class="bi bi-upload icon"></i>Submit Your Music</h3>
             <form id="submit-music-form">
-                <!-- form fields unchanged -->
+                <div class="mb-3">
+                    <label for="submit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="submit-artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="track-name" class="form-label"><i class="bi bi-music-note-list icon"></i>Track Name</label>
+                    <input type="text" class="form-control" id="track-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cover-upload" class="form-label"><i class="bi bi-image icon"></i>Cover Art</label>
+                    <input type="file" class="form-control" id="cover-upload" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="soundcloud-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Private SoundCloud Link</label>
+                    <input type="url" class="form-control" id="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
             </form>
         </div>
     </div>
 
-    <!-- Edit Modals & Footer – unchanged -->
-    <!-- (All the modal HTML and footer remain exactly as you originally had) -->
+    <!-- Edit Artist Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Artist</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-artist-form">
+                        <div class="mb-3">
+                            <label for="edit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                            <input type="text" class="form-control" id="edit-artist-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
+                            <input type="email" class="form-control" id="edit-artist-email">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                            <textarea class="form-control" id="edit-artist-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-artist-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                            <input type="url" class="form-control" id="edit-artist-instagram" placeholder="https://instagram.com/artist">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                            <input type="url" class="form-control" id="edit-artist-spotify" placeholder="https://open.spotify.com/artist">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Artist</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Slider Modal -->
+    <div class="modal fade" id="editSliderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Slider</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-slider-form">
+                        <div class="mb-3">
+                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                            <input type="text" class="form-control" id="edit-slider-title" placeholder="Slide Title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                            <textarea class="form-control" id="edit-slider-description" rows="2" placeholder="Slide Description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-slider-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                            <input type="url" class="form-control" id="edit-slider-link" placeholder="https://example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Slider</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer id="footer" class="site-footer">
+        <p>&copy; 2025 SJ x N41 music. All rights reserved.</p>
+        <p><a href="mailto:simo.jibou@gmail.com">simo.jibou@gmail.com</a></p>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
