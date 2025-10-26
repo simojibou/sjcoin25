@@ -667,7 +667,8 @@
                     const managerRef = doc(db, 'managers', user.email);
                     const managerSnap = await getDoc(managerRef);
                     if (managerSnap.exists()) {
-                        artistManagementSection.classList.remove('d-none');
+                        // Do not show artist management for managers as per requirement
+                        // artistManagementSection.classList.remove('d-none');
                     }
                 }
             } else {
@@ -680,7 +681,11 @@
             }
             const artistId = getQueryParam('artist');
             if (artistId) {
-                await logArtistView(artistId);
+                try {
+                    await logArtistView(artistId);
+                } catch (error) {
+                    console.error('Error logging view:', error);
+                }
                 loadSingleArtist(artistId);
             } else {
                 loadArtists();
