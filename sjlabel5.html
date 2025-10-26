@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -479,6 +478,38 @@
             height: 90px;
         }
 
+        /* Resources Section - New Addition */
+        .resources-section {
+            background: var(--netflix-dark);
+            border-radius: 4px;
+            padding: var(--space-4);
+            margin: var(--space-3) auto;
+            max-width: 800px;
+            border: 1px solid #333;
+        }
+        .resource-card {
+            background: #333;
+            border-radius: 4px;
+            padding: var(--space-3);
+            margin-bottom: var(--space-2);
+            border-left: 4px solid var(--netflix-red);
+        }
+        .resource-card h5 {
+            color: var(--netflix-red);
+            margin-bottom: var(--space-1);
+        }
+        .resource-card ul {
+            color: #ccc;
+            padding-left: var(--space-3);
+        }
+        .resource-card a {
+            color: var(--netflix-red);
+            text-decoration: none;
+        }
+        .resource-card a:hover {
+            text-decoration: underline;
+        }
+
         /* Animations - Subtle */
         @keyframes fadeInUp {
             from {
@@ -550,6 +581,10 @@
             .row-container {
                 padding: 0 2%;
                 gap: var(--space-1);
+            }
+            .resources-section {
+                margin: var(--space-2) 4%;
+                padding: var(--space-3);
             }
         }
 
@@ -1612,6 +1647,31 @@
                 <button type="submit" class="btn btn-primary"><i class="bi bi-send icon"></i>Submit Track</button>
             </form>
         </div>
+
+        <!-- Resources Section - Added for Spotify and Apple Music Guides -->
+        <div id="resources-section" class="resources-section d-none">
+            <h3 class="text-center mb-4"><i class="bi bi-book icon"></i>Artist Resources</h3>
+            <div class="resource-card">
+                <h5><i class="bi bi-spotify icon"></i> Spotify for Artists</h5>
+                <p>Claim and customize your Spotify artist page. Automatically generated upon release.</p>
+                <ul>
+                    <li><a href="https://artists.spotify.com/" target="_blank">Go to Spotify for Artists</a></li>
+                    <li>Upload bio, photos, and analytics access.</li>
+                    <li>Pitch to playlists 7 days pre-release.</li>
+                    <li>Track streams and earnings.</li>
+                </ul>
+            </div>
+            <div class="resource-card">
+                <h5><i class="bi bi-music-note-beamed icon"></i> Apple Music for Artists</h5>
+                <p>Claim your Apple Music profile after 5 days of release. Use the iOS app for full access.</p>
+                <ul>
+                    <li><a href="https://artists.apple.com/" target="_blank">Go to Apple Music for Artists</a></li>
+                    <li>Add image, bio (via email), and Q&A.</li>
+                    <li>Analytics: Streams, Shazam, radio spins.</li>
+                    <li>Pitch tracks 4-6 weeks pre-release.</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <!-- Edit Artist Modal -->
@@ -1696,6 +1756,18 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Show resources section for logged-in users
+        document.addEventListener('DOMContentLoaded', () => {
+            const authSection = document.getElementById('auth-section');
+            const resourcesSection = document.getElementById('resources-section');
+            const observer = new MutationObserver(() => {
+                if (!loginBtn.classList.contains('d-none')) {
+                    resourcesSection.classList.remove('d-none');
+                }
+            });
+            observer.observe(authSection, { childList: true, subtree: true });
+        });
+    </script>
 </body>
 </html>
-```
