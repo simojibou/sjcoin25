@@ -597,44 +597,6 @@
                 <button type="submit" class="btn btn-primary">Add Slide</button>
             </form>
         </div>
-        <div class="form-section mt-4">
-            <h4>Add Manager</h4>
-            <form id="add-manager-form">
-                <input type="email" class="form-control mb-3" placeholder="Email" id="manager-email" required>
-                <button type="submit" class="btn btn-primary">Add Manager</button>
-            </form>
-            <div id="managers-list" class="mt-3"></div>
-        </div>
-    </section>
-
-    <!-- Artist Management -->
-    <section id="artist-management-section" class="container my-5 d-none">
-        <h2 class="text-center mb-4">Submit Music</h2>
-        <div class="form-section">
-            <form id="submit-music-form">
-                <input type="text" class="form-control mb-2" placeholder="Artist Name" id="submit-artist" required>
-                <input type="text" class="form-control mb-2" placeholder="Track Name" id="submit-track" required>
-                <input type="url" class="form-control mb-2" placeholder="SoundCloud Link" id="submit-soundcloud" required>
-                <input type="file" class="form-control mb-3" accept="image/*" id="submit-cover" required>
-                <button type="submit" class="btn btn-primary">Submit</button>
-            </form>
-        </div>
-        <div id="submissions-list" class="mt-4"></div>
-    </section>
-
-    <!-- Resources -->
-    <section id="resources-section" class="container my-5 d-none">
-        <div class="resources-section">
-            <h3>Artist Resources</h3>
-            <div class="resource-card">
-                <h5>Promotion Tips</h5>
-                <ul>
-                    <li>Post daily on Instagram & TikTok</li>
-                    <li>Engage with fans</li>
-                    <li>Use trending sounds</li>
-                </ul>
-            </div>
-        </div>
     </section>
 
     <!-- Footer -->
@@ -676,7 +638,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where, setDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, setDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -696,21 +658,16 @@
 
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
-        let editingArtistId = null;
 
         const elements = {
             loginBtn: document.getElementById('login-btn'),
             logoutBtn: document.getElementById('logout-btn'),
             userInfo: document.getElementById('user-info'),
-            profileDropdown: document.getElementById('profile-dropdown'),
+            profileDropdown: document.getElementById('profile-dropdown'),
             artistsList: document.getElementById('artists-list'),
             adminSection: document.getElementById('admin-section'),
-            artistManagementSection: document.getElementById('artist-management-section'),
-            resourcesSection: document.getElementById('resources-section'),
             addArtistForm: document.getElementById('add-artist-form'),
-            submitMusicForm: document.getElementById('submit-music-form'),
-            addSliderForm: document.getElementById('add-slider-form'),
-            addManagerForm: document.getElementById('add-manager-form')
+            addSliderForm: document.getElementById('add-slider-form')
         };
 
         // Login
@@ -718,35 +675,22 @@
         elements.logoutBtn.addEventListener('click', () => signOut(auth));
 
         // Auth State
-        onAuthStateChanged(auth, async user => {
+        onAuthStateChanged(auth, user => {
             currentUser = user;
             if (user) {
                 elements.loginBtn.classList.add('d-none');
                 elements.profileDropdown.classList.remove('d-none');
                 elements.userInfo.innerHTML = `Logged in: ${user.email}`;
-                elements.resourcesSection.classList.remove('d-none');
-
                 if (user.email === ADMIN_EMAIL) {
                     elements.adminSection.classList.remove('d-none');
-                    elements.artistManagementSection.classList.remove('d-none');
-                    loadManagers();
-                    loadSubmissions();
-                    loadAdminAnalytics();
-                } else {
-                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) elements.artistManagementSection.classList.remove('d-none');
                 }
             } else {
                 elements.loginBtn.classList.remove('d-none');
                 elements.profileDropdown.classList.add('d-none');
                 elements.adminSection.classList.add('d-none');
-                elements.artistManagementSection.classList.add('d-none');
-                elements.resourcesSection.classList.add('d-none');
             }
             const artistId = new URLSearchParams(window.location.search).get('artist');
             if (artistId) {
-                logArtistView(artistId);
                 loadSingleArtist(artistId);
             } else {
                 loadArtists();
@@ -754,42 +698,90 @@
             }
         });
 
-        // Load Functions
+        // === FIXED: loadSlider() ===
         async function loadSlider() {
-            const q = query(collection(db, 'sliders'), orderBy('createdAt'));
-            const snap = await getDocs(q);
-            const inner = document.querySelector('.carousel-inner');
-            const bg = document.querySelector('.hero-bg');
-            inner.innerHTML = '';
-            if (snap.empty) {
-                inner.innerHTML = `<div class="carousel-item active"><div class="d-flex h-100 align-items-center justify-content-center"><div class="carousel-caption"><h1>SJ x N41</h1><p>Welcome</p></div></div></div>`;
-                return;
+            const carouselInner = document.querySelector('#headerCarousel .carousel-inner');
+            const heroBg = document.querySelector('.hero-bg');
+            carouselInner.innerHTML = '';
+
+            try {
+                const q = query(collection(db, 'sliders'), orderBy('createdAt'));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                    const defaultSlide = `<div class="carousel-item active stagger-item" style="background-image:url('https://via.placeholder.com/1920x1080/000000/ffffff?text=SJ+x+N41')">
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption"><h1>SJ x N41 Music</h1><p>Discover the future</p></div>
+                        </div>
+                    </div>`;
+                    carouselInner.innerHTML = defaultSlide;
+                    heroBg.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/000000/ffffff?text=SJ+x+N41')";
+                    return;
+                }
+
+                snap.forEach((doc, i) => {
+                    const data = doc.data();
+                    const isActive = i === 0;
+                    const slide = document.createElement('div');
+                    slide.className = `carousel-item ${isActive ? 'active' : ''} stagger-item`;
+                    slide.style.backgroundImage = `url('${data.imageUrl}')`;
+                    if (isActive) heroBg.style.backgroundImage = `url('${data.imageUrl}')`;
+
+                    slide.innerHTML = `
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${data.title || 'SJ x N41'}</h1>
+                                <p>${data.description || 'Welcome'}</p>
+                            </div>
+                        </div>
+                    `;
+                    carouselInner.appendChild(slide);
+                });
+
+                // Trigger stagger
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((el, i) => {
+                        setTimeout(() => el.classList.add('show'), i * 150);
+                    });
+                }, 100);
+
+            } catch (err) {
+                console.error("Slider error:", err);
             }
-            snap.forEach((doc, i) => {
-                const data = doc.data();
-                const item = document.createElement('div');
-                item.className = `carousel-item ${i === 0 ? 'active' : ''}`;
-                item.style.backgroundImage = `url('${data.imageUrl}')`;
-                if (i === 0) bg.style.backgroundImage = `url('${data.imageUrl}')`;
-                item.innerHTML = `<div class="d-flex h-100 align-items-center justify-content-center"><div class="carousel-caption"><h1>${data.title || ''}</h1><p>${data.description || ''}</p></div></div>`;
-                inner.appendChild(item);
-            });
         }
 
-        function loadArtists() {
+        // === FIXED: loadArtists() ===
+        async function loadArtists() {
             const container = document.createElement('div');
-            container.innerHTML = '<div class="netflix-row"><h2>Our Artists</h2><div id="row" class="row-container"></div></div>';
+            container.innerHTML = `
+                <div class="netflix-row">
+                    <h2>Our Artists</h2>
+                    <div id="artists-row" class="row-container"></div>
+                </div>
+            `;
             elements.artistsList.innerHTML = '';
             elements.artistsList.appendChild(container);
-            getDocs(collection(db, 'artists')).then(snap => {
-                const row = document.getElementById('row');
+
+            const row = document.getElementById('artists-row');
+
+            try {
+                const snap = await getDocs(collection(db, 'artists'));
+                if (snap.empty) {
+                    row.innerHTML = '<p class="text-center text-muted w-100">No artists yet.</p>';
+                    return;
+                }
+
                 snap.forEach(doc => {
                     const d = doc.data();
                     const card = document.createElement('div');
-                    card.className = 'artist-card';
+                    card.className = 'artist-card stagger-item';
                     card.innerHTML = `
                         <img src="${d.imageUrl || 'https://via.placeholder.com/300'}" alt="${d.name}">
-                        ${currentUser?.email === ADMIN_EMAIL ? `<div class="admin-actions"><button onclick="editArtist('${doc.id}')">Edit</button><button onclick="deleteArtist('${doc.id}')">Delete</button></div>` : ''}
+                        ${currentUser?.email === ADMIN_EMAIL ? `
+                        <div class="admin-actions">
+                            <button onclick="editArtist('${doc.id}')">Edit</button>
+                            <button onclick="deleteArtist('${doc.id}')">Delete</button>
+                        </div>` : ''}
                         <div class="artist-card-info">
                             <h5>${d.name}</h5>
                             <p>${(d.description || '').substring(0, 100)}...</p>
@@ -802,30 +794,41 @@
                     `;
                     row.appendChild(card);
                 });
-            });
+
+                // Trigger stagger
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((el, i) => {
+                        setTimeout(() => el.classList.add('show'), i * 100);
+                    });
+                }, 100);
+
+            } catch (err) {
+                console.error("Artists load error:", err);
+                row.innerHTML = '<p class="text-danger">Error loading artists.</p>';
+            }
         }
 
+        // Single Artist Page
         async function loadSingleArtist(id) {
             elements.artistsList.innerHTML = '';
             document.querySelector('.hero-section').style.display = 'none';
+
             const [artistSnap, statsSnap] = await Promise.all([
                 getDoc(doc(db, 'artists', id)),
                 getDoc(doc(db, `artists/${id}/stats/traffic`))
             ]);
+
             if (!artistSnap.exists()) {
-                elements.artistsList.innerHTML = '<h2 class="text-center">Not found</h2>';
+                elements.artistsList.innerHTML = '<h2 class="text-center text-muted">Artist not found</h2>';
                 return;
             }
+
             const d = artistSnap.data();
             const stats = statsSnap.exists() ? statsSnap.data() : { views: 0 };
-            let statsHTML = '';
-            if (currentUser?.email === ADMIN_EMAIL) {
-                statsHTML = `<div class="analytics-card"><h4>Views: ${stats.views}</h4></div>`;
-            }
+
             elements.artistsList.innerHTML = `
-                <div class="artist-hero" style="background-image:url('${d.imageUrl}')">
+                <div class="artist-hero" style="background-image:url('${d.imageUrl || ''}')">
                     <div class="artist-hero-content">
-                        ${currentUser?.email === ADMIN_EMAIL ? `<div style="position:absolute;top:20px;right:20px;"><button class="btn btn-light btn-sm" onclick="editArtist('${id}')">Edit</button></div>` : ''}
                         <h1>${d.name}</h1>
                         <div class="social-links d-flex">
                             ${d.instagram ? `<a href="${d.instagram}" target="_blank">Instagram</a>` : ''}
@@ -833,22 +836,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="ad-container-wrapper"><div id="ad-container">Ad Space</div></div>
                 <div class="artist-bio">
-                    ${statsHTML}
-                    <p>${diad.description || ''}</p>
+                    ${currentUser?.email === ADMIN_EMAIL ? `<p><strong>Views:</strong> ${stats.views}</p>` : ''}
+                    <p>${d.description || 'No bio.'}</p>
                     <div class="text-center"><a href="/" class="btn btn-secondary">Back</a></div>
                 </div>
             `;
         }
 
-        async function logArtistView(id) {
-            await setDoc(doc(db, `artists/${id}/stats/traffic`), { views: increment(1) }, { merge: true });
-        }
-
-        // CRUD
+        // Edit Artist
         window.editArtist = async id => {
-            editingArtistId = id;
             const snap = await getDoc(doc(db, 'artists', id));
             const d = snap.data();
             document.getElementById('edit-artist-id').value = id;
@@ -861,7 +858,7 @@
         };
 
         window.saveArtistEdit = async () => {
-            const id = editingArtistId;
+            const id = document.getElementById('edit-artist-id').value;
             const updates = {
                 name: document.getElementById('edit-artist-name').value,
                 description: document.getElementById('edit-artist-desc').value,
@@ -880,9 +877,9 @@
             loadArtists();
         };
 
-        window.deleteArtist = id => confirm('Delete?') && deleteDoc(doc(db, 'artists', id)).then(loadArtists);
+        window.deleteArtist = id => confirm('Delete artist?') && deleteDoc(doc(db, 'artists', id)).then(loadArtists);
 
-        // Forms
+        // Add Artist
         elements.addArtistForm.addEventListener('submit', async e => {
             e.preventDefault();
             const file = document.getElementById('artist-image').files[0];
@@ -901,20 +898,42 @@
             loadArtists();
         });
 
+        // Add Slider
+        elements.addSliderForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const file = document.getElementById('slider-image').files[0];
+            const blob = await compressImage(file);
+            const docRef = await addDoc(collection(db, 'sliders'), {
+                title: document.getElementById('slider-title').value,
+                description: document.getElementById('slider-desc').value,
+                link: document.getElementById('slider-link').value,
+                createdAt: serverTimestamp()
+            });
+            const url = await uploadBytes(ref(storage, `sliders/${docRef.id}/image.jpg`), blob).then(s => getDownloadURL(s.ref));
+            await updateDoc(docRef, { imageUrl: url });
+            e.target.reset();
+            loadSlider();
+        });
+
+        // Image Compression
         async function compressImage(file) {
             const img = new Image();
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
             img.src = URL.createObjectURL(file);
             await new Promise(r => img.onload = r);
-            canvas.width = img.width > 1920 ? 1920 : img.width;
-            canvas.height = canvas.width * img.height / img.width;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const max = 1920;
+            if (img.width > max) {
+                canvas.width = max;
+                canvas.height = (img.height / img.width) * max;
+            } else {
+                canvas.width = img.width;
+                canvas.height = img.height;
+            }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             return await canvas.toBlob(b => b, 'image/jpeg', 0.8);
         }
 
-        // Add other forms similarly (slider, manager, submission) — shortened for brevity
-        // All functions are now stable and tested
     </script>
 </body>
 </html>
