@@ -246,7 +246,7 @@
         }
         .artist-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
         .artist-card img {
             width: 100%;
@@ -280,17 +280,6 @@
             right: var(--space-1);
             opacity: 0;
             transition: opacity 0.3s ease;
-        }
-        .artist-card:hover .admin-actions {
-            opacity: 1;
-        }
-        .admin-actions button {
-            background: none;
-            border: none;
-            color: var(--color-white);
-            margin-left: 5px;
-            cursor: pointer;
-            font-size: 1.2rem;
         }
         .artist-card:hover .admin-actions {
             opacity: 1;
@@ -514,160 +503,47 @@
 
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
-            .hero-section {
-                height: 80vh;
-            }
-            .carousel-item {
-                height: 80vh;
-            }
-            .carousel-caption {
-                padding: var(--space-2);
-                max-width: 90%;
-                border-radius: 15px;
-            }
-            .carousel-caption h1 {
-                font-size: 1.8rem;
-                letter-spacing: 1px;
-            }
-            .carousel-caption p {
-                font-size: 0.9rem;
-            }
-            .carousel-control-prev, .carousel-control-next {
-                width: 15%;
-            }
-            .music-platforms-bar {
-                bottom: 5%;
-                gap: var(--space-1);
-                padding: 10px 20px;
-            }
-            .music-platforms-bar a {
-                font-size: 1.4rem;
-            }
-            .top-social-links a {
-                font-size: 1.3rem;
-                margin: 0 10px;
-            }
-            .artist-hero {
-                height: 50vh;
-            }
-            .artist-hero h1 {
-                font-size: 2rem;
-                letter-spacing: 1.5px;
-            }
-            .artist-hero .social-links {
-                font-size: 1.5rem;
-            }
-            .artist-bio {
-                padding: var(--space-2);
-                max-width: 95%;
-            }
-            .artist-bio p {
-                font-size: 0.9rem;
-            }
-            .artist-card {
-                margin: var(--space-1) 0;
-                padding: var(--space-1);
-            }
-            .artist-card img {
-                height: 180px;
-            }
-            .artist-card h5 {
-                font-size: 1.2rem;
-            }
-            .artist-card p {
-                font-size: 0.9rem;
-            }
-            .social-links a {
-                font-size: 1.3rem;
-            }
-            .form-section {
-                margin: var(--space-2);
-                padding: var(--space-1);
-                max-width: 95%;
-            }
-            .form-control {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-            .btn-primary, .btn-secondary {
-                padding: 12px 25px;
-                font-size: 0.9rem;
-            }
-            .admin-actions {
-                position: static;
-                opacity: 1;
-                margin-top: var(--space-1);
-                display: flex;
-                justify-content: flex-end;
-            }
-            .submissions-table img {
-                width: 40px;
-                height: 40px;
-            }
-            .submissions-table th, .submissions-table td {
-                font-size: 0.85rem;
-                padding: 8px;
-            }
-            .ad-container-wrapper {
-                margin: var(--space-1) auto;
-            }
-            #ad-container {
-                width: 100%;
-                height: auto;
-            }
-            .analytics-card p {
-                font-size: 1.5rem;
-            }
-            .chart-container {
-                height: 250px;
-            }
-            .progress {
-                height: 15px;
-            }
+            .hero-section { height: 80vh; }
+            .carousel-item { height: 80vh; }
+            .carousel-caption { padding: var(--space-2); max-width: 90%; border-radius: 15px; }
+            .carousel-caption h1 { font-size: 1.8rem; letter-spacing: 1px; }
+            .carousel-caption p { font-size: 0.9rem; }
+            .carousel-control-prev, .carousel-control-next { width: 15%; }
+            .music-platforms-bar { bottom: 5%; gap: var(--space-1); padding: 10px 20px; }
+            .music-platforms-bar a { font-size: 1.4rem; }
+            .top-social-links a { font-size: 1.3rem; margin: 0 10px; }
+            .artist-hero { height: 50vh; }
+            .artist-hero h1 { font-size: 2rem; letter-spacing: 1.5px; }
+            .artist-hero .social-links { font-size: 1.5rem; }
+            .artist-bio { padding: var(--space-2); max-width: 95%; }
+            .artist-bio p { font-size: 0.9rem; }
+            .artist-card { margin: var(--space-1) 0; padding: var(--space-1); }
+            .artist-card img { height: 180px; }
+            .artist-card h5 { font-size: 1.2rem; }
+            .artist-card p { font-size: 0.9rem; }
+            .social-links a { font-size: 1.3rem; }
+            .form-section { margin: var(--space-2); padding: var(--space-1); max-width: 95%; }
+            .form-control { padding: 10px; font-size: 0.9rem; }
+            .btn-primary, .btn-secondary { padding: 12px 25px; font-size: 0.9rem; }
+            .admin-actions { position: static; opacity: 1; margin-top: var(--space-1); display: flex; justify-content: flex-end; }
+            .submissions-table img { width: 40px; height: 40px; }
+            .submissions-table th, .submissions-table td { font-size: 0.85rem; padding: 8px; }
+            .ad-container-wrapper { margin: var(--space-1) auto; }
+            #ad-container { width: 100%; height: auto; }
+            .analytics-card p { font-size: 1.5rem; }
+            .chart-container { height: 250px; }
+            .progress { height: 15px; }
         }
 
         @media (max-width: 576px) {
-            .carousel-caption h1 {
-                font-size: 1.5rem;
-            }
-            .carousel-caption p {
-                font-size: 0.85rem;
-            }
-            .artist-hero h1 {
-                font-size: 1.8rem;
-            }
-            .btn-primary, .btn-secondary {
-                padding: 10px 20px;
-                font-size: 0.85rem;
-            }
-            .top-social-links a {
-                font-size: 1.2rem;
-                margin: 0 8px;
-            }
-            .analytics-card p {
-                font-size: 1.2rem;
-            }
-            .chart-container {
-                height: 200px;
-            }
-            .progress {
-                height: 12px;
-            }
-        }
-
-        /* Permission Table Styles */
-        .permission-table th {
-            background: rgba(255,0,0,0.2);
-            text-align: center;
-        }
-        .permission-table td {
-            text-align: center;
-        }
-        .yes {
-            color: #0f0;
-        }
-        .no {
-            color: #f55;
+            .carousel-caption h1 { font-size: 1.5rem; }
+            .carousel-caption p { font-size: 0.85rem; }
+            .artist-hero h1 { font-size: 1.8rem; }
+            .btn-primary, .btn-secondary { padding: 10px 20px; font-size: 0.85rem; }
+            .top-social-links a { font-size: 1.2rem; margin: 0 8px; }
+            .analytics-card p { font-size: 1.2rem; }
+            .chart-container { height: 200px; }
+            .progress { height: 12px; }
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
@@ -818,13 +694,11 @@
             if (!analyticsSection) return;
 
             try {
-                // Fetch artist and submission counts
                 const artistsSnap = await getDocs(collection(db, 'artists'));
                 const submissionsSnap = await getDocs(collection(db, 'submissions'));
                 const artistCount = artistsSnap.size;
                 const submissionCount = submissionsSnap.size;
 
-                // Fetch traffic and earnings data
                 let totalViews = 0;
                 let totalEarnings = 0;
                 const trafficData = [];
@@ -843,68 +717,12 @@
                     });
                 }
 
-                // Prepare chart data
                 const labels = trafficData.map(item => item.name);
                 const views = trafficData.map(item => item.views);
                 const earnings = trafficData.map(item => item.earnings);
 
-                // Permission matrix table HTML
-                const permissionTable = `
-                    <div class="table-responsive">
-                        <table class="table permission-table glass-effect">
-                            <thead>
-                                <tr>
-                                    <th>Feature</th>
-                                    <th>Public</th>
-                                    <th>Logged-in User</th>
-                                    <th>Artist's Manager</th>
-                                    <th>Admin</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>View Artist Name, Image, Bio</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>View Social Links</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                    <td class="yes">Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>View Views & Earnings</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="yes">Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>Edit/Delete Artist</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="yes">Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>View Admin Analytics</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="no">No</td>
-                                    <td class="yes">Yes</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-
                 analyticsSection.innerHTML = `
                     <h3 class="text-center mb-4"><i class="bi bi-graph-up icon"></i>Admin Analytics Dashboard</h3>
-                    ${permissionTable}
                     <div class="row">
                         <div class="col-md-4">
                             <div class="analytics-card glass-effect">
@@ -936,7 +754,6 @@
                     </div>
                 `;
 
-                // Initialize Chart.js for traffic
                 const ctx = document.getElementById('trafficChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'bar',
@@ -965,43 +782,22 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Value',
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                },
-                                ticks: {
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                }
+                                title: { display: true, text: 'Value', color: 'rgba(255,255,255,0.9)' },
+                                ticks: { color: 'rgba(255,255,255,0.9)' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
                             },
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Artists',
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                },
-                                ticks: {
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                }
+                                title: { display: true, text: 'Artists', color: 'rgba(255,255,255,0.9)' },
+                                ticks: { color: 'rgba(255,255,255,0.9)' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
                             }
                         },
                         plugins: {
-                            legend: {
-                                labels: {
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                }
-                            }
+                            legend: { labels: { color: 'rgba(255,255,255,0.9)' } }
                         }
                     }
                 });
 
-                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1069,13 +865,11 @@
                     headerCarousel.appendChild(carouselItem);
                     active = false;
                 });
-                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 200);
                     });
                 }, 100);
-                // Update hero background on slide change
                 const carousel = document.getElementById('headerCarousel');
                 carousel.addEventListener('slid.bs.carousel', (event) => {
                     const activeSlide = event.relatedTarget;
@@ -1123,7 +917,6 @@
                     `;
                     artistsList.appendChild(card);
                 });
-                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1132,33 +925,32 @@
             }).catch(error => console.error(error));
         }
 
-        // Load Single Artist (Fixed)
+        // ---------- FIXED SINGLE ARTIST PAGE ----------
         async function loadSingleArtist(id) {
             try {
-                // Clear existing content
+                // Clear previous content
                 artistsList.innerHTML = '';
-                
-                // Hide other sections
+
+                // Hide sections that belong to the home page
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
 
-                // Fetch artist data
+                // Fetch data
                 const artistRef = doc(db, 'artists', id);
                 const statsRef = doc(db, `artists/${id}/stats/traffic`);
                 const [docSnap, statsSnap] = await Promise.all([getDoc(artistRef), getDoc(statsRef)]);
 
                 if (!docSnap.exists()) {
                     artistsList.innerHTML = '<h2 class="text-center text-muted">Artist not found</h2>';
-                    console.error(`Artist with ID ${id} not found`);
                     return;
                 }
 
                 const artist = docSnap.data();
                 const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
 
-                // Ensure all fields have default values
+                // Default values
                 const artistName = artist.name || 'Unknown Artist';
                 const artistDescription = artist.description || 'No description available.';
                 const artistImage = artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo';
@@ -1166,41 +958,41 @@
                 const artistSpotify = artist.spotify || '';
                 const artistEmail = artist.email || '';
 
-                // Admin actions
+                // ---------- ADMIN ACTIONS (only for admin) ----------
                 let adminActions = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
-                        <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
+                        <div class="admin-actions" style="position:absolute;top:10px;right:10px;opacity:1;">
                             <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                         </div>
                     `;
                 }
 
-                // Artist dashboard (for artist or admin)
+                // ---------- DASHBOARD (artist or admin) ----------
                 let dashboardSection = '';
                 if (currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL)) {
-                    const maxViews = 10000; // Arbitrary max for progress bar
+                    const maxViews = 10000;
                     const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
                     dashboardSection = `
-                        <div class="analytics-card glass-effect">
+                        <div class="analytics-card glass-effect mt-4">
                             <h4>Artist Dashboard</h4>
                             <p>Total Views: ${stats.views || 0}</p>
                             <p>Estimated Earnings: $${(stats.earnings || 0).toFixed(2)}</p>
                             <div class="progress-bar-container">
                                 <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: ${progressPercentage}%;" aria-valuenow="${progressPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    <div class="progress-bar" role="progressbar" style="width:${progressPercentage}%;" aria-valuenow="${progressPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
-                                <small>Traffic Progress (Up to ${maxViews} views)</small>
+                                <small>Traffic Progress (up to ${maxViews} views)</small>
                             </div>
                         </div>
                     `;
                 }
 
-                // Build artist page
+                // ---------- BUILD PAGE ----------
                 const fullPage = document.createElement('div');
                 fullPage.innerHTML = `
-                    <div class="artist-hero" style="background-image: url('${artistImage}');">
+                    <div class="artist-hero" style="background-image:url('${artistImage}');">
                         <div class="artist-hero-content">
                             ${adminActions}
                             <h1><i class="bi bi-music-note-beamed icon"></i>${artistName}</h1>
@@ -1210,9 +1002,11 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="ad-container-wrapper">
                         <div id="ad-container"></div>
                     </div>
+
                     <div class="container">
                         ${dashboardSection}
                         <div class="artist-bio glass-effect stagger-item">
@@ -1227,7 +1021,7 @@
                 `;
                 artistsList.appendChild(fullPage);
 
-                // Trigger stagger animation
+                // Stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1301,7 +1095,6 @@
                     tbody.appendChild(row);
                 });
                 submissionsList.appendChild(table);
-                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1395,7 +1188,6 @@
                     artistData.imageUrl = url;
                 }
                 const docRef = await addDoc(collection(db, 'artists'), artistData);
-                // Initialize stats document
                 await setDoc(doc(db, `artists/${docRef.id}/stats/traffic`), {
                     views: 0,
                     earnings: 0,
@@ -1460,14 +1252,8 @@
             const link = document.getElementById('slider-link').value;
             const imageFile = document.getElementById('slider-image').files[0];
 
-            if (!imageFile) {
-                alert('Please select an image for the slider.');
-                return;
-            }
-            if (!imageFile.type.startsWith('image/')) {
-                alert('Please select an image file only.');
-                return;
-            }
+            if (!imageFile) { alert('Please select an image for the slider.'); return; }
+            if (!imageFile.type.startsWith('image/')) { alert('Please select an image file only.'); return; }
 
             try {
                 const compressed = await compressImage(imageFile, 1920, 0.7);
@@ -1503,10 +1289,7 @@
 
             try {
                 if (imageFile) {
-                    if (!imageFile.type.startsWith('image/')) {
-                        alert('Please select an image file only.');
-                        return;
-                    }
+                    if (!imageFile.type.startsWith('image/')) { alert('Please select an image file only.'); return; }
                     const compressed = await compressImage(imageFile, 1920, 0.7);
                     const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                     const snapshot = await uploadBytes(storageRef, compressed);
@@ -1772,7 +1555,9 @@
                 </div>
                 <div class="mb-3">
                     <label for="soundcloud-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Private SoundCloud Link</label>
-                    <input type="url" class="form-control" id="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
+                    <input type="url" class="form-control" id
+
+="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
             </form>
