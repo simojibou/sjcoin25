@@ -950,8 +950,20 @@
                 }
 
                 const artist = docSnap.data();
+
+                // Check if user is a manager
+                let isManager = false;
+                if (currentUser && currentUser.email !== ADMIN_EMAIL) {
+                    const q = query(collection(db, 'managers'), where('email', '==', currentUser.email));
+                    const snap = await getDocs(q);
+                    isManager = !snap.empty;
+                }
+
+                const artistEmail = artist.email || '';
+                const isAuthorized = currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL || isManager);
+
                 let stats = { views: 0, earnings: 0 };
-                if (currentUser && (currentUser.email === artist.email || currentUser.email === ADMIN_EMAIL)) {
+                if (isAuthorized) {
                     try {
                         const statsSnap = await getDoc(statsRef);
                         if (statsSnap.exists()) {
@@ -968,7 +980,6 @@
                 const artistImage = artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo';
                 const artistInstagram = artist.instagram || '';
                 const artistSpotify = artist.spotify || '';
-                const artistEmail = artist.email || '';
 
                 // ---------- ADMIN ACTIONS (only for admin) ----------
                 let adminActions = '';
@@ -981,9 +992,9 @@
                     `;
                 }
 
-                // ---------- DASHBOARD (artist or admin) ----------
+                // ---------- DASHBOARD (artist, manager, or admin) ----------
                 let dashboardSection = '';
-                if (currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL)) {
+                if (isAuthorized) {
                     const maxViews = 10000;
                     const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
                     dashboardSection = `
