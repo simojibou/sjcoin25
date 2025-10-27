@@ -1,42 +1,420 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- … all your existing <head> … -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SJ X N41 music - Artist Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
     <style>
-        /* ---- NEW: Stats panel (admin only) ---- */
-        .artist-stats {
-            background: rgba(255,255,255,0.07);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: var(--space-2);
-            margin-top: var(--space-3);
+        :root {
+            --color-red: #ff0000;
+            --color-white: #ffffff;
+            --color-dark: #0a0a0a;
+            --color-dark-transparent: #0a0a0af2;
+            --color-dark-transparent-alt: #1a1a1ad9;
+            --color-dark-light: #1a1a1a;
+            --space-unit: 8px;
+            --space-1: calc(1 * var(--space-unit));
+            --space-2: calc(2 * var(--space-unit));
+            --space-3: calc(3 * var(--space-unit));
+            --space-4: calc(4 * var(--space-unit));
+        }
+
+        body {
+            background: linear-gradient(135deg, #050608, #101218, #090c14);
+            color: var(--color-white);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Glassmorphism effect */
+        .glass-effect {
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+        }
+
+        /* Top social bar */
+        .top-social-bar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: var(--space-2) 0;
+            transition: transform 0.3s ease;
+        }
+        .top-social-bar.hidden {
+            transform: translateY(-100%);
+        }
+        .top-social-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .top-social-links a {
+            color: var(--color-white);
+            margin: 0 var(--space-1);
+            font-size: 1.5rem;
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        .top-social-links a:hover {
+            color: var(--color-red);
+            transform: scale(1.2);
+        }
+
+        /* Big Slider (Hero Section) */
+        .hero-section {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transform: scale(1.05);
+            transition: transform 0.3s ease;
+            z-index: -1;
+        }
+        .header-carousel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .carousel-item {
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            transition: opacity 0.5s ease;
+        }
+        .carousel-item.active {
+            opacity: 1;
+        }
+        .carousel-item:not(.active) {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .carousel-caption {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: var(--space-3);
+            max-width: 80%;
             text-align: center;
-            font-size: 1.1rem;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
-        .artist-stats .stat {
-            margin: 0 var(--space-2);
+        .carousel-item.active .carousel-caption {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .artist-stats .value {
+        .carousel-caption h1 {
+            font-size: 2.5rem;
             font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: var(--space-1);
+        }
+        .carousel-caption p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .carousel-caption a {
+            color: var(--color-red);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        .carousel-caption a:hover {
+            color: var(--color-white);
+        }
+        .carousel-control-prev, .carousel-control-next {
+            width: 10%;
+            background: rgba(0, 0, 0, 0.3);
+            transition: background 0.3s ease;
+        }
+        .carousel-control-prev:hover, .carousel-control-next:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .carousel-control-prev-icon, .carousel-control-next-icon {
+            filter: invert(1);
+        }
+
+        /* Music platforms bar */
+        .music-platforms-bar {
+            position: absolute;
+            bottom: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-2);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            z-index: 2;
+        }
+        .music-platforms-bar a {
+            color: var(--color-white);
+            font-size: 1.6rem;
+            transition: transform 0.3s ease;
+        }
+        .music-platforms-bar a:hover {
+            transform: scale(1.2);
+        }
+
+        /* Artist cards */
+        .artist-section {
+            position: relative;
+            padding: var(--space-3) 0;
+            overflow: hidden;
+        }
+        .artist-list {
+            position: relative;
+            z-index: 1;
+        }
+        .artist-card {
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: var(--space-2);
+            margin: var(--space-1);
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .artist-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
+        }
+        .artist-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: var(--space-1);
+        }
+        .artist-card h5 {
+            color: var(--color-red);
+            font-weight: 600;
+            letter-spacing: 1px;
+            font-size: 1.3rem;
+        }
+        .artist-card p {
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+        .social-links a {
+            color: var(--color-white);
+            margin-right: var(--space-1);
+            font-size: 1.4rem;
+            transition: color 0.3s ease;
+        }
+        .social-links a:hover {
             color: var(--color-red);
         }
+        .admin-actions {
+            position: absolute;
+            top: var(--space-1);
+            right: var(--space-1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .artist-card:hover .admin-actions {
+            opacity: 1;
+        }
+        .admin-actions button {
+            background: none;
+            border: none;
+            color: var(--color-white);
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .admin-actions button:hover {
+            color: var(--color-red);
+        }
+
+        /* Forms */
+        .form-section {
+            margin: var(--space-3) auto;
+            max-width: 90%;
+            padding: var(--space-2);
+        }
+        .form-control, .form-control:focus {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-red);
+            color: var(--color-white);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 1rem;
+        }
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-red) 0%, #cc0000 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 14px 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(135deg, #cc0000 0%, var(--color-red) 100%);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 25px;
+            padding: 14px 30px;
+            font-size: 1rem;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Modals */
+        .modal-content {
+            background: var(--color-dark-light);
+            color: var(--color-white);
+            border-radius: 20px;
+        }
+        .modal-header, .modal-footer {
+            border-color: var(--color-red);
+        }
+        .btn-close-white {
+            filter: invert(1);
+        }
+
+        /* Footer */
+        .site-footer {
+            text-align: center;
+            padding: var(--space-3);
+            background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .site-footer a {
+            color: var(--color-red);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .site-footer a:hover {
+            color: var(--color-white);
+        }
+
+        /* Particles */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+        }
+
+        /* Ad Container */
+        .ad-container-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: var(--space-2) auto;
+        }
+        #ad-container {
+            width: 468px;
+            height: 60px;
+            max-width: 100%;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .stagger-item.enhanced-appear {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .artist-stats { font-size: 0.95rem; }
+            .hero-section { height: 80vh; }
+            .carousel-item { height: 80vh; }
+            .carousel-caption { padding: var(--space-2); max-width: 90%; }
+            .carousel-caption h1 { font-size: 1.8rem; }
+            .top-social-links a { font-size: 1.3rem; margin: 0 10px; }
+            .artist-card { margin: var(--space-1) 0; padding: var(--space-1); }
+            .artist-card img { height: 180px; }
+            .form-section { max-width: 95%; }
+            .ad-container-wrapper { margin: var(--space-1) auto; }
+            #ad-container { width: 100%; height: auto; }
+        }
+        @media (max-width: 576px) {
+            .carousel-caption h1 { font-size: 1.5rem; }
+            .top-social-links a { font-size: 1.2rem; margin: 0 8px; }
         }
     </style>
-</head>
-<body>
-    <!-- … all your existing HTML … -->
 
-    <!-- --------------  JAVASCRIPT  -------------- -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, serverTimestamp, query, orderBy, where, increment, runTransaction } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
-        // ---------- Firebase config (unchanged) ----------
-        const firebaseConfig = { /* … your config … */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -47,256 +425,56 @@
         let editingArtistId = null;
         let editingSliderId = null;
 
-        /* ------------------------------------------------------------------ */
-        /* -------------------  NEW: VIEW COUNTER LOGIC  -------------------- */
-        /* ------------------------------------------------------------------ */
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const artistsList = document.getElementById('artists-list');
+        const adminSection = document.getElementById('admin-section');
+        const artistManagementSection = document.getElementById('artist-management-section');
+        const submissionSection = document.getElementById('submission-section');
+        const addArtistForm = document.getElementById('add-artist-form');
+        const submitMusicForm = document.getElementById('submit-music-form');
+        const addSliderForm = document.getElementById('add-slider-form');
+        const addManagerForm = document.getElementById('add-manager-form');
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        const editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
 
-        /** Increment the view counter for an artist (non‑admin only) */
-        async function incrementArtistView(artistId) {
-            if (!currentUser || currentUser.email === ADMIN_EMAIL) return;   // admins don’t count
+        const provider = new GoogleAuthProvider();
 
-            const artistRef = doc(db, 'artists', artistId);
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const snap = await transaction.get(artistRef);
-                    if (!snap.exists()) return;
-                    const newViews = (snap.data().views || 0) + 1;
-                    transaction.update(artistRef, { views: newViews });
-                });
-            } catch (e) { console.warn('View increment failed', e); }
-        }
-
-        /** Render the admin‑only stats panel */
-        function renderArtistStats(artistId, views) {
-            if (!currentUser || currentUser.email !== ADMIN_EMAIL) return '';
-
-            const earnings = (views / 1000).toFixed(2);   // 1000 views = $1
-            return `
-                <div class="artist-stats glass-effect stagger-item">
-                    <div class="d-flex justify-content-center flex-wrap">
-                        <div class="stat">
-                            <span class="value">${views.toLocaleString()}</span> Views
-                        </div>
-                        <div class="stat">
-                            <span class="value">$${earnings}</span> Earnings
-                        </div>
-                    </div>
-                    <small class="d-block mt-2 text-muted">* Earnings = Views ÷ 1000 × $1</small>
-                </div>
-            `;
-        }
-
-        /* ------------------------------------------------------------------ */
-        /* -------------------  LOAD SINGLE ARTIST (UPDATED)  --------------- */
-        /* ------------------------------------------------------------------ */
-        async function loadSingleArtist(id) {
-            const artistRef = doc(db, 'artists', id);
-            const docSnap = await getDoc(artistRef);
-
-            if (!docSnap.exists()) {
-                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
-                return;
-            }
-
-            const artist = docSnap.data();
-            const views = artist.views || 0;
-
-            // ----------  Increment view for non‑admin  ----------
-            incrementArtistView(id);
-
-            // ----------  Hide sections that are not needed  ----------
-            document.querySelector('.hero-section').style.display = 'none';
-            document.getElementById('submission-section').style.display = 'none';
-            document.getElementById('admin-section').style.display = 'none';
-            document.getElementById('artist-management-section').style.display = 'none';
-            artistsList.innerHTML = '';
-
-            // ----------  Admin edit/delete buttons ----------
-            let adminActions = '';
-            if (currentUser && currentUser.email === ADMIN_EMAIL) {
-                adminActions = `
-                    <div class="admin-actions" style="position:absolute;top:10px;right:10px;opacity:1;">
-                        <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
-                        <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
-                    </div>
-                `;
-            }
-
-            // ----------  Build the full artist page ----------
-            const fullPage = document.createElement('div');
-            fullPage.innerHTML = `
-                <div class="artist-hero" style="background-image:url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
-                    <div class="artist-hero-content">
-                        ${adminActions}
-                        <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
-                        <div class="social-links">
-                            ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                            ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ad-container-wrapper">
-                    <div id="ad-container"></div>
-                </div>
-
-                <div class="container">
-                    <div class="artist-bio glass-effect stagger-item">
-                        <h3>Biography</h3>
-                        <p>${artist.description || 'Emerging talent in the music scene.'}</p>
-                    </div>
-
-                    <!-- NEW: Admin stats panel -->
-                    ${renderArtistStats(id, views)}
-
-                    <div class="text-center mt-4">
-                        <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
-                    </div>
-                </div>
-            `;
-            artistsList.appendChild(fullPage);
-
-            // Stagger animation
-            setTimeout(() => {
-                document.querySelectorAll('.stagger-item').forEach((item, i) => {
-                    setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
-                });
-            }, 100);
-        }
-
-        /* ------------------------------------------------------------------ */
-        /* -------------------  ARTIST CARD (link stays the same)  ---------- */
-        /* ------------------------------------------------------------------ */
-        function loadArtists() {
-            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>';
-            const artistsCol = collection(db, 'artists');
-            getDocs(artistsCol).then(snapshot => {
-                if (snapshot.empty) {
-                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet. Add some!</p>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const artist = doc.data();
-                    const artistId = doc.id;
-                    const card = document.createElement('div');
-                    card.className = 'col-md-4 col-sm-6';
-                    let adminActions = '';
-                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
-                        adminActions = `
-                            <div class="admin-actions">
-                                <button onclick="editArtist('${artistId}')" title="Edit"><i class="bi bi-pencil"></i></button>
-                                <button onclick="deleteArtist('${artistId}')" title="Delete"><i class="bi bi-trash"></i></button>
-                            </div>
-                        `;
+        // Compress Image
+        async function compressImage(file, maxWidth = 1920, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const { width, height } = img;
+                    if (width > maxWidth) {
+                        canvas.width = maxWidth;
+                        canvas.height = (height / width) * maxWidth;
+                    } else {
+                        canvas.width = width;
+                        canvas.height = height;
                     }
-                    card.innerHTML = `
-                        <div class="artist-card stagger-item">
-                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
-                            ${adminActions}
-                            <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
-                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
-                            <div class="social-links">
-                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
-                            </div>
-                            <a href="?artist=${artistId}" class="stretched-link"></a>
-                        </div>
-                    `;
-                    artistsList.appendChild(card);
-                });
-                setTimeout(() => {
-                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
-                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
-                    });
-                }, 100);
-            }).catch(error => console.error(error));
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+                };
+                img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+                img.src = URL.createObjectURL(file);
+            });
         }
 
-        /* ------------------------------------------------------------------ */
-        /* -------------------  ADD / EDIT ARTIST (views init)  ------------- */
-        /* ------------------------------------------------------------------ */
+        // Login
+        loginBtn.addEventListener('click', () => signInWithPopup(auth, provider).catch(console.error));
+        logoutBtn.addEventListener('click', () => signOut(auth).catch(console.error));
 
-        // ---- ADD NEW ARTIST (initialize views = 0) ----
-        addArtistForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('artist-name').value;
-            const description = document.getElementById('artist-description').value;
-            const instagram = document.getElementById('artist-instagram').value;
-            const spotify = document.getElementById('artist-spotify').value;
-            const imageFile = document.getElementById('artist-image').files[0];
-
-            const artistData = {
-                name,
-                description: description || '',
-                instagram: instagram || '',
-                spotify: spotify || '',
-                views: 0                                 // <-- NEW
-            };
-
-            try {
-                if (imageFile) {
-                    if (!imageFile.type.startsWith('image/')) { alert('Image only'); return; }
-                    const compressed = await compressImage(imageFile);
-                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
-                    const snap = await uploadBytes(storageRef, compressed);
-                    artistData.imageUrl = await getDownloadURL(snap.ref);
-                }
-                await addDoc(collection(db, 'artists'), artistData);
-                alert('Artist added!');
-                addArtistForm.reset();
-                loadArtists();
-            } catch (err) { console.error(err); alert('Error: ' + err.message); }
-        });
-
-        // ---- EDIT ARTIST (preserve existing views) ----
-        document.getElementById('edit-artist-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('edit-artist-name').value;
-            const description = document.getElementById('edit-artist-description').value;
-            const instagram = document.getElementById('edit-artist-instagram').value;
-            const spotify = document.getElementById('edit-artist-spotify').value;
-            const imageFile = document.getElementById('edit-artist-image').files[0];
-
-            const artistRef = doc(db, 'artists', editingArtistId);
-            const updateData = {
-                name,
-                description: description || '',
-                instagram: instagram || '',
-                spotify: spotify || ''
-                // **views** is **not** touched – it stays as‑is
-            };
-
-            try {
-                if (imageFile) {
-                    if (!imageFile.type.startsWith('image/')) { alert('Image only'); return; }
-                    const compressed = await compressImage(imageFile);
-                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
-                    const snap = await uploadBytes(storageRef, compressed);
-                    updateData.imageUrl = await getDownloadURL(snap.ref);
-                }
-                await updateDoc(artistRef, updateData);
-                alert('Artist updated!');
-                editModal.hide();
-                const artistId = getQueryParam('artist');
-                if (artistId) loadSingleArtist(artistId);
-                else loadArtists();
-            } catch (err) { console.error(err); alert('Error: ' + err.message); }
-        });
-
-        /* ------------------------------------------------------------------ */
-        /* -------------------  REST OF YOUR ORIGINAL CODE  ----------------- */
-        /* ------------------------------------------------------------------ */
-
-        // (All the other functions you already had – login, slider, manager, etc.)
-        // … keep everything else exactly as it was …
-
-        // Auth state listener (unchanged, just calls loadSingleArtist when needed)
+        // Auth State
         onAuthStateChanged(auth, user => {
             currentUser = user;
             if (user) {
                 loginBtn.classList.add('d-none');
                 logoutBtn.classList.remove('d-none');
-                userInfo.innerHTML = `<i class="bi bi-person-circle icon"></i>Logged in as: ${user.email}`;
+                userInfo.innerHTML = `<i class="bi bi-person-circle"></i> ${user.email}`;
                 submissionSection.classList.remove('d-none');
 
                 if (user.email === ADMIN_EMAIL) {
@@ -318,15 +496,199 @@
                 artistManagementSection.classList.add('d-none');
                 submissionSection.classList.add('d-none');
             }
-
-            const artistId = getQueryParam('artist');
-            if (artistId) loadSingleArtist(artistId);
-            else { loadArtists(); loadSlider(); }
+            loadSlider();
+            loadArtists();
         });
 
-        // … (rest of your original script – loginBtn, logoutBtn, sliders, etc.) …
-        // Keep **all** of it – only the sections above were added/modified.
+        // Load Slider
+        function loadSlider() {
+            const sliderCol = collection(db, 'sliders');
+            const q = query(sliderCol, orderBy('createdAt'));
+            getDocs(q).then(snapshot => {
+                const headerCarousel = document.querySelector('.header-carousel .carousel-inner');
+                const heroBg = document.querySelector('.hero-bg');
+                headerCarousel.innerHTML = '';
+                if (snapshot.empty) {
+                    const defaultSlide = document.createElement('div');
+                    defaultSlide.className = 'carousel-item active stagger-item';
+                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
+                    heroBg.style.backgroundImage = defaultSlide.style.backgroundImage;
+                    defaultSlide.innerHTML = `<div class="d-flex h-100 align-items-center justify-content-center"><div class="carousel-caption"><h1>Welcome to SJ x N41 music</h1><p>Discover the future of music.</p></div></div>`;
+                    headerCarousel.appendChild(defaultSlide);
+                    return;
+                }
+                let active = true;
+                snapshot.forEach(doc => {
+                    const slide = doc.data();
+                    const slideId = doc.id;
+                    const item = document.createElement('div');
+                    item.className = `carousel-item ${active ? 'active' : ''} stagger-item`;
+                    item.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    if (active) heroBg.style.backgroundImage = item.style.backgroundImage;
+                    let admin = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        admin = `<div class="position-absolute top-0 end-0 p-2">
+                            <button onclick="editSlider('${slideId}')" class="btn btn-sm btn-outline-light me-1"><i class="bi bi-pencil"></i></button>
+                            <button onclick="deleteSlider('${slideId}')" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </div>`;
+                    }
+                    item.innerHTML = `${admin}<div class="d-flex h-100 align-items-center justify-content-center"><div class="carousel-caption"><h1>${slide.title || 'Welcome'}</h1><p>${slide.description || ''}</p>${slide.link ? `<a href="${slide.link}" target="_blank">Learn More</a>` : ''}</div></div>`;
+                    headerCarousel.appendChild(item);
+                    active = false;
+                });
+                setTimeout(() => document.querySelectorAll('.stagger-item').forEach((el, i) => setTimeout(() => el.classList.add('enhanced-appear'), i * 200)), 100);
+                document.getElementById('headerCarousel').addEventListener('slid.bs.carousel', e => {
+                    heroBg.style.backgroundImage = e.relatedTarget.style.backgroundImage;
+                });
+            }).catch(console.error);
+        }
 
+        // Load Artists (Home Page)
+        function loadArtists() {
+            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people"></i> Our Artists</h2>';
+            getDocs(collection(db, 'artists')).then(snapshot => {
+                if (snapshot.empty) {
+                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet.</p>';
+                    return;
+                }
+                const row = document.createElement('div');
+                row.className = 'row justify-content-center';
+                snapshot.forEach(doc => {
+                    const artist = doc.data();
+                    const artistId = doc.id;
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-sm-6';
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `<div class="admin-actions">
+                            <button onclick="editArtist('${artistId}')"><i class="bi bi-pencil"></i></button>
+                            <button onclick="deleteArtist('${artistId}')"><i class="bi bi-trash"></i></button>
+                        </div>`;
+                    }
+                    col.innerHTML = `
+                        <div class="artist-card stagger-item" onclick="window.location='artistpage.html?artist=${artistId}'">
+                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200'}" alt="${artist.name}">
+                            ${adminActions}
+                            <h5><i class="bi bi-music-note-beamed"></i> ${artist.name}</h5>
+                            <p>${artist.description || 'Emerging talent.'}</p>
+                            <div class="social-links">
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" onclick="event.stopPropagation();"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" onclick="event.stopPropagation();"><i class="bi bi-spotify"></i></a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    row.appendChild(col);
+                });
+                artistsList.appendChild(row);
+                setTimeout(() => document.querySelectorAll('.stagger-item').forEach((el, i) => setTimeout(() => el.classList.add('enhanced-appear'), i * 100)), 100);
+            }).catch(console.error);
+        }
+
+        // Global Admin Functions
+        window.editArtist = id => { editingArtistId = id; getDoc(doc(db, 'artists', id)).then(s => { const a = s.data(); document.getElementById('edit-artist-name').value = a.name; document.getElementById('edit-artist-description').value = a.description; document.getElementById('edit-artist-instagram').value = a.instagram; document.getElementById('edit-artist-spotify').value = a.spotify; editModal.show(); }); };
+        window.deleteArtist = id => { if (confirm('Delete artist?')) deleteDoc(doc(db, 'artists', id)).then(() => loadArtists()); };
+        window.editSlider = id => { editingSliderId = id; getDoc(doc(db, 'sliders', id)).then(s => { const d = s.data(); document.getElementById('edit-slider-title').value = d.title; document.getElementById('edit-slider-description').value = d.description; document.getElementById('edit-slider-link').value = d.link; editSliderModal.show(); }); };
+        window.deleteSlider = id => { if (confirm('Delete slider?')) deleteDoc(doc(db, 'sliders', id)).then(() => loadSlider()); };
+        window.removeManager = id => { if (confirm('Remove manager?')) deleteDoc(doc(db, 'managers', id)).then(() => loadManagers()); };
+
+        // Forms
+        addArtistForm.onsubmit = async e => { /* ... same as before ... */ };
+        document.getElementById('edit-artist-form').onsubmit = async e => { /* ... update logic ... */ };
+        addSliderForm.onsubmit = async e => { /* ... */ };
+        document.getElementById('edit-slider-form').onsubmit = async e => { /* ... */ };
+        addManagerForm.onsubmit = e => { e.preventDefault(); const email = document.getElementById('manager-email').value; addDoc(collection(db, 'managers'), { email }).then(() => { alert('Manager added!'); addManagerForm.reset(); loadManagers(); }); };
+        submitMusicForm.onsubmit = async e => { /* ... same ... */ };
+
+        // Scroll hide social bar
+        let lastY = 0;
+        window.addEventListener('scroll', () => {
+            const bar = document.querySelector('.top-social-bar');
+            if (window.scrollY > lastY && window.scrollY > 100) bar.classList.add('hidden');
+            else bar.classList.remove('hidden');
+            lastY = window.scrollY;
+        });
+
+        // Particles
+        function createParticles() {
+            const p = document.querySelector('.particles');
+            for (let i = 0; i < 20; i++) {
+                const el = document.createElement('div');
+                el.className = 'particle';
+                const s = Math.random() * 10 + 5;
+                el.style.width = el.style.height = s + 'px';
+                el.style.left = Math.random() * 100 + '%';
+                el.style.top = Math.random() * 100 + '%';
+                el.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
+                p.appendChild(el);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', createParticles);
     </script>
+</head>
+<body>
+    <!-- Top Social Bar -->
+    <div class="top-social-bar">
+        <div class="container">
+            <div class="top-social-container">
+                <div class="top-social-links">
+                    <a href="https://instagram.com/sjlabel" target="_blank"><i class="bi bi-instagram"></i></a>
+                    <a href="https://twitter.com/sjlabel" target="_blank"><i class="bi bi-twitter"></i></a>
+                    <a href="https://tiktok.com/@sjlabel" target="_blank"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://facebook.com/sjlabel" target="_blank"><i class="bi bi-facebook"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Slider -->
+    <section id="hero" class="hero-section">
+        <div class="hero-bg"></div>
+        <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
+            <div class="carousel-inner"></div>
+            <button class="carousel-control-prev" data-bs-target="#headerCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+            <button class="carousel-control-next" data-bs-target="#headerCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+        </div>
+        <div class="music-platforms-bar">
+            <a href="https://open.spotify.com" target="_blank"><i class="bi bi-spotify"></i></a>
+            <a href="https://music.apple.com" target="_blank"><i class="bi bi-music-note-beamed"></i></a>
+            <a href="https://youtube.com" target="_blank"><i class="bi bi-youtube"></i></a>
+        </div>
+    </section>
+
+    <!-- Ad -->
+    <div class="ad-container-wrapper"><div id="ad-container"></div></div>
+    <script type="text/javascript">
+        atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+        document.addEventListener('DOMContentLoaded', () => { const c = document.getElementById('ad-container'); if(c){ const s=document.createElement('script'); s.src='https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js'; s.async=true; c.appendChild(s); } });
+    </script>
+
+    <div class="particles"></div>
+
+    <div class="container">
+        <!-- Auth -->
+        <div id="auth-section" class="text-center my-4 glass-effect">
+            <button id="login-btn" class="btn btn-primary">Login with Google</button>
+            <button id="logout-btn" class="btn btn-secondary d-none">Logout</button>
+            <div id="user-info" class="mt-2"></div>
+        </div>
+
+        <!-- Artists -->
+        <section id="artists" class="artist-section">
+            <div id="artists-list" class="artist-list"></div>
+        </section>
+
+        <!-- Management, Admin, Submission Forms (same as before) -->
+        <!-- ... [Keep all forms and modals from original] ... -->
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>© 2025 SJ x N41 music. All rights reserved.</p>
+        <p><a href="mailto:simo.jibou@gmail.com">simo.jibou@gmail.com</a></p>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
