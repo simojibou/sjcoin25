@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,8 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Chart.js for analytics visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <!-- Custom CSS with enhanced mobile design -->
     <style>
         :root {
@@ -45,42 +42,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border-radius: 20px;
-        }
-
-        /* Analytics Dashboard */
-        .analytics-card {
-            padding: var(--space-2);
-            margin-bottom: var(--space-2);
-            text-align: center;
-        }
-        .analytics-card h4 {
-            color: var(--color-red);
-            font-weight: 600;
-            margin-bottom: var(--space-1);
-        }
-        .analytics-card p {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0;
-        }
-        .chart-container {
-            position: relative;
-            max-width: 100%;
-            height: 300px;
-            margin: var(--space-2) auto;
-        }
-        .progress-bar-container {
-            margin: var(--space-2) 0;
-        }
-        .progress {
-            height: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-bar {
-            background: var(--color-red);
-            transition: width 0.5s ease;
         }
 
         /* Top social bar */
@@ -247,7 +208,7 @@
         }
         .artist-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
         }
         .artist-card img {
             width: 100%;
@@ -504,54 +465,134 @@
 
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
-            .hero-section { height: 80vh; }
-            .carousel-item { height: 80vh; }
-            .carousel-caption { padding: var(--space-2); max-width: 90%; border-radius: 15px; }
-            .carousel-caption h1 { font-size: 1.8rem; letter-spacing: 1px; }
-            .carousel-caption p { font-size: 0.9rem; }
-            .carousel-control-prev, .carousel-control-next { width: 15%; }
-            .music-platforms-bar { bottom: 5%; gap: var(--space-1); padding: 10px 20px; }
-            .music-platforms-bar a { font-size: 1.4rem; }
-            .top-social-links a { font-size: 1.3rem; margin: 0 10px; }
-            .artist-hero { height: 50vh; }
-            .artist-hero h1 { font-size: 2rem; letter-spacing: 1.5px; }
-            .artist-hero .social-links { font-size: 1.5rem; }
-            .artist-bio { padding: var(--space-2); max-width: 95%; }
-            .artist-bio p { font-size: 0.9rem; }
-            .artist-card { margin: var(--space-1) 0; padding: var(--space-1); }
-            .artist-card img { height: 180px; }
-            .artist-card h5 { font-size: 1.2rem; }
-            .artist-card p { font-size: 0.9rem; }
-            .social-links a { font-size: 1.3rem; }
-            .form-section { margin: var(--space-2); padding: var(--space-1); max-width: 95%; }
-            .form-control { padding: 10px; font-size: 0.9rem; }
-            .btn-primary, .btn-secondary { padding: 12px 25px; font-size: 0.9rem; }
-            .admin-actions { position: static; opacity: 1; margin-top: var(--space-1); display: flex; justify-content: flex-end; }
-            .submissions-table img { width: 40px; height: 40px; }
-            .submissions-table th, .submissions-table td { font-size: 0.85rem; padding: 8px; }
-            .ad-container-wrapper { margin: var(--space-1) auto; }
-            #ad-container { width: 100%; height: auto; }
-            .analytics-card p { font-size: 1.5rem; }
-            .chart-container { height: 250px; }
-            .progress { height: 15px; }
+            .hero-section {
+                height: 80vh;
+            }
+            .carousel-item {
+                height: 80vh;
+            }
+            .carousel-caption {
+                padding: var(--space-2);
+                max-width: 90%;
+                border-radius: 15px;
+            }
+            .carousel-caption h1 {
+                font-size: 1.8rem;
+                letter-spacing: 1px;
+            }
+            .carousel-caption p {
+                font-size: 0.9rem;
+            }
+            .carousel-control-prev, .carousel-control-next {
+                width: 15%;
+            }
+            .music-platforms-bar {
+                bottom: 5%;
+                gap: var(--space-1);
+                padding: 10px 20px;
+            }
+            .music-platforms-bar a {
+                font-size: 1.4rem;
+            }
+            .top-social-links a {
+                font-size: 1.3rem;
+                margin: 0 10px;
+            }
+            .artist-hero {
+                height: 50vh;
+            }
+            .artist-hero h1 {
+                font-size: 2rem;
+                letter-spacing: 1.5px;
+            }
+            .artist-hero .social-links {
+                font-size: 1.5rem;
+            }
+            .artist-bio {
+                padding: var(--space-2);
+                max-width: 95%;
+            }
+            .artist-bio p {
+                font-size: 0.9rem;
+            }
+            .artist-card {
+                margin: var(--space-1) 0;
+                padding: var(--space-1);
+            }
+            .artist-card img {
+                height: 180px;
+            }
+            .artist-card h5 {
+                font-size: 1.2rem;
+            }
+            .artist-card p {
+                font-size: 0.9rem;
+            }
+            .social-links a {
+                font-size: 1.3rem;
+            }
+            .form-section {
+                margin: var(--space-2);
+                padding: var(--space-1);
+                max-width: 95%;
+            }
+            .form-control {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 12px 25px;
+                font-size: 0.9rem;
+            }
+            .admin-actions {
+                position: static;
+                opacity: 1;
+                margin-top: var(--space-1);
+                display: flex;
+                justify-content: flex-end;
+            }
+            .submissions-table img {
+                width: 40px;
+                height: 40px;
+            }
+            .submissions-table th, .submissions-table td {
+                font-size: 0.85rem;
+                padding: 8px;
+            }
+            .ad-container-wrapper {
+                margin: var(--space-1) auto;
+            }
+            #ad-container {
+                width: 100%;
+                height: auto;
+            }
         }
 
         @media (max-width: 576px) {
-            .carousel-caption h1 { font-size: 1.5rem; }
-            .carousel-caption p { font-size: 0.85rem; }
-            .artist-hero h1 { font-size: 1.8rem; }
-            .btn-primary, .btn-secondary { padding: 10px 20px; font-size: 0.85rem; }
-            .top-social-links a { font-size: 1.2rem; margin: 0 8px; }
-            .analytics-card p { font-size: 1.2rem; }
-            .chart-container { height: 200px; }
-            .progress { height: 12px; }
+            .carousel-caption h1 {
+                font-size: 1.5rem;
+            }
+            .carousel-caption p {
+                font-size: 0.85rem;
+            }
+            .artist-hero h1 {
+                font-size: 1.8rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.85rem;
+            }
+            .top-social-links a {
+                font-size: 1.2rem;
+                margin: 0 8px;
+            }
         }
     </style>
     <!-- Firebase SDKs (Modular Imports) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where, setDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where, increment, setDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         // Firebase config
@@ -626,19 +667,6 @@
             return params.get(name);
         }
 
-        // Log Artist Page View
-        async function logArtistView(artistId) {
-            try {
-                const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
-                await setDoc(statsRef, {
-                    views: increment(1),
-                    lastUpdated: serverTimestamp()
-                }, { merge: true });
-            } catch (error) {
-                console.error('Error logging view:', error);
-            }
-        }
-
         // Login with Google
         loginBtn.addEventListener('click', () => {
             signInWithPopup(auth, provider).catch(error => console.error(error));
@@ -650,7 +678,7 @@
         });
 
         // Auth State Listener
-        onAuthStateChanged(auth, async user => {
+        onAuthStateChanged(auth, user => {
             currentUser = user;
             if (user) {
                 loginBtn.classList.add('d-none');
@@ -663,13 +691,13 @@
                     artistManagementSection.classList.remove('d-none');
                     loadManagers();
                     loadSubmissions();
-                    loadAdminAnalytics();
                 } else {
-                    const managerRef = doc(db, 'managers', user.email);
-                    const managerSnap = await getDoc(managerRef);
-                    if (managerSnap.exists()) {
-                        artistManagementSection.classList.remove('d-none');
-                    }
+                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
+                    getDocs(q).then(snap => {
+                        if (!snap.empty) {
+                            artistManagementSection.classList.remove('d-none');
+                        }
+                    }).catch(err => console.error(err));
                 }
             } else {
                 loginBtn.classList.remove('d-none');
@@ -681,134 +709,12 @@
             }
             const artistId = getQueryParam('artist');
             if (artistId) {
-                await logArtistView(artistId);
                 loadSingleArtist(artistId);
             } else {
                 loadArtists();
                 loadSlider();
             }
         });
-
-        // Load Admin Analytics
-        async function loadAdminAnalytics() {
-            const analyticsSection = document.getElementById('analytics-section');
-            if (!analyticsSection) return;
-
-            try {
-                const artistsSnap = await getDocs(collection(db, 'artists'));
-                const submissionsSnap = await getDocs(collection(db, 'submissions'));
-                const artistCount = artistsSnap.size;
-                const submissionCount = submissionsSnap.size;
-
-                let totalViews = 0;
-                let totalEarnings = 0;
-                const trafficData = [];
-                for (const doc of artistsSnap.docs) {
-                    const artistId = doc.id;
-                    const artist = doc.data();
-                    const statsRef = doc(db, `artists/${artistId}/stats/traffic`);
-                    const statsSnap = await getDoc(statsRef);
-                    const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, earnings: 0 };
-                    totalViews += stats.views || 0;
-                    totalEarnings += stats.earnings || 0;
-                    trafficData.push({
-                        name: artist.name,
-                        views: stats.views || 0,
-                        earnings: stats.earnings || 0
-                    });
-                }
-
-                const labels = trafficData.map(item => item.name);
-                const views = trafficData.map(item => item.views);
-                const earnings = trafficData.map(item => item.earnings);
-
-                analyticsSection.innerHTML = `
-                    <h3 class="text-center mb-4"><i class="bi bi-graph-up icon"></i>Admin Analytics Dashboard</h3>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="analytics-card glass-effect">
-                                <h4>Total Artists</h4>
-                                <p>${artistCount}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="analytics-card glass-effect">
-                                <h4>Total Submissions</h4>
-                                <p>${submissionCount}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="analytics-card glass-effect">
-                                <h4>Total Views</h4>
-                                <p>${totalViews}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="analytics-card glass-effect">
-                                <h4>Total Earnings</h4>
-                                <p>$${totalEarnings.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chart-container glass-effect">
-                        <canvas id="trafficChart"></canvas>
-                    </div>
-                `;
-
-                const ctx = document.getElementById('trafficChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Views',
-                                data: views,
-                                backgroundColor: 'rgba(255, 0, 0, 0.5)',
-                                borderColor: 'rgba(255, 0, 0, 1)',
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Earnings ($)',
-                                data: earnings,
-                                backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                                borderColor: 'rgba(255, 255, 255, 1)',
-                                borderWidth: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true;
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'Value', color: 'rgba(255,255,255,0.9)' },
-                                ticks: { color: 'rgba(255,255,255,0.9)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
-                            },
-                            x: {
-                                title: { display: true, text: 'Artists', color: 'rgba(255,255,255,0.9)' },
-                                ticks: { color: 'rgba(255,255,255,0.9)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
-                            }
-                        },
-                        plugins: {
-                            legend: { labels: { color: 'rgba(255,255,255,0.9)' } }
-                        }
-                    }
-                });
-
-                setTimeout(() => {
-                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
-                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
-                    });
-                }, 100);
-            } catch (error) {
-                console.error('Admin analytics load error:', error);
-                analyticsSection.innerHTML = '<p class="text-center text-muted">Error loading analytics.</p>';
-            }
-        }
 
         // Load Slider from Firestore
         function loadSlider() {
@@ -866,11 +772,13 @@
                     headerCarousel.appendChild(carouselItem);
                     active = false;
                 });
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 200);
                     });
                 }, 100);
+                // Update hero background on slide change
                 const carousel = document.getElementById('headerCarousel');
                 carousel.addEventListener('slid.bs.carousel', (event) => {
                     const activeSlide = event.relatedTarget;
@@ -918,6 +826,7 @@
                     `;
                     artistsList.appendChild(card);
                 });
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -926,133 +835,80 @@
             }).catch(error => console.error(error));
         }
 
-        // ---------- FIXED SINGLE ARTIST PAGE ----------
-        async function loadSingleArtist(id) {
-            try {
-                // Clear previous content
-                artistsList.innerHTML = '';
+        // Function to update earnings based on views
+        async function updateEarnings(artistId) {
+            const trafficRef = doc(db, 'artists', artistId, 'stats', 'traffic');
+            const trafficSnap = await getDoc(trafficRef);
+            const views = trafficSnap.exists() ? trafficSnap.data().views || 0 : 0;
+            const earnings = views / 1000;
+            const earningsRef = doc(db, 'artists', artistId, 'stats', 'earnings');
+            await setDoc(earningsRef, { amount: earnings }, { merge: true });
+        }
 
-                // Hide sections that belong to the home page
+        // Load Single Artist
+        async function loadSingleArtist(id) {
+            const artistRef = doc(db, 'artists', id);
+            const docSnap = await getDoc(artistRef);
+            if (docSnap.exists()) {
+                // Increment views
+                const trafficRef = doc(db, 'artists', id, 'stats', 'traffic');
+                try {
+                    await updateDoc(trafficRef, { views: increment(1) });
+                } catch (error) {
+                    await setDoc(trafficRef, { views: 1 });
+                }
+                // Update earnings
+                await updateEarnings(id);
+                // Load page content (no earnings displayed)
+                const artist = docSnap.data();
                 document.querySelector('.hero-section').style.display = 'none';
                 document.getElementById('submission-section').style.display = 'none';
                 document.getElementById('admin-section').style.display = 'none';
                 document.getElementById('artist-management-section').style.display = 'none';
-
-                // Fetch data
-                const artistRef = doc(db, 'artists', id);
-                const statsRef = doc(db, `artists/${id}/stats/traffic`);
-
-                const docSnap = await getDoc(artistRef);
-
-                if (!docSnap.exists()) {
-                    artistsList.innerHTML = '<h2 class="text-center text-muted">Artist not found</h2>';
-                    return;
-                }
-
-                const artist = docSnap.data();
-
-                // Check if user is a manager
-                let isManager = false;
-                if (currentUser && currentUser.email !== ADMIN_EMAIL) {
-                    const managerRef = doc(db, 'managers', currentUser.email);
-                    const managerSnap = await getDoc(managerRef);
-                    isManager = managerSnap.exists();
-                }
-
-                const artistEmail = artist.email || '';
-                const isAuthorized = currentUser && (currentUser.email === artistEmail || currentUser.email === ADMIN_EMAIL || isManager);
-
-                let stats = { views: 0, earnings: 0 };
-                if (isAuthorized) {
-                    try {
-                        const statsSnap = await getDoc(statsRef);
-                        if (statsSnap.exists()) {
-                            stats = statsSnap.data();
-                        }
-                    } catch (error) {
-                        console.error('Error fetching stats:', error);
-                    }
-                }
-
-                // Default values
-                const artistName = artist.name || 'Unknown Artist';
-                const artistDescription = artist.description || 'No description available.';
-                const artistImage = artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo';
-                const artistInstagram = artist.instagram || '';
-                const artistSpotify = artist.spotify || '';
-
-                // ---------- ADMIN ACTIONS (only for admin) ----------
+                artistsList.innerHTML = '';
                 let adminActions = '';
                 if (currentUser && currentUser.email === ADMIN_EMAIL) {
                     adminActions = `
-                        <div class="admin-actions" style="position:absolute;top:10px;right:10px;opacity:1;">
+                        <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
                             <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                         </div>
                     `;
                 }
-
-                // ---------- DASHBOARD (artist, manager, or admin) ----------
-                let dashboardSection = '';
-                if (isAuthorized) {
-                    const maxViews = 10000;
-                    const progressPercentage = Math.min((stats.views / maxViews) * 100, 100);
-                    dashboardSection = `
-                        <div class="analytics-card glass-effect mt-4">
-                            <h4>Artist Dashboard</h4>
-                            <p>Total Views: ${stats.views || 0}</p>
-                            <p>Estimated Earnings: $${(stats.earnings || 0).toFixed(2)}</p>
-                            <div class="progress-bar-container">
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width:${progressPercentage}%;" aria-valuenow="${progressPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                <small>Traffic Progress (up to ${maxViews} views)</small>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // ---------- BUILD PAGE ----------
                 const fullPage = document.createElement('div');
                 fullPage.innerHTML = `
-                    <div class="artist-hero" style="background-image:url('${artistImage}');">
+                    <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
                         <div class="artist-hero-content">
                             ${adminActions}
-                            <h1><i class="bi bi-music-note-beamed icon"></i>${artistName}</h1>
+                            <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
                             <div class="social-links">
-                                ${artistInstagram ? `<a href="${artistInstagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${artistSpotify ? `<a href="${artistSpotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
                             </div>
                         </div>
                     </div>
-
                     <div class="ad-container-wrapper">
                         <div id="ad-container"></div>
                     </div>
-
                     <div class="container">
-                        ${dashboardSection}
                         <div class="artist-bio glass-effect stagger-item">
                             <h3>Biography</h3>
-                            <p>${artistDescription}</p>
-                            ${artistEmail ? `<p><strong>Email:</strong> ${artistEmail}</p>` : ''}
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                         </div>
                         <div class="text-center mt-4">
-                            <a href="/index.html" class="btn btn-secondary">Back to Home</a>
+                            <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
                         </div>
                     </div>
                 `;
                 artistsList.appendChild(fullPage);
-
-                // Stagger animation
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
                     });
                 }, 100);
-            } catch (error) {
-                console.error('Error loading artist page:', error);
-                artistsList.innerHTML = '<h2 class="text-center text-muted">Error loading artist information</h2>';
+            } else {
+                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
             }
         }
 
@@ -1071,7 +927,7 @@
                     div.className = 'manager-item glass-effect';
                     div.innerHTML = `
                         <span>${data.email}</span>
-                        <button class="btn btn-danger btn-sm" onclick="removeManager('${data.email}')">Remove</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeManager('${doc.id}')">Remove</button>
                     `;
                     managersList.appendChild(div);
                 });
@@ -1118,6 +974,7 @@
                     tbody.appendChild(row);
                 });
                 submissionsList.appendChild(table);
+                // Trigger stagger animation
                 setTimeout(() => {
                     document.querySelectorAll('.stagger-item').forEach((item, i) => {
                         setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
@@ -1137,7 +994,6 @@
                     document.getElementById('edit-artist-description').value = artist.description || '';
                     document.getElementById('edit-artist-instagram').value = artist.instagram || '';
                     document.getElementById('edit-artist-spotify').value = artist.spotify || '';
-                    document.getElementById('edit-artist-email').value = artist.email || '';
                     editModal.show();
                 }
             });
@@ -1149,7 +1005,6 @@
                 deleteDoc(artistRef).then(() => {
                     alert('Artist deleted!');
                     loadArtists();
-                    loadAdminAnalytics();
                 }).catch(error => console.error(error));
             }
         };
@@ -1178,9 +1033,9 @@
             }
         };
 
-        window.removeManager = function(email) {
+        window.removeManager = function(id) {
             if (confirm('Are you sure you want to remove this manager?')) {
-                deleteDoc(doc(db, 'managers', email)).then(() => {
+                deleteDoc(doc(db, 'managers', id)).then(() => {
                     loadManagers();
                 }).catch(error => console.error(error));
             }
@@ -1194,9 +1049,8 @@
             const instagram = document.getElementById('artist-instagram').value;
             const spotify = document.getElementById('artist-spotify').value;
             const imageFile = document.getElementById('artist-image').files[0];
-            const email = document.getElementById('artist-email').value;
 
-            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
+            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
 
             try {
                 if (imageFile) {
@@ -1210,16 +1064,10 @@
                     const url = await getDownloadURL(snapshot.ref);
                     artistData.imageUrl = url;
                 }
-                const docRef = await addDoc(collection(db, 'artists'), artistData);
-                await setDoc(doc(db, `artists/${docRef.id}/stats/traffic`), {
-                    views: 0,
-                    earnings: 0,
-                    lastUpdated: serverTimestamp()
-                });
+                await addDoc(collection(db, 'artists'), artistData);
                 alert('Artist added!');
                 addArtistForm.reset();
                 loadArtists();
-                loadAdminAnalytics();
             } catch (error) {
                 console.error(error);
                 alert('Error adding artist: ' + (error.message || error));
@@ -1233,11 +1081,10 @@
             const description = document.getElementById('edit-artist-description').value;
             const instagram = document.getElementById('edit-artist-instagram').value;
             const spotify = document.getElementById('edit-artist-spotify').value;
-            const email = document.getElementById('edit-artist-email').value;
             const imageFile = document.getElementById('edit-artist-image').files[0];
 
             const artistRef = doc(db, 'artists', editingArtistId);
-            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '', email: email || '' };
+            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
 
             try {
                 if (imageFile) {
@@ -1259,7 +1106,6 @@
                     loadSingleArtist(artistId);
                 } else {
                     loadArtists();
-                    loadAdminAnalytics();
                 }
             } catch (error) {
                 console.error(error);
@@ -1275,8 +1121,14 @@
             const link = document.getElementById('slider-link').value;
             const imageFile = document.getElementById('slider-image').files[0];
 
-            if (!imageFile) { alert('Please select an image for the slider.'); return; }
-            if (!imageFile.type.startsWith('image/')) { alert('Please select an image file only.'); return; }
+            if (!imageFile) {
+                alert('Please select an image for the slider.');
+                return;
+            }
+            if (!imageFile.type.startsWith('image/')) {
+                alert('Please select an image file only.');
+                return;
+            }
 
             try {
                 const compressed = await compressImage(imageFile, 1920, 0.7);
@@ -1312,7 +1164,10 @@
 
             try {
                 if (imageFile) {
-                    if (!imageFile.type.startsWith('image/')) { alert('Please select an image file only.'); return; }
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
                     const compressed = await compressImage(imageFile, 1920, 0.7);
                     const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
                     const snapshot = await uploadBytes(storageRef, compressed);
@@ -1330,17 +1185,14 @@
         });
 
         // Add Manager
-        addManagerForm.addEventListener('submit', async (e) => {
+        addManagerForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('manager-email').value;
-            try {
-                await setDoc(doc(db, 'managers', email), { email });
+            addDoc(collection(db, 'managers'), { email }).then(() => {
                 alert('Manager added!');
                 addManagerForm.reset();
                 loadManagers();
-            } catch (error) {
-                console.error(error);
-            }
+            }).catch(error => console.error(error));
         });
 
         // Submit Music
@@ -1371,7 +1223,6 @@
                 });
                 alert('Submission successful!');
                 submitMusicForm.reset();
-                loadAdminAnalytics();
             } catch (error) {
                 console.error(error);
                 alert('Error submitting music: ' + (error.message || error));
@@ -1498,10 +1349,6 @@
                     <input type="text" class="form-control" id="artist-name" required>
                 </div>
                 <div class="mb-3">
-                    <label for="artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
-                    <input type="email" class="form-control" id="artist-email">
-                </div>
-                <div class="mb-3">
                     <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
                     <textarea class="form-control" id="artist-description" rows="3"></textarea>
                 </div>
@@ -1523,8 +1370,6 @@
 
         <!-- Admin Dashboard Section -->
         <div id="admin-section" class="form-section d-none glass-effect">
-            <div id="analytics-section" class="mb-4"></div>
-            <hr class="my-4" style="border-color: var(--color-red);">
             <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
             <form id="add-slider-form">
                 <div class="mb-3">
@@ -1603,10 +1448,6 @@
                             <input type="text" class="form-control" id="edit-artist-name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit-artist-email" class="form-label"><i class="bi bi-envelope icon"></i>Artist Email</label>
-                            <input type="email" class="form-control" id="edit-artist-email">
-                        </div>
-                        <div class="mb-3">
                             <label for="edit-artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
                             <textarea class="form-control" id="edit-artist-description" rows="3"></textarea>
                         </div>
@@ -1671,5 +1512,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
-```
+            </html>
