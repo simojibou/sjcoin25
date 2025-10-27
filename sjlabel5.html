@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SJ X N41 music - Artist Management</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap CSS for responsive layout -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
+    <!-- Custom CSS with enhanced mobile design -->
     <style>
         :root {
             --color-red: #ff0000;
@@ -34,7 +34,7 @@
             scroll-behavior: smooth;
         }
 
-        /* Glassmorphism */
+        /* Glassmorphism effect */
         .glass-effect {
             background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
             backdrop-filter: blur(20px);
@@ -44,7 +44,7 @@
             border-radius: 20px;
         }
 
-        /* Top Social Bar */
+        /* Top social bar */
         .top-social-bar {
             position: fixed;
             top: 0;
@@ -53,7 +53,14 @@
             padding: var(--space-2) 0;
             transition: transform 0.3s ease;
         }
-        .top-social-bar.hidden { transform: translateY(-100%); }
+        .top-social-bar.hidden {
+            transform: translateY(-100%);
+        }
+        .top-social-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .top-social-links a {
             color: var(--color-white);
             margin: 0 var(--space-1);
@@ -65,7 +72,7 @@
             transform: scale(1.2);
         }
 
-        /* Hero Slider */
+        /* Big Slider (Hero Section) */
         .hero-section {
             position: relative;
             height: 100vh;
@@ -78,19 +85,37 @@
         }
         .hero-bg {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-size: cover;
             background-position: center;
             transform: scale(1.05);
             transition: transform 0.3s ease;
             z-index: -1;
         }
+        .header-carousel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
         .carousel-item {
             height: 100vh;
             background-size: cover;
             background-position: center;
             position: relative;
+            transition: opacity 0.5s ease;
+        }
+        .carousel-item.active {
+            opacity: 1;
+        }
+        .carousel-item:not(.active) {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         .carousel-caption {
             background: rgba(0, 0, 0, 0.6);
@@ -99,20 +124,46 @@
             padding: var(--space-3);
             max-width: 80%;
             text-align: center;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .carousel-item.active .carousel-caption {
+            opacity: 1;
+            transform: translateY(0);
         }
         .carousel-caption h1 {
             font-size: 2.5rem;
             font-weight: 700;
             letter-spacing: 1.5px;
+            margin-bottom: var(--space-1);
+        }
+        .carousel-caption p {
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
         .carousel-caption a {
             color: var(--color-red);
             text-decoration: none;
             font-weight: 600;
+            transition: color 0.3s ease;
         }
-        .carousel-caption a:hover { color: var(--color-white); }
+        .carousel-caption a:hover {
+            color: var(--color-white);
+        }
+        .carousel-control-prev, .carousel-control-next {
+            width: 10%;
+            background: rgba(0, 0, 0, 0.3);
+            transition: background 0.3s ease;
+        }
+        .carousel-control-prev:hover, .carousel-control-next:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .carousel-control-prev-icon, .carousel-control-next-icon {
+            filter: invert(1);
+        }
 
-        /* Music Platforms */
+        /* Music platforms bar */
         .music-platforms-bar {
             position: absolute;
             bottom: 8%;
@@ -131,9 +182,20 @@
             font-size: 1.6rem;
             transition: transform 0.3s ease;
         }
-        .music-platforms-bar a:hover { transform: scale(1.2); }
+        .music-platforms-bar a:hover {
+            transform: scale(1.2);
+        }
 
-        /* Artist Cards */
+        /* Artist cards */
+        .artist-section {
+            position: relative;
+            padding: var(--space-3) 0;
+            overflow: hidden;
+        }
+        .artist-list {
+            position: relative;
+            z-index: 1;
+        }
         .artist-card {
             background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -143,11 +205,10 @@
             position: relative;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             overflow: hidden;
-            cursor: pointer;
         }
         .artist-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(255, 0, 0, 0.2);
         }
         .artist-card img {
             width: 100%;
@@ -159,7 +220,12 @@
         .artist-card h5 {
             color: var(--color-red);
             font-weight: 600;
+            letter-spacing: 1px;
             font-size: 1.3rem;
+        }
+        .artist-card p {
+            opacity: 0.8;
+            font-size: 0.95rem;
         }
         .social-links a {
             color: var(--color-white);
@@ -167,7 +233,9 @@
             font-size: 1.4rem;
             transition: color 0.3s ease;
         }
-        .social-links a:hover { color: var(--color-red); }
+        .social-links a:hover {
+            color: var(--color-red);
+        }
         .admin-actions {
             position: absolute;
             top: var(--space-1);
@@ -175,15 +243,100 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        .artist-card:hover .admin-actions { opacity: 1; }
+        .artist-card:hover .admin-actions {
+            opacity: 1;
+        }
         .admin-actions button {
             background: none;
             border: none;
             color: var(--color-white);
-            font-size: 1.2rem;
+            margin-left: 5px;
             cursor: pointer;
+            font-size: 1.2rem;
         }
-        .admin-actions button:hover { color: var(--color-red); }
+        .admin-actions button:hover {
+            color: var(--color-red);
+        }
+
+        /* Single Artist Page */
+        .artist-hero {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 1;
+            margin-bottom: var(--space-3);
+        }
+        .artist-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
+            z-index: -1;
+        }
+        .artist-hero-content {
+            padding: var(--space-2);
+        }
+        .artist-hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--color-red);
+            text-transform: uppercase;
+            margin-bottom: var(--space-1);
+            animation: fadeInUp 1s ease;
+        }
+        .artist-hero .social-links {
+            font-size: 1.8rem;
+        }
+        .artist-bio {
+            max-width: 90%;
+            margin: 0 auto;
+            padding: var(--space-3);
+            border-radius: 20px;
+        }
+        .artist-bio p {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        /* Admin Submissions Section */
+        .submissions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-2);
+        }
+        .submissions-table th, .submissions-table td {
+            padding: var(--space-1);
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .submissions-table th {
+            color: var(--color-red);
+            font-weight: 600;
+        }
+        .submissions-table img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        .submissions-table a {
+            color: var(--color-red);
+            text-decoration: none;
+        }
+        .submissions-table a:hover {
+            color: var(--color-white);
+        }
 
         /* Forms */
         .form-section {
@@ -196,18 +349,36 @@
             border: 1px solid var(--color-red);
             color: var(--color-white);
             border-radius: 10px;
+            padding: 12px;
+            font-size: 1rem;
+        }
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
         }
         .btn-primary {
-            background: linear-gradient(135deg, var(--color-red), #cc0000);
+            background: linear-gradient(135deg, var(--color-red) 0%, #cc0000 100%);
             border: none;
             border-radius: 25px;
             padding: 14px 30px;
             font-weight: 600;
+            font-size: 1rem;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            background: linear-gradient(135deg, #cc0000, var(--color-red));
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+            background: linear-gradient(135deg, #cc0000 0%, var(--color-red) 100%);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 25px;
+            padding: 14px 30px;
+            font-size: 1rem;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         /* Modals */
@@ -216,7 +387,12 @@
             color: var(--color-white);
             border-radius: 20px;
         }
-        .modal-header, .modal-footer { border-color: var(--color-red); }
+        .modal-header, .modal-footer {
+            border-color: var(--color-red);
+        }
+        .btn-close-white {
+            filter: invert(1);
+        }
 
         /* Footer */
         .site-footer {
@@ -225,43 +401,201 @@
             background: linear-gradient(135deg, var(--color-dark-transparent), var(--color-dark-transparent-alt));
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .site-footer a { color: var(--color-red); text-decoration: none; }
-        .site-footer a:hover { color: var(--color-white); }
+        .site-footer a {
+            color: var(--color-red);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .site-footer a:hover {
+            color: var(--color-white);
+        }
 
         /* Particles */
-        .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
         .particle {
             position: absolute;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
             border-radius: 50%;
         }
 
-        /* Ad */
-        .ad-container-wrapper { display: flex; justify-content: center; margin: var(--space-2) auto; }
-        #ad-container { width: 468px; height: 60px; max-width: 100%; }
+        /* Ad Container */
+        .ad-container-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: var(--space-2) auto;
+        }
+        #ad-container {
+            width: 468px;
+            height: 60px;
+            max-width: 100%;
+        }
 
         /* Animations */
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-        .stagger-item { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
-        .stagger-item.enhanced-appear { opacity: 1; transform: translateY(0); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .stagger-item.enhanced-appear {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-        /* Responsive */
+        /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
-            .hero-section, .carousel-item { height: 80vh; }
-            .carousel-caption h1 { font-size: 1.8rem; }
-            .top-social-links a { font-size: 1.3rem; }
-            .artist-card img { height: 180px; }
-            .form-section { max-width: 95%; }
+            .hero-section {
+                height: 80vh;
+            }
+            .carousel-item {
+                height: 80vh;
+            }
+            .carousel-caption {
+                padding: var(--space-2);
+                max-width: 90%;
+                border-radius: 15px;
+            }
+            .carousel-caption h1 {
+                font-size: 1.8rem;
+                letter-spacing: 1px;
+            }
+            .carousel-caption p {
+                font-size: 0.9rem;
+            }
+            .carousel-control-prev, .carousel-control-next {
+                width: 15%;
+            }
+            .music-platforms-bar {
+                bottom: 5%;
+                gap: var(--space-1);
+                padding: 10px 20px;
+            }
+            .music-platforms-bar a {
+                font-size: 1.4rem;
+            }
+            .top-social-links a {
+                font-size: 1.3rem;
+                margin: 0 10px;
+            }
+            .artist-hero {
+                height: 50vh;
+            }
+            .artist-hero h1 {
+                font-size: 2rem;
+                letter-spacing: 1.5px;
+            }
+            .artist-hero .social-links {
+                font-size: 1.5rem;
+            }
+            .artist-bio {
+                padding: var(--space-2);
+                max-width: 95%;
+            }
+            .artist-bio p {
+                font-size: 0.9rem;
+            }
+            .artist-card {
+                margin: var(--space-1) 0;
+                padding: var(--space-1);
+            }
+            .artist-card img {
+                height: 180px;
+            }
+            .artist-card h5 {
+                font-size: 1.2rem;
+            }
+            .artist-card p {
+                font-size: 0.9rem;
+            }
+            .social-links a {
+                font-size: 1.3rem;
+            }
+            .form-section {
+                margin: var(--space-2);
+                padding: var(--space-1);
+                max-width: 95%;
+            }
+            .form-control {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 12px 25px;
+                font-size: 0.9rem;
+            }
+            .admin-actions {
+                position: static;
+                opacity: 1;
+                margin-top: var(--space-1);
+                display: flex;
+                justify-content: flex-end;
+            }
+            .submissions-table img {
+                width: 40px;
+                height: 40px;
+            }
+            .submissions-table th, .submissions-table td {
+                font-size: 0.85rem;
+                padding: 8px;
+            }
+            .ad-container-wrapper {
+                margin: var(--space-1) auto;
+            }
+            #ad-container {
+                width: 100%;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .carousel-caption h1 {
+                font-size: 1.5rem;
+            }
+            .carousel-caption p {
+                font-size: 0.85rem;
+            }
+            .artist-hero h1 {
+                font-size: 1.8rem;
+            }
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.85rem;
+            }
+            .top-social-links a {
+                font-size: 1.2rem;
+                margin: 0 8px;
+            }
         }
     </style>
-
-    <!-- Firebase -->
+    <!-- Firebase SDKs (Modular Imports) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
+        // Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -269,19 +603,22 @@
             projectId: "sj-one",
             storageBucket: "sj-one.appspot.com",
             messagingSenderId: "426335553508",
-            appId: "1:426335553508:web:248f76772f6f78419ca9f1"
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
         };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
 
+        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
         let editingArtistId = null;
         let editingSliderId = null;
 
+        // Elements
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const userInfo = document.getElementById('user-info');
@@ -289,41 +626,78 @@
         const adminSection = document.getElementById('admin-section');
         const artistManagementSection = document.getElementById('artist-management-section');
         const submissionSection = document.getElementById('submission-section');
+        const addArtistForm = document.getElementById('add-artist-form');
+        const submitMusicForm = document.getElementById('submit-music-form');
+        const addSliderForm = document.getElementById('add-slider-form');
+        const addManagerForm = document.getElementById('add-manager-form');
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        const editSliderModal = new bootstrap.Modal(document.getElementById('editSliderModal'));
 
+        // Google Auth Provider
         const provider = new GoogleAuthProvider();
 
-        // Compress Image
+        // Compress Image Function
         async function compressImage(file, maxWidth = 1920, quality = 0.8) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 const img = new Image();
                 img.onload = () => {
-                    const ratio = Math.min(maxWidth / img.width, 1);
-                    canvas.width = img.width * ratio;
-                    canvas.height = img.height * ratio;
+                    const { width, height } = img;
+                    if (width > maxWidth) {
+                        canvas.width = maxWidth;
+                        canvas.height = (height / width) * maxWidth;
+                    } else {
+                        canvas.width = width;
+                        canvas.height = height;
+                    }
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+                    canvas.toBlob(blob => {
+                        resolve(blob);
+                    }, 'image/jpeg', quality);
                 };
+                img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
                 img.src = URL.createObjectURL(file);
             });
         }
 
-        // Auth
-        loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
-        logoutBtn.addEventListener('click', () => signOut(auth));
+        // Get Query Param Function
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
 
+        // Login with Google
+        loginBtn.addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(error => console.error(error));
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(error => console.error(error));
+        });
+
+        // Auth State Listener
         onAuthStateChanged(auth, user => {
             currentUser = user;
             if (user) {
                 loginBtn.classList.add('d-none');
                 logoutBtn.classList.remove('d-none');
-                userInfo.innerHTML = `<i class="bi bi-person-circle"></i> ${user.email}`;
+                userInfo.innerHTML = `<i class="bi bi-person-circle icon"></i>Logged in as: ${user.email}`;
                 submissionSection.classList.remove('d-none');
+
                 if (user.email === ADMIN_EMAIL) {
                     adminSection.classList.remove('d-none');
                     artistManagementSection.classList.remove('d-none');
-                    loadManagers(); loadSubmissions();
+                    loadManagers();
+                    loadSubmissions();
+                } else {
+                    const q = query(collection(db, 'managers'), where('email', '==', user.email));
+                    getDocs(q).then(snap => {
+                        if (!snap.empty) {
+                            artistManagementSection.classList.remove('d-none');
+                        }
+                    }).catch(err => console.error(err));
                 }
             } else {
                 loginBtn.classList.remove('d-none');
@@ -333,186 +707,784 @@
                 artistManagementSection.classList.add('d-none');
                 submissionSection.classList.add('d-none');
             }
-            loadSlider();
             loadArtists();
+            loadSlider();
         });
 
-        // Load Slider
+        // Load Slider from Firestore
         function loadSlider() {
-            const q = query(collection(db, 'sliders'), orderBy('createdAt'));
-            getDocs(q).then(snap => {
-                const inner = document.querySelector('.carousel-inner');
+            const sliderCol = collection(db, 'sliders');
+            const q = query(sliderCol, orderBy('createdAt'));
+            getDocs(q).then(snapshot => {
+                const headerCarousel = document.querySelector('.header-carousel .carousel-inner');
                 const heroBg = document.querySelector('.hero-bg');
-                inner.innerHTML = '';
-                if (snap.empty) {
-                    const def = `<div class="carousel-item active stagger-item" style="background-image:url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')">
-                        <div class="d-flex h-100 align-items-center justify-content-center">
-                            <div class="carousel-caption"><h1>Welcome</h1><p>Discover the future of music.</p></div>
-                        </div>
-                    </div>`;
-                    inner.innerHTML = def;
+                headerCarousel.innerHTML = '';
+                if (snapshot.empty) {
+                    const defaultSlide = document.createElement('div');
+                    defaultSlide.className = 'carousel-item active stagger-item';
+                    defaultSlide.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
                     heroBg.style.backgroundImage = "url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label')";
+                    defaultSlide.innerHTML = `
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>Welcome to SJ x N41 music</h1>
+                                <p>Discover the future of music.</p>
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(defaultSlide);
                     return;
                 }
                 let active = true;
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    const item = document.createElement('div');
-                    item.className = `carousel-item ${active ? 'active' : ''} stagger-item`;
-                    item.style.backgroundImage = `url('${d.imageUrl}')`;
-                    if (active) heroBg.style.backgroundImage = item.style.backgroundImage;
-                    let admin = currentUser?.email === ADMIN_EMAIL ? `
-                        <div class="position-absolute top-0 end-0 p-2">
-                            <button onclick="editSlider('${doc.id}')" class="btn btn-sm btn-outline-light"><i class="bi bi-pencil"></i></button>
-                            <button onclick="deleteSlider('${doc.id}')" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </div>` : '';
-                    item.innerHTML = `${admin}<div class="d-flex h-100 align-items-center justify-content-center">
-                        <div class="carousel-caption"><h1>${d.title || 'Welcome'}</h1><p>${d.description || ''}</p>${d.link ? `<a href="${d.link}" target="_blank">Learn More</a>` : ''}</div>
-                    </div>`;
-                    inner.appendChild(item);
+                snapshot.forEach(doc => {
+                    const slide = doc.data();
+                    const slideId = doc.id;
+                    const carouselItem = document.createElement('div');
+                    carouselItem.className = `carousel-item ${active ? 'active' : ''} stagger-item`;
+                    carouselItem.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    if (active) {
+                        heroBg.style.backgroundImage = `url('${slide.imageUrl}')`;
+                    }
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <button onclick="editSlider('${slideId}')" class="btn btn-sm btn-outline-light me-1" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteSlider('${slideId}')" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `;
+                    }
+                    carouselItem.innerHTML = `
+                        ${adminActions}
+                        <div class="d-flex h-100 align-items-center justify-content-center">
+                            <div class="carousel-caption">
+                                <h1>${slide.title || 'Welcome to SJ x N41 music'}</h1>
+                                <p>${slide.description || 'Discover the future of music.'}</p>
+                                ${slide.link ? `<a href="${slide.link}" target="_blank" rel="noopener noreferrer">Learn More</a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    headerCarousel.appendChild(carouselItem);
                     active = false;
                 });
-                setTimeout(() => document.querySelectorAll('.stagger-item').forEach((el, i) => setTimeout(() => el.classList.add('enhanced-appear'), i * 200)), 100);
-            });
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 200);
+                    });
+                }, 100);
+                // Update hero background on slide change
+                const carousel = document.getElementById('headerCarousel');
+                carousel.addEventListener('slid.bs.carousel', (event) => {
+                    const activeSlide = event.relatedTarget;
+                    const bgImage = activeSlide.style.backgroundImage;
+                    heroBg.style.backgroundImage = bgImage;
+                });
+            }).catch(error => console.error(error));
         }
 
-        // Load Artists (Home Page Only)
+        // Load Artists from Firestore
         function loadArtists() {
-            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people"></i> Our Artists</h2>';
-            getDocs(collection(db, 'artists')).then(snap => {
-                if (snap.empty) {
-                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet.</p>';
+            artistsList.innerHTML = '<h2 class="text-center mb-4"><i class="bi bi-people icon"></i>Our Artists</h2>';
+            const artistsCol = collection(db, 'artists');
+            getDocs(artistsCol).then(snapshot => {
+                if (snapshot.empty) {
+                    artistsList.innerHTML += '<p class="text-center text-muted">No artists yet. Add some!</p>';
                     return;
                 }
-                const row = document.createElement('div');
-                row.className = 'row justify-content-center';
-                snap.forEach(doc => {
-                    const a = doc.data();
-                    const id = doc.id;
-                    const col = document.createElement('div');
-                    col.className = 'col-md-4 col-sm-6';
-                    let admin = currentUser?.email === ADMIN_EMAIL ? `
-                        <div class="admin-actions">
-                            <button onclick="editArtist('${id}')"><i class="bi bi-pencil"></i></button>
-                            <button onclick="deleteArtist('${id}')"><i class="bi bi-trash"></i></button>
-                        </div>` : '';
-                    col.innerHTML = `
-                        <div class="artist-card stagger-item" onclick="window.location='artistpage.html?artist=${id}'">
-                            <img src="${a.imageUrl || 'https://via.placeholder.com/300'}" alt="${a.name}">
-                            ${admin}
-                            <h5><i class="bi bi-music-note-beamed"></i> ${a.name}</h5>
-                            <p>${a.description || 'Emerging talent.'}</p>
-                            <div class="social-links">
-                                ${a.instagram ? `<a href="${a.instagram}" target="_blank" onclick="event.stopPropagation();"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${a.spotify ? `<a href="${a.spotify}" target="_blank" onclick="event.stopPropagation();"><i class="bi bi-spotify"></i></a>` : ''}
+                snapshot.forEach(doc => {
+                    const artist = doc.data();
+                    const artistId = doc.id;
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4 col-sm-6';
+                    let adminActions = '';
+                    if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                        adminActions = `
+                            <div class="admin-actions">
+                                <button onclick="editArtist('${artistId}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                                <button onclick="deleteArtist('${artistId}')" title="Delete"><i class="bi bi-trash"></i></button>
                             </div>
-                        </div>`;
-                    row.appendChild(col);
+                        `;
+                    }
+                    card.innerHTML = `
+                        <div class="artist-card stagger-item">
+                            <img src="${artist.imageUrl || 'https://via.placeholder.com/300x200/4a90e2/ffffff?text=Artist+Photo'}" alt="${artist.name}">
+                            ${adminActions}
+                            <h5><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h5>
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                            <div class="social-links">
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                            </div>
+                            <a href="artistpage.html?artist=${artistId}" class="stretched-link"></a>
+                        </div>
+                    `;
+                    artistsList.appendChild(card);
                 });
-                artistsList.appendChild(row);
-                setTimeout(() => document.querySelectorAll('.stagger-item').forEach((el, i) => setTimeout(() => el.classList.add('enhanced-appear'), i * 100)), 100);
-            });
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
+            }).catch(error => console.error(error));
         }
 
-        // Admin Functions
-        window.editArtist = id => { /* ... same as before ... */ };
-        window.deleteArtist = id => confirm('Delete?') && deleteDoc(doc(db, 'artists', id)).then(loadArtists);
-        window.editSlider = id => { /* ... */ };
-        window.deleteSlider = id => confirm('Delete?') && deleteDoc(doc(db, 'sliders', id)).then(loadSlider);
-        window.removeManager = id => confirm('Remove?') && deleteDoc(doc(db, 'managers', id)).then(loadManagers);
+        // Load Single Artist
+        async function loadSingleArtist(id) {
+            const artistRef = doc(db, 'artists', id);
+            const docSnap = await getDoc(artistRef);
+            if (docSnap.exists()) {
+                const artist = docSnap.data();
+                document.querySelector('.hero-section').style.display = 'none';
+                document.getElementById('submission-section').style.display = 'none';
+                document.getElementById('admin-section').style.display = 'none';
+                document.getElementById('artist-management-section').style.display = 'none';
+                artistsList.innerHTML = '';
+                let adminActions = '';
+                if (currentUser && currentUser.email === ADMIN_EMAIL) {
+                    adminActions = `
+                        <div class="admin-actions" style="position: absolute; top: 10px; right: 10px; opacity: 1;">
+                            <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                }
+                const fullPage = document.createElement('div');
+                fullPage.innerHTML = `
+                    <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                        <div class="artist-hero-content">
+                            ${adminActions}
+                            <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
+                            <div class="social-links">
+                                ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer" title="Spotify"><i class="bi bi-spotify"></i></a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ad-container-wrapper">
+                        <div id="ad-container"></div>
+                    </div>
+                    <div class="container">
+                        <div class="artist-bio glass-effect stagger-item">
+                            <h3>Biography</h3>
+                            <p>${artist.description || 'Emerging talent in the music scene.'}</p>
+                        </div>
+                        <div class="text-center mt-4">
+                            <a href="https://simojibou.github.io/sjcoin25/sjlabel3.html" class="btn btn-secondary">Back to Home</a>
+                        </div>
+                    </div>
+                `;
+                artistsList.appendChild(fullPage);
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
+            } else {
+                artistsList.innerHTML = '<h2 class="text-center">Artist not found</h2>';
+            }
+        }
 
-        // Forms (same logic as before)
-        document.getElementById('add-artist-form').onsubmit = async e => { /* ... */ };
-        document.getElementById('edit-artist-form').onsubmit = async e => { /* ... */ };
-        document.getElementById('add-slider-form').onsubmit = async e => { /* ... */ };
-        document.getElementById('add-manager-form').onsubmit = e => { /* ... */ };
-        document.getElementById('submit-music-form').onsubmit = async e => { /* ... */ };
+        // Load Managers
+        function loadManagers() {
+            const managersList = document.getElementById('managers-list');
+            managersList.innerHTML = '<h4 class="mb-3"><i class="bi bi-people icon"></i>Current Managers</h4>';
+            getDocs(collection(db, 'managers')).then(snapshot => {
+                if (snapshot.empty) {
+                    managersList.innerHTML += '<p class="text-muted">No managers yet.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'manager-item glass-effect';
+                    div.innerHTML = `
+                        <span>${data.email}</span>
+                        <button class="btn btn-danger btn-sm" onclick="removeManager('${doc.id}')">Remove</button>
+                    `;
+                    managersList.appendChild(div);
+                });
+            }).catch(error => console.error(error));
+        }
 
-        // Particles
-        document.addEventListener('DOMContentLoaded', () => {
-            const p = document.querySelector('.particles');
-            for (let i = 0; i < 20; i++) {
-                const el = document.createElement('div');
-                el.className = 'particle';
-                el.style.width = el.style.height = `${Math.random() * 10 + 5}px`;
-                el.style.left = `${Math.random() * 100}%`;
-                el.style.top = `${Math.random() * 100}%`;
-                el.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
-                p.appendChild(el);
+        // Load Music Submissions (Admin Only)
+        function loadSubmissions() {
+            const submissionsList = document.getElementById('submissions-list');
+            submissionsList.innerHTML = '<h4 class="mb-3"><i class="bi bi-music-note-list icon"></i>Music Submissions</h4>';
+            const q = query(collection(db, 'submissions'), orderBy('timestamp', 'desc'));
+            getDocs(q).then(snapshot => {
+                if (snapshot.empty) {
+                    submissionsList.innerHTML += '<p class="text-muted">No submissions yet.</p>';
+                    return;
+                }
+                const table = document.createElement('table');
+                table.className = 'submissions-table glass-effect';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Artist</th>
+                            <th>Track</th>
+                            <th>Cover</th>
+                            <th>SoundCloud</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                `;
+                const tbody = table.querySelector('tbody');
+                snapshot.forEach(doc => {
+                    const submission = doc.data();
+                    const row = document.createElement('tr');
+                    row.className = 'stagger-item';
+                    const date = submission.timestamp ? new Date(submission.timestamp.toDate()).toLocaleDateString() : 'N/A';
+                    row.innerHTML = `
+                        <td>${submission.artistName}</td>
+                        <td>${submission.trackName}</td>
+                        <td><img src="${submission.coverUrl}" alt="Cover"></td>
+                        <td><a href="${submission.soundcloudLink}" target="_blank">Listen</a></td>
+                        <td>${date}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                submissionsList.appendChild(table);
+                // Trigger stagger animation
+                setTimeout(() => {
+                    document.querySelectorAll('.stagger-item').forEach((item, i) => {
+                        setTimeout(() => item.classList.add('enhanced-appear'), i * 100);
+                    });
+                }, 100);
+            }).catch(error => console.error(error));
+        }
+
+        // Global functions
+        window.editArtist = function(artistId) {
+            editingArtistId = artistId;
+            const artistRef = doc(db, 'artists', artistId);
+            getDoc(artistRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const artist = docSnap.data();
+                    document.getElementById('edit-artist-name').value = artist.name || '';
+                    document.getElementById('edit-artist-description').value = artist.description || '';
+                    document.getElementById('edit-artist-instagram').value = artist.instagram || '';
+                    document.getElementById('edit-artist-spotify').value = artist.spotify || '';
+                    editModal.show();
+                }
+            });
+        };
+
+        window.deleteArtist = function(artistId) {
+            if (confirm('Are you sure you want to delete this artist?')) {
+                const artistRef = doc(db, 'artists', artistId);
+                deleteDoc(artistRef).then(() => {
+                    alert('Artist deleted!');
+                    loadArtists();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.editSlider = function(sliderId) {
+            editingSliderId = sliderId;
+            const sliderRef = doc(db, 'sliders', sliderId);
+            getDoc(sliderRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const slider = docSnap.data();
+                    document.getElementById('edit-slider-title').value = slider.title || '';
+                    document.getElementById('edit-slider-description').value = slider.description || '';
+                    document.getElementById('edit-slider-link').value = slider.link || '';
+                    editSliderModal.show();
+                }
+            });
+        };
+
+        window.deleteSlider = function(sliderId) {
+            if (confirm('Are you sure you want to delete this slider?')) {
+                const sliderRef = doc(db, 'sliders', sliderId);
+                deleteDoc(sliderRef).then(() => {
+                    alert('Slider deleted!');
+                    loadSlider();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        window.removeManager = function(id) {
+            if (confirm('Are you sure you want to remove this manager?')) {
+                deleteDoc(doc(db, 'managers', id)).then(() => {
+                    loadManagers();
+                }).catch(error => console.error(error));
+            }
+        };
+
+        // Add Artist
+        addArtistForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('artist-name').value;
+            const description = document.getElementById('artist-description').value;
+            const instagram = document.getElementById('artist-instagram').value;
+            const spotify = document.getElementById('artist-spotify').value;
+            const imageFile = document.getElementById('artist-image').files[0];
+
+            const artistData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    artistData.imageUrl = url;
+                }
+                await addDoc(collection(db, 'artists'), artistData);
+                alert('Artist added!');
+                addArtistForm.reset();
+                loadArtists();
+            } catch (error) {
+                console.error(error);
+                alert('Error adding artist: ' + (error.message || error));
             }
         });
 
-        // Scroll hide bar
-        let lastY = 0;
-        window.addEventListener('scroll', () => {
-            const bar = document.querySelector('.top-social-bar');
-            if (window.scrollY > lastY && window.scrollY > 100) bar.classList.add('hidden');
-            else bar.classList.remove('hidden');
-            lastY = window.scrollY;
+        // Edit Artist
+        document.getElementById('edit-artist-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('edit-artist-name').value;
+            const description = document.getElementById('edit-artist-description').value;
+            const instagram = document.getElementById('edit-artist-instagram').value;
+            const spotify = document.getElementById('edit-artist-spotify').value;
+            const imageFile = document.getElementById('edit-artist-image').files[0];
+
+            const artistRef = doc(db, 'artists', editingArtistId);
+            const updateData = { name, description: description || '', instagram: instagram || '', spotify: spotify || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile);
+                    const storageRef = ref(storage, `artists/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const url = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = url;
+                }
+                await updateDoc(artistRef, updateData);
+                alert('Artist updated!');
+                editModal.hide();
+                const artistId = getQueryParam('artist');
+                if (artistId) {
+                    loadSingleArtist(artistId);
+                } else {
+                    loadArtists();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error updating artist: ' + (error.message || error));
+            }
         });
+
+        // Add Slider
+        addSliderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('slider-title').value;
+            const description = document.getElementById('slider-description').value;
+            const link = document.getElementById('slider-link').value;
+            const imageFile = document.getElementById('slider-image').files[0];
+
+            if (!imageFile) {
+                alert('Please select an image for the slider.');
+                return;
+            }
+            if (!imageFile.type.startsWith('image/')) {
+                alert('Please select an image file only.');
+                return;
+            }
+
+            try {
+                const compressed = await compressImage(imageFile, 1920, 0.7);
+                const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const imageUrl = await getDownloadURL(snapshot.ref);
+                await addDoc(collection(db, 'sliders'), {
+                    title: title || '',
+                    description: description || '',
+                    link: link || '',
+                    imageUrl,
+                    createdAt: serverTimestamp()
+                });
+                alert('Slider added successfully!');
+                addSliderForm.reset();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider add error:', error);
+                alert('Error adding slider: ' + (error.message || error));
+            }
+        });
+
+        // Edit Slider
+        document.getElementById('edit-slider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('edit-slider-title').value;
+            const description = document.getElementById('edit-slider-description').value;
+            const link = document.getElementById('edit-slider-link').value;
+            const imageFile = document.getElementById('edit-slider-image').files[0];
+
+            const sliderRef = doc(db, 'sliders', editingSliderId);
+            const updateData = { title: title || '', description: description || '', link: link || '' };
+
+            try {
+                if (imageFile) {
+                    if (!imageFile.type.startsWith('image/')) {
+                        alert('Please select an image file only.');
+                        return;
+                    }
+                    const compressed = await compressImage(imageFile, 1920, 0.7);
+                    const storageRef = ref(storage, `sliders/${Date.now()}_${imageFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                    const snapshot = await uploadBytes(storageRef, compressed);
+                    const imageUrl = await getDownloadURL(snapshot.ref);
+                    updateData.imageUrl = imageUrl;
+                }
+                await updateDoc(sliderRef, updateData);
+                alert('Slider updated!');
+                editSliderModal.hide();
+                loadSlider();
+            } catch (error) {
+                console.error('Slider edit error:', error);
+                alert('Error updating slider: ' + (error.message || error));
+            }
+        });
+
+        // Add Manager
+        addManagerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('manager-email').value;
+            addDoc(collection(db, 'managers'), { email }).then(() => {
+                alert('Manager added!');
+                addManagerForm.reset();
+                loadManagers();
+            }).catch(error => console.error(error));
+        });
+
+        // Submit Music
+        submitMusicForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const artistName = document.getElementById('submit-artist-name').value;
+            const trackName = document.getElementById('track-name').value;
+            const soundcloudLink = document.getElementById('soundcloud-link').value;
+            const coverFile = document.getElementById('cover-upload').files[0];
+
+            if (!coverFile.type.startsWith('image/')) {
+                alert('Please select an image file only for cover art.');
+                return;
+            }
+
+            try {
+                const compressed = await compressImage(coverFile);
+                const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name.replace(/\.[^/.]+$/, ".jpg")}`);
+                const snapshot = await uploadBytes(storageRef, compressed);
+                const url = await getDownloadURL(snapshot.ref);
+                await addDoc(collection(db, 'submissions'), {
+                    artistName,
+                    trackName,
+                    coverUrl: url,
+                    soundcloudLink,
+                    submittedBy: auth.currentUser.email,
+                    timestamp: serverTimestamp()
+                });
+                alert('Submission successful!');
+                submitMusicForm.reset();
+            } catch (error) {
+                console.error(error);
+                alert('Error submitting music: ' + (error.message || error));
+            }
+        });
+
+        // Scroll-based social bar hide
+        let lastScrollY = 0;
+        window.addEventListener('scroll', () => {
+            const socialBar = document.querySelector('.top-social-bar');
+            if (window.scrollY > lastScrollY && window.scrollY > 100) {
+                socialBar.classList.add('hidden');
+            } else {
+                socialBar.classList.remove('hidden');
+            }
+            lastScrollY = window.scrollY;
+        });
+
+        // Particle generation
+        function createParticles() {
+            const particleContainer = document.querySelector('.particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = `${Math.random() * 10 + 5}px`;
+                particle.style.height = particle.style.width;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
+                particleContainer.appendChild(particle);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', createParticles);
     </script>
 </head>
 <body>
     <!-- Top Social Bar -->
     <div class="top-social-bar">
         <div class="container">
-            <div class="top-social-links">
-                <a href="https://instagram.com/sjlabel" target="_blank"><i class="bi bi-instagram"></i></a>
-                <a href="https://twitter.com/sjlabel" target="_blank"><i class="bi bi-twitter"></i></a>
-                <a href="https://tiktok.com/@sjlabel" target="_blank"><i class="bi bi-tiktok"></i></a>
-                <a href="https://facebook.com/sjlabel" target="_blank"><i class="bi bi-facebook"></i></a>
+            <div class="top-social-container">
+                <div class="top-social-links">
+                    <a href="https://instagram.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="https://twitter.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+                    <a href="https://tiktok.com/@sjlabel" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://facebook.com/sjlabel" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Hero -->
-    <section class="hero-section">
-        <div class="hero-bg"></div>
-        <div id="headerCarousel" class="carousel slide" data-bs-ride="carousel">
-            <div class="carousel-inner"></div>
-            <button class="carousel-control-prev" data-bs-target="#headerCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-            <button class="carousel-control-next" data-bs-target="#headerCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+    <!-- Big Slider (Hero Section) -->
+    <section id="hero" class="hero-section">
+        <div class="hero-bg" style="background-image: url('https://via.placeholder.com/1920x1080/1e3c72/ffffff?text=SJ+Label');"></div>
+        <div id="headerCarousel" class="carousel slide header-carousel" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <!-- Slides loaded dynamically -->
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#headerCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#headerCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
         </div>
+        <!-- Music Platforms Bar -->
         <div class="music-platforms-bar">
-            <a href="https://open.spotify.com" target="_blank"><i class="bi bi-spotify"></i></a>
-            <a href="https://music.apple.com" target="_blank"><i class="bi bi-music-note-beamed"></i></a>
-            <a href="https://youtube.com" target="_blank"><i class="bi bi-youtube"></i></a>
+            <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="bi bi-spotify"></i></a>
+            <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="bi bi-music-note-beamed"></i></a>
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
         </div>
     </section>
 
-    <div class="ad-container-wrapper"><div id="ad-container"></div></div>
+    <!-- Ad Container -->
+    <div class="ad-container-wrapper">
+        <div id="ad-container"></div>
+    </div>
+
+    <!-- Ad Script -->
     <script type="text/javascript">
-        atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
-        document.addEventListener('DOMContentLoaded', () => {
-            const c = document.getElementById('ad-container');
-            if(c){ const s=document.createElement('script'); s.src='https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js'; s.async=true; c.appendChild(s); }
+        atOptions = {
+            'key': '6819d716a99f588efc7f8dacfbc474bb',
+            'format': 'iframe',
+            'height': 60,
+            'width': 468,
+            'params': {}
+        };
+        document.addEventListener('DOMContentLoaded', function () {
+            const adContainer = document.getElementById('ad-container');
+            if (adContainer) {
+                const script = document.createElement('script');
+                script.src = 'https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js';
+                script.async = true;
+                adContainer.appendChild(script);
+            }
         });
     </script>
 
+    <!-- Particles -->
     <div class="particles"></div>
 
     <div class="container">
-        <!-- Auth -->
+        <!-- Auth Section -->
         <div id="auth-section" class="text-center my-4 glass-effect">
-            <button id="login-btn" class="btn btn-primary">Login with Google</button>
-            <button id="logout-btn" class="btn btn-secondary d-none">Logout</button>
-            <div id="user-info" class="mt-2"></div>
+            <button id="login-btn" class="btn btn-primary"><i class="bi bi-google icon"></i>Login with Google</button>
+            <button id="logout-btn" class="btn btn-secondary d-none"><i class="bi bi-box-arrow-right icon"></i>Logout</button>
+            <div id="user-info" class="user-info d-inline-block mt-2"></div>
         </div>
 
-        <!-- Artists -->
+        <!-- Artists Showcase Section -->
         <section id="artists" class="artist-section">
-            <div id="artists-list" class="artist-list"></div>
+            <div id="artists-list" class="row justify-content-center artist-list">
+                <!-- Artists loaded dynamically -->
+            </div>
         </section>
 
-        <!-- Forms & Admin (same as before) -->
-        <!-- ... [Keep all your forms, modals, etc.] ... -->
+        <!-- Artist Management Section -->
+        <div id="artist-management-section" class="form-section d-none glass-effect">
+            <h3 class="text-center mb-4"><i class="bi bi-plus-circle icon"></i>Add New Artist</h3>
+            <form id="add-artist-form">
+                <div class="mb-3">
+                    <label for="artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                    <textarea class="form-control" id="artist-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image</label>
+                    <input type="file" class="form-control" id="artist-image" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                    <input type="url" class="form-control" id="artist-instagram" placeholder="https://instagram.com/artist">
+                </div>
+                <div class="mb-3">
+                    <label for="artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                    <input type="url" class="form-control" id="artist-spotify" placeholder="https://open.spotify.com/artist">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Artist</button>
+            </form>
+        </div>
+
+        <!-- Admin Dashboard Section -->
+        <div id="admin-section" class="form-section d-none glass-effect">
+            <h3 class="text-center mb-4"><i class="bi bi-images icon"></i>Add Slider Image</h3>
+            <form id="add-slider-form">
+                <div class="mb-3">
+                    <label for="slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                    <input type="text" class="form-control" id="slider-title" placeholder="Slide Title">
+                </div>
+                <div class="mb-3">
+                    <label for="slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                    <textarea class="form-control" id="slider-description" rows="2" placeholder="Slide Description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (required)</label>
+                    <input type="file" class="form-control" id="slider-image" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                    <input type="url" class="form-control" id="slider-link" placeholder="https://example.com">
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Slider</button>
+            </form>
+
+            <hr class="my-4" style="border-color: var(--color-red);">
+
+            <h3 class="text-center mb-4"><i class="bi bi-person-plus icon"></i>Add Manager</h3>
+            <form id="add-manager-form">
+                <div class="mb-3">
+                    <label for="manager-email" class="form-label"><i class="bi bi-envelope icon"></i>Manager Email</label>
+                    <input type="email" class="form-control" id="manager-email" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg icon"></i>Add Manager</button>
+            </form>
+            <div id="managers-list"></div>
+
+            <hr class="my-4" style="border-color: var(--color-red);">
+
+            <div id="submissions-list"></div>
+        </div>
+
+        <!-- Music Submission Section -->
+        <div id="submission-section" class="form-section d-none glass-effect">
+            <h3 class="text-center mb-4"><i class="bi bi-upload icon"></i>Submit Your Music</h3>
+            <form id="submit-music-form">
+                <div class="mb-3">
+                    <label for="submit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                    <input type="text" class="form-control" id="submit-artist-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="track-name" class="form-label"><i class="bi bi-music-note-list icon"></i>Track Name</label>
+                    <input type="text" class="form-control" id="track-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cover-upload" class="form-label"><i class="bi bi-image icon"></i>Cover Art</label>
+                    <input type="file" class="form-control" id="cover-upload" accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                    <label for="soundcloud-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Private SoundCloud Link</label>
+                    <input type="url" class="form-control" id="soundcloud-link" placeholder="https://soundcloud.com/private-link" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send icon"></i>Submit Track</button>
+            </form>
+        </div>
     </div>
 
-    <footer class="site-footer">
-        <p>© 2025 SJ x N41 music. All rights reserved.</p>
+    <!-- Edit Artist Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Artist</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-artist-form">
+                        <div class="mb-3">
+                            <label for="edit-artist-name" class="form-label"><i class="bi bi-person icon"></i>Artist Name</label>
+                            <input type="text" class="form-control" id="edit-artist-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description</label>
+                            <textarea class="form-control" id="edit-artist-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-image" class="form-label"><i class="bi bi-image icon"></i>Profile Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-artist-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-instagram" class="form-label"><i class="bi bi-instagram icon"></i>Instagram Link</label>
+                            <input type="url" class="form-control" id="edit-artist-instagram" placeholder="https://instagram.com/artist">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-artist-spotify" class="form-label"><i class="bi bi-spotify icon"></i>Spotify Link</label>
+                            <input type="url" class="form-control" id="edit-artist-spotify" placeholder="https://open.spotify.com/artist">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Artist</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Slider Modal -->
+    <div class="modal fade" id="editSliderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil icon"></i>Edit Slider</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-slider-form">
+                        <div class="mb-3">
+                            <label for="edit-slider-title" class="form-label"><i class="bi bi-type icon"></i>Title (optional)</label>
+                            <input type="text" class="form-control" id="edit-slider-title" placeholder="Slide Title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-description" class="form-label"><i class="bi bi-chat-text icon"></i>Description (optional)</label>
+                            <textarea class="form-control" id="edit-slider-description" rows="2" placeholder="Slide Description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-image" class="form-label"><i class="bi bi-image icon"></i>Slider Image (optional)</label>
+                            <input type="file" class="form-control" id="edit-slider-image" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-slider-link" class="form-label"><i class="bi bi-link-45deg icon"></i>Link (optional)</label>
+                            <input type="url" class="form-control" id="edit-slider-link" placeholder="https://example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save icon"></i>Update Slider</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer id="footer" class="site-footer">
+        <p>&copy; 2025 SJ x N41 music. All rights reserved.</p>
         <p><a href="mailto:simo.jibou@gmail.com">simo.jibou@gmail.com</a></p>
     </footer>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
