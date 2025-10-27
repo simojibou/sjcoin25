@@ -831,7 +831,7 @@
                         `;
                     }
                     let earningsHtml = '';
-                    if (artist.views !== undefined) {
+                    if (currentUser && currentUser.email === ADMIN_EMAIL && artist.views !== undefined) {
                         const earnings = (artist.views / 1000).toFixed(2);
                         earningsHtml = `<p class="mb-0"><i class="bi bi-currency-dollar text-success"></i> Earnings: $${earnings}</p>`;
                     }
@@ -881,7 +881,7 @@
                     `;
                 }
                 let earningsHtml = '';
-                if (artist.views !== undefined) {
+                if (currentUser && currentUser.email === ADMIN_EMAIL && artist.views !== undefined) {
                     earningsHtml = `
                         <p><i class="bi bi-eye"></i> Total Views: ${artist.views.toLocaleString()}</p>
                         <p><i class="bi bi-currency-dollar text-success"></i> Earnings: $${(artist.views / 1000).toFixed(2)}</p>
