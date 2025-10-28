@@ -268,6 +268,62 @@
             </div>
         </div>
     </div>
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Artist</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control bg-dark text-white" id="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control bg-dark text-white" id="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="imageUrl" class="form-label">Image URL</label>
+                            <input type="url" class="form-control bg-dark text-white" id="imageUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label for="instagram" class="form-label">Instagram</label>
+                            <input type="url" class="form-control bg-dark text-white" id="instagram">
+                        </div>
+                        <div class="mb-3">
+                            <label for="spotify" class="form-label">Spotify</label>
+                            <input type="url" class="form-control bg-dark text-white" id="spotify">
+                        </div>
+                        <div class="mb-3">
+                            <label for="tiktok" class="form-label">TikTok</label>
+                            <input type="url" class="form-control bg-dark text-white" id="tiktok">
+                        </div>
+                        <div class="mb-3">
+                            <label for="youtube" class="form-label">YouTube</label>
+                            <input type="url" class="form-control bg-dark text-white" id="youtube">
+                        </div>
+                        <div class="mb-3">
+                            <label for="googlePlay" class="form-label">Google Play</label>
+                            <input type="url" class="form-control bg-dark text-white" id="googlePlay">
+                        </div>
+                        <div class="mb-3">
+                            <label for="appleMusic" class="form-label">Apple Music</label>
+                            <input type="url" class="form-control bg-dark text-white" id="appleMusic">
+                        </div>
+                        <div class="mb-3">
+                            <label for="personalWebsite" class="form-label">Personal Website</label>
+                            <input type="url" class="form-control bg-dark text-white" id="personalWebsite">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Main Content -->
     <div id="artist-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
         <!-- Artist content will be injected here -->
@@ -276,7 +332,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, where, orderBy, startAt, endAt, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, where, orderBy, startAt, endAt, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -293,6 +349,7 @@
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
         let artistId = null;
+        let currentArtist = null;
         // ---------- Helper ----------
         function getQueryParam(name) {
             return new URLSearchParams(window.location.search).get(name);
@@ -384,6 +441,7 @@
                 console.error('Failed to increment views:', e);
                 // Proceed with original data
             }
+            currentArtist = artist;
             // Check if current user is admin
             const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
             const adminActions = isAdmin
@@ -406,6 +464,11 @@
                         <div class="social-links">
                             ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
                             ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
+                            ${artist.tiktok ? `<a href="${artist.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
+                            ${artist.youtube ? `<a href="${artist.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
+                            ${artist.googlePlay ? `<a href="${artist.googlePlay}" target="_blank" rel="noopener noreferrer"><i class="bi bi-google"></i></a>` : ''}
+                            ${artist.appleMusic ? `<a href="${artist.appleMusic}" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple"></i></a>` : ''}
+                            ${artist.personalWebsite ? `<a href="${artist.personalWebsite}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe"></i></a>` : ''}
                         </div>
                     </div>
                 </div>
@@ -440,11 +503,29 @@
         }
         // ---------- Admin Button Handlers ----------
         window.editArtist = (id) => {
-            alert('Edit functionality is available on the main admin page.');
+            if (!currentArtist) return;
+            document.getElementById('name').value = currentArtist.name || '';
+            document.getElementById('description').value = currentArtist.description || '';
+            document.getElementById('imageUrl').value = currentArtist.imageUrl || '';
+            document.getElementById('instagram').value = currentArtist.instagram || '';
+            document.getElementById('spotify').value = currentArtist.spotify || '';
+            document.getElementById('tiktok').value = currentArtist.tiktok || '';
+            document.getElementById('youtube').value = currentArtist.youtube || '';
+            document.getElementById('googlePlay').value = currentArtist.googlePlay || '';
+            document.getElementById('appleMusic').value = currentArtist.appleMusic || '';
+            document.getElementById('personalWebsite').value = currentArtist.personalWebsite || '';
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
         };
-        window.deleteArtist = (id) => {
+        window.deleteArtist = async (id) => {
             if (confirm('Are you sure you want to delete this artist?')) {
-                alert('Delete handled on main admin page.');
+                try {
+                    await deleteDoc(doc(db, 'artists', id));
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    alert('Failed to delete artist.');
+                }
             }
         };
         window.loginWithGoogle = loginWithGoogle;
@@ -455,6 +536,32 @@
                 searchInput.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.trim();
                     searchArtists(searchTerm);
+                });
+            }
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const updatedData = {
+                        name: document.getElementById('name').value,
+                        description: document.getElementById('description').value,
+                        imageUrl: document.getElementById('imageUrl').value,
+                        instagram: document.getElementById('instagram').value,
+                        spotify: document.getElementById('spotify').value,
+                        tiktok: document.getElementById('tiktok').value,
+                        youtube: document.getElementById('youtube').value,
+                        googlePlay: document.getElementById('googlePlay').value,
+                        appleMusic: document.getElementById('appleMusic').value,
+                        personalWebsite: document.getElementById('personalWebsite').value,
+                    };
+                    try {
+                        await updateDoc(doc(db, 'artists', artistId), updatedData);
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                        loadSingleArtist(artistId);
+                    } catch (error) {
+                        console.error('Update error:', error);
+                        alert('Failed to update artist.');
+                    }
                 });
             }
         });
