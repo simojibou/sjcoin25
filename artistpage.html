@@ -10,7 +10,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Custom CSS (kept only the parts used by the artist page) -->
+    <!-- Custom CSS -->
     <style>
         :root{
             --color-red:#ff0000;
@@ -20,6 +20,9 @@
             --color-dark-transparent-alt:#1a1a1ad9;
             --color-dark-light:#1a1a1a;
             --space-unit:8px;
+            --space-1:calc(var(--space-unit)*1);
+            --space-2:calc(var(--space-unit)*2);
+            --space-3:calc(var(--space-unit)*3);
         }
         body{
             background:linear-gradient(135deg,#050608,#101218,#090c14);
@@ -92,8 +95,18 @@
             .artist-hero h1{font-size:1.8rem;}
         }
     </style>
+</head>
+<body>
 
-    <!-- Firebase SDKs (modular) -->
+    <!-- Particles Background -->
+    <div class="particles"></div>
+
+    <!-- Main Content -->
+    <div id="artist-container" class="container my-5">
+        <!-- Artist content will be injected here -->
+    </div>
+
+    <!-- Firebase SDKs (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
@@ -115,36 +128,41 @@
         const db = getFirestore(app);
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
+        let artistId = null;
 
         // ---------- Helper ----------
-        function getQueryParam(name){
+        function getQueryParam(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
 
-        // ---------- Load Single Artist ----------
-        async function loadSingleArtist(id){
-            const artistRef = doc(db,'artists',id);
+        // ---------- Load Artist (Public + Admin) ----------
+        async function loadSingleArtist(id) {
+            const artistRef = doc(db, 'artists', id);
             const snap = await getDoc(artistRef);
-            if(!snap.exists()){
+
+            if (!snap.exists()) {
                 document.getElementById('artist-container').innerHTML = '<h2 class="text-center">Artist not found</h2>';
                 return;
             }
 
-            // Increment views
+            // Increment views (for all users)
             await updateDoc(artistRef, { views: increment(1) });
 
-            // Fetch updated data
+            // Get updated data
             const updatedSnap = await getDoc(artistRef);
             const artist = updatedSnap.data();
 
-            const adminActions = (currentUser && currentUser.email===ADMIN_EMAIL)
+            // Check if current user is admin
+            const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
+            const adminActions = isAdmin
                 ? `<div class="admin-actions">
                        <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                        <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                    </div>`
                 : '';
 
-            const adminStats = (currentUser && currentUser.email===ADMIN_EMAIL)
+            const adminStats = isAdmin
                 ? `<div class="admin-stats glass-effect stagger-item mt-4">
                        <h3>Artist Stats</h3>
                        <p>Total Views: ${artist.views || 0}</p>
@@ -153,13 +171,13 @@
                 : '';
 
             const html = `
-                <div class="artist-hero" style="background-image:url('${artist.imageUrl||'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                <div class="artist-hero" style="background-image:url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
                     <div class="artist-hero-content">
                         ${adminActions}
-                        <h1><i class="bi bi-music-note-beamed icon"></i>${artist.name}</h1>
+                        <h1><i class="bi bi-music-note-beamed"></i> ${artist.name}</h1>
                         <div class="social-links">
-                            ${artist.instagram?`<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>`:''}
-                            ${artist.spotify?`<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>`:''}
+                            ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
+                            ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
                         </div>
                     </div>
                 </div>
@@ -169,7 +187,7 @@
                 <div class="container">
                     <div class="artist-bio glass-effect stagger-item">
                         <h3>Biography</h3>
-                        <p>${artist.description||'Emerging talent in the music scene.'}</p>
+                        <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                     </div>
                     ${adminStats}
                     <div class="text-center mt-4">
@@ -177,55 +195,75 @@
                     </div>
                 </div>
             `;
+
             document.getElementById('artist-container').innerHTML = html;
 
             // Stagger animation
-            setTimeout(()=>{document.querySelectorAll('.stagger-item').forEach((el,i)=>setTimeout(()=>el.classList.add('enhanced-appear'),i*100));},100);
+            setTimeout(() => {
+                document.querySelectorAll('.stagger-item').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('enhanced-appear'), i * 100);
+                });
+            }, 100);
         }
 
-        // ---------- Auth ----------
-        onAuthStateChanged(auth, user=>{
+        // ---------- Start Loading Immediately (Public Access) ----------
+        artistId = getQueryParam('artist');
+        if (artistId) {
+            loadSingleArtist(artistId); // Load even if not logged in
+        } else {
+            document.getElementById('artist-container').innerHTML = '<h2 class="text-center">No artist specified</h2>';
+        }
+
+        // ---------- Auth: Only for Admin UI ----------
+        onAuthStateChanged(auth, user => {
             currentUser = user;
-            const artistId = getQueryParam('artist');
-            if(artistId) loadSingleArtist(artistId);
+            if (artistId) {
+                loadSingleArtist(artistId); // Reload to show/hide admin tools
+            }
         });
 
-        // ---------- Global admin functions (kept for the buttons) ----------
-        window.editArtist = id=>{ alert('Edit functionality is in the main page.'); };
-        window.deleteArtist = id=>{ if(confirm('Delete this artist?')) alert('Delete handled in main page.'); };
+        // ---------- Admin Button Handlers ----------
+        window.editArtist = (id) => {
+            alert('Edit functionality is available on the main admin page.');
+        };
+
+        window.deleteArtist = (id) => {
+            if (confirm('Are you sure you want to delete this artist?')) {
+                alert('Delete handled on main admin page.');
+            }
+        };
     </script>
-</head>
 
-<body>
-    <!-- Particles (optional, kept from original) -->
-    <div class="particles"></div>
-
-    <div id="artist-container" class="container my-5">
-        <!-- Artist page will be injected here -->
-    </div>
-
-    <!-- Ad script (kept from original) -->
+    <!-- Ad Script -->
     <script type="text/javascript">
         atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
-        document.addEventListener('DOMContentLoaded',()=>{ const c=document.getElementById('ad-container'); if(c){ const s=document.createElement('script'); s.src='https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js'; s.async=true; c.appendChild(s); } });
+        document.addEventListener('DOMContentLoaded', () => {
+            const c = document.getElementById('ad-container');
+            if (c) {
+                const s = document.createElement('script');
+                s.src = 'https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js';
+                s.async = true;
+                c.appendChild(s);
+            }
+        });
     </script>
 
-    <!-- Particles generation (optional) -->
+    <!-- Particles Effect -->
     <script>
-        function createParticles(){
-            const p=document.querySelector('.particles');
-            for(let i=0;i<20;i++){
-                const e=document.createElement('div');
-                e.className='particle';
-                const sz=Math.random()*10+5;
-                e.style.width=e.style.height=sz+'px';
-                e.style.left=Math.random()*100+'%';
-                e.style.top=Math.random()*100+'%';
-                e.style.animation=`float ${Math.random()*10+5}s infinite`;
+        function createParticles() {
+            const p = document.querySelector('.particles');
+            for (let i = 0; i < 20; i++) {
+                const e = document.createElement('div');
+                e.className = 'particle';
+                const sz = Math.random() * 10 + 5;
+                e.style.width = e.style.height = sz + 'px';
+                e.style.left = Math.random() * 100 + '%';
+                e.style.top = Math.random() * 100 + '%';
+                e.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
                 p.appendChild(e);
             }
         }
-        document.addEventListener('DOMContentLoaded',createParticles);
+        document.addEventListener('DOMContentLoaded', createParticles);
     </script>
 
     <!-- Bootstrap JS -->
