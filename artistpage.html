@@ -173,6 +173,20 @@
         #profile-link img {
             object-fit: cover;
         }
+        /* Search results style - Netflix-like cards */
+        .search-result-card {
+            transition: transform 0.2s;
+        }
+        .search-result-card:hover {
+            transform: scale(1.05);
+        }
+        .search-result-card img {
+            aspect-ratio: 2/3; /* Poster-like aspect ratio */
+            object-fit: cover;
+        }
+        .search-result-card .card-body {
+            text-align: center;
+        }
         /* Mobile tweaks */
         @media (max-width: 768px){
             .artist-hero{
@@ -227,7 +241,7 @@
                 </ul>
                 <ul class="navbar-nav mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-search"></i></a>
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i></a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#"><i class="bi bi-bell"></i></a>
@@ -239,6 +253,21 @@
             </div>
         </div>
     </nav>
+    <!-- Search Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalLabel">Search Artists</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="searchInput" class="form-control bg-dark text-white" placeholder="Search for artists...">
+                    <div id="searchResults" class="row mt-3 gy-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Main Content -->
     <div id="artist-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
         <!-- Artist content will be injected here -->
@@ -247,7 +276,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, where, orderBy, startAt, endAt, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -286,6 +315,43 @@
             } else {
                 profileLink.innerHTML = `<i class="bi bi-person-circle"></i>`;
                 profileLink.onclick = loginWithGoogle;
+            }
+        }
+        // ---------- Search Artists ----------
+        async function searchArtists(searchTerm) {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = '';
+            if (!searchTerm) return;
+            const q = query(collection(db, 'artists'), 
+                            orderBy('name'), 
+                            startAt(searchTerm.toLowerCase()), 
+                            endAt(searchTerm.toLowerCase() + '\uf8ff'));
+            try {
+                const snapshot = await getDocs(q);
+                if (snapshot.empty) {
+                    resultsContainer.innerHTML = '<p class="text-center text-muted">No artists found.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const artist = doc.data();
+                    const id = doc.id;
+                    const card = `
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                            <a href="artist.html?artist=${id}" class="text-decoration-none">
+                                <div class="card bg-dark border-0 search-result-card">
+                                    <img src="${artist.imageUrl || 'https://via.placeholder.com/200x300/141414/ffffff?text=Artist'}" class="card-img-top" alt="${artist.name}">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title text-white">${artist.name}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    `;
+                    resultsContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = '<p class="text-center text-danger">Error searching artists.</p>';
             }
         }
         // ---------- Load Artist (Public + Admin) ----------
@@ -371,6 +437,16 @@
             }
         };
         window.loginWithGoogle = loginWithGoogle;
+        // ---------- Search Event Listener ----------
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.trim();
+                    searchArtists(searchTerm);
+                });
+            }
+        });
     </script>
     <!-- Ad Script -->
     <script type="text/javascript">
