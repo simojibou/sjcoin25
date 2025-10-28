@@ -8,96 +8,179 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
+    <!-- Custom CSS (Netflix-inspired) -->
     <style>
         :root{
-            --color-red:#ff0000;
-            --color-white:#ffffff;
-            --color-dark:#0a0a0a;
-            --color-dark-transparent:#0a0a0af2;
-            --color-dark-transparent-alt:#1a1a1ad9;
-            --color-dark-light:#1a1a1a;
-            --space-unit:8px;
-            --space-1:calc(var(--space-unit)*1);
-            --space-2:calc(var(--space-unit)*2);
-            --space-3:calc(var(--space-unit)*3);
+            --color-red: #e50914; /* Netflix red */
+            --color-white: #ffffff;
+            --color-dark: #141414; /* Netflix primary dark */
+            --color-dark-light: #221f1f; /* Slightly lighter dark for accents */
+            --color-grey: #8c8c8c; /* For secondary text */
+            --space-unit: 16px; /* Larger spacing for Netflix feel */
+            --space-1: calc(var(--space-unit) * 1);
+            --space-2: calc(var(--space-unit) * 2);
+            --space-3: calc(var(--space-unit) * 3);
         }
         body{
-            background:linear-gradient(135deg,#050608,#101218,#090c14);
-            color:var(--color-white);
-            font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
-            margin:0;padding:0;
-            overflow-x:hidden;
-        }
-        .glass-effect{
-            background:linear-gradient(135deg,var(--color-dark-transparent),var(--color-dark-transparent-alt));
-            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-            border:1px solid rgba(255,255,255,.1);
-            box-shadow:0 8px 32px rgba(0,0,0,.3);
-            border-radius:20px;
+            background: var(--color-dark);
+            color: var(--color-white);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Netflix-like font stack */
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
         .artist-hero{
-            position:relative;height:60vh;width:100%;background-size:cover;background-position:center;
-            display:flex;align-items:center;justify-content:center;text-align:center;
-            margin-bottom:var(--space-3);
+            position: relative;
+            height: 70vh; /* Taller hero for dramatic Netflix effect */
+            width: 100%;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end; /* Align content to bottom like Netflix banners */
+            justify-content: flex-start;
+            text-align: left;
+            margin-bottom: var(--space-3);
+            padding: var(--space-3) var(--space-3) var(--space-2);
         }
         .artist-hero::before{
-            content:'';position:absolute;top:0;left:0;width:100%;height:100%;
-            background:linear-gradient(to bottom,rgba(0,0,0,.5),rgba(0,0,0,.8));
-            z-index:-1;
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(20,20,20,0), rgba(20,20,20,1)); /* Netflix fade to black */
+            z-index: 1;
         }
-        .artist-hero-content{padding:var(--space-2);}
+        .artist-hero-content{
+            position: relative;
+            z-index: 2;
+            max-width: 50%;
+        }
         .artist-hero h1{
-            font-size:3rem;font-weight:800;letter-spacing:2px;color:var(--color-red);
-            text-transform:uppercase;margin-bottom:var(--space-1);
-            animation:fadeInUp 1s ease;
+            font-size: 4rem; /* Larger, bold titles */
+            font-weight: 700;
+            letter-spacing: -1px;
+            color: var(--color-white);
+            margin-bottom: var(--space-1);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Subtle shadow for readability */
         }
-        .artist-hero .social-links{font-size:1.8rem;}
+        .artist-hero .social-links{
+            font-size: 1.5rem;
+        }
         .artist-bio{
-            max-width:90%;margin:0 auto;padding:var(--space-3);border-radius:20px;
+            max-width: 90%;
+            margin: 0 auto;
+            padding: var(--space-2);
+            background: var(--color-dark-light);
+            border-radius: 4px; /* Minimal rounding like Netflix cards */
         }
-        .artist-bio p{font-size:1rem;line-height:1.6;opacity:.9;}
+        .artist-bio h3{
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-1);
+        }
+        .artist-bio p{
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--color-grey); /* Secondary text color */
+        }
+        .artist-stats{
+            max-width: 90%;
+            margin: var(--space-3) auto;
+            padding: var(--space-2);
+            background: var(--color-dark-light);
+            border-radius: 4px;
+        }
+        .artist-stats h3{
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-1);
+        }
+        .artist-stats p{
+            font-size: 1rem;
+            color: var(--color-grey);
+        }
         .admin-actions{
-            position:absolute;top:10px;right:10px;opacity:1;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 3;
         }
         .admin-actions button{
-            background:none;border:none;color:var(--color-white);
-            margin-left:5px;cursor:pointer;font-size:1.2rem;
+            background: none;
+            border: none;
+            color: var(--color-white);
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.5rem;
         }
-        .admin-actions button:hover{color:var(--color-red);}
-        .social-links a{color:var(--color-white);margin-right:8px;font-size:1.4rem;transition:color .3s;}
-        .social-links a:hover{color:var(--color-red);}
-        .ad-container-wrapper{display:flex;justify-content:center;margin:16px auto;}
-        #ad-container{width:468px;height:60px;max-width:100%;}
-        @keyframes fadeInUp{
-            from{opacity:0;transform:translateY(30px);}
-            to{opacity:1;transform:translateY(0);}
+        .admin-actions button:hover{
+            color: var(--color-red);
         }
-        @keyframes float{
-            0%,100%{transform:translateY(0);}
-            50%{transform:translateY(-20px);}
+        .social-links a{
+            color: var(--color-grey);
+            margin-right: 12px;
+            font-size: 1.5rem;
+            transition: color .3s;
         }
-        .stagger-item{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}
-        .stagger-item.enhanced-appear{opacity:1;transform:translateY(0);}
+        .social-links a:hover{
+            color: var(--color-red);
+        }
+        .ad-container-wrapper{
+            display: flex;
+            justify-content: center;
+            margin: var(--space-2) auto;
+        }
+        #ad-container{
+            width: 728px; /* Wider ad for Netflix-like layout */
+            height: 90px;
+            max-width: 100%;
+        }
+        .btn-secondary{
+            background-color: var(--color-red);
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .btn-secondary:hover{
+            background-color: #b20710; /* Darker red on hover */
+        }
+        /* Remove glass effects and particles for clean Netflix style */
+        /* No animations for simplicity, Netflix is subtle */
         /* Mobile tweaks */
-        @media (max-width:768px){
-            .artist-hero{height:50vh;}
-            .artist-hero h1{font-size:2rem;letter-spacing:1.5px;}
-            .artist-hero .social-links{font-size:1.5rem;}
-            .artist-bio{padding:16px;max-width:95%;}
-            .artist-bio p{font-size:.9rem;}
-            #ad-container{width:100%;height:auto;}
+        @media (max-width: 768px){
+            .artist-hero{
+                height: 50vh;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+            .artist-hero-content{
+                max-width: 90%;
+            }
+            .artist-hero h1{
+                font-size: 2.5rem;
+            }
+            .artist-bio{
+                max-width: 95%;
+            }
+            #ad-container{
+                width: 100%;
+                height: auto;
+            }
         }
-        @media (max-width:576px){
-            .artist-hero h1{font-size:1.8rem;}
+        @media (max-width: 576px){
+            .artist-hero h1{
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Particles Background -->
-    <div class="particles"></div>
     <!-- Main Content -->
-    <div id="artist-container" class="container my-5">
+    <div id="artist-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
         <!-- Artist content will be injected here -->
     </div>
     <!-- Firebase SDKs (Modular) -->
@@ -153,16 +236,16 @@
                    </div>`
                 : '';
             const artistStats = `
-                <div class="artist-stats glass-effect stagger-item mt-4">
+                <div class="artist-stats">
                     <h3>Artist Stats</h3>
                     <p>Total Views: ${artist.views || 0}</p>
                     ${isAdmin ? `<p>Earnings: $${((artist.views || 0) / 1000).toFixed(2)}</p>` : ''}
                 </div>`;
             const html = `
-                <div class="artist-hero" style="background-image:url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
+                <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Artist+Photo'}');">
                     <div class="artist-hero-content">
                         ${adminActions}
-                        <h1><i class="bi bi-music-note-beamed"></i> ${artist.name}</h1>
+                        <h1>${artist.name}</h1> <!-- Removed icon for cleaner Netflix look -->
                         <div class="social-links">
                             ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
                             ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
@@ -171,7 +254,7 @@
                 </div>
                 <div class="ad-container-wrapper"><div id="ad-container"></div></div>
                 <div class="container">
-                    <div class="artist-bio glass-effect stagger-item">
+                    <div class="artist-bio">
                         <h3>Biography</h3>
                         <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                     </div>
@@ -182,12 +265,6 @@
                 </div>
             `;
             document.getElementById('artist-container').innerHTML = html;
-            // Stagger animation
-            setTimeout(() => {
-                document.querySelectorAll('.stagger-item').forEach((el, i) => {
-                    setTimeout(() => el.classList.add('enhanced-appear'), i * 100);
-                });
-            }, 100);
         }
         // ---------- Start Loading Immediately (Public Access) ----------
         artistId = getQueryParam('artist');
@@ -215,7 +292,7 @@
     </script>
     <!-- Ad Script -->
     <script type="text/javascript">
-        atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+        atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
         document.addEventListener('DOMContentLoaded', () => {
             const c = document.getElementById('ad-container');
             if (c) {
@@ -225,23 +302,6 @@
                 c.appendChild(s);
             }
         });
-    </script>
-    <!-- Particles Effect -->
-    <script>
-        function createParticles() {
-            const p = document.querySelector('.particles');
-            for (let i = 0; i < 20; i++) {
-                const e = document.createElement('div');
-                e.className = 'particle';
-                const sz = Math.random() * 10 + 5;
-                e.style.width = e.style.height = sz + 'px';
-                e.style.left = Math.random() * 100 + '%';
-                e.style.top = Math.random() * 100 + '%';
-                e.style.animation = `float ${Math.random() * 10 + 5}s infinite`;
-                p.appendChild(e);
-            }
-        }
-        document.addEventListener('DOMContentLoaded', createParticles);
     </script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
