@@ -26,8 +26,30 @@
             color: var(--color-white);
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Netflix-like font stack */
             margin: 0;
-            padding: 0;
+            padding-top: 56px; /* Padding for fixed navbar */
             overflow-x: hidden;
+        }
+        .navbar{
+            background-color: var(--color-dark) !important;
+        }
+        .navbar-brand{
+            color: var(--color-red);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .navbar-brand:hover{
+            color: var(--color-red);
+        }
+        .nav-link{
+            color: var(--color-white) !important;
+            font-weight: 500;
+        }
+        .nav-link:hover{
+            color: var(--color-grey) !important;
+        }
+        .nav-link.active{
+            color: var(--color-white) !important;
+            font-weight: bold;
         }
         .artist-hero{
             position: relative;
@@ -179,6 +201,42 @@
     </style>
 </head>
 <body>
+    <!-- Netflix-inspired Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">SJ X N41</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Artists</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Playlists</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Albums</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-search"></i></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-bell"></i></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-person-circle"></i></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
     <!-- Main Content -->
     <div id="artist-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
         <!-- Artist content will be injected here -->
