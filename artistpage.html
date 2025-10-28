@@ -133,11 +133,17 @@
                 document.getElementById('artist-container').innerHTML = '<h2 class="text-center">Artist not found</h2>';
                 return;
             }
-            // Increment views (for all users)
-            await updateDoc(artistRef, { views: increment(1) });
-            // Get updated data
-            const updatedSnap = await getDoc(artistRef);
-            const artist = updatedSnap.data();
+            let artist = snap.data();
+            // Attempt to increment views (for all users, but catch if permission denied)
+            try {
+                await updateDoc(artistRef, { views: increment(1) });
+                // Get updated data
+                const updatedSnap = await getDoc(artistRef);
+                artist = updatedSnap.data();
+            } catch (e) {
+                console.error('Failed to increment views:', e);
+                // Proceed with original data
+            }
             // Check if current user is admin
             const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
             const adminActions = isAdmin
