@@ -317,27 +317,38 @@
                 profileLink.onclick = loginWithGoogle;
             }
         }
-        // ---------- Search Artists ----------
+        // ---------- Search Artists (Case-insensitive hack: query both lower and capitalized) ----------
         async function searchArtists(searchTerm) {
             const resultsContainer = document.getElementById('searchResults');
             resultsContainer.innerHTML = '';
             if (!searchTerm) return;
-            const q = query(collection(db, 'artists'), 
-                            orderBy('name'), 
-                            startAt(searchTerm.toLowerCase()), 
-                            endAt(searchTerm.toLowerCase() + '\uf8ff'));
+            const lowerTerm = searchTerm.toLowerCase();
+            const capTerm = searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase();
+            const queries = [];
+            if (lowerTerm !== capTerm) {
+                queries.push(query(collection(db, 'artists'), orderBy('name'), startAt(capTerm), endAt(capTerm + '\uf8ff')));
+            }
+            queries.push(query(collection(db, 'artists'), orderBy('name'), startAt(lowerTerm), endAt(lowerTerm + '\uf8ff')));
+            let artists = new Map(); // To avoid duplicates
             try {
-                const snapshot = await getDocs(q);
-                if (snapshot.empty) {
+                for (const q of queries) {
+                    const snapshot = await getDocs(q);
+                    snapshot.forEach(doc => {
+                        const artist = doc.data();
+                        const id = doc.id;
+                        if (!artists.has(id)) {
+                            artists.set(id, {id, artist});
+                        }
+                    });
+                }
+                if (artists.size === 0) {
                     resultsContainer.innerHTML = '<p class="text-center text-muted">No artists found.</p>';
                     return;
                 }
-                snapshot.forEach(doc => {
-                    const artist = doc.data();
-                    const id = doc.id;
+                artists.forEach(({id, artist}) => {
                     const card = `
                         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                            <a href="artist.html?artist=${id}" class="text-decoration-none">
+                            <a href="artistpage.html?artist=${id}" class="text-decoration-none">
                                 <div class="card bg-dark border-0 search-result-card">
                                     <img src="${artist.imageUrl || 'https://via.placeholder.com/200x300/141414/ffffff?text=Artist'}" class="card-img-top" alt="${artist.name}">
                                     <div class="card-body p-2">
