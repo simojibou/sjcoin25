@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SJ X N41 music - Artist</title>
-
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-
     <!-- Custom CSS -->
     <style>
         :root{
@@ -81,7 +79,6 @@
         }
         .stagger-item{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}
         .stagger-item.enhanced-appear{opacity:1;transform:translateY(0);}
-
         /* Mobile tweaks */
         @media (max-width:768px){
             .artist-hero{height:50vh;}
@@ -97,21 +94,17 @@
     </style>
 </head>
 <body>
-
     <!-- Particles Background -->
     <div class="particles"></div>
-
     <!-- Main Content -->
     <div id="artist-container" class="container my-5">
         <!-- Artist content will be injected here -->
     </div>
-
     <!-- Firebase SDKs (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -122,54 +115,43 @@
             appId: "1:426335553508:web:248f76772f6f78419ca9f1",
             measurementId: "G-YQTVZQWXGB"
         };
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
         let artistId = null;
-
         // ---------- Helper ----------
         function getQueryParam(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
-
         // ---------- Load Artist (Public + Admin) ----------
         async function loadSingleArtist(id) {
             const artistRef = doc(db, 'artists', id);
             const snap = await getDoc(artistRef);
-
             if (!snap.exists()) {
                 document.getElementById('artist-container').innerHTML = '<h2 class="text-center">Artist not found</h2>';
                 return;
             }
-
             // Increment views (for all users)
             await updateDoc(artistRef, { views: increment(1) });
-
             // Get updated data
             const updatedSnap = await getDoc(artistRef);
             const artist = updatedSnap.data();
-
             // Check if current user is admin
             const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-
             const adminActions = isAdmin
                 ? `<div class="admin-actions">
                        <button onclick="editArtist('${id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                        <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                    </div>`
                 : '';
-
-            const adminStats = isAdmin
-                ? `<div class="admin-stats glass-effect stagger-item mt-4">
-                       <h3>Artist Stats</h3>
-                       <p>Total Views: ${artist.views || 0}</p>
-                       <p>Earnings: $${((artist.views || 0) / 1000).toFixed(2)}</p>
-                   </div>`
-                : '';
-
+            const artistStats = `
+                <div class="artist-stats glass-effect stagger-item mt-4">
+                    <h3>Artist Stats</h3>
+                    <p>Total Views: ${artist.views || 0}</p>
+                    ${isAdmin ? `<p>Earnings: $${((artist.views || 0) / 1000).toFixed(2)}</p>` : ''}
+                </div>`;
             const html = `
                 <div class="artist-hero" style="background-image:url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/4a90e2/ffffff?text=Artist+Photo'}');">
                     <div class="artist-hero-content">
@@ -181,23 +163,19 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="ad-container-wrapper"><div id="ad-container"></div></div>
-
                 <div class="container">
                     <div class="artist-bio glass-effect stagger-item">
                         <h3>Biography</h3>
                         <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                     </div>
-                    ${adminStats}
+                    ${artistStats}
                     <div class="text-center mt-4">
                         <a href="index.html" class="btn btn-secondary">Back to Home</a>
                     </div>
                 </div>
             `;
-
             document.getElementById('artist-container').innerHTML = html;
-
             // Stagger animation
             setTimeout(() => {
                 document.querySelectorAll('.stagger-item').forEach((el, i) => {
@@ -205,7 +183,6 @@
                 });
             }, 100);
         }
-
         // ---------- Start Loading Immediately (Public Access) ----------
         artistId = getQueryParam('artist');
         if (artistId) {
@@ -213,7 +190,6 @@
         } else {
             document.getElementById('artist-container').innerHTML = '<h2 class="text-center">No artist specified</h2>';
         }
-
         // ---------- Auth: Only for Admin UI ----------
         onAuthStateChanged(auth, user => {
             currentUser = user;
@@ -221,19 +197,16 @@
                 loadSingleArtist(artistId); // Reload to show/hide admin tools
             }
         });
-
         // ---------- Admin Button Handlers ----------
         window.editArtist = (id) => {
             alert('Edit functionality is available on the main admin page.');
         };
-
         window.deleteArtist = (id) => {
             if (confirm('Are you sure you want to delete this artist?')) {
                 alert('Delete handled on main admin page.');
             }
         };
     </script>
-
     <!-- Ad Script -->
     <script type="text/javascript">
         atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
@@ -247,7 +220,6 @@
             }
         });
     </script>
-
     <!-- Particles Effect -->
     <script>
         function createParticles() {
@@ -265,7 +237,6 @@
         }
         document.addEventListener('DOMContentLoaded', createParticles);
     </script>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
