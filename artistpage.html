@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,12 +144,20 @@
                    </div>`
                 : '';
 
+            const publicStats = `
+                <div class="public-stats glass-effect stagger-item mt-4">
+                    <h3>Artist Stats</h3>
+                    <p>Total Views: ${artist.views || 0}</p>
+                </div>
+            `;
+
             const adminStats = (currentUser && currentUser.email===ADMIN_EMAIL)
-                ? `<div class="admin-stats glass-effect stagger-item mt-4">
-                       <h3>Artist Stats</h3>
-                       <p>Total Views: ${artist.views || 0}</p>
-                       <p>Earnings: $${((artist.views || 0) / 1000).toFixed(2)}</p>
-                   </div>`
+                ? `
+                    <div class="admin-stats glass-effect stagger-item mt-4">
+                        <h3>Admin Stats</h3>
+                        <p>Earnings: $${((artist.views || 0) / 1000).toFixed(2)}</p>
+                    </div>
+                `
                 : '';
 
             const html = `
@@ -172,6 +179,7 @@
                         <h3>Biography</h3>
                         <p>${artist.description||'Emerging talent in the music scene.'}</p>
                     </div>
+                    ${publicStats}
                     ${adminStats}
                     <div class="text-center mt-4">
                         <a href="index.html" class="btn btn-secondary">Back to Home</a>
