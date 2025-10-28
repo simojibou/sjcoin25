@@ -318,6 +318,14 @@
                             <label for="personalWebsite" class="form-label">Personal Website</label>
                             <input type="url" class="form-control bg-dark text-white" id="personalWebsite">
                         </div>
+                        <div class="mb-3">
+                            <label for="x" class="form-label">X (Twitter)</label>
+                            <input type="url" class="form-control bg-dark text-white" id="x">
+                        </div>
+                        <div class="mb-3">
+                            <label for="snapchat" class="form-label">Snapchat</label>
+                            <input type="url" class="form-control bg-dark text-white" id="snapchat">
+                        </div>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
@@ -469,6 +477,8 @@
                             ${artist.googlePlay ? `<a href="${artist.googlePlay}" target="_blank" rel="noopener noreferrer"><i class="bi bi-google"></i></a>` : ''}
                             ${artist.appleMusic ? `<a href="${artist.appleMusic}" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple"></i></a>` : ''}
                             ${artist.personalWebsite ? `<a href="${artist.personalWebsite}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe"></i></a>` : ''}
+                            ${artist.x ? `<a href="${artist.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
+                            ${artist.snapchat ? `<a href="${artist.snapchat}" target="_blank" rel="noopener noreferrer"><i class="bi bi-snapchat"></i></a>` : ''}
                         </div>
                     </div>
                 </div>
@@ -514,6 +524,8 @@
             document.getElementById('googlePlay').value = currentArtist.googlePlay || '';
             document.getElementById('appleMusic').value = currentArtist.appleMusic || '';
             document.getElementById('personalWebsite').value = currentArtist.personalWebsite || '';
+            document.getElementById('x').value = currentArtist.x || '';
+            document.getElementById('snapchat').value = currentArtist.snapchat || '';
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
         };
@@ -553,6 +565,8 @@
                         googlePlay: document.getElementById('googlePlay').value,
                         appleMusic: document.getElementById('appleMusic').value,
                         personalWebsite: document.getElementById('personalWebsite').value,
+                        x: document.getElementById('x').value,
+                        snapchat: document.getElementById('snapchat').value,
                     };
                     try {
                         await updateDoc(doc(db, 'artists', artistId), updatedData);
