@@ -169,8 +169,10 @@
         .btn-secondary:hover{
             background-color: #b20710; /* Darker red on hover */
         }
-        /* Remove glass effects and particles for clean Netflix style */
-        /* No animations for simplicity, Netflix is subtle */
+        /* Profile image style */
+        #profile-link img {
+            object-fit: cover;
+        }
         /* Mobile tweaks */
         @media (max-width: 768px){
             .artist-hero{
@@ -231,7 +233,7 @@
                         <a class="nav-link" href="#"><i class="bi bi-bell"></i></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-person-circle"></i></a>
+                        <a class="nav-link" id="profile-link" href="#"><i class="bi bi-person-circle"></i></a>
                     </li>
                 </ul>
             </div>
@@ -244,7 +246,7 @@
     <!-- Firebase SDKs (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -265,6 +267,26 @@
         // ---------- Helper ----------
         function getQueryParam(name) {
             return new URLSearchParams(window.location.search).get(name);
+        }
+        // ---------- Login with Google ----------
+        async function loginWithGoogle() {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error('Login error:', error);
+            }
+        }
+        // ---------- Update Profile UI ----------
+        function updateProfileUI(user) {
+            const profileLink = document.getElementById('profile-link');
+            if (user) {
+                profileLink.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/32?text=U'}" class="rounded-circle" width="32" height="32" alt="Profile">`;
+                profileLink.onclick = null; // Could add profile dropdown later
+            } else {
+                profileLink.innerHTML = `<i class="bi bi-person-circle"></i>`;
+                profileLink.onclick = loginWithGoogle;
+            }
         }
         // ---------- Load Artist (Public + Admin) ----------
         async function loadSingleArtist(id) {
@@ -324,6 +346,14 @@
             `;
             document.getElementById('artist-container').innerHTML = html;
         }
+        // ---------- Auth: For Admin UI and Profile ----------
+        onAuthStateChanged(auth, user => {
+            currentUser = user;
+            updateProfileUI(user);
+            if (artistId) {
+                loadSingleArtist(artistId); // Reload to show/hide admin tools
+            }
+        });
         // ---------- Start Loading Immediately (Public Access) ----------
         artistId = getQueryParam('artist');
         if (artistId) {
@@ -331,13 +361,6 @@
         } else {
             document.getElementById('artist-container').innerHTML = '<h2 class="text-center">No artist specified</h2>';
         }
-        // ---------- Auth: Only for Admin UI ----------
-        onAuthStateChanged(auth, user => {
-            currentUser = user;
-            if (artistId) {
-                loadSingleArtist(artistId); // Reload to show/hide admin tools
-            }
-        });
         // ---------- Admin Button Handlers ----------
         window.editArtist = (id) => {
             alert('Edit functionality is available on the main admin page.');
@@ -347,6 +370,7 @@
                 alert('Delete handled on main admin page.');
             }
         };
+        window.loginWithGoogle = loginWithGoogle;
     </script>
     <!-- Ad Script -->
     <script type="text/javascript">
