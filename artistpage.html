@@ -326,6 +326,22 @@
                             <label for="snapchat" class="form-label">Snapchat</label>
                             <input type="url" class="form-control bg-dark text-white" id="snapchat">
                         </div>
+                        <div class="mb-3">
+                            <label for="whatsapp" class="form-label">WhatsApp</label>
+                            <input type="url" class="form-control bg-dark text-white" id="whatsapp">
+                        </div>
+                        <div class="mb-3">
+                            <label for="facebook" class="form-label">Facebook</label>
+                            <input type="url" class="form-control bg-dark text-white" id="facebook">
+                        </div>
+                        <div class="mb-3">
+                            <label for="soundcloud" class="form-label">SoundCloud</label>
+                            <input type="url" class="form-control bg-dark text-white" id="soundcloud">
+                        </div>
+                        <div class="mb-3">
+                            <label for="appstore" class="form-label">App Store</label>
+                            <input type="url" class="form-control bg-dark text-white" id="appstore">
+                        </div>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
@@ -479,6 +495,10 @@
                             ${artist.personalWebsite ? `<a href="${artist.personalWebsite}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe"></i></a>` : ''}
                             ${artist.x ? `<a href="${artist.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
                             ${artist.snapchat ? `<a href="${artist.snapchat}" target="_blank" rel="noopener noreferrer"><i class="bi bi-snapchat"></i></a>` : ''}
+                            ${artist.whatsapp ? `<a href="${artist.whatsapp}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i></a>` : ''}
+                            ${artist.facebook ? `<a href="${artist.facebook}" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>` : ''}
+                            ${artist.soundcloud ? `<a href="${artist.soundcloud}" target="_blank" rel="noopener noreferrer"><i class="bi bi-soundwave"></i></a>` : ''}
+                            ${artist.appstore ? `<a href="${artist.appstore}" target="_blank" rel="noopener noreferrer"><i class="bi bi-app"></i></a>` : ''}
                         </div>
                     </div>
                 </div>
@@ -526,6 +546,10 @@
             document.getElementById('personalWebsite').value = currentArtist.personalWebsite || '';
             document.getElementById('x').value = currentArtist.x || '';
             document.getElementById('snapchat').value = currentArtist.snapchat || '';
+            document.getElementById('whatsapp').value = currentArtist.whatsapp || '';
+            document.getElementById('facebook').value = currentArtist.facebook || '';
+            document.getElementById('soundcloud').value = currentArtist.soundcloud || '';
+            document.getElementById('appstore').value = currentArtist.appstore || '';
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
         };
@@ -567,6 +591,10 @@
                         personalWebsite: document.getElementById('personalWebsite').value,
                         x: document.getElementById('x').value,
                         snapchat: document.getElementById('snapchat').value,
+                        whatsapp: document.getElementById('whatsapp').value,
+                        facebook: document.getElementById('facebook').value,
+                        soundcloud: document.getElementById('soundcloud').value,
+                        appstore: document.getElementById('appstore').value,
                     };
                     try {
                         await updateDoc(doc(db, 'artists', artistId), updatedData);
