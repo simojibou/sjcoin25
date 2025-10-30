@@ -187,6 +187,21 @@
         .search-result-card .card-body {
             text-align: center;
         }
+        /* Products section - Netflix-style horizontal scroll */
+        .products-section .overflow-auto {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .products-section .overflow-auto::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        .products-section .product-card {
+            min-width: 150px;
+            max-width: 200px;
+            flex: 0 0 auto;
+        }
         /* Mobile tweaks */
         @media (max-width: 768px){
             .artist-hero{
@@ -283,8 +298,12 @@
                             <textarea class="form-control bg-dark text-white" id="description" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="imageUrl" class="form-label">Image URL</label>
+                            <label for="imageUrl" class="form-label">Image URL (current)</label>
                             <input type="url" class="form-control bg-dark text-white" id="imageUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label for="imageFile" class="form-label">Upload New Image from Device (optional)</label>
+                            <input type="file" class="form-control bg-dark text-white" id="imageFile" accept="image/*">
                         </div>
                         <div class="mb-3">
                             <label for="instagram" class="form-label">Instagram</label>
@@ -344,6 +363,38 @@
             </div>
         </div>
     </div>
+    <!-- Add Product Modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProductForm">
+                        <div class="mb-3">
+                            <label for="productTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control bg-dark text-white" id="productTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productDesc" class="form-label">Short Description</label>
+                            <textarea class="form-control bg-dark text-white" id="productDesc" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPrice" class="form-label">Price ($)</label>
+                            <input type="number" class="form-control bg-dark text-white" id="productPrice" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPic" class="form-label">Upload Picture from Device</label>
+                            <input type="file" class="form-control bg-dark text-white" id="productPic" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Product</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Main Content -->
     <div id="artist-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
         <!-- Artist content will be injected here -->
@@ -352,7 +403,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, where, orderBy, startAt, endAt, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, where, orderBy, startAt, endAt, getDocs, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -366,6 +418,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         let currentUser = null;
         let artistId = null;
@@ -442,6 +495,38 @@
                 resultsContainer.innerHTML = '<p class="text-center text-danger">Error searching artists.</p>';
             }
         }
+        // ---------- Load Products ----------
+        async function loadProducts(id) {
+            const productsContainer = document.getElementById('products-row');
+            if (!productsContainer) return;
+            productsContainer.innerHTML = '';
+            const q = query(collection(db, `artists/${id}/products`));
+            try {
+                const snapshot = await getDocs(q);
+                if (snapshot.empty) {
+                    productsContainer.innerHTML = '<p class="text-center text-muted">No products available.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const prod = doc.data();
+                    const card = `
+                        <div class="product-card search-result-card">
+                            <div class="card bg-dark border-0">
+                                <img src="${prod.picUrl || 'https://via.placeholder.com/200x300/141414/ffffff?text=Product'}" class="card-img-top" alt="${prod.title}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-white">${prod.title}</h6>
+                                    <p class="text-muted small">${prod.description || ''}</p>
+                                    <p class="text-white fw-bold">$${prod.price.toFixed(2)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    productsContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Load products error:', error);
+            }
+        }
         // ---------- Load Artist (Public + Admin) ----------
         async function loadSingleArtist(id) {
             const artistRef = doc(db, 'artists', id);
@@ -505,10 +590,27 @@
                         <p>${artist.description || 'Emerging talent in the music scene.'}</p>
                     </div>
                     ${artistStats}
-                 
+                    <div class="products-section mt-4">
+                        <h3 id="products-header">Products</h3>
+                        <div id="products-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
+                    </div>
                 </div>
             `;
             document.getElementById('artist-container').innerHTML = html;
+            // Load products after rendering
+            await loadProducts(id);
+            // Add admin button if applicable
+            if (isAdmin) {
+                const header = document.getElementById('products-header');
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-sm btn-secondary ms-2';
+                addBtn.textContent = 'Add Product';
+                addBtn.onclick = () => {
+                    const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+                    modal.show();
+                };
+                header.appendChild(addBtn);
+            }
         }
         // ---------- Auth: For Admin UI and Profile ----------
         onAuthStateChanged(auth, user => {
@@ -572,10 +674,9 @@
             if (editForm) {
                 editForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const updatedData = {
+                    let updatedData = {
                         name: document.getElementById('name').value,
                         description: document.getElementById('description').value,
-                        imageUrl: document.getElementById('imageUrl').value,
                         instagram: document.getElementById('instagram').value,
                         spotify: document.getElementById('spotify').value,
                         tiktok: document.getElementById('tiktok').value,
@@ -590,6 +691,20 @@
                         soundcloud: document.getElementById('soundcloud').value,
                         appstore: document.getElementById('appstore').value,
                     };
+                    const imageFile = document.getElementById('imageFile').files[0];
+                    if (imageFile) {
+                        try {
+                            const storageRef = ref(storage, `artists/${artistId}/${imageFile.name}`);
+                            await uploadBytes(storageRef, imageFile);
+                            updatedData.imageUrl = await getDownloadURL(storageRef);
+                        } catch (error) {
+                            console.error('Image upload error:', error);
+                            alert('Failed to upload image.');
+                            return;
+                        }
+                    } else {
+                        updatedData.imageUrl = document.getElementById('imageUrl').value;
+                    }
                     try {
                         await updateDoc(doc(db, 'artists', artistId), updatedData);
                         bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
@@ -597,6 +712,39 @@
                     } catch (error) {
                         console.error('Update error:', error);
                         alert('Failed to update artist.');
+                    }
+                });
+            }
+            const addProductForm = document.getElementById('addProductForm');
+            if (addProductForm) {
+                addProductForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const title = document.getElementById('productTitle').value;
+                    const description = document.getElementById('productDesc').value;
+                    const price = parseFloat(document.getElementById('productPrice').value);
+                    const picFile = document.getElementById('productPic').files[0];
+                    if (!picFile) {
+                        alert('Please upload a picture.');
+                        return;
+                    }
+                    try {
+                        const storageRef = ref(storage, `products/${artistId}/${picFile.name}`);
+                        await uploadBytes(storageRef, picFile);
+                        const picUrl = await getDownloadURL(storageRef);
+                        await addDoc(collection(db, `artists/${artistId}/products`), {
+                            title,
+                            description,
+                            price,
+                            picUrl
+                        });
+                        bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+                        // Reset form
+                        addProductForm.reset();
+                        // Reload products
+                        loadProducts(artistId);
+                    } catch (error) {
+                        console.error('Add product error:', error);
+                        alert('Failed to add product.');
                     }
                 });
             }
