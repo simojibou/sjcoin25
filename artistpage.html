@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,6 +20,7 @@
             --space-1: calc(var(--space-unit) * 1);
             --space-2: calc(var(--space-unit) * 2);
             --space-3: calc(var(--space-unit) * 3);
+            --instagram-blue: #0095f6; /* Instagram verified blue */
         }
         body{
             background: var(--color-dark);
@@ -203,6 +203,13 @@
             max-width: 200px;
             flex: 0 0 auto;
         }
+        /* Verified badge style like Instagram */
+        .verified-badge {
+            color: var(--instagram-blue);
+            font-size: 0.8em;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
         /* Mobile tweaks */
         @media (max-width: 768px){
             .artist-hero{
@@ -358,6 +365,10 @@
                             <label for="appstore" class="form-label">App Store</label>
                             <input type="url" class="form-control bg-dark text-white" id="appstore">
                         </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="verified">
+                            <label class="form-check-label" for="verified">Verified Account</label>
+                        </div>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
@@ -496,13 +507,14 @@
                     return;
                 }
                 artists.forEach(({id, artist}) => {
+                    const verifiedBadge = artist.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
                     const card = `
                         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                             <a href="artistpage.html?artist=${id}" class="text-decoration-none">
                                 <div class="card bg-dark border-0 search-result-card">
                                     <img src="${artist.imageUrl || 'https://via.placeholder.com/200x300/141414/ffffff?text=Artist'}" class="card-img-top" alt="${artist.name}">
                                     <div class="card-body p-2">
-                                        <h6 class="card-title text-white">${artist.name}</h6>
+                                        <h6 class="card-title text-white">${artist.name}${verifiedBadge}</h6>
                                     </div>
                                 </div>
                             </a>
@@ -575,6 +587,7 @@
                        <button onclick="deleteArtist('${id}')" title="Delete"><i class="bi bi-trash"></i></button>
                    </div>`
                 : '';
+            const verifiedBadge = artist.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
             const artistStats = `
                 <div class="artist-stats">
                     <h3>Artist Stats</h3>
@@ -585,7 +598,7 @@
                 <div class="artist-hero" style="background-image: url('${artist.imageUrl || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Artist+Photo'}');">
                     <div class="artist-hero-content">
                         ${adminActions}
-                        <h1>${artist.name}</h1> <!-- Removed icon for cleaner Netflix look -->
+                        <h1>${artist.name}${verifiedBadge}</h1> <!-- Removed icon for cleaner Netflix look -->
                         <div class="social-links">
                             ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
                             ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
@@ -667,6 +680,7 @@
             document.getElementById('facebook').value = currentArtist.facebook || '';
             document.getElementById('soundcloud').value = currentArtist.soundcloud || '';
             document.getElementById('appstore').value = currentArtist.appstore || '';
+            document.getElementById('verified').checked = currentArtist.verified || false;
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
         };
@@ -718,6 +732,7 @@
                         facebook: document.getElementById('facebook').value,
                         soundcloud: document.getElementById('soundcloud').value,
                         appstore: document.getElementById('appstore').value,
+                        verified: document.getElementById('verified').checked,
                     };
                     const imageFile = document.getElementById('imageFile').files[0];
                     if (imageFile) {
@@ -811,6 +826,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
-
-
+    </html>
