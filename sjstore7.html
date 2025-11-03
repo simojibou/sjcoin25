@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +19,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
-    import { getDatabase, ref, onValue, set, push, remove, get, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, remove, get, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
       authDomain: "sj-one.firebaseapp.com",
@@ -70,7 +71,6 @@
       const titleH1 = document.querySelector("h1");
       let currentUser = null;
       let isAdmin = false;
-      let userRole = 'buyer'; // Default role
       let products = [];
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
       let currentCategory = ""; // Track selected category
@@ -308,13 +308,12 @@
           if (isAdmin) loadAdminSliders();
           const userRef = ref(db, `users/${user.uid}`);
           onValue(userRef, (snapshot) => {
-            userData = snapshot.val() || { currency: 'DH', language: 'English', role: 'buyer' };
-            userRole = userData.role || 'buyer';
-            marketerOption.style.display = (userRole === 'marketer') ? "block" : "none";
-            sellNowOption.style.display = (userRole === 'seller' || isAdmin) ? "block" : "none";
+            userData = snapshot.val() || { currency: 'DH', language: 'English' };
+            marketerOption.style.display = "block";
+            sellNowOption.style.display = "block";
             applyLanguage(userData.language);
             renderProducts(searchInput.value, currentCategory);
-            if (userRole === 'marketer') loadAffiliateDashboard();
+            loadAffiliateDashboard();
           });
         } else {
           loginBtn.style.display = "inline-block";
@@ -322,7 +321,6 @@
           dropdownMenu.style.display = "none";
           adminPanel.style.display = "none";
           isAdmin = false;
-          userRole = 'buyer';
           userData = { currency: 'DH', language: 'English' };
           applyLanguage('English');
         }
@@ -338,7 +336,7 @@
             const userRef = ref(db, `users/${result.user.uid}`);
             get(userRef).then((snapshot) => {
               if (!snapshot.exists()) {
-                set(userRef, { role: 'buyer', currency: 'DH', language: 'English' });
+                set(userRef, { currency: 'DH', language: 'English' });
               }
             });
             alert("Login successful!");
@@ -361,21 +359,12 @@
           });
       });
       sellNowOption.addEventListener("click", () => {
-        if (userRole !== 'seller' && !isAdmin) {
-          alert("Only sellers can add products.");
-          return;
-        }
         dropdownMenu.style.display = "none";
         sellModal.style.display = "block";
       });
       marketerOption.addEventListener("click", () => {
-        if (userRole !== 'marketer') {
-          alert("Only marketers can access this.");
-          return;
-        }
         dropdownMenu.style.display = "none";
-        marketerModal.style.display = "block";
-        loadAffiliateDashboard();
+        window.location.href = "MARKETERDASHBOARD.html";
       });
       settingsOption.addEventListener("click", () => {
         dropdownMenu.style.display = "none";
@@ -444,16 +433,14 @@
         filteredProducts.forEach((product) => {
           const div = document.createElement("div");
           div.classList.add("product");
+          div.id = `product-${product.id}`;
           let orderButton = '';
           if (product.orderUrl) {
             orderButton = `
               <button class="order-btn">${t.orderNow}</button>
             `;
           }
-          let affiliateButton = '';
-          if (userRole === 'marketer') {
-            affiliateButton = `<button class="generate-affiliate-btn" data-pid="${product.id}">${t.generateLink}</button>`;
-          }
+          let affiliateButton = `<button class="generate-affiliate-btn" data-pid="${product.id}">${t.generateLink}</button>`;
           const convertedPrice = getConvertedPrice(product.price, userData.currency);
           const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
@@ -486,12 +473,12 @@
             updateCartCount();
             alert("Added to cart!");
           });
-          if (userRole === 'marketer' && div.querySelector(".generate-affiliate-btn")) {
+          if (div.querySelector(".generate-affiliate-btn")) {
             div.querySelector(".generate-affiliate-btn").addEventListener("click", () => {
               generateAffiliateLink(product.id);
             });
           }
-          if (isAdmin || (userRole === 'seller' && product.userId === currentUser.uid)) {
+          if (isAdmin || (product.userId === currentUser.uid)) {
             const adminActions = document.createElement("div");
             adminActions.classList.add("admin-actions");
             const editBtn = document.createElement("button");
@@ -504,6 +491,11 @@
             adminActions.appendChild(deleteBtn);
             div.appendChild(adminActions);
           }
+          div.addEventListener("click", (e) => {
+            if (!e.target.closest('button')) {
+              window.location.href = `Productpage.html?id=${product.id}`;
+            }
+          });
           container.appendChild(div);
         });
         if (filteredProducts.length === 0) {
@@ -710,10 +702,6 @@
           alert("Please log in to add a product.");
           return;
         }
-        if (userRole !== 'seller' && !isAdmin) {
-          alert("Only sellers can add products.");
-          return;
-        }
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const des = document.getElementById("product-des").value;
@@ -748,10 +736,6 @@
         e.preventDefault();
         if (!currentUser) {
           alert("Please log in to add a product.");
-          return;
-        }
-        if (userRole !== 'seller' && !isAdmin) {
-          alert("Only sellers can add products.");
           return;
         }
         const title = document.getElementById("sell-product-title").value;
@@ -929,6 +913,7 @@
           });
           const urlParams = new URLSearchParams(window.location.search);
           const refCode = urlParams.get('ref');
+          const pid = urlParams.get('pid');
           const affiliateData = refCode ? { affiliateCode: refCode } : {};
           await set(orderRef, {
             userId: currentUser.uid,
@@ -943,16 +928,34 @@
             createdAt: Date.now(),
             ...affiliateData
           });
-          if (refCode) {
-            const affiliateRef = ref(db, `affiliates/${refCode}`);
-            get(affiliateRef).then((snapshot) => {
-              if (snapshot.exists()) {
-                const data = snapshot.val();
-                const commission = total * 0.15; // 15% commission
-                const commissions = data.commissions || 0;
-                update(affiliateRef, { commissions: commissions + commission });
-              }
-            });
+          if (refCode && pid) {
+            const affiliatedItems = cart.filter(item => item.id === pid);
+            const count = affiliatedItems.length;
+            if (count > 0) {
+              const affiliateLinksQuery = query(ref(db, "affiliate_links"), orderByChild('code'), equalTo(refCode));
+              get(affiliateLinksQuery).then((snapshot) => {
+                if (snapshot.exists()) {
+                  snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.productId === pid) {
+                      const linkRef = ref(db, `affiliate_links/${childSnapshot.key}`);
+                      update(linkRef, {
+                        buyers: (data.buyers || 0) + count
+                      });
+                      const price = parseFloat(affiliatedItems[0].price);
+                      const commission = price * count * 0.1;
+                      const marketerId = data.marketerId;
+                      const userRef = ref(db, `users/${marketerId}`);
+                      get(userRef).then((userSnap) => {
+                        const userData = userSnap.val();
+                        const currentCommissions = userData.commissions || 0;
+                        update(userRef, { commissions: currentCommissions + commission });
+                      });
+                    }
+                  });
+                }
+              });
+            }
           }
           alert("Order submitted successfully!");
           cart = [];
@@ -967,7 +970,7 @@
         return Math.random().toString(36).substr(2, 9);
       }
       function generateAffiliateLink(productId) {
-        if (!currentUser || userRole !== 'marketer') return;
+        if (!currentUser) return;
         const code = generateUniqueCode();
         const link = `${window.location.origin}${window.location.pathname}?ref=${code}&pid=${productId}`;
         const affiliateRef = push(ref(db, "affiliate_links"));
@@ -975,12 +978,14 @@
           code,
           productId,
           marketerId: currentUser.uid,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          clicks: 0,
+          buyers: 0
         });
         prompt("Copy this affiliate link:", link);
       }
       function loadAffiliateDashboard() {
-        if (!currentUser || userRole !== 'marketer') return;
+        if (!currentUser) return;
         affiliateList.innerHTML = "";
         const affiliateLinksRef = ref(db, "affiliate_links");
         onValue(affiliateLinksRef, (snapshot) => {
@@ -1038,8 +1043,52 @@
           .then(reg => {
           })
           .catch(err => {
-            alert("Service Worker failed to register: " + err.message);
+            //alert("Service Worker failed to register: " + err.message);
           });
+      }
+      // Click tracking for affiliate links
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      const productId = urlParams.get('pid');
+      if (refCode && productId) {
+        const affiliateLinksQuery = query(
+          ref(db, "affiliate_links"),
+          orderByChild('code'),
+          equalTo(refCode)
+        );
+        get(affiliateLinksQuery).then((snapshot) => {
+          if (snapshot.exists()) {
+            let linkFound = false;
+            snapshot.forEach((childSnapshot) => {
+              const data = childSnapshot.val();
+              if (data.productId === productId) {
+                const linkRef = ref(db, `affiliate_links/${childSnapshot.key}`);
+                update(linkRef, {
+                  clicks: (data.clicks || 0) + 1
+                }).then(() => {
+                  console.log("Click tracked successfully for ref:", refCode);
+                }).catch((error) => {
+                  console.error("Failed to update click count:", error);
+                });
+                linkFound = true;
+              }
+            });
+            if (!linkFound) {
+              console.warn("No matching affiliate link found for ref:", refCode, "and pid:", productId);
+            }
+          } else {
+            console.warn("No affiliate links found for ref:", refCode);
+          }
+        }).catch((error) => {
+          console.error("Error querying affiliate links:", error);
+        });
+        // Scroll to the product
+        setTimeout(() => {
+          const productElement = document.getElementById(`product-${productId}`);
+          if (productElement) {
+            productElement.scrollIntoView({ behavior: "smooth" });
+          }
+        }, 1000); // Delay to allow products to render
       }
     });
   </script>
@@ -1866,7 +1915,7 @@
               <stop offset="100%" style="stop-color:#80f;stop-opacity:1" />
             </linearGradient>
           </defs>
-          <path fill="url(#grad6)" d="M15 5v-2c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v2h-2v4c0 1.1.9 2 2 2v2c-1.1 0-2 .9-2 2v4h2v2c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-2h2v-4c0-1.1-.9-2-2-2v-2c1.1 0 2-.9 2-2v-4h-2zm-4-2h2v2h-2v-2zm2 16h-2v-2h2v2zm0-4h-2v-2c-1.1 0-2-.9-2-2h4c0 1.1-.9 2-2 2v2zm0-4h-4c0-1.1.9-2 2-2s2 .9 2 2v2z"/>
+          <path fill="url(#grad6)" d="M15 5v-2c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1v2h-2v4c0 1.1.9 2 2 2v2c-1.1 0-2 .9-2 2v4h2v2c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-2h2v-4c0-1.1-.9-2-2-2v-2c1.1 0 2-.9 2-2v-4h-2zm-4-2h2v2h-2v-2zm2 16h-2v-2h2v2zm0-4h-2v-2c-1.1 0-2-.9-2-2h4c0 1.1-.9 2-2 2v2zm0-4h-4c0-1.1.9-2 2-2s2 .9 2 2v2z"/>
         </svg>
         <span>Tickets</span>
       </div>
@@ -2068,4 +2117,5 @@
     </div>
   </footer>
 </body>
-  </html>
+</html>
+
