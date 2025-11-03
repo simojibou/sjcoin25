@@ -415,6 +415,8 @@
             orderUrl: data.orderUrl,
             photo: data.photo,
             userId: data.id,
+            sellerName: data.sellerName,
+            sellerPhoto: data.sellerPhoto,
             category: data.category || "Uncategorized" // Default if no category
           });
         });
@@ -444,6 +446,10 @@
           const convertedPrice = getConvertedPrice(product.price, userData.currency);
           const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
+            <div class="seller-profile">
+              <img src="${product.sellerPhoto || 'https://via.placeholder.com/40'}" alt="${product.sellerName || 'Anonymous'}" class="seller-pic">
+              <span>${product.sellerName || 'Anonymous'}</span>
+            </div>
             <div class="product-image-wrapper">
               <img src="${product.photo || 'https://via.placeholder.com/280x280/111/fff?text=No+Image'}" alt="${product.title || 'No title'}">
             </div>
@@ -723,6 +729,8 @@
             orderUrl,
             photo: photoUrl,
             id: currentUser.uid,
+            sellerName: currentUser.displayName,
+            sellerPhoto: currentUser.photoURL,
             pId,
             category
           });
@@ -757,6 +765,8 @@
             des,
             photo: photoUrl,
             id: currentUser.uid,
+            sellerName: currentUser.displayName,
+            sellerPhoto: currentUser.photoURL,
             pId,
             category
           });
@@ -781,6 +791,8 @@
             orderUrl: newOrderUrl,
             photo: product.photo,
             id: product.userId,
+            sellerName: currentUser.displayName,
+            sellerPhoto: currentUser.photoURL,
             pId: productId,
             category: newCategory
           }).then(() => {
@@ -1257,6 +1269,22 @@
     .product:hover {
       transform: translateY(-5px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    .seller-profile {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .seller-pic {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .seller-profile span {
+      font-size: 1rem;
+      font-weight: 700;
     }
     .product-image-wrapper {
       width: 100%;
@@ -2118,4 +2146,5 @@
   </footer>
 </body>
 </html>
+
 
