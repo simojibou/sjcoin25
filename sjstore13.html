@@ -446,7 +446,7 @@
           const symbol = getCurrencySymbol(userData.currency);
           div.innerHTML = `
             <div class="seller-profile">
-              <img src="${product.sellerPhoto || 'https://via.placeholder.com/25'}" alt="${product.sellerName || 'Anonymous'}" class="seller-pic">
+              <img src="${product.sellerPhoto || 'https://via.placeholder.com/20'}" alt="${product.sellerName || 'Anonymous'}" class="seller-pic">
               <div class="seller-info">
                 <span class="seller-username">${product.sellerName || 'Anonymous'}</span>
               </div>
@@ -1279,17 +1279,12 @@
       padding: 0.5rem 0;
     }
     .seller-pic {
-      width: 25px;
-      height: 25px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       object-fit: cover;
       flex-shrink: 0;
-      border: 1px solid #333;
-      transition: border-color 0.3s ease, transform 0.2s ease;
-    }
-    .seller-profile:hover .seller-pic {
-      border-color: #666;
-      transform: scale(1.1);
+      transition: transform 0.2s ease;
     }
     .seller-info {
       display: flex;
@@ -1303,7 +1298,7 @@
       line-height: 1.2;
       text-transform: none;
       letter-spacing: 0;
-      max-width: calc(100% - 30px);
+      max-width: calc(100% - 25px);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
