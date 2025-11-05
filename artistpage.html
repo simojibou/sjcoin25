@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -462,6 +463,8 @@
         let artistId = null;
         let spotifyId = null;
         let currentArtist = null;
+        let currentBio = '';
+        let currentSocial = {};
         // Spotify Credentials - Replace with your own from developer.spotify.com
         // WARNING: Exposing clientSecret in client-side code is insecure for production use. 
         // Use a backend server to handle token requests in a real app.
@@ -857,11 +860,11 @@
                 }
                 const artist = await response.json();
                 currentArtist = artist; // For edit? But no edit for Spotify
-                const bio = await getWikipediaBio(artist.name);
-                const social = await getWikipediaSocial(artist.name);
-                const isAdmin = false; // No admin for Spotify artists
-                const adminActions = '';
-                const verifiedBadge = ''; // No verified
+                currentBio = await getWikipediaBio(artist.name);
+                currentSocial = await getWikipediaSocial(artist.name);
+                const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+                const adminActions = isAdmin ? `<div class="admin-actions"><button onclick="importArtist()" title="Import"><i class="bi bi-plus"></i></button></div>` : '';
+                const verifiedBadge = (currentBio !== artist.genres.join(', ')) ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
                 const artistStats = `<div class="artist-stats"><h3>Artist Stats</h3><p>Followers: ${artist.followers.total}</p><p>Popularity: ${artist.popularity}</p></div>`;
                 const html = `
                     <div class="artist-hero" style="background-image: url('${artist.images[0]?.url || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Artist+Photo'}');">
@@ -870,12 +873,12 @@
                             <h1>${artist.name}${verifiedBadge}</h1>
                             <div class="social-links">
                                 <a href="${artist.external_urls.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>
-                                ${social.instagram ? `<a href="${social.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
-                                ${social.x ? `<a href="${social.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
-                                ${social.facebook ? `<a href="${social.facebook}" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>` : ''}
-                                ${social.tiktok ? `<a href="${social.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
-                                ${social.youtube ? `<a href="${social.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
-                                ${social.soundcloud ? `<a href="${social.soundcloud}" target="_blank" rel="noopener noreferrer"><i class="bi bi-soundwave"></i></a>` : ''}
+                                ${currentSocial.instagram ? `<a href="${currentSocial.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${currentSocial.x ? `<a href="${currentSocial.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
+                                ${currentSocial.facebook ? `<a href="${currentSocial.facebook}" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>` : ''}
+                                ${currentSocial.tiktok ? `<a href="${currentSocial.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
+                                ${currentSocial.youtube ? `<a href="${currentSocial.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
+                                ${currentSocial.soundcloud ? `<a href="${currentSocial.soundcloud}" target="_blank" rel="noopener noreferrer"><i class="bi bi-soundwave"></i></a>` : ''}
                                 <a href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="bi bi-qr-code-scan"></i></a>
                             </div>
                         </div>
@@ -884,7 +887,7 @@
                     <div class="container">
                         <div class="artist-bio">
                             <h3>Biography</h3>
-                            <p>${bio}</p>
+                            <p>${currentBio}</p>
                         </div>
                         ${artistStats}
                         <div class="products-section mt-4" style="display: none;"></div> <!-- No products -->
@@ -925,7 +928,9 @@
         }
         // ---------- Admin Button Handlers ----------
         window.editArtist = (id) => {
+            artistId = id; // Set global for submit
             if (!currentArtist) return;
+            document.getElementById('editModalLabel').textContent = 'Edit Artist';
             document.getElementById('name').value = currentArtist.name || '';
             document.getElementById('description').value = currentArtist.description || '';
             document.getElementById('imageUrl').value = currentArtist.imageUrl || '';
@@ -943,6 +948,30 @@
             document.getElementById('soundcloud').value = currentArtist.soundcloud || '';
             document.getElementById('appstore').value = currentArtist.appstore || '';
             document.getElementById('verified').checked = currentArtist.verified || false;
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
+        };
+        window.importArtist = () => {
+            artistId = null; // Set to null for add
+            if (!currentArtist) return;
+            document.getElementById('editModalLabel').textContent = 'Import Artist';
+            document.getElementById('name').value = currentArtist.name || '';
+            document.getElementById('description').value = currentBio || '';
+            document.getElementById('imageUrl').value = currentArtist.images[0]?.url || '';
+            document.getElementById('instagram').value = currentSocial.instagram || '';
+            document.getElementById('spotify').value = currentArtist.external_urls.spotify || '';
+            document.getElementById('tiktok').value = currentSocial.tiktok || '';
+            document.getElementById('youtube').value = currentSocial.youtube || '';
+            document.getElementById('googlePlay').value = '';
+            document.getElementById('appleMusic').value = '';
+            document.getElementById('personalWebsite').value = '';
+            document.getElementById('x').value = currentSocial.x || '';
+            document.getElementById('snapchat').value = '';
+            document.getElementById('whatsapp').value = '';
+            document.getElementById('facebook').value = currentSocial.facebook || '';
+            document.getElementById('soundcloud').value = currentSocial.soundcloud || '';
+            document.getElementById('appstore').value = '';
+            document.getElementById('verified').checked = true;
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
         };
@@ -1006,11 +1035,12 @@
                         soundcloud: document.getElementById('soundcloud').value,
                         appstore: document.getElementById('appstore').value,
                         verified: document.getElementById('verified').checked,
+                        views: 0
                     };
                     const imageFile = document.getElementById('imageFile').files[0];
                     if (imageFile) {
                         try {
-                            const storageRef = ref(storage, `artists/${artistId}/${imageFile.name}`);
+                            const storageRef = ref(storage, `artists/${imageFile.name}`); // For new, no id yet
                             await uploadBytes(storageRef, imageFile);
                             updatedData.imageUrl = await getDownloadURL(storageRef);
                         } catch (error) {
@@ -1022,14 +1052,17 @@
                         updatedData.imageUrl = document.getElementById('imageUrl').value;
                     }
                     try {
-                        await updateDoc(doc(db, 'artists', artistId), updatedData);
-                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
                         if (artistId) {
+                            await updateDoc(doc(db, 'artists', artistId), updatedData);
                             loadLocalArtist(artistId);
+                        } else {
+                            const newRef = await addDoc(collection(db, 'artists'), updatedData);
+                            window.location.href = `artistpage.html?artist=${newRef.id}`;
                         }
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
                     } catch (error) {
-                        console.error('Update error:', error);
-                        alert('Failed to update artist: ' + error.message);
+                        console.error('Save error:', error);
+                        alert('Failed to save artist: ' + error.message);
                     }
                 });
             }
@@ -1102,5 +1135,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
