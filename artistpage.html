@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -288,6 +289,7 @@
                     <select id="searchType" class="form-select bg-dark text-white mt-2">
                         <option value="local">Local Artists</option>
                         <option value="spotify">Spotify Artists</option>
+                        <option value="kick">Kick Gamers</option>
                     </select>
                     <div id="searchResults" class="row mt-3 gy-3"></div>
                 </div>
@@ -327,6 +329,10 @@
                         <div class="mb-3">
                             <label for="spotify" class="form-label">Spotify</label>
                             <input type="url" class="form-control bg-dark text-white" id="spotify">
+                        </div>
+                        <div class="mb-3">
+                            <label for="kick" class="form-label">Kick</label>
+                            <input type="url" class="form-control bg-dark text-white" id="kick">
                         </div>
                         <div class="mb-3">
                             <label for="tiktok" class="form-label">TikTok</label>
@@ -461,6 +467,7 @@
         let currentUser = null;
         let artistId = null;
         let spotifyId = null;
+        let kickId = null;
         let currentArtist = null;
         let currentBio = '';
         let currentSocial = {};
@@ -582,6 +589,46 @@
             } catch (error) {
                 console.error('Spotify search error:', error);
                 resultsContainer.innerHTML = '<p class="text-center text-danger">Error searching Spotify artists.</p>';
+            }
+        }
+        // ---------- Kick Search Gamers ----------
+        async function searchKickGamers(searchTerm) {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = '';
+            if (!searchTerm) return;
+            try {
+                const response = await fetch(`https://kick.com/api/search?q=${encodeURIComponent(searchTerm)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to search Kick channels');
+                }
+                const data = await response.json();
+                const channels = data.channels || []; // Assuming response structure
+                if (channels.length === 0) {
+                    resultsContainer.innerHTML = '<p class="text-center text-muted">No gamers found on Kick.</p>';
+                    return;
+                }
+                channels.forEach(channel => {
+                    const verifiedBadge = channel.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
+                    const image = channel.user.profilepic || 'https://via.placeholder.com/200x300/141414/ffffff?text=Gamer';
+                    const slug = channel.slug;
+                    const name = channel.user.username;
+                    const card = `
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                            <a href="artistpage.html?kick=${slug}" class="text-decoration-none">
+                                <div class="card bg-dark border-0 search-result-card">
+                                    <img src="${image}" class="card-img-top" alt="${name}">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title text-white">${name}${verifiedBadge}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    `;
+                    resultsContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Kick search error:', error);
+                resultsContainer.innerHTML = '<p class="text-center text-danger">Error searching Kick gamers.</p>';
             }
         }
         // ---------- Load Products ----------
@@ -767,6 +814,43 @@
                 tracksContainer.innerHTML = '<p class="text-center text-danger">Error loading tracks from Spotify. Check console for details.</p>';
             }
         }
+        // ---------- Load Clips from Kick ----------
+        async function loadKickClips(slug) {
+            const tracksContainer = document.getElementById('tracks-row');
+            if (!tracksContainer) return;
+            tracksContainer.innerHTML = '';
+            try {
+                const response = await fetch(`https://kick.com/api/v2/channels/${slug}/clips?limit=20`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch clips');
+                }
+                const data = await response.json();
+                const clips = data.clips || data.data || []; // Assuming structure
+                if (clips.length === 0) {
+                    tracksContainer.innerHTML = '<p class="text-center text-muted">No clips found on Kick.</p>';
+                    return;
+                }
+                clips.forEach(clip => {
+                    const imageUrl = clip.thumbnail || clip.thumbnail_url || 'https://via.placeholder.com/200x200/141414/ffffff?text=Clip';
+                    const card = `
+                        <div class="track-card search-result-card">
+                            <div class="card bg-dark border-0">
+                                <img src="${imageUrl}" class="card-img-top" alt="${clip.title}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-white">${clip.title}</h6>
+                                    <p class="text-muted small">${clip.category ? clip.category.name : ''}</p>
+                                    <a href="${clip.url || clip.video_url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Watch on Kick</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    tracksContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Kick clips fetch error:', error);
+                tracksContainer.innerHTML = '<p class="text-center text-danger">Error loading clips from Kick.</p>';
+            }
+        }
         // ---------- Load Local Artist ----------
         async function loadLocalArtist(id) {
             const artistRef = doc(db, 'artists', id);
@@ -797,6 +881,7 @@
                         <div class="social-links">
                             ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
                             ${artist.spotify ? `<a href="${artist.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
+                            ${artist.kick ? `<a href="${artist.kick}" target="_blank" rel="noopener noreferrer"><i class="bi bi-joystick"></i></a>` : ''}
                             ${artist.tiktok ? `<a href="${artist.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
                             ${artist.youtube ? `<a href="${artist.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
                             ${artist.googlePlay ? `<a href="${artist.googlePlay}" target="_blank" rel="noopener noreferrer"><i class="bi bi-google"></i></a>` : ''}
@@ -903,25 +988,84 @@
                 document.getElementById('artist-container').innerHTML = '<h2 class="text-center">Error loading artist</h2>';
             }
         }
+        // ---------- Load Kick Channel ----------
+        async function loadKickChannel(slug) {
+            try {
+                const response = await fetch(`https://kick.com/api/v2/channels/${slug}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch Kick channel');
+                }
+                const data = await response.json();
+                const channel = data;
+                currentArtist = channel;
+                currentBio = await getWikipediaBio(channel.user.username);
+                currentSocial = await getWikipediaSocial(channel.user.username);
+                const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+                const adminActions = isAdmin ? `<div class="admin-actions"><button onclick="importArtist()" title="Import"><i class="bi bi-plus"></i></button></div>` : '';
+                const verifiedBadge = channel.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
+                const artistStats = `<div class="artist-stats"><h3>Gamer Stats</h3><p>Followers: ${channel.followers_count}</p></div>`;
+                const html = `
+                    <div class="artist-hero" style="background-image: url('${channel.banner_url || channel.user.profilepic || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Gamer+Photo'}');">
+                        <div class="artist-hero-content">
+                            ${adminActions}
+                            <h1>${channel.slug}${verifiedBadge}</h1>
+                            <div class="social-links">
+                                <a href="https://kick.com/${channel.slug}" target="_blank" rel="noopener noreferrer"><i class="bi bi-joystick"></i></a>
+                                ${currentSocial.instagram ? `<a href="${currentSocial.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
+                                ${currentSocial.x ? `<a href="${currentSocial.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
+                                ${currentSocial.facebook ? `<a href="${currentSocial.facebook}" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>` : ''}
+                                ${currentSocial.tiktok ? `<a href="${currentSocial.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
+                                ${currentSocial.youtube ? `<a href="${currentSocial.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
+                                ${currentSocial.soundcloud ? `<a href="${currentSocial.soundcloud}" target="_blank" rel="noopener noreferrer"><i class="bi bi-soundwave"></i></a>` : ''}
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="bi bi-qr-code-scan"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ad-container-wrapper"><div id="ad-container"></div></div>
+                    <div class="container">
+                        <div class="artist-bio">
+                            <h3>Biography</h3>
+                            <p>${currentBio}</p>
+                        </div>
+                        ${artistStats}
+                        <div class="products-section mt-4" style="display: none;"></div> <!-- No products -->
+                        <div class="tracks-section mt-4">
+                            <h3 id="tracks-header">Clips</h3>
+                            <div id="tracks-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('artist-container').innerHTML = html;
+                await loadKickClips(slug);
+            } catch (error) {
+                console.error('Load Kick channel error:', error);
+                document.getElementById('artist-container').innerHTML = '<h2 class="text-center">Error loading gamer</h2>';
+            }
+        }
         // ---------- Auth: For Admin UI and Profile ----------
         onAuthStateChanged(auth, user => {
             currentUser = user;
             updateProfileUI(user);
-            if (artistId || spotifyId) {
+            if (artistId || spotifyId || kickId) {
                 if (artistId) {
                     loadLocalArtist(artistId);
                 } else if (spotifyId) {
                     loadSpotifyArtist(spotifyId);
+                } else if (kickId) {
+                    loadKickChannel(kickId);
                 }
             }
         });
         // ---------- Start Loading Immediately (Public Access) ----------
         artistId = getQueryParam('artist');
         spotifyId = getQueryParam('spotify');
+        kickId = getQueryParam('kick');
         if (artistId) {
             loadLocalArtist(artistId);
         } else if (spotifyId) {
             loadSpotifyArtist(spotifyId);
+        } else if (kickId) {
+            loadKickChannel(kickId);
         } else {
             document.getElementById('artist-container').innerHTML = '<h2 class="text-center">No artist specified</h2>';
         }
@@ -935,6 +1079,7 @@
             document.getElementById('imageUrl').value = currentArtist.imageUrl || '';
             document.getElementById('instagram').value = currentArtist.instagram || '';
             document.getElementById('spotify').value = currentArtist.spotify || '';
+            document.getElementById('kick').value = currentArtist.kick || '';
             document.getElementById('tiktok').value = currentArtist.tiktok || '';
             document.getElementById('youtube').value = currentArtist.youtube || '';
             document.getElementById('googlePlay').value = currentArtist.googlePlay || '';
@@ -954,23 +1099,45 @@
             artistId = null; // Set to null for add
             if (!currentArtist) return;
             document.getElementById('editModalLabel').textContent = 'Import Artist';
-            document.getElementById('name').value = currentArtist.name || '';
-            document.getElementById('description').value = currentBio || '';
-            document.getElementById('imageUrl').value = currentArtist.images[0]?.url || '';
-            document.getElementById('instagram').value = currentSocial.instagram || '';
-            document.getElementById('spotify').value = currentArtist.external_urls.spotify || '';
-            document.getElementById('tiktok').value = currentSocial.tiktok || '';
-            document.getElementById('youtube').value = currentSocial.youtube || '';
-            document.getElementById('googlePlay').value = '';
-            document.getElementById('appleMusic').value = '';
-            document.getElementById('personalWebsite').value = '';
-            document.getElementById('x').value = currentSocial.x || '';
-            document.getElementById('snapchat').value = '';
-            document.getElementById('whatsapp').value = '';
-            document.getElementById('facebook').value = currentSocial.facebook || '';
-            document.getElementById('soundcloud').value = currentSocial.soundcloud || '';
-            document.getElementById('appstore').value = '';
-            document.getElementById('verified').checked = true;
+            if (spotifyId) {
+                document.getElementById('name').value = currentArtist.name || '';
+                document.getElementById('description').value = currentBio || '';
+                document.getElementById('imageUrl').value = currentArtist.images[0]?.url || '';
+                document.getElementById('instagram').value = currentSocial.instagram || '';
+                document.getElementById('spotify').value = currentArtist.external_urls.spotify || '';
+                document.getElementById('kick').value = '';
+                document.getElementById('tiktok').value = currentSocial.tiktok || '';
+                document.getElementById('youtube').value = currentSocial.youtube || '';
+                document.getElementById('googlePlay').value = '';
+                document.getElementById('appleMusic').value = '';
+                document.getElementById('personalWebsite').value = '';
+                document.getElementById('x').value = currentSocial.x || '';
+                document.getElementById('snapchat').value = '';
+                document.getElementById('whatsapp').value = '';
+                document.getElementById('facebook').value = currentSocial.facebook || '';
+                document.getElementById('soundcloud').value = currentSocial.soundcloud || '';
+                document.getElementById('appstore').value = '';
+                document.getElementById('verified').checked = true;
+            } else if (kickId) {
+                document.getElementById('name').value = currentArtist.user.username || '';
+                document.getElementById('description').value = currentBio || '';
+                document.getElementById('imageUrl').value = currentArtist.user.profilepic || '';
+                document.getElementById('instagram').value = currentSocial.instagram || '';
+                document.getElementById('spotify').value = '';
+                document.getElementById('kick').value = `https://kick.com/${currentArtist.slug}` || '';
+                document.getElementById('tiktok').value = currentSocial.tiktok || '';
+                document.getElementById('youtube').value = currentSocial.youtube || '';
+                document.getElementById('googlePlay').value = '';
+                document.getElementById('appleMusic').value = '';
+                document.getElementById('personalWebsite').value = '';
+                document.getElementById('x').value = currentSocial.x || '';
+                document.getElementById('snapchat').value = '';
+                document.getElementById('whatsapp').value = '';
+                document.getElementById('facebook').value = currentSocial.facebook || '';
+                document.getElementById('soundcloud').value = currentSocial.soundcloud || '';
+                document.getElementById('appstore').value = '';
+                document.getElementById('verified').checked = true;
+            }
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
         };
@@ -1005,6 +1172,8 @@
                         searchLocalArtists(searchTerm);
                     } else if (type === 'spotify') {
                         searchSpotifyArtists(searchTerm);
+                    } else if (type === 'kick') {
+                        searchKickGamers(searchTerm);
                     }
                 };
                 searchInput.addEventListener('input', performSearch);
@@ -1022,6 +1191,7 @@
                         description: document.getElementById('description').value,
                         instagram: document.getElementById('instagram').value,
                         spotify: document.getElementById('spotify').value,
+                        kick: document.getElementById('kick').value,
                         tiktok: document.getElementById('tiktok').value,
                         youtube: document.getElementById('youtube').value,
                         googlePlay: document.getElementById('googlePlay').value,
@@ -1134,6 +1304,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
 
