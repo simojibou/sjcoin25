@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -747,8 +746,16 @@
                     tracksContainer.innerHTML = '<p class="text-center text-muted">No tracks found on Spotify.</p>';
                     return;
                 }
-                tracks.forEach(track => {
+                for (const track of tracks) {
                     const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/200x200/141414/ffffff?text=Track';
+                    let itunesUrl = '';
+                    try {
+                        const songlinkResponse = await fetch(`https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(track.external_urls.spotify)}`);
+                        const songlinkData = await songlinkResponse.json();
+                        itunesUrl = songlinkData.linksByPlatform.itunes?.url || '';
+                    } catch (err) {
+                        console.error('Songlink fetch error:', err);
+                    }
                     const card = `
                         <div class="track-card search-result-card">
                             <div class="card bg-dark border-0">
@@ -757,12 +764,13 @@
                                     <h6 class="card-title text-white">${track.name}</h6>
                                     <p class="text-muted small">${track.album.name}</p>
                                     <a href="${track.external_urls.spotify}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Listen on Spotify</a>
+                                    ${itunesUrl ? `<a href="${itunesUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary mt-1">Download MP3 on iTunes</a>` : ''}
                                 </div>
                             </div>
                         </div>
                     `;
                     tracksContainer.innerHTML += card;
-                });
+                }
             } catch (error) {
                 console.error('Spotify fetch error:', error);
                 tracksContainer.innerHTML = '<p class="text-center text-danger">Error loading tracks from Spotify. Check console for details.</p>';
@@ -1134,7 +1142,7 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+    </html>
 
 
 
