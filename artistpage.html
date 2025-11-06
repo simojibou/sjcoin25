@@ -647,7 +647,7 @@
             resultsContainer.innerHTML = '';
             if (!searchTerm) return;
             try {
-                const response = await fetch(`https://kick.com/api/search?q=${encodeURIComponent(searchTerm)}`);
+                const response = await fetch(`https://kick.com/api/v1/search?type=channels&q=${encodeURIComponent(searchTerm)}`);
                 if (!response.ok) {
                     throw new Error('Failed to search Kick channels');
                 }
