@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -647,21 +646,27 @@
             resultsContainer.innerHTML = '';
             if (!searchTerm) return;
             try {
-                const response = await fetch(`https://kick.com/api/v1/search?type=channels&q=${encodeURIComponent(searchTerm)}`);
+                const response = await fetch(`https://kick.com/api/search?q=${encodeURIComponent(searchTerm)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error('Failed to search Kick channels');
                 }
                 const data = await response.json();
-                const channels = data.channels || []; // Assuming response structure
+                const channelsSection = data.find(section => section.type === 'channels') || { data: [] };
+                const channels = channelsSection.data;
                 if (channels.length === 0) {
                     resultsContainer.innerHTML = '<p class="text-center text-muted">No gamers found on Kick.</p>';
                     return;
                 }
                 channels.forEach(channel => {
                     const verifiedBadge = channel.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
-                    const image = channel.user.profilepic || 'https://via.placeholder.com/200x300/141414/ffffff?text=Gamer';
+                    const image = channel.profile_pic || 'https://via.placeholder.com/200x300/141414/ffffff?text=Gamer';
                     const slug = channel.slug;
-                    const name = channel.user.username;
+                    const name = channel.username;
                     const card = `
                         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                             <a href="artistpage.html?kick=${slug}" class="text-decoration-none">
@@ -870,7 +875,12 @@
             if (!tracksContainer) return;
             tracksContainer.innerHTML = '';
             try {
-                const response = await fetch(`https://kick.com/api/v2/channels/${slug}/clips?limit=20`);
+                const response = await fetch(`https://kick.com/api/v2/channels/${slug}/clips?limit=20`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error('Failed to fetch clips');
                 }
@@ -1041,7 +1051,12 @@
         // ---------- Load Kick Channel ----------
         async function loadKickChannel(slug) {
             try {
-                const response = await fetch(`https://kick.com/api/v2/channels/${slug}`);
+                const response = await fetch(`https://kick.com/api/v2/channels/${slug}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error('Failed to fetch Kick channel');
                 }
