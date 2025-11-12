@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SJ X N41 - Profile</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN&currency=USD"></script>
+    <!-- Custom CSS -->
+    <style>
+        :root{
+            --color-red: #e50914;
+            --color-white: #ffffff;
+            --color-dark: #141414;
+            --color-dark-light: #221f1f;
+            --color-grey: #8c8c8c;
+            --space-unit: 16px;
+            --instagram-blue: #0095f6;
+        }
+        body{
+            background: var(--color-dark);
+            color: var(--color-white);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding-top: 56px;
+            overflow-x: hidden;
+        }
+        .navbar{
+            background-color: var(--color-dark) !important;
+        }
+        .navbar-brand{
+            color: var(--color-red);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .nav-link{color: var(--color-white) !important;}
+        .nav-link:hover{color: var(--color-grey) !important;}
+        .nav-link.active{color: var(--color-white) !important; font-weight: bold;}
+
+        .profile-hero{
+            position: relative;
+            height: 70vh;
+            width: 100%;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            text-align: left;
+            margin-bottom: var(--space-3);
+            padding: var(--space-3) var(--space-3) var(--space-2);
+        }
+        .profile-hero::before{
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(20,20,20,0), rgba(20,20,20,1));
+            z-index: 1;
+        }
+        .profile-hero-content{position: relative; z-index: 2; max-width: 50%;}
+        .profile-hero h1{font-size: 4rem; font-weight: 700; color: var(--color-white); margin-bottom: var(--space-1); text-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        .social-links a{color: var(--color-grey); margin-right: 12px; font-size: 1.5rem;}
+        .social-links a:hover{color: var(--color-red);}
+
+        .earnings-banner {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .earnings-banner .brand { font-size: 1.4rem; color: #ffd700; }
+
+        .profile-bio, .profile-stats, .products-section, .tracks-section {
+            max-width: 90%; margin: 0 auto var(--space-3); padding: var(--space-2);
+            background: var(--color-dark-light); border-radius: 4px;
+        }
+        .product-card .btn-paypal { margin-top: 8px; }
+
+        .verified-badge { color: var(--instagram-blue); font-size: 0.8em; vertical-align: middle; margin-left: 5px; }
+
+        @media (max-width: 768px){
+            .profile-hero{height: 50vh; align-items: center; justify-content: center; text-align: center;}
+            .profile-hero-content{max-width: 90%;}
+            .profile-hero h1{font-size: 2.5rem;}
+            .earnings-banner { font-size: 1rem; padding: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="https://simojibou.github.io/sjcoin25/sjlabel5.html">SJ X N41</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="https://simojibou.github.io/sjcoin25/sjlabel5.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://simojibou.github.io/sjcoin25/sjstore.html">SJSTORE</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i></a></li>
+                    <li class="nav-item dropdown" id="profile-dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="profile-link" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle" id="profile-icon"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li id="user-info" style="display: none;">
+                                <div class="dropdown-header">
+                                    <img id="user-pic" src="" alt="User" class="rounded-circle me-2" width="30" height="30">
+                                    <span id="user-name"></span>
+                                </div>
+                            </li>
+                            <li id="profile-item" style="display: none;"><a class="dropdown-item" href="#">Profile</a></li>
+                            <li id="edit-item" style="display: none;"><a class="dropdown-item" href="#" onclick="editProfile(currentUser.uid)">Edit Profile</a></li>
+                            <li style="display: none;" id="logout-divider"><hr class="dropdown-divider"></li>
+                            <li id="logout-item" style="display: none;"><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
+                            <li id="login-item"><a class="dropdown-item" href="#" onclick="loginWithGoogle()">Login with Google</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Artists</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="searchInput" class="form-control bg-dark text-white" placeholder="Search...">
+                    <select id="searchType" class="form-select bg-dark text-white mt-2">
+                        <option value="local">Local Artists</option>
+                        <option value="spotify">Spotify Artists</option>
+                        <option value="kick">Kick Gamers</option>
+                    </select>
+                    <div id="searchResults" class="row mt-3 gy-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <div class="mb-3">
+                            <label>Name</label>
+                            <input type="text" class="form-control bg-dark text-white" id="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Description</label>
+                            <textarea class="form-control bg-dark text-white" id="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Image URL</label>
+                            <input type="url" class="form-control bg-dark text-white" id="imageUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label>Upload New Image</label>
+                            <input type="file" class="form-control bg-dark text-white" id="imageFile" accept="image/*">
+                        </div>
+                        <!-- Social Links -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>Instagram</label>
+                                <input type="url" class="form-control bg-dark text-white" id="instagram">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Spotify</label>
+                                <input type="url" class="form-control bg-dark text-white" id="spotify">
+                            </div>
+                        </div>
+                        <!-- Add more as needed -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="verified">
+                            <label class="form-check-label">Verified Account</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProductForm">
+                        <div class="mb-3">
+                            <label>Title</label>
+                            <input type="text" class="form-control bg-dark text-white" id="productTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Description</label>
+                            <textarea class="form-control bg-dark text-white" id="productDesc" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Price ($)</label>
+                            <input type="number" class="form-control bg-dark text-white" id="productPrice" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Upload Picture</label>
+                            <input type="file" class="form-control bg-dark text-white" id="productPic" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Product</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal fade" id="shareModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="qr-code" class="d-inline-block mb-3"></div>
+                    <p>Scan to share</p>
+                    <input type="text" id="profile-link-input" class="form-control bg-dark text-white mt-3" readonly>
+                    <button class="btn btn-secondary mt-2" onclick="copyLink()">Copy Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="profile-container" class="container-fluid p-0">
+        <!-- Profile injected here -->
+    </div>
+
+    <!-- QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let currentUser = null;
+        let currentProfile = null;
+        let currentProfileId = null;
+
+        // PayPal Client ID (Safe to expose)
+        const PAYPAL_CLIENT_ID = 'AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN';
+
+        // Load Profile
+        async function loadUserProfile(id) {
+            const userRef = doc(db, 'users', id);
+            let snap = await getDoc(userRef);
+            const isOwnProfile = currentUser && currentUser.uid === id;
+
+            if (!snap.exists() && isOwnProfile) {
+                const defaultProfile = {
+                    name: currentUser.displayName || 'User',
+                    description: '',
+                    imageUrl: currentUser.photoURL || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Profile',
+                    instagram: '', spotify: '', kick: '', verified: false, views: 0
+                };
+                await setDoc(userRef, { ...defaultProfile, nameLower: defaultProfile.name.toLowerCase() });
+                snap = await getDoc(userRef);
+            }
+
+            if (!snap.exists()) {
+                document.getElementById('profile-container').innerHTML = '<h2 class="text-center">Profile not found</h2>';
+                return;
+            }
+
+            let profile = snap.data();
+            await updateDoc(userRef, { views: increment(1) });
+            const updated = await getDoc(userRef);
+            profile = updated.data();
+
+            currentProfile = profile;
+            currentProfileId = id;
+
+            // Load Earnings
+            let earnings = 0;
+            const earningsDoc = await getDoc(doc(db, 'users', id, 'earnings', 'total'));
+            if (earningsDoc.exists()) earnings = earningsDoc.data().amount || 0;
+
+            const verifiedBadge = profile.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
+            const userActions = isOwnProfile ? `<button onclick="editProfile('${id}')" class="btn btn-outline-light btn-sm position-absolute top-0 end-0 m-3"><i class="bi bi-pencil"></i></button>` : '';
+
+            const earningsBanner = isOwnProfile ? `
+                <div class="earnings-banner">
+                    <span class="brand">SJPAY</span> Earnings: <strong>$${earnings.toFixed(2)}</strong>
+                </div>
+            ` : '';
+
+            const html = `
+                ${earningsBanner}
+                <div class="profile-hero" style="background-image: url('${profile.imageUrl}');">
+                    <div class="profile-hero-content">
+                        ${userActions}
+                        <h1>${profile.name}${verifiedBadge}</h1>
+                        <div class="social-links">
+                            ${profile.instagram ? `<a href="${profile.instagram}" target="_blank"><i class="bi bi-instagram"></i></a>` : ''}
+                            ${profile.spotify ? `<a href="${profile.spotify}" target="_blank"><i class="bi bi-spotify"></i></a>` : ''}
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="bi bi-qr-code-scan"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="ad-container-wrapper text-center my-3"><div id="ad-container" style="width:728px;height:90px;max-width:100%;margin:auto;"></div></div>
+                <div class="container">
+                    <div class="profile-bio">
+                        <h3>Biography</h3>
+                        <p>${profile.description || 'No bio yet.'}</p>
+                    </div>
+                    <div class="products-section">
+                        <h3>Products ${isOwnProfile ? '<button class="btn btn-sm btn-secondary float-end" data-bs-toggle="modal" data-bs-target="#addProductModal">Add</button>' : ''}</h3>
+                        <div id="products-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('profile-container').innerHTML = html;
+            await loadUserProducts(id, isOwnProfile);
+        }
+
+        // Load Products + PayPal Buttons
+        async function loadUserProducts(id, isOwnProfile) {
+            const container = document.getElementById('products-row');
+            container.innerHTML = '<div class="text-center w-100"><div class="spinner-border text-light"></div></div>';
+
+            const q = query(collection(db, `users/${id}/products`));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                container.innerHTML = '<p class="text-center text-muted w-100">No products yet.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            snapshot.forEach(doc => {
+                const prod = doc.data();
+                const card = document.createElement('div');
+                card.className = 'product-card search-result-card';
+                card.innerHTML = `
+                    <div class="card bg-dark border-0 text-white">
+                        <img src="${prod.picUrl}" class="card-img-top" alt="${prod.title}">
+                        <div class="card-body p-3">
+                            <h6 class="card-title">${prod.title}</h6>
+                            <p class="text-muted small">${prod.description || ''}</p>
+                            <p class="fw-bold">$${prod.price.toFixed(2)}</p>
+                            ${!isOwnProfile ? `<div id="paypal-button-container-${doc.id}"></div>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                if (!isOwnProfile) {
+                    paypal.Buttons({
+                        createOrder: (data, actions) => {
+                            return actions.order.create({
+                                purchase_units: [{
+                                    amount: { value: prod.price.toFixed(2) },
+                                    description: prod.title
+                                }]
+                            });
+                        },
+                        onApprove: async (data, actions) => {
+                            const order = await actions.order.capture();
+                            await recordSale(id, prod.price, order);
+                            alert('Payment successful! Thank you.');
+                        },
+                        onError: (err) => {
+                            console.error(err);
+                            alert('Payment failed.');
+                        }
+                    }).render(`#paypal-button-container-${doc.id}`);
+                }
+            });
+        }
+
+        // Record Sale & Update Earnings
+        async function recordSale(sellerId, amount, order) {
+            const saleRef = await addDoc(collection(db, `users/${sellerId}/sales`), {
+                amount,
+                orderId: order.id,
+                buyer: currentUser?.displayName || 'Guest',
+                timestamp: new Date()
+            });
+
+            const earningsRef = doc(db, `users/${sellerId}/earnings/total`);
+            await setDoc(earningsRef, { amount: increment(amount) }, { merge: true });
+        }
+
+        // Auth
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileUid = urlParams.get('uid');
+
+        onAuthStateChanged(auth, user => {
+            currentUser = user;
+            updateProfileUI(user);
+            if (profileUid) {
+                loadUserProfile(profileUid);
+            } else if (user) {
+                loadUserProfile(user.uid);
+            } else {
+                document.getElementById('profile-container').innerHTML = '<h2 class="text-center">Login to view profile</h2>';
+            }
+        });
+
+        function updateProfileUI(user) {
+            // ... (same as before)
+            const userInfo = document.getElementById('user-info');
+            const loginItem = document.getElementById('login-item');
+            if (user) {
+                userInfo.style.display = 'block';
+                document.getElementById('user-pic').src = user.photoURL;
+                document.getElementById('user-name').textContent = user.displayName;
+                loginItem.style.display = 'none';
+            } else {
+                userInfo.style.display = 'none';
+                loginItem.style.display = 'block';
+            }
+        }
+
+        window.loginWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
+        window.logout = () => signOut(auth);
+        window.editProfile = (id) => { /* same as before */ };
+        window.copyLink = () => { /* same */ };
+
+        // PayPal SDK Ready
+        if (typeof paypal !== 'undefined') {
+            // Ready
+        }
+    </script>
+
+    <!-- Ad Script -->
+    <script type="text/javascript">
+        atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
+        document.addEventListener('DOMContentLoaded', () => {
+            const c = document.getElementById('ad-container');
+            if (c) {
+                const s = document.createElement('script');
+                s.src = 'https://www.highperformanceformat.com/6819d716a99f588efc7f8dacfbc474bb/invoke.js';
+                s.async = true;
+                c.appendChild(s);
+            }
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
