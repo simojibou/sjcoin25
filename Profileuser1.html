@@ -10,7 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- PayPal SDK -->
     <script src="https://www.paypal.com/sdk/js?client-id=AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN&currency=USD"></script>
-    <!-- Custom CSS -->
+    <!-- Custom CSS (Netflix-inspired) -->
     <style>
         :root{
             --color-red: #e50914; /* Netflix red */
@@ -659,9 +659,8 @@
                     productsContainer.innerHTML = '<p class="text-center text-muted">No products available.</p>';
                     return;
                 }
-                snapshot.forEach((docSnap) => {
-                    const prod = docSnap.data();
-                    const productId = docSnap.id;
+                snapshot.forEach(doc => {
+                    const prod = doc.data();
                     const card = `
                         <div class="product-card search-result-card">
                             <div class="card bg-dark border-0">
@@ -670,56 +669,48 @@
                                     <h6 class="card-title text-white">${prod.title}</h6>
                                     <p class="text-muted small">${prod.description || ''}</p>
                                     <p class="text-white fw-bold">$${prod.price.toFixed(2)}</p>
-                                    ${!isOwnProfile ? `<div id="paypal-button-${productId}" class="mt-2"></div>` : ''}
+                                    ${isOwnProfile ? '' : `<div id="paypal-button-${doc.id}"></div>`}
                                 </div>
                             </div>
                         </div>
                     `;
                     productsContainer.innerHTML += card;
-
                     if (!isOwnProfile) {
                         paypal.Buttons({
-                            createOrder: function(data, actions) {
+                            createOrder: (data, actions) => {
                                 return actions.order.create({
                                     purchase_units: [{
-                                        amount: {
-                                            value: prod.price.toFixed(2)
-                                        },
+                                        amount: { value: prod.price.toFixed(2) },
                                         description: prod.title
                                     }]
                                 });
                             },
-                            onApprove: async function(data, actions) {
+                            onApprove: async (data, actions) => {
                                 const order = await actions.order.capture();
                                 await recordSale(id, prod.price, order);
-                                alert('Transaction completed!');
-                                // Optionally reload products or profile
+                                alert('Payment successful! Thank you.');
+                            },
+                            onError: (err) => {
+                                console.error(err);
+                                alert('Payment failed.');
                             }
-                        }).render(`#paypal-button-${productId}`);
+                        }).render(`#paypal-button-${doc.id}`);
                     }
                 });
             } catch (error) {
                 console.error('Load products error:', error);
             }
         }
-        // Record Sale
+        // Record Sale and Update Earnings
         async function recordSale(sellerId, amount, order) {
-            try {
-                const salesCollection = collection(db, `users/${sellerId}/sales`);
-                await addDoc(salesCollection, {
-                    amount: amount,
-                    orderId: order.id,
-                    payerName: order.payer.name.given_name,
-                    timestamp: new Date()
-                });
-
-                const earningsRef = doc(db, `users/${sellerId}/earnings`);
-                await setDoc(earningsRef, {
-                    total: increment(amount)
-                }, { merge: true });
-            } catch (error) {
-                console.error('Error recording sale:', error);
-            }
+            const saleRef = await addDoc(collection(db, `users/${sellerId}/sales`), {
+                amount,
+                orderId: order.id,
+                buyer: currentUser ? currentUser.displayName : 'Guest',
+                timestamp: new Date()
+            });
+            const earningsRef = doc(db, `users/${sellerId}/earnings`);
+            await setDoc(earningsRef, { total: increment(amount) }, { merge: true });
         }
         // ---------- Load User Profile ----------
         async function loadUserProfile(id) {
@@ -775,11 +766,10 @@
             const verifiedBadge = profile.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
             const profileStats = `<div class="profile-stats"><h3>Profile Stats</h3><p>Total Views: ${profile.views || 0}</p></div>`;
 
-            // Get earnings if own profile
+            // Load earnings if own profile
             let earningsBanner = '';
             if (isOwnProfile) {
-                const earningsRef = doc(db, `users/${id}/earnings`);
-                const earningsSnap = await getDoc(earningsRef);
+                const earningsSnap = await getDoc(doc(db, `users/${id}/earnings`));
                 const totalEarnings = earningsSnap.exists() ? earningsSnap.data().total || 0 : 0;
                 earningsBanner = `<div class="earnings-banner">SJPAY Earnings: $${totalEarnings.toFixed(2)}</div>`;
             }
@@ -915,6 +905,10 @@
             const provider = new GoogleAuthProvider();
             try {
                 await signInWithPopup(auth, provider);
+                // Reload profile after login
+                if (currentUser) {
+                    loadUserProfile(currentUser.uid);
+                }
             } catch (error) {
                 console.error('Login error:', error);
             }
@@ -922,6 +916,7 @@
         async function logout() {
             try {
                 await signOut(auth);
+                document.getElementById('profile-container').innerHTML = '<h2 class="text-center">Please log in to view your profile</h2>';
             } catch (error) {
                 console.error('Logout error:', error);
             }
@@ -1105,4 +1100,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+    </html>
