@@ -9,8 +9,12 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Roboto', sans-serif; background: #000; color: #fff; line-height: 1.6; min-height: 100vh; }
     .header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; border-bottom: 1px solid #333; background: #000; position: sticky; top: 0; z-index: 1000; }
-    #back-btn { background: transparent; color: #fff; border: 1px solid #fff; padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; cursor: pointer; letter-spacing: 0.15em; transition: 0.3s; }
-    #back-btn:hover { background: #222; border-color: #ccc; }
+    #back-btn, #add-btn {
+      background: transparent; color: #fff; border: 1px solid #fff;
+      padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase;
+      cursor: pointer; letter-spacing: 0.15em; transition: 0.3s;
+    }
+    #back-btn:hover, #add-btn:hover { background: #222; border-color: #ccc; }
     .profile-header { text-align: center; padding: 2rem; border-bottom: 1px solid #333; }
     .profile-pic-large { width: 120px; height: 120px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-bottom: 1rem; }
     .profile-name { font-size: 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; }
@@ -22,6 +26,7 @@
     .product-item:hover .product-overlay { opacity: 1; }
     .product-title { font-size: 1rem; font-weight: 700; }
     .product-price { font-size: 0.875rem; }
+    .actions { display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0; }
   </style>
 
   <script type="module">
@@ -46,11 +51,14 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       const backBtn = document.getElementById("back-btn");
+      const addBtn = document.getElementById("add-btn");
       const profilePic = document.getElementById("profile-pic");
       const profileName = document.getElementById("profile-name");
       const productGrid = document.getElementById("product-grid");
 
       let sellerUid = new URLSearchParams(window.location.search).get("uid");
+      let currentUser = null;
+
       if (!sellerUid) {
         productGrid.innerHTML = "<p>Seller not found.</p>";
         return;
@@ -58,7 +66,13 @@
 
       productGrid.innerHTML = "<p>Loading products...</p>";
 
-      onAuthStateChanged(auth, () => loadSellerData());
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user && user.uid === sellerUid) {
+          addBtn.style.display = "inline-block"; // إظهار الزر فقط لصاحب الصفحة
+        }
+        loadSellerData();
+      });
 
       function loadSellerData() {
         const productRef = ref(db, "Product");
@@ -114,6 +128,10 @@
       backBtn.addEventListener("click", () => {
         window.location.href = "./sjstore.html";
       });
+
+      addBtn.addEventListener("click", () => {
+        window.location.href = `AddProduct.html?uid=${sellerUid}`;
+      });
     });
   </script>
 </head>
@@ -121,10 +139,16 @@
   <div class="header">
     <button id="back-btn">Back to Store</button>
   </div>
+
   <div class="profile-header">
     <img id="profile-pic" class="profile-pic-large" alt="Seller Profile Picture" />
     <h1 id="profile-name">Seller Name</h1>
   </div>
+
+  <div class="actions">
+    <button id="add-btn" style="display:none;">➕ Add Product</button>
+  </div>
+
   <div id="product-grid" class="product-grid"></div>
 </body>
 </html>
