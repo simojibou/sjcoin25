@@ -1,37 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Profile - SJ STORE</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Roboto', sans-serif; background: #000; color: #fff; line-height: 1.6; min-height: 100vh; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; border-bottom: 1px solid #333; background: #000; position: sticky; top: 0; z-index: 1000; }
-    #back-btn, #add-btn {
-      background: transparent; color: #fff; border: 1px solid #fff;
-      padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase;
-      cursor: pointer; letter-spacing: 0.15em; transition: 0.3s;
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Roboto',sans-serif; background:#000; color:#fff; line-height:1.6; min-height:100vh; }
+    .header { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; background:#000; position:sticky; top:0; z-index:1000; border-bottom:1px solid #333; }
+    .header-left { display:flex; align-items:center; gap:1rem; }
+    .back-btn, #login-btn, #chat-btn { background:transparent; color:#fff; border:1px solid #fff; padding:.5rem 1rem; border-radius:0; cursor:pointer; font-weight:700; text-transform:uppercase; letter-spacing:.18em; transition:border-color .3s,background .3s; }
+    .back-btn:hover, #login-btn:hover, #chat-btn:hover { border-color:#ccc; background:#222; }
+    #profile-pic { width:40px; height:40px; border-radius:50%; border:2px solid #fff; cursor:pointer; display:none; }
+    .dropdown { position:relative; }
+    .dropdown-menu { display:none; position:absolute; top:100%; right:0; background:#111; border:1px solid #333; min-width:150px; z-index:1001; box-shadow:0 4px 8px rgba(0,0,0,.5); }
+    .dropdown-menu button { width:100%; background:transparent; color:#fff; border:none; padding:.75rem 1rem; text-align:left; font-weight:700; text-transform:uppercase; letter-spacing:.18em; cursor:pointer; transition:background .3s; }
+    .dropdown-menu button:hover { background:#333; }
+
+    .profile-header { text-align:center; padding:2rem; border-bottom:1px solid #333; }
+    .profile-pic-large { width:120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom:1rem; border:2px solid #fff; }
+    .profile-name { font-size:1.5rem; font-weight:700; text-transform:uppercase; letter-spacing:.18em; }
+
+    .product-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; max-width:1200px; margin:0 auto; }
+    .product-item { position:relative; aspect-ratio:1/1; overflow:hidden; cursor:pointer; }
+    .product-item img { width:100%; height:100%; object-fit:cover; transition:transform .3s; }
+    .product-item:hover img { transform:scale(1.05); }
+    .product-overlay { position:absolute; bottom:0; left:0; width:100%; background:rgba(0,0,0,.7); padding:.5rem; opacity:0; transition:opacity .3s; }
+    .product-item:hover .product-overlay { opacity:1; }
+    .product-title { font-size:1rem; font-weight:700; }
+    .product-price { font-size:.875rem; }
+
+    .empty { text-align:center; padding:2rem; font-size:1.2rem; }
+
+    @media (max-width:768px){ .product-grid{grid-template-columns:repeat(2,1fr);} }
+    @media (max-width:480px){
+      .product-grid{grid-template-columns:1fr;}
+      .profile-pic-large{width:100px;height:100px;}
+      .profile-name{font-size:1.25rem;}
     }
-    #back-btn:hover, #add-btn:hover { background: #222; border-color: #ccc; }
-    .profile-header { text-align: center; padding: 2rem; border-bottom: 1px solid #333; }
-    .profile-pic-large { width: 120px; height: 120px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-bottom: 1rem; }
-    .profile-name { font-size: 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; }
-    .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px; max-width: 1200px; margin: 0 auto; padding: 1rem; }
-    .product-item { position: relative; aspect-ratio: 1 / 1; overflow: hidden; cursor: pointer; }
-    .product-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-    .product-item:hover img { transform: scale(1.05); }
-    .product-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); padding: 0.5rem; opacity: 0; transition: opacity 0.3s; }
-    .product-item:hover .product-overlay { opacity: 1; }
-    .product-title { font-size: 1rem; font-weight: 700; }
-    .product-price { font-size: 0.875rem; }
-    .actions { display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0; }
   </style>
 
+  <!-- Firebase v12.3.0 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -46,107 +59,150 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
     const auth = getAuth(app);
+    const db   = getDatabase(app);
+    const provider = new GoogleAuthProvider();
 
     document.addEventListener("DOMContentLoaded", () => {
-      const backBtn = document.getElementById("back-btn");
-      const addBtn = document.getElementById("add-btn");
-      const profilePic = document.getElementById("profile-pic");
-      const profileName = document.getElementById("profile-name");
-      const productGrid = document.getElementById("product-grid");
+      const backBtn       = document.getElementById("back-btn");
+      const loginBtn      = document.getElementById("login-btn");
+      const profilePic    = document.getElementById("profile-pic");
+      const dropdownMenu  = document.getElementById("dropdown-menu");
+      const logoutOption  = document.getElementById("logout-option");
 
-      let sellerUid = new URLSearchParams(window.location.search).get("uid");
+      const profilePicLarge = document.getElementById("profile-pic-large");
+      const profileName     = document.getElementById("profile-name");
+      const productGrid     = document.getElementById("product-grid");
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const sellerUid = urlParams.get('uid');
+
       let currentUser = null;
 
-      if (!sellerUid) {
-        productGrid.innerHTML = "<p>Seller not found.</p>";
-        return;
-      }
-
-      productGrid.innerHTML = "<p>Loading products...</p>";
-
-      onAuthStateChanged(auth, (user) => {
-        currentUser = user;
-        if (user && user.uid === sellerUid) {
-          addBtn.style.display = "inline-block"; // إظهار الزر فقط لصاحب الصفحة
-        }
-        loadSellerData();
+      // ---------- Navigation ----------
+      backBtn.addEventListener("click", () => {
+        window.location.href = "sjstore.html";   // <-- change if your main file has a different name
       });
 
+      // ---------- Auth UI ----------
+      loginBtn.addEventListener("click", () => {
+        signInWithPopup(auth, provider)
+          .then(() => alert("Logged in!"))
+          .catch(err => alert("Login failed: " + err.message));
+      });
+
+      profilePic.addEventListener("click", () => {
+        dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
+      });
+
+      logoutOption.addEventListener("click", () => {
+        signOut(auth)
+          .then(() => { alert("Logged out!"); dropdownMenu.style.display = "none"; })
+          .catch(err => alert("Logout error: " + err.message));
+      });
+
+      // Close dropdown when clicking outside
+      window.addEventListener("click", e => {
+        if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target))
+          dropdownMenu.style.display = "none";
+      });
+
+      // ---------- Auth State ----------
+      onAuthStateChanged(auth, user => {
+        currentUser = user;
+        if (user) {
+          loginBtn.style.display = "none";
+          profilePic.src = user.photoURL || "https://via.placeholder.com/40";
+          profilePic.style.display = "block";
+        } else {
+          loginBtn.style.display = "inline-block";
+          profilePic.style.display = "none";
+          dropdownMenu.style.display = "none";
+        }
+        loadSellerData();   // refresh products (admin actions may appear)
+      });
+
+      // ---------- Load Seller & Products ----------
       function loadSellerData() {
         const productRef = ref(db, "Product");
-        onValue(productRef, (snapshot) => {
-          let products = [];
-          let sellerName = "Anonymous";
-          let sellerPhoto = "https://via.placeholder.com/120";
-          let found = false;
+        onValue(productRef, snapshot => {
+          const products = [];
+          let sellerInfo = { name: "Anonymous", photo: "https://via.placeholder.com/120" };
 
-          snapshot.forEach((child) => {
-            const data = child.val();
-            if (data.id === sellerUid) {
-              if (!found) {
-                sellerName = data.sellerName || sellerName;
-                sellerPhoto = data.sellerPhoto || sellerPhoto;
-                found = true;
+          snapshot.forEach(child => {
+            const p = child.val();
+            if (p.id === sellerUid) {
+              if (!sellerInfo.name) {
+                sellerInfo.name  = p.sellerName || "Anonymous";
+                sellerInfo.photo = p.sellerPhoto || "https://via.placeholder.com/120";
               }
               products.push({
-                id: child.key,
-                title: data.title || "Untitled Product",
-                price: data.price || "0",
-                photo: data.photo || "https://via.placeholder.com/300"
+                id:    child.key,
+                title: p.title,
+                price: p.price,
+                photo: p.photo
               });
             }
           });
 
-          profilePic.src = sellerPhoto;
-          profileName.textContent = sellerName;
+          // Update header
+          profilePicLarge.src = sellerInfo.photo;
+          profileName.textContent = sellerInfo.name;
 
-          if (products.length === 0) {
-            productGrid.innerHTML = "<p>No products found for this seller.</p>";
-          } else {
-            productGrid.innerHTML = "";
-            products.forEach((p) => {
-              const div = document.createElement("div");
-              div.classList.add("product-item");
-              div.innerHTML = `
-                <img src="${p.photo}" alt="${p.title}">
-                <div class="product-overlay">
-                  <span class="product-title">${p.title}</span>
-                  <span class="product-price">${p.price} DH</span>
-                </div>
-              `;
-              div.addEventListener("click", () => {
-                window.location.href = `Productpage.html?id=${p.id}`;
-              });
-              productGrid.appendChild(div);
-            });
-          }
+          // Render grid
+          renderProducts(products);
+        }, err => {
+          console.error(err);
+          productGrid.innerHTML = `<p class="empty">Failed to load data.</p>`;
         });
       }
 
-      backBtn.addEventListener("click", () => {
-        window.location.href = "./sjstore.html";
-      });
+      function renderProducts(products) {
+        productGrid.innerHTML = "";
+        if (products.length === 0) {
+          productGrid.innerHTML = `<p class="empty">No products posted by this seller.</p>`;
+          return;
+        }
 
-      addBtn.addEventListener("click", () => {
-        window.location.href = `AddProduct.html?uid=${sellerUid}`;
-      });
+        products.forEach(p => {
+          const div = document.createElement("div");
+          div.className = "product-item";
+          div.innerHTML = `
+            <img src="${p.photo || 'https://via.placeholder.com/300'}" alt="${p.title || 'Untitled'}">
+            <div class="product-overlay">
+              <span class="product-title">${p.title || 'Untitled'}</span>
+              <span class="product-price">${p.price} DH</span>
+            </div>
+          `;
+          div.addEventListener("click", () => {
+            window.location.href = `Productpage.html?id=${p.id}`;
+          });
+          productGrid.appendChild(div);
+        });
+      }
     });
   </script>
 </head>
 <body>
   <div class="header">
-    <button id="back-btn">Back to Store</button>
+    <div class="header-left">
+      <button id="back-btn">Back to Store</button>
+    </div>
+    <div class="header-right">
+      <button id="chat-btn">Chat</button>
+      <button id="login-btn">Login</button>
+      <div class="dropdown">
+        <img id="profile-pic" alt="Profile">
+        <div id="dropdown-menu" class="dropdown-menu">
+          <button id="logout-option">Logout</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="profile-header">
-    <img id="profile-pic" class="profile-pic-large" alt="Seller Profile Picture" />
+    <img id="profile-pic-large" class="profile-pic-large" alt="Seller">
     <h1 id="profile-name">Seller Name</h1>
-  </div>
-
-  <div class="actions">
-    <button id="add-btn" style="display:none;">➕ Add Product</button>
   </div>
 
   <div id="product-grid" class="product-grid"></div>
