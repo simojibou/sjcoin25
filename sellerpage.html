@@ -45,7 +45,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+    import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -77,11 +77,16 @@
       const urlParams = new URLSearchParams(window.location.search);
       const sellerUid = urlParams.get('uid');
 
+      if (!sellerUid) {
+        productGrid.innerHTML = `<p class="empty">Invalid seller.</p>`;
+        return;
+      }
+
       let currentUser = null;
 
       // ---------- Navigation ----------
       backBtn.addEventListener("click", () => {
-        window.location.href = "sjstore.html";   // <-- change if your main file has a different name
+        window.location.href = "sjstore.html";
       });
 
       // ---------- Auth UI ----------
@@ -101,7 +106,6 @@
           .catch(err => alert("Logout error: " + err.message));
       });
 
-      // Close dropdown when clicking outside
       window.addEventListener("click", e => {
         if (!profilePic.contains(e.target) && !dropdownMenu.contains(e.target))
           dropdownMenu.style.display = "none";
@@ -119,23 +123,33 @@
           profilePic.style.display = "none";
           dropdownMenu.style.display = "none";
         }
-        loadSellerData();   // refresh products (admin actions may appear)
+        loadSellerData();   // refresh UI
       });
 
-      // ---------- Load Seller & Products ----------
-      function loadSellerData() {
+      // ---------- Load Seller Profile & Products ----------
+      async function loadSellerData() {
+        // 1. Get seller profile from /users/{uid}
+        const userRef = ref(db, `users/${sellerUid}`);
+        let sellerInfo = { name: "Anonymous", photo: "https://via.placeholder.com/120" };
+
+        try {
+          const snap = await get(userRef);
+          if (snap.exists()) {
+            const data = snap.val();
+            sellerInfo.name  = data.displayName || "Anonymous";
+            sellerInfo.photo = data.photoURL   || "https://via.placeholder.com/120";
+          }
+        } catch (err) { console.warn("User record missing:", err); }
+
+        // 2. Load products
         const productRef = ref(db, "Product");
         onValue(productRef, snapshot => {
           const products = [];
-          let sellerInfo = { name: "Anonymous", photo: "https://via.placeholder.com/120" };
 
           snapshot.forEach(child => {
             const p = child.val();
             if (p.id === sellerUid) {
-              if (!sellerInfo.name) {
-                sellerInfo.name  = p.sellerName || "Anonymous";
-                sellerInfo.photo = p.sellerPhoto || "https://via.placeholder.com/120";
-              }
+              // Ensure every product saves seller info on upload (main page already does this)
               products.push({
                 id:    child.key,
                 title: p.title,
@@ -180,6 +194,9 @@
           productGrid.appendChild(div);
         });
       }
+
+      // Start loading
+      loadSellerData();
     });
   </script>
 </head>
@@ -202,7 +219,7 @@
 
   <div class="profile-header">
     <img id="profile-pic-large" class="profile-pic-large" alt="Seller">
-    <h1 id="profile-name">Seller Name</h1>
+    <h1 id="profile-name">Loading...</h1>
   </div>
 
   <div id="product-grid" class="product-grid"></div>
