@@ -8,7 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS (Netflix-inspired) -->
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN&currency=USD"></script>
+    <!-- Custom CSS -->
     <style>
         :root{
             --color-red: #e50914; /* Netflix red */
@@ -255,33 +257,39 @@
                 font-size: 2rem;
             }
         }
+        /* Earnings Banner */
+        .earnings-banner {
+            background: var(--color-dark-light);
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: var(--space-2);
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <!-- Netflix-inspired Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
-          
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                      
+                        
                     </li>
                     <li class="nav-item">
-                       
+                        
                     </li>
-                  
-                   
                 </ul>
                 <ul class="navbar-nav mb-2 mb-lg-0">
                     <li class="nav-item">
-                      
+                        
                     </li>
                     <li class="nav-item">
-                       
+                        
                     </li>
                     <li class="nav-item dropdown" id="profile-dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="profile-link" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -305,8 +313,6 @@
             </div>
         </div>
     </nav>
-    <!-- Search Modal -->
-   
     <!-- Edit Modal -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -479,7 +485,7 @@
         let currentProfile = null;
         let currentProfileId = null;
         // Spotify Credentials - Replace with your own from developer.spotify.com
-        // WARNING: Exposing clientSecret in client-side code is insecure for production use. 
+        // WARNING: Exposing clientSecret in client-side code is insecure for production use.
         // Use a backend server to handle token requests in a real app.
         const spotifyClientId = '2e6b3a5e190c4e918bf4650bceac9af4';
         const spotifyClientSecret = '4d0370f7ea0148adb056c22fddd03341';
@@ -642,7 +648,7 @@
             }
         }
         // ---------- Load User Products ----------
-        async function loadUserProducts(id) {
+        async function loadUserProducts(id, isOwnProfile) {
             const productsContainer = document.getElementById('products-row');
             if (!productsContainer) return;
             productsContainer.innerHTML = '';
@@ -653,8 +659,9 @@
                     productsContainer.innerHTML = '<p class="text-center text-muted">No products available.</p>';
                     return;
                 }
-                snapshot.forEach(doc => {
-                    const prod = doc.data();
+                snapshot.forEach((docSnap) => {
+                    const prod = docSnap.data();
+                    const productId = docSnap.id;
                     const card = `
                         <div class="product-card search-result-card">
                             <div class="card bg-dark border-0">
@@ -663,14 +670,55 @@
                                     <h6 class="card-title text-white">${prod.title}</h6>
                                     <p class="text-muted small">${prod.description || ''}</p>
                                     <p class="text-white fw-bold">$${prod.price.toFixed(2)}</p>
+                                    ${!isOwnProfile ? `<div id="paypal-button-${productId}" class="mt-2"></div>` : ''}
                                 </div>
                             </div>
                         </div>
                     `;
                     productsContainer.innerHTML += card;
+
+                    if (!isOwnProfile) {
+                        paypal.Buttons({
+                            createOrder: function(data, actions) {
+                                return actions.order.create({
+                                    purchase_units: [{
+                                        amount: {
+                                            value: prod.price.toFixed(2)
+                                        },
+                                        description: prod.title
+                                    }]
+                                });
+                            },
+                            onApprove: async function(data, actions) {
+                                const order = await actions.order.capture();
+                                await recordSale(id, prod.price, order);
+                                alert('Transaction completed!');
+                                // Optionally reload products or profile
+                            }
+                        }).render(`#paypal-button-${productId}`);
+                    }
                 });
             } catch (error) {
                 console.error('Load products error:', error);
+            }
+        }
+        // Record Sale
+        async function recordSale(sellerId, amount, order) {
+            try {
+                const salesCollection = collection(db, `users/${sellerId}/sales`);
+                await addDoc(salesCollection, {
+                    amount: amount,
+                    orderId: order.id,
+                    payerName: order.payer.name.given_name,
+                    timestamp: new Date()
+                });
+
+                const earningsRef = doc(db, `users/${sellerId}/earnings`);
+                await setDoc(earningsRef, {
+                    total: increment(amount)
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error recording sale:', error);
             }
         }
         // ---------- Load User Profile ----------
@@ -726,7 +774,18 @@
             const userActions = isOwnProfile ? `<div class="user-actions"><button onclick="editProfile('${id}')" title="Edit"><i class="bi bi-pencil"></i></button></div>` : '';
             const verifiedBadge = profile.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
             const profileStats = `<div class="profile-stats"><h3>Profile Stats</h3><p>Total Views: ${profile.views || 0}</p></div>`;
+
+            // Get earnings if own profile
+            let earningsBanner = '';
+            if (isOwnProfile) {
+                const earningsRef = doc(db, `users/${id}/earnings`);
+                const earningsSnap = await getDoc(earningsRef);
+                const totalEarnings = earningsSnap.exists() ? earningsSnap.data().total || 0 : 0;
+                earningsBanner = `<div class="earnings-banner">SJPAY Earnings: $${totalEarnings.toFixed(2)}</div>`;
+            }
+
             const html = `
+                ${earningsBanner}
                 <div class="profile-hero" style="background-image: url('${profile.imageUrl}');">
                     <div class="profile-hero-content">
                         ${userActions}
@@ -758,17 +817,17 @@
                     </div>
                     ${profileStats}
                     <div class="products-section mt-4">
-                        
+                        <h3 id="products-header">Products</h3>
                         <div id="products-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
                     </div>
                     <div class="tracks-section mt-4">
-                      
+                        <h3 id="tracks-header">Tracks/Clips</h3>
                         <div id="tracks-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
                     </div>
                 </div>
             `;
             document.getElementById('profile-container').innerHTML = html;
-            await loadUserProducts(id);
+            await loadUserProducts(id, isOwnProfile);
             const spotifyArtistId = getSpotifyArtistId(profile.spotify);
             if (spotifyArtistId) {
                 await loadTracks(spotifyArtistId);
@@ -1004,7 +1063,7 @@
                         });
                         bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
                         addProductForm.reset();
-                        loadUserProducts(currentProfileId);
+                        loadUserProducts(currentProfileId, true);
                     } catch (error) {
                         console.error('Add product error:', error);
                         alert('Failed to add product: ' + error.message);
@@ -1028,72 +1087,6 @@
                     document.getElementById('profile-link-input').value = profileUrl;
                 });
             }
-            // ---------- Search Event Listener ----------
-            const searchInput = document.getElementById('searchInput');
-            const searchType = document.getElementById('searchType');
-            const searchResults = document.getElementById('searchResults');
-            let timeout;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(timeout);
-                timeout = setTimeout(async () => {
-                    const q = searchInput.value.trim();
-                    if (!q) {
-                        searchResults.innerHTML = '';
-                        return;
-                    }
-                    const type = searchType.value;
-                    let results = [];
-                    try {
-                        if (type === 'local') {
-                            results = await searchLocalArtists(q);
-                        } else if (type === 'spotify') {
-                            results = await searchSpotifyArtists(q);
-                        } else if (type === 'kick') {
-                            results = await searchKickGamers(q);
-                        }
-                    } catch (error) {
-                        console.error('Search error:', error);
-                        searchResults.innerHTML = '<p class="text-center text-danger">Error performing search.</p>';
-                        return;
-                    }
-                    searchResults.innerHTML = '';
-                    if (results.length === 0) {
-                        searchResults.innerHTML = '<p class="text-center text-muted">No results found.</p>';
-                        return;
-                    }
-                    results.forEach(result => {
-                        let image, name, link, target = '';
-                        const placeholder = 'https://via.placeholder.com/200x300/141414/ffffff?text=User';
-                        if (type === 'local') {
-                            image = result.imageUrl || placeholder;
-                            name = result.name;
-                            link = `${window.location.pathname}?uid=${result.id}`;
-                        } else if (type === 'spotify') {
-                            image = result.images && result.images[0] ? result.images[0].url : placeholder;
-                            name = result.name;
-                            link = result.external_urls.spotify;
-                            target = ' target="_blank" rel="noopener noreferrer"';
-                        } else if (type === 'kick') {
-                            image = result.profile_pic || result.user?.profile_pic || placeholder;
-                            name = result.name || result.user?.username || result.slug;
-                            link = result.link || `https://kick.com/${result.slug}`;
-                            target = ' target="_blank" rel="noopener noreferrer"';
-                        }
-                        const card = `
-                            <div class="col-md-3">
-                                <div class="card bg-dark border-0 search-result-card">
-                                    <img src="${image}" class="card-img-top" alt="${name}">
-                                    <div class="card-body">
-                                        <h5 class="card-title text-white">${name}</h5>
-                                        <a href="${link}"${target} class="btn btn-secondary">View Profile</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        searchResults.innerHTML += card;
-                    });
-                }, 500);
-            });
         });
     </script>
     <!-- Ad Script -->
@@ -1112,4 +1105,4 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-    </html>
+</html>
