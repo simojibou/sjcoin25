@@ -4,249 +4,1117 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>SJ X N41 - Profile</title>
-
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN&currency=USD"></script>
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS (Netflix-inspired) -->
     <style>
-        :root {
-            --color-red: #e50914;
+        :root{
+            --color-red: #e50914; /* Netflix red */
             --color-white: #ffffff;
-            --color-dark: #141414;
-            --color-dark-light: #221f1f;
-            --color-grey: #8c8c8c;
-            --instagram-blue: #0095f6;
+            --color-dark: #141414; /* Netflix primary dark */
+            --color-dark-light: #221f1f; /* Slightly lighter dark for accents */
+            --color-grey: #8c8c8c; /* For secondary text */
+            --space-unit: 16px; /* Larger spacing for Netflix feel */
+            --space-1: calc(var(--space-unit) * 1);
+            --space-2: calc(var(--space-unit) * 2);
+            --space-3: calc(var(--space-unit) * 3);
+            --instagram-blue: #0095f6; /* Instagram verified blue */
         }
-
-        body {
+        body{
             background: var(--color-dark);
             color: var(--color-white);
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Netflix-like font stack */
             margin: 0;
-            padding-top: 56px;
+            padding-top: 56px; /* Padding for fixed navbar */
             overflow-x: hidden;
         }
-
-        .navbar {
+        .navbar{
             background-color: var(--color-dark) !important;
-            border-bottom: 1px solid #333;
         }
-
-        .navbar-brand {
+        .navbar-brand{
             color: var(--color-red);
-            font-weight: 800;
-            font-size: 2.4rem;
-            letter-spacing: -1.5px;
+            font-weight: bold;
+            font-size: 1.5rem;
         }
-
-        .navbar-brand:hover {
+        .navbar-brand:hover{
             color: var(--color-red);
         }
-
-        .profile-hero {
+        .nav-link{
+            color: var(--color-white) !important;
+            font-weight: 500;
+        }
+        .nav-link:hover{
+            color: var(--color-grey) !important;
+        }
+        .nav-link.active{
+            color: var(--color-white) !important;
+            font-weight: bold;
+        }
+        .profile-hero{
             position: relative;
-            height: 70vh;
+            height: 70vh; /* Taller hero for dramatic Netflix effect */
+            width: 100%;
             background-size: cover;
             background-position: center;
             display: flex;
-            align-items: flex-end;
-            padding: 3rem;
+            align-items: flex-end; /* Align content to bottom like Netflix banners */
+            justify-content: flex-start;
+            text-align: left;
+            margin-bottom: var(--space-3);
+            padding: var(--space-3) var(--space-3) var(--space-2);
         }
-
-        .profile-hero::before {
+        .profile-hero::before{
             content: '';
             position: absolute;
-            inset: 0;
-            background: linear-gradient(to top, rgba(20,20,20,1), rgba(20,20,20,0));
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(20,20,20,0), rgba(20,20,20,1)); /* Netflix fade to black */
             z-index: 1;
         }
-
-        .profile-hero-content {
+        .profile-hero-content{
             position: relative;
             z-index: 2;
-            max-width: 60%;
+            max-width: 50%;
         }
-
-        .profile-hero h1 {
-            font-size: 4.5rem;
+        .profile-hero h1{
+            font-size: 4rem; /* Larger, bold titles */
             font-weight: 700;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
-            margin-bottom: 1rem;
+            letter-spacing: -1px;
+            color: var(--color-white);
+            margin-bottom: var(--space-1);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Subtle shadow for readability */
         }
-
-        .social-links a {
+        .profile-hero .social-links{
+            font-size: 1.5rem;
+        }
+        .profile-bio{
+            max-width: 90%;
+            margin: 0 auto;
+            padding: var(--space-2);
+            background: var(--color-dark-light);
+            border-radius: 4px; /* Minimal rounding like Netflix cards */
+        }
+        .profile-bio h3{
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-1);
+        }
+        .profile-bio p{
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--color-grey); /* Secondary text color */
+        }
+        .profile-stats{
+            max-width: 90%;
+            margin: var(--space-3) auto;
+            padding: var(--space-2);
+            background: var(--color-dark-light);
+            border-radius: 4px;
+        }
+        .profile-stats h3{
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-1);
+        }
+        .profile-stats p{
+            font-size: 1rem;
             color: var(--color-grey);
-            font-size: 1.8rem;
-            margin-right: 1rem;
-            transition: color .3s;
         }
-
-        .social-links a:hover {
-            color: var(--color-red);
+        .user-actions{
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 3;
         }
-
-        .verified-badge {
-            color: var(--instagram-blue);
-            font-size: 0.9em;
-            margin-left: 0.5rem;
-        }
-
-        .user-actions button {
+        .user-actions button{
             background: none;
             border: none;
-            color: white;
-            font-size: 1.8rem;
-            opacity: 0.8;
+            color: var(--color-white);
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.5rem;
         }
-
-        .user-actions button:hover {
+        .user-actions button:hover{
             color: var(--color-red);
-            opacity: 1;
         }
-
-        .earnings-banner {
-            background: linear-gradient(90deg, #930007, #e50914);
-            color: white;
-            padding: 1.2rem;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            border-radius: 8px;
-            max-width: 90%;
-            margin: 2rem auto;
+        .social-links a{
+            color: var(--color-grey);
+            margin-right: 12px;
+            font-size: 1.5rem;
+            transition: color .3s;
         }
-
-        .btn-netflix {
+        .social-links a:hover{
+            color: var(--color-red);
+        }
+        .ad-container-wrapper{
+            display: flex;
+            justify-content: center;
+            margin: var(--space-2) auto;
+        }
+        #ad-container{
+            width: 728px; /* Wider ad for Netflix-like layout */
+            height: 90px;
+            max-width: 100%;
+        }
+        .btn-secondary{
             background-color: var(--color-red);
             border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 4px;
             font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 4px;
         }
-
-        .btn-netflix:hover {
-            background-color: #b20710;
+        .btn-secondary:hover{
+            background-color: #b20710; /* Darker red on hover */
         }
-
-        .product-card, .track-card {
-            min-width: 180px;
-            transition: transform .2s;
+        /* Profile image style */
+        #profile-link img {
+            object-fit: cover;
         }
-
-        .product-card:hover, .track-card:hover {
-            transform: scale(1.08);
+        /* Search results style - Netflix-like cards */
+        .search-result-card {
+            transition: transform 0.2s;
         }
-
-        @media (max-width: 768px) {
-            .profile-hero {
-                height: 60vh;
+        .search-result-card:hover {
+            transform: scale(1.05);
+        }
+        .search-result-card img {
+            aspect-ratio: 2/3; /* Poster-like aspect ratio */
+            object-fit: cover;
+        }
+        .search-result-card .card-body {
+            text-align: center;
+        }
+        /* Products section - Netflix-style horizontal scroll */
+        .products-section .overflow-auto,
+        .tracks-section .overflow-auto {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .products-section .overflow-auto::-webkit-scrollbar,
+        .tracks-section .overflow-auto::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        .products-section .product-card,
+        .tracks-section .track-card {
+            min-width: 150px;
+            max-width: 200px;
+            flex: 0 0 auto;
+        }
+        /* Verified badge style like Instagram */
+        .verified-badge {
+            color: var(--instagram-blue);
+            font-size: 0.8em;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        /* Dropdown menu style */
+        .dropdown-menu {
+            background-color: var(--color-dark-light);
+            border: none;
+        }
+        .dropdown-item {
+            color: var(--color-white);
+        }
+        .dropdown-item:hover {
+            background-color: var(--color-red);
+            color: var(--color-white);
+        }
+        .dropdown-divider {
+            border-top: 1px solid var(--color-grey);
+        }
+        /* Mobile tweaks */
+        @media (max-width: 768px){
+            .profile-hero{
+                height: 50vh;
                 align-items: center;
+                justify-content: center;
                 text-align: center;
             }
-            .profile-hero-content {
+            .profile-hero-content{
                 max-width: 90%;
             }
-            .profile-hero h1 {
-                font-size: 3rem;
+            .profile-hero h1{
+                font-size: 2.5rem;
             }
-            .navbar-brand {
+            .profile-bio{
+                max-width: 95%;
+            }
+            #ad-container{
+                width: 100%;
+                height: auto;
+            }
+        }
+        @media (max-width: 576px){
+            .profile-hero h1{
                 font-size: 2rem;
             }
         }
     </style>
 </head>
 <body>
-
-    <!-- Fixed Netflix-style Navbar -->
+    <!-- Netflix-inspired Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="/">SJ X N41</a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <div class="container">
+            <a class="navbar-brand" href="https://simojibou.github.io/sjcoin25/sjlabel5.html">SJ X N41</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profile-link" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle fs-2" id="profile-icon"></i>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="https://simojibou.github.io/sjcoin25/sjlabel5.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://simojibou.github.io/sjcoin25/sjstore.html">SJSTORE</a>
+                    </li>
+                  
+                   
+                </ul>
+                <ul class="navbar-nav mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-bell"></i></a>
+                    </li>
+                    <li class="nav-item dropdown" id="profile-dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="profile-link" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle" id="profile-icon"></i>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end bg-dark border-0 shadow">
-                            <li id="user-info" style="display:none">
-                                <div class="dropdown-item text-white d-flex align-items-center gap-3">
-                                    <img id="user-pic" src="" class="rounded-circle" width="40" height="40">
-                                    <div>
-                                        <div id="user-name" class="fw-bold"></div>
-                                        <small class="text-muted">View profile</small>
-                                    </div>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profile-link">
+                            <li id="user-info" style="display: none;">
+                                <div class="dropdown-header">
+                                    <img id="user-pic" src="" alt="User" class="rounded-circle me-2" width="30" height="30">
+                                    <span id="user-name"></span>
                                 </div>
                             </li>
-                            <li id="profile-item" style="display:none"><a class="dropdown-item text-white" href="#">My Profile</a></li>
-                            <li id="edit-item" style="display:none"><a class="dropdown-item text-white" href="#" onclick="editProfile(currentUser?.uid)">Edit Profile</a></li>
-                            <li id="logout-divider" style="display:none"><hr class="dropdown-divider"></li>
-                            <li id="logout-item" style="display:none"><a class="dropdown-item text-white" href="#" onclick="logout()">Logout</a></li>
-                            <li id="login-item"><a class="dropdown-item text-white" href="#" onclick="loginWithGoogle()">Login with Google</a></li>
+                            <li id="profile-item" style="display: none;"><a class="dropdown-item" href="#">Profile</a></li>
+                            <li id="edit-item" style="display: none;"><a class="dropdown-item" href="#" onclick="editProfile(currentUser.uid)">Edit Profile</a></li>
+                            <li style="display: none;" id="logout-divider"><hr class="dropdown-divider"></li>
+                            <li id="logout-item" style="display: none;"><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
+                            <li id="login-item"><a class="dropdown-item" href="#" onclick="loginWithGoogle()">Login with Google</a></li>
                         </ul>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
-
-    <!-- Modals (unchanged except minor class updates for dark theme) -->
-    <!-- Edit Modal -->
-    <div class="modal fade" id="editModal" tabindex="-1">
+    <!-- Search Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark text-white">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title">Edit Profile</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalLabel">Search Artists</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="searchInput" class="form-control bg-dark text-white" placeholder="Search for artists...">
+                    <select id="searchType" class="form-select bg-dark text-white mt-2">
+                        <option value="local">Local Artists</option>
+                        <option value="spotify">Spotify Artists</option>
+                        <option value="kick">Kick Gamers</option>
+                    </select>
+                    <div id="searchResults" class="row mt-3 gy-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editForm">
-                        <!-- all your input fields exactly as before -->
-                        <!-- ... (kept identical) ... -->
-                        <button type="submit" class="btn btn-netflix mt-3">Save Changes</button>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control bg-dark text-white" id="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control bg-dark text-white" id="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="imageUrl" class="form-label">Image URL (current)</label>
+                            <input type="url" class="form-control bg-dark text-white" id="imageUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label for="imageFile" class="form-label">Upload New Image from Device (optional)</label>
+                            <input type="file" class="form-control bg-dark text-white" id="imageFile" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label for="instagram" class="form-label">Instagram</label>
+                            <input type="url" class="form-control bg-dark text-white" id="instagram">
+                        </div>
+                        <div class="mb-3">
+                            <label for="spotify" class="form-label">Spotify</label>
+                            <input type="url" class="form-control bg-dark text-white" id="spotify">
+                        </div>
+                        <div class="mb-3">
+                            <label for="kick" class="form-label">Kick</label>
+                            <input type="url" class="form-control bg-dark text-white" id="kick">
+                        </div>
+                        <div class="mb-3">
+                            <label for="tiktok" class="form-label">TikTok</label>
+                            <input type="url" class="form-control bg-dark text-white" id="tiktok">
+                        </div>
+                        <div class="mb-3">
+                            <label for="youtube" class="form-label">YouTube</label>
+                            <input type="url" class="form-control bg-dark text-white" id="youtube">
+                        </div>
+                        <div class="mb-3">
+                            <label for="googlePlay" class="form-label">Google Play</label>
+                            <input type="url" class="form-control bg-dark text-white" id="googlePlay">
+                        </div>
+                        <div class="mb-3">
+                            <label for="appleMusic" class="form-label">Apple Music</label>
+                            <input type="url" class="form-control bg-dark text-white" id="appleMusic">
+                        </div>
+                        <div class="mb-3">
+                            <label for="personalWebsite" class="form-label">Personal Website</label>
+                            <input type="url" class="form-control bg-dark text-white" id="personalWebsite">
+                        </div>
+                        <div class="mb-3">
+                            <label for="x" class="form-label">X (Twitter)</label>
+                            <input type="url" class="form-control bg-dark text-white" id="x">
+                        </div>
+                        <div class="mb-3">
+                            <label for="snapchat" class="form-label">Snapchat</label>
+                            <input type="url" class="form-control bg-dark text-white" id="snapchat">
+                        </div>
+                        <div class="mb-3">
+                            <label for="whatsapp" class="form-label">WhatsApp</label>
+                            <input type="url" class="form-control bg-dark text-white" id="whatsapp">
+                        </div>
+                        <div class="mb-3">
+                            <label for="facebook" class="form-label">Facebook</label>
+                            <input type="url" class="form-control bg-dark text-white" id="facebook">
+                        </div>
+                        <div class="mb-3">
+                            <label for="soundcloud" class="form-label">SoundCloud</label>
+                            <input type="url" class="form-control bg-dark text-white" id="soundcloud">
+                        </div>
+                        <div class="mb-3">
+                            <label for="appstore" class="form-label">App Store</label>
+                            <input type="url" class="form-control bg-dark text-white" id="appstore">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="verified">
+                            <label class="form-check-label" for="verified">Verified Account</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Add Product Modal & Share Modal unchanged (only class updates for consistency) -->
-
-    <!-- Main container -->
-    <div id="profile-container" class="container-fluid p-0"></div>
-
-    <!-- QR Code Lib -->
+    <!-- Add Product Modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProductForm">
+                        <div class="mb-3">
+                            <label for="productTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control bg-dark text-white" id="productTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productDesc" class="form-label">Short Description</label>
+                            <textarea class="form-control bg-dark text-white" id="productDesc" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPrice" class="form-label">Price ($)</label>
+                            <input type="number" class="form-control bg-dark text-white" id="productPrice" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPic" class="form-label">Upload Picture from Device</label>
+                            <input type="file" class="form-control bg-dark text-white" id="productPic" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Product</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Share Profile Modal -->
+    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shareModalLabel">Share Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="qr-code" class="d-inline-block mb-3"></div>
+                    <p>Scan the QR code to share this profile</p>
+                    <input type="text" id="profile-link-input" class="form-control bg-dark text-white mt-3" readonly>
+                    <button class="btn btn-secondary mt-2" onclick="copyLink()">Copy Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Main Content -->
+    <div id="profile-container" class="container-fluid p-0"> <!-- Full-width for Netflix feel -->
+        <!-- Profile content will be injected here -->
+    </div>
+    <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <!-- Your entire Firebase + PayPal + Spotify + Kick script (100% unchanged, only one tiny safety addition: currentUser?.uid) -->
+    <!-- Firebase SDKs (Modular) -->
     <script type="module">
-        // EXACTLY the same script you posted, with only this tiny safe-guard added in the dropdown:
-        // onclick="editProfile(currentUser?.uid)"
-        // Everything else is identical to your original code.
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
-        const firebaseConfig = { /* your config */ };
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, collection, query, getDocs, deleteDoc, addDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-storage.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const storage = getStorage(app);
-
-        // ... ALL YOUR ORIGINAL JAVASCRIPT BELOW THIS LINE (unchanged) ...
-        // Only change: in the dropdown menu edit link I used currentUser?.uid instead of currentUser.uid to prevent errors when not logged in
+        let currentUser = null;
+        let userId = null;
+        let currentProfile = null;
+        let currentProfileId = null;
+        // Spotify Credentials - Replace with your own from developer.spotify.com
+        // WARNING: Exposing clientSecret in client-side code is insecure for production use. 
+        // Use a backend server to handle token requests in a real app.
+        const spotifyClientId = '2e6b3a5e190c4e918bf4650bceac9af4';
+        const spotifyClientSecret = '4d0370f7ea0148adb056c22fddd03341';
+        // ---------- Helper ----------
+        function getSpotifyArtistId(url) {
+            if (!url) return null;
+            const match = url.match(/artist\/([a-zA-Z0-9]+)/);
+            return match ? match[1] : null;
+        }
+        async function getSpotifyToken() {
+            const response = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + btoa(spotifyClientId + ':' + spotifyClientSecret)
+                },
+                body: 'grant_type=client_credentials'
+            });
+            if (!response.ok) {
+                throw new Error('Failed to get Spotify token');
+            }
+            const data = await response.json();
+            return data.access_token;
+        }
+        async function getArtistAlbums(spotifyArtistId, token) {
+            let albums = [];
+            let url = `https://api.spotify.com/v1/artists/${spotifyArtistId}/albums?include_groups=album,single&market=US&limit=50`;
+            while (url) {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to fetch albums');
+                }
+                const data = await response.json();
+                albums = albums.concat(data.items);
+                url = data.next;
+            }
+            return albums;
+        }
+        async function getAlbumTracks(albumId, token) {
+            let tracks = [];
+            let url = `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`;
+            while (url) {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to fetch tracks');
+                }
+                const data = await response.json();
+                tracks = tracks.concat(data.items);
+                url = data.next;
+            }
+            return tracks;
+        }
+        async function getAllArtistTracks(spotifyArtistId, token) {
+            const albums = await getArtistAlbums(spotifyArtistId, token);
+            let allTracks = [];
+            for (const album of albums) {
+                const tracks = await getAlbumTracks(album.id, token);
+                tracks.forEach(track => {
+                    track.album = {
+                        name: album.name,
+                        images: album.images
+                    };
+                });
+                allTracks = allTracks.concat(tracks);
+            }
+            // Deduplicate by track ID
+            const uniqueTracks = new Map();
+            allTracks.forEach(track => {
+                if (!uniqueTracks.has(track.id)) {
+                    uniqueTracks.set(track.id, track);
+                }
+            });
+            return Array.from(uniqueTracks.values());
+        }
+        // ---------- Load Tracks from Spotify ----------
+        async function loadTracks(spotifyArtistId) {
+            const tracksContainer = document.getElementById('tracks-row');
+            if (!tracksContainer) return;
+            tracksContainer.innerHTML = '';
+            if (!spotifyArtistId) {
+                tracksContainer.innerHTML = '<p class="text-center text-muted">No Spotify profile linked.</p>';
+                return;
+            }
+            try {
+                const token = await getSpotifyToken();
+                const tracks = await getAllArtistTracks(spotifyArtistId, token);
+                if (tracks.length === 0) {
+                    tracksContainer.innerHTML = '<p class="text-center text-muted">No tracks found on Spotify.</p>';
+                    return;
+                }
+                tracks.forEach(track => {
+                    const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/200x200/141414/ffffff?text=Track';
+                    const card = `
+                        <div class="track-card search-result-card">
+                            <div class="card bg-dark border-0">
+                                <img src="${imageUrl}" class="card-img-top" alt="${track.name}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-white">${track.name}</h6>
+                                    <p class="text-muted small">${track.album.name}</p>
+                                    <a href="${track.external_urls.spotify}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Listen on Spotify</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    tracksContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Spotify fetch error:', error);
+                tracksContainer.innerHTML = '<p class="text-center text-danger">Error loading tracks from Spotify. Check console for details.</p>';
+            }
+        }
+        // ---------- Load Clips from Kick ----------
+        async function loadKickClips(slug) {
+            const tracksContainer = document.getElementById('tracks-row');
+            if (!tracksContainer) return;
+            tracksContainer.innerHTML = '';
+            try {
+                const response = await fetch(`https://kick.com/api/v2/channels/${slug}/clips?limit=20`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to fetch clips');
+                }
+                const data = await response.json();
+                const clips = data.clips || data.data || []; // Assuming structure
+                if (clips.length === 0) {
+                    tracksContainer.innerHTML = '<p class="text-center text-muted">No clips found on Kick.</p>';
+                    return;
+                }
+                clips.forEach(clip => {
+                    const imageUrl = clip.thumbnail || clip.thumbnail_url || 'https://via.placeholder.com/200x200/141414/ffffff?text=Clip';
+                    const card = `
+                        <div class="track-card search-result-card">
+                            <div class="card bg-dark border-0">
+                                <img src="${imageUrl}" class="card-img-top" alt="${clip.title}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-white">${clip.title}</h6>
+                                    <p class="text-muted small">${clip.category ? clip.category.name : ''}</p>
+                                    <a href="${clip.url || clip.video_url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Watch on Kick</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    tracksContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Kick clips fetch error:', error);
+                tracksContainer.innerHTML = '<p class="text-center text-danger">Error loading clips from Kick.</p>';
+            }
+        }
+        // ---------- Load User Products ----------
+        async function loadUserProducts(id) {
+            const productsContainer = document.getElementById('products-row');
+            if (!productsContainer) return;
+            productsContainer.innerHTML = '';
+            const q = query(collection(db, `users/${id}/products`));
+            try {
+                const snapshot = await getDocs(q);
+                if (snapshot.empty) {
+                    productsContainer.innerHTML = '<p class="text-center text-muted">No products available.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const prod = doc.data();
+                    const card = `
+                        <div class="product-card search-result-card">
+                            <div class="card bg-dark border-0">
+                                <img src="${prod.picUrl || 'https://via.placeholder.com/200x300/141414/ffffff?text=Product'}" class="card-img-top" alt="${prod.title}">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-white">${prod.title}</h6>
+                                    <p class="text-muted small">${prod.description || ''}</p>
+                                    <p class="text-white fw-bold">$${prod.price.toFixed(2)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    productsContainer.innerHTML += card;
+                });
+            } catch (error) {
+                console.error('Load products error:', error);
+            }
+        }
+        // ---------- Load User Profile ----------
+        async function loadUserProfile(id) {
+            const userRef = doc(db, 'users', id);
+            let snap = await getDoc(userRef);
+            const isOwnProfile = currentUser && currentUser.uid === id;
+            if (!snap.exists()) {
+                if (isOwnProfile) {
+                    // Create default profile if not exists and it's own
+                    const defaultProfile = {
+                        name: currentUser.displayName || 'User',
+                        description: '',
+                        imageUrl: currentUser.photoURL || 'https://via.placeholder.com/1920x1080/141414/ffffff?text=Profile+Photo',
+                        instagram: '',
+                        spotify: '',
+                        kick: '',
+                        tiktok: '',
+                        youtube: '',
+                        googlePlay: '',
+                        appleMusic: '',
+                        personalWebsite: '',
+                        x: '',
+                        snapchat: '',
+                        whatsapp: '',
+                        facebook: '',
+                        soundcloud: '',
+                        appstore: '',
+                        verified: false,
+                        views: 0
+                    };
+                    await setDoc(userRef, {
+                        ...defaultProfile,
+                        nameLower: defaultProfile.name.toLowerCase()
+                    });
+                    snap = await getDoc(userRef);
+                } else {
+                    document.getElementById('profile-container').innerHTML = '<h2 class="text-center">Profile not found</h2>';
+                    return;
+                }
+            }
+            let profile = snap.data();
+            // Increment views
+            try {
+                await updateDoc(userRef, { views: increment(1) });
+                const updatedSnap = await getDoc(userRef);
+                profile = updatedSnap.data();
+            } catch (e) {
+                console.error('Failed to increment views:', e);
+            }
+            currentProfile = profile;
+            currentProfileId = id;
+            const userActions = isOwnProfile ? `<div class="user-actions"><button onclick="editProfile('${id}')" title="Edit"><i class="bi bi-pencil"></i></button></div>` : '';
+            const verifiedBadge = profile.verified ? '<i class="bi bi-check-circle-fill verified-badge"></i>' : '';
+            const profileStats = `<div class="profile-stats"><h3>Profile Stats</h3><p>Total Views: ${profile.views || 0}</p></div>`;
+            const html = `
+                <div class="profile-hero" style="background-image: url('${profile.imageUrl}');">
+                    <div class="profile-hero-content">
+                        ${userActions}
+                        <h1>${profile.name}${verifiedBadge}</h1>
+                        <div class="social-links">
+                            ${profile.instagram ? `<a href="${profile.instagram}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>` : ''}
+                            ${profile.spotify ? `<a href="${profile.spotify}" target="_blank" rel="noopener noreferrer"><i class="bi bi-spotify"></i></a>` : ''}
+                            ${profile.kick ? `<a href="${profile.kick}" target="_blank" rel="noopener noreferrer"><i class="bi bi-joystick"></i></a>` : ''}
+                            ${profile.tiktok ? `<a href="${profile.tiktok}" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>` : ''}
+                            ${profile.youtube ? `<a href="${profile.youtube}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>` : ''}
+                            ${profile.googlePlay ? `<a href="${profile.googlePlay}" target="_blank" rel="noopener noreferrer"><i class="bi bi-google"></i></a>` : ''}
+                            ${profile.appleMusic ? `<a href="${profile.appleMusic}" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple"></i></a>` : ''}
+                            ${profile.personalWebsite ? `<a href="${profile.personalWebsite}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe"></i></a>` : ''}
+                            ${profile.x ? `<a href="${profile.x}" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter"></i></a>` : ''}
+                            ${profile.snapchat ? `<a href="${profile.snapchat}" target="_blank" rel="noopener noreferrer"><i class="bi bi-snapchat"></i></a>` : ''}
+                            ${profile.whatsapp ? `<a href="${profile.whatsapp}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i></a>` : ''}
+                            ${profile.facebook ? `<a href="${profile.facebook}" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>` : ''}
+                            ${profile.soundcloud ? `<a href="${profile.soundcloud}" target="_blank" rel="noopener noreferrer"><i class="bi bi-soundwave"></i></a>` : ''}
+                            ${profile.appstore ? `<a href="${profile.appstore}" target="_blank" rel="noopener noreferrer"><i class="bi bi-app"></i></a>` : ''}
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="bi bi-qr-code-scan"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="ad-container-wrapper"><div id="ad-container"></div></div>
+                <div class="container">
+                    <div class="profile-bio">
+                        <h3>Biography</h3>
+                        <p>${profile.description || 'Tell us about yourself.'}</p>
+                    </div>
+                    ${profileStats}
+                    <div class="products-section mt-4">
+                        <h3 id="products-header">Products</h3>
+                        <div id="products-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
+                    </div>
+                    <div class="tracks-section mt-4">
+                        <h3 id="tracks-header">Tracks/Clips</h3>
+                        <div id="tracks-row" class="d-flex flex-nowrap overflow-auto gap-3 pb-3"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('profile-container').innerHTML = html;
+            await loadUserProducts(id);
+            const spotifyArtistId = getSpotifyArtistId(profile.spotify);
+            if (spotifyArtistId) {
+                await loadTracks(spotifyArtistId);
+            } else if (profile.kick) {
+                const kickSlug = profile.kick.match(/\/([^/]+)$/) ? profile.kick.match(/\/([^/]+)$/)[1] : '';
+                if (kickSlug) {
+                    await loadKickClips(kickSlug);
+                }
+            }
+            if (isOwnProfile) {
+                const header = document.getElementById('products-header');
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-sm btn-secondary ms-2';
+                addBtn.textContent = 'Add Product';
+                addBtn.onclick = () => {
+                    const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+                    modal.show();
+                };
+                header.appendChild(addBtn);
+            }
+        }
+        // ---------- Auth: For User Profile ----------
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileUid = urlParams.get('uid');
+        onAuthStateChanged(auth, user => {
+            currentUser = user;
+            updateProfileUI(user);
+            if (profileUid) {
+                loadUserProfile(profileUid);
+            } else if (user) {
+                loadUserProfile(user.uid);
+            } else {
+                document.getElementById('profile-container').innerHTML = '<h2 class="text-center">Please log in to view your profile</h2>';
+            }
+        });
+        // ---------- Update Profile UI ----------
+        function updateProfileUI(user) {
+            const profileLink = document.getElementById('profile-link');
+            const profileIcon = document.getElementById('profile-icon');
+            const userInfo = document.getElementById('user-info');
+            const profileItem = document.getElementById('profile-item');
+            const editItem = document.getElementById('edit-item');
+            const logoutDivider = document.getElementById('logout-divider');
+            const logoutItem = document.getElementById('logout-item');
+            const loginItem = document.getElementById('login-item');
+            const userPic = document.getElementById('user-pic');
+            const userName = document.getElementById('user-name');
+            if (user) {
+                userInfo.style.display = 'block';
+                userPic.src = user.photoURL || 'https://via.placeholder.com/30';
+                userName.textContent = user.displayName || 'User';
+                profileItem.style.display = 'block';
+                profileItem.querySelector('a').href = `${window.location.pathname}?uid=${user.uid}`;
+                editItem.style.display = 'block';
+                logoutDivider.style.display = 'block';
+                logoutItem.style.display = 'block';
+                loginItem.style.display = 'none';
+                profileIcon.classList.add('d-none');
+                let img = document.getElementById('profile-pic');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.id = 'profile-pic';
+                    img.classList.add('rounded-circle');
+                    img.width = 30;
+                    img.height = 30;
+                    img.style.objectFit = 'cover';
+                    profileLink.insertBefore(img, profileIcon);
+                }
+                img.src = user.photoURL || 'https://via.placeholder.com/30';
+                img.alt = 'Profile';
+            } else {
+                userInfo.style.display = 'none';
+                profileItem.style.display = 'none';
+                editItem.style.display = 'none';
+                logoutDivider.style.display = 'none';
+                logoutItem.style.display = 'none';
+                loginItem.style.display = 'block';
+                const profilePic = document.getElementById('profile-pic');
+                if (profilePic) profilePic.remove();
+                profileIcon.classList.remove('d-none');
+            }
+        }
+        // ---------- Login and Logout ----------
+        async function loginWithGoogle() {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error('Login error:', error);
+            }
+        }
+        async function logout() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+        // ---------- User Button Handlers ----------
+        window.editProfile = (id) => {
+            userId = id;
+            if (!currentProfile) return;
+            document.getElementById('editModalLabel').textContent = 'Edit Profile';
+            document.getElementById('name').value = currentProfile.name || '';
+            document.getElementById('description').value = currentProfile.description || '';
+            document.getElementById('imageUrl').value = currentProfile.imageUrl || '';
+            document.getElementById('instagram').value = currentProfile.instagram || '';
+            document.getElementById('spotify').value = currentProfile.spotify || '';
+            document.getElementById('kick').value = currentProfile.kick || '';
+            document.getElementById('tiktok').value = currentProfile.tiktok || '';
+            document.getElementById('youtube').value = currentProfile.youtube || '';
+            document.getElementById('googlePlay').value = currentProfile.googlePlay || '';
+            document.getElementById('appleMusic').value = currentProfile.appleMusic || '';
+            document.getElementById('personalWebsite').value = currentProfile.personalWebsite || '';
+            document.getElementById('x').value = currentProfile.x || '';
+            document.getElementById('snapchat').value = currentProfile.snapchat || '';
+            document.getElementById('whatsapp').value = currentProfile.whatsapp || '';
+            document.getElementById('facebook').value = currentProfile.facebook || '';
+            document.getElementById('soundcloud').value = currentProfile.soundcloud || '';
+            document.getElementById('appstore').value = currentProfile.appstore || '';
+            document.getElementById('verified').checked = currentProfile.verified || false;
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
+        };
+        window.loginWithGoogle = loginWithGoogle;
+        window.logout = logout;
+        // ---------- Copy Link Function ----------
+        window.copyLink = () => {
+            const input = document.getElementById('profile-link-input');
+            input.select();
+            document.execCommand('copy');
+            alert('Link copied to clipboard!');
+        };
+        // ---------- Search Functions ----------
+        async function searchLocalArtists(searchQuery) {
+            const lowerQuery = searchQuery.toLowerCase();
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('nameLower', '>=', lowerQuery), where('nameLower', '<=', lowerQuery + '\uf8ff'));
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        }
+        async function searchSpotifyArtists(searchQuery) {
+            const token = await getSpotifyToken();
+            const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=artist&limit=10`, {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            const data = await response.json();
+            return data.artists ? data.artists.items : [];
+        }
+        async function searchKickGamers(searchQuery) {
+            const response = await fetch(`https://kick.com/api/search?query=${encodeURIComponent(searchQuery)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
+            const data = await response.json();
+            return data.channels || data.data?.channels || [];
+        }
+        // ---------- Edit Form Submit ----------
+        document.addEventListener('DOMContentLoaded', () => {
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    let updatedData = {
+                        name: document.getElementById('name').value,
+                        description: document.getElementById('description').value,
+                        instagram: document.getElementById('instagram').value,
+                        spotify: document.getElementById('spotify').value,
+                        kick: document.getElementById('kick').value,
+                        tiktok: document.getElementById('tiktok').value,
+                        youtube: document.getElementById('youtube').value,
+                        googlePlay: document.getElementById('googlePlay').value,
+                        appleMusic: document.getElementById('appleMusic').value,
+                        personalWebsite: document.getElementById('personalWebsite').value,
+                        x: document.getElementById('x').value,
+                        snapchat: document.getElementById('snapchat').value,
+                        whatsapp: document.getElementById('whatsapp').value,
+                        facebook: document.getElementById('facebook').value,
+                        soundcloud: document.getElementById('soundcloud').value,
+                        appstore: document.getElementById('appstore').value,
+                        verified: document.getElementById('verified').checked
+                    };
+                    updatedData.nameLower = updatedData.name.toLowerCase();
+                    const imageFile = document.getElementById('imageFile').files[0];
+                    if (imageFile) {
+                        try {
+                            const storageRef = ref(storage, `users/${userId}/${imageFile.name}`);
+                            await uploadBytes(storageRef, imageFile);
+                            updatedData.imageUrl = await getDownloadURL(storageRef);
+                        } catch (error) {
+                            console.error('Image upload error:', error);
+                            alert('Failed to upload image: ' + error.message);
+                            return;
+                        }
+                    } else {
+                        updatedData.imageUrl = document.getElementById('imageUrl').value;
+                    }
+                    try {
+                        await updateDoc(doc(db, 'users', userId), updatedData);
+                        loadUserProfile(userId);
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    } catch (error) {
+                        console.error('Save error:', error);
+                        alert('Failed to save profile: ' + error.message);
+                    }
+                });
+            }
+            const addProductForm = document.getElementById('addProductForm');
+            if (addProductForm) {
+                addProductForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const title = document.getElementById('productTitle').value;
+                    const description = document.getElementById('productDesc').value;
+                    const price = parseFloat(document.getElementById('productPrice').value);
+                    const picFile = document.getElementById('productPic').files[0];
+                    if (!picFile) {
+                        alert('Please upload a picture.');
+                        return;
+                    }
+                    try {
+                        const storageRef = ref(storage, `users/${currentProfileId}/products/${picFile.name}`);
+                        await uploadBytes(storageRef, picFile);
+                        const picUrl = await getDownloadURL(storageRef);
+                        await addDoc(collection(db, `users/${currentProfileId}/products`), {
+                            title,
+                            description,
+                            price,
+                            picUrl
+                        });
+                        bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+                        addProductForm.reset();
+                        loadUserProducts(currentProfileId);
+                    } catch (error) {
+                        console.error('Add product error:', error);
+                        alert('Failed to add product: ' + error.message);
+                    }
+                });
+            }
+            // ---------- Share Modal QR Generation ----------
+            const shareModal = document.getElementById('shareModal');
+            if (shareModal) {
+                shareModal.addEventListener('shown.bs.modal', () => {
+                    const qrContainer = document.getElementById('qr-code');
+                    qrContainer.innerHTML = '';
+                    const profileUrl = `${window.location.origin}${window.location.pathname}?uid=${currentProfileId}`;
+                    new QRCode(qrContainer, {
+                        text: profileUrl,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#ffffff",
+                        colorLight: "#141414"
+                    });
+                    document.getElementById('profile-link-input').value = profileUrl;
+                });
+            }
+            // ---------- Search Event Listener ----------
+            const searchInput = document.getElementById('searchInput');
+            const searchType = document.getElementById('searchType');
+            const searchResults = document.getElementById('searchResults');
+            let timeout;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(async () => {
+                    const q = searchInput.value.trim();
+                    if (!q) {
+                        searchResults.innerHTML = '';
+                        return;
+                    }
+                    const type = searchType.value;
+                    let results = [];
+                    try {
+                        if (type === 'local') {
+                            results = await searchLocalArtists(q);
+                        } else if (type === 'spotify') {
+                            results = await searchSpotifyArtists(q);
+                        } else if (type === 'kick') {
+                            results = await searchKickGamers(q);
+                        }
+                    } catch (error) {
+                        console.error('Search error:', error);
+                        searchResults.innerHTML = '<p class="text-center text-danger">Error performing search.</p>';
+                        return;
+                    }
+                    searchResults.innerHTML = '';
+                    if (results.length === 0) {
+                        searchResults.innerHTML = '<p class="text-center text-muted">No results found.</p>';
+                        return;
+                    }
+                    results.forEach(result => {
+                        let image, name, link, target = '';
+                        const placeholder = 'https://via.placeholder.com/200x300/141414/ffffff?text=User';
+                        if (type === 'local') {
+                            image = result.imageUrl || placeholder;
+                            name = result.name;
+                            link = `${window.location.pathname}?uid=${result.id}`;
+                        } else if (type === 'spotify') {
+                            image = result.images && result.images[0] ? result.images[0].url : placeholder;
+                            name = result.name;
+                            link = result.external_urls.spotify;
+                            target = ' target="_blank" rel="noopener noreferrer"';
+                        } else if (type === 'kick') {
+                            image = result.profile_pic || result.user?.profile_pic || placeholder;
+                            name = result.name || result.user?.username || result.slug;
+                            link = result.link || `https://kick.com/${result.slug}`;
+                            target = ' target="_blank" rel="noopener noreferrer"';
+                        }
+                        const card = `
+                            <div class="col-md-3">
+                                <div class="card bg-dark border-0 search-result-card">
+                                    <img src="${image}" class="card-img-top" alt="${name}">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-white">${name}</h5>
+                                        <a href="${link}"${target} class="btn btn-secondary">View Profile</a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        searchResults.innerHTML += card;
+                    });
+                }, 500);
+            });
+        });
     </script>
-
-    <!-- Ad script unchanged -->
+    <!-- Ad Script -->
     <script type="text/javascript">
         atOptions = { 'key' : '6819d716a99f588efc7f8dacfbc474bb', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
         document.addEventListener('DOMContentLoaded', () => {
@@ -259,8 +1127,7 @@
             }
         });
     </script>
-
-    <!-- Latest stable Bootstrap 5 bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+    </html>
