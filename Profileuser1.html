@@ -390,7 +390,6 @@
         import { getFirestore, doc, getDoc, updateDoc, collection, query, getDocs, addDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         // --- Configuration ---
-        // Uses environment variables if available (Preview Environment), otherwise uses provided fallback
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -420,8 +419,12 @@
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
             } else {
-               // Optional: Sign in anonymously if you want public reads to always be authenticated
-               // await signInAnonymously(auth);
+               // Fallback to Anonymous auth so PUBLIC data can be read
+               try {
+                   await signInAnonymously(auth);
+               } catch (error) {
+                   console.error("Anonymous auth failed", error);
+               }
             }
         };
         initAuth();
@@ -430,18 +433,14 @@
             currentUser = user;
             updateNavUI(user);
             
-            // Routing Logic: Check URL for specific user ID
-            // NOTE: In sandbox environments, window.location might be blob: or restricted.
-            // We access what we can, but avoid pushState if it throws SecurityError.
             const urlParams = new URLSearchParams(window.location.search);
             const urlUid = urlParams.get('uid');
 
             if (urlUid) {
                 // 1. If URL has a UID, load that profile specifically
                 await loadProfile(urlUid);
-            } else if (user) {
-                // 2. If no URL UID but User is Logged In, go to their own profile
-                // We REMOVE pushState here because it causes SecurityErrors in sandbox/blob environments
+            } else if (user && !user.isAnonymous) {
+                // 2. If User is Logged In (and not anon), go to their own profile
                 await loadProfile(user.uid);
             } else {
                 // 3. Not logged in, no specific link -> Demo
@@ -457,16 +456,12 @@
             const editItem = document.getElementById('edit-item');
             const addProdItem = document.getElementById('add-product-item');
             
-            if (user) {
+            // Only show "Logged In" UI if user is NOT anonymous
+            if (user && !user.isAnonymous) {
                 loginItem.style.display = 'none';
                 logoutItem.style.display = 'block';
                 logoutDivider.style.display = 'block';
                 userInfo.style.display = 'block';
-                
-                // Show Edit/Add buttons only if we are viewing OUR OWN profile
-                // We check this dynamically in renderProfile, but the Navbar "Edit Profile" 
-                // usually allows editing *your* profile regardless of where you are.
-                // Let's allow editing your own profile always from navbar.
                 editItem.style.display = 'block';
                 addProdItem.style.display = 'block';
                 
@@ -487,7 +482,6 @@
             const provider = new GoogleAuthProvider();
             try {
                 await signInWithPopup(auth, provider);
-                // Page reload is often handled by the auth state change, but sometimes needed to clear URL params if switching users
             } catch (e) {
                 console.error(e);
                 alert("Login failed: " + e.message);
@@ -496,22 +490,22 @@
 
         document.getElementById('btn-logout').addEventListener('click', async () => {
             await signOut(auth);
-            // Reload to clear state
             window.location.reload();
         });
 
         document.getElementById('btn-edit-profile').addEventListener('click', async () => {
-            if (!currentUser) return;
+            if (!currentUser || currentUser.isAnonymous) return;
             
-            // Fetch *My* latest data to populate the form, even if I'm viewing someone else
+            // Load MY data for editing, even if viewing someone else
             let myData = currentProfileData;
             if (viewingProfileId !== currentUser.uid) {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'main');
+                // Use PUBLIC path for profile data
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid);
                 const snap = await getDoc(docRef);
                 if (snap.exists()) myData = snap.data();
             }
 
-            if(!myData) return; // Should have data if logged in due to auto-create logic
+            if(!myData) return; 
 
             document.getElementById('edit-name').value = myData.name || "";
             document.getElementById('edit-desc').value = myData.description || "";
@@ -527,7 +521,7 @@
 
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) return;
+            if (!currentUser || currentUser.isAnonymous) return;
             
             const newData = {
                 name: document.getElementById('edit-name').value,
@@ -541,50 +535,51 @@
                 updatedAt: new Date().toISOString()
             };
 
-            // Save to Firestore
             try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'main'), newData);
+                // SAVE TO PUBLIC PATH
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid), newData);
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
                 modal.hide();
                 
-                // If we are currently looking at our own profile, reload it to see changes
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlUid = urlParams.get('uid');
                 
                 if (!urlUid || urlUid === currentUser.uid) {
                     loadProfile(currentUser.uid);
                 } else {
-                    alert("Profile updated! Return to your profile to see changes.");
+                    alert("Profile updated!");
                 }
             } catch(err) {
                 console.error("Error saving profile", err);
-                alert("Error saving profile.");
+                alert("Error saving profile: " + err.message);
             }
         });
 
         document.getElementById('addProductForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) return;
+            if (!currentUser || currentUser.isAnonymous) return;
 
             const newProd = {
                 title: document.getElementById('prod-title').value,
                 price: parseFloat(document.getElementById('prod-price').value),
                 image: document.getElementById('prod-img').value,
+                uid: currentUser.uid, // Important: Tag with owner UID
                 createdAt: new Date().toISOString()
             };
 
             try {
-                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'products'), newProd);
+                // SAVE TO PUBLIC PRODUCTS COLLECTION
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), newProd);
                 document.getElementById('addProductForm').reset();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
                 modal.hide();
                 
-                // Refresh products if viewing own profile
                 if (viewingProfileId === currentUser.uid) {
                     loadUserProducts(currentUser.uid);
                 }
             } catch(err) {
                 console.error("Error adding product", err);
+                alert("Error adding product");
             }
         });
 
@@ -594,7 +589,6 @@
             viewingProfileId = uid;
             const container = document.getElementById('profile-container');
             
-            // Show loading state
             container.innerHTML = `
                 <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
                     <div class="spinner-border text-danger" role="status"></div>
@@ -602,7 +596,8 @@
             `;
 
             try {
-                const docRef = doc(db, 'artifacts', appId, 'users', uid, 'profile', 'main');
+                // LOAD FROM PUBLIC PATH
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', uid);
                 const docSnap = await getDoc(docRef);
                 
                 if (docSnap.exists()) {
@@ -612,10 +607,8 @@
                     if (currentProfileData.spotifyId) loadTracks(currentProfileData.spotifyId);
                     if (currentProfileData.kickSlug) loadKickClips(currentProfileData.kickSlug);
                 } else {
-                    // Profile Document does NOT exist
-                    // Check if the viewer is the owner (First time login)
-                    if (currentUser && currentUser.uid === uid) {
-                        // AUTO-CREATE PROFILE using Google Data
+                    // Profile doesn't exist. Check if current user is the owner (first time login)
+                    if (currentUser && !currentUser.isAnonymous && currentUser.uid === uid) {
                         const autoProfile = {
                             name: currentUser.displayName || "New Artist",
                             imageUrl: currentUser.photoURL || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&w=1600&q=80",
@@ -625,12 +618,12 @@
                             createdAt: new Date().toISOString()
                         };
                         
+                        // Create in PUBLIC path
                         await setDoc(docRef, autoProfile);
                         currentProfileData = autoProfile;
                         renderProfile(autoProfile);
-                        loadUserProducts(uid); // Will be empty
+                        loadUserProducts(uid);
                     } else {
-                        // Viewing a non-existent profile of someone else
                         container.innerHTML = `
                             <div class="d-flex flex-column justify-content-center align-items-center" style="height: 80vh;">
                                 <h2 class="text-muted">Profile Not Found</h2>
@@ -665,20 +658,17 @@
             const container = document.getElementById('profile-container');
             const verifiedBadge = data.verified ? '<i class="bi bi-patch-check-fill verified-badge"></i>' : '';
             
-            // Social Icons logic
             let socialIcons = '';
             if(data.instagram) socialIcons += `<a href="${data.instagram}" target="_blank"><i class="bi bi-instagram"></i></a>`;
             if(data.spotifyId) socialIcons += `<a href="https://open.spotify.com/artist/${data.spotifyId}" target="_blank"><i class="bi bi-spotify"></i></a>`;
             
-            // Determine if we show the edit button ON the hero (optional, but requested for "own profile")
-            // We already have it in navbar, but let's hide context actions if not owner
-            const isOwner = currentUser && currentUser.uid === data.uid;
+            const isOwner = currentUser && !currentUser.isAnonymous && currentUser.uid === data.uid;
             
             container.innerHTML = `
                 <div class="profile-hero" style="background-image: url('${data.imageUrl || 'https://via.placeholder.com/1600x900'}');">
                     <div class="user-actions">
                         <button onclick="window.shareProfile('${data.uid}')" title="Share Link"><i class="bi bi-share"></i></button>
-                        ${!currentUser ? '<button onclick="document.getElementById(\'btn-login\').click()" title="Login"><i class="bi bi-person-plus"></i></button>' : ''}
+                        ${(!currentUser || currentUser.isAnonymous) ? '<button onclick="document.getElementById(\'btn-login\').click()" title="Login"><i class="bi bi-person-plus"></i></button>' : ''}
                     </div>
                     <div class="profile-hero-content">
                         <h1>${data.name} ${verifiedBadge}</h1>
@@ -697,7 +687,6 @@
                 <div class="scroll-section">
                     <h3 class="section-title">Latest Tracks & Clips</h3>
                     <div id="tracks-row" class="horizontal-scroll">
-                        <!-- Tracks injected here -->
                         <div class="text-muted ps-3 pt-2">Connect Spotify or Kick in 'Edit Profile' to see content.</div>
                     </div>
                 </div>
@@ -705,20 +694,21 @@
                 <div class="scroll-section">
                     <h3 class="section-title">Official Merch</h3>
                     <div id="products-row" class="horizontal-scroll">
-                        <!-- Products injected here -->
                         <div class="text-muted ps-3 pt-2">No products listed yet.</div>
                     </div>
                 </div>
             `;
         }
 
-        // --- Data Loading Functions ---
-
         async function loadUserProducts(uid) {
             const productsContainer = document.getElementById('products-row');
             if (!productsContainer) return;
             
-            const q = query(collection(db, 'artifacts', appId, 'users', uid, 'products'));
+            // QUERY PUBLIC PRODUCTS BY UID
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', 'products'),
+                where('uid', '==', uid)
+            );
             
             try {
                 const snapshot = await getDocs(q);
@@ -752,7 +742,6 @@
         }
 
         // --- Spotify & Kick API Utils ---
-
         async function getSpotifyToken() {
             try {
                 const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -772,7 +761,6 @@
             }
         }
 
-        // Global scope for use in HTML
         window.loadTracks = async function(spotifyArtistId) {
             const tracksContainer = document.getElementById('tracks-row');
             if (!tracksContainer) return;
@@ -786,7 +774,6 @@
             }
 
             try {
-                // Get Top Tracks
                 const url = `https://api.spotify.com/v1/artists/${spotifyArtistId}/top-tracks?market=US`;
                 const response = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
                 const data = await response.json();
@@ -847,12 +834,6 @@
         };
 
         window.shareProfile = function(uid) {
-            // Safe sharing mechanism
-            // We avoid constructing the full URL if location is blob to prevent user confusion,
-            // but since we are copying to clipboard, we want the real shareable link if possible.
-            // In this environment, we will just construct a basic representation.
-            
-            // If uid is provided, assume it's the ID of the profile being viewed.
             let link = window.location.href.split('?')[0];
             if (uid && uid !== 'demo') {
                 link += `?uid=${uid}`;
