@@ -213,6 +213,10 @@
             background-color: #333;
             color: var(--color-white);
         }
+        /* Fix for User Info visibility in Dropdown */
+        .dropdown-header {
+            color: var(--color-white) !important;
+        }
         .dropdown-divider {
             border-top: 1px solid #333;
         }
@@ -257,7 +261,7 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profile-link">
                             <li id="user-info" style="display: none;">
                                 <div class="dropdown-header">
-                                    <img id="user-pic" src="" alt="User" class="rounded-circle me-2" width="30" height="30">
+                                    <img id="user-pic" src="" alt="User" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
                                     <span id="user-name">User</span>
                                 </div>
                             </li>
@@ -461,7 +465,7 @@
                 loginItem.style.display = 'none';
                 logoutItem.style.display = 'block';
                 logoutDivider.style.display = 'block';
-                userInfo.style.display = 'block';
+                userInfo.style.display = 'block'; // Ensure visibility logic triggers
                 editItem.style.display = 'block';
                 addProdItem.style.display = 'block';
                 
