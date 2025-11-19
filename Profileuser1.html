@@ -431,6 +431,8 @@
             updateNavUI(user);
             
             // Routing Logic: Check URL for specific user ID
+            // NOTE: In sandbox environments, window.location might be blob: or restricted.
+            // We access what we can, but avoid pushState if it throws SecurityError.
             const urlParams = new URLSearchParams(window.location.search);
             const urlUid = urlParams.get('uid');
 
@@ -439,9 +441,7 @@
                 await loadProfile(urlUid);
             } else if (user) {
                 // 2. If no URL UID but User is Logged In, go to their own profile
-                // Update URL history so they have a shareable link immediately
-                const newUrl = `${window.location.pathname}?uid=${user.uid}`;
-                window.history.pushState({path: newUrl}, '', newUrl);
+                // We REMOVE pushState here because it causes SecurityErrors in sandbox/blob environments
                 await loadProfile(user.uid);
             } else {
                 // 3. Not logged in, no specific link -> Demo
@@ -496,7 +496,8 @@
 
         document.getElementById('btn-logout').addEventListener('click', async () => {
             await signOut(auth);
-            window.location.href = window.location.pathname; // Clear query params on logout
+            // Reload to clear state
+            window.location.reload();
         });
 
         document.getElementById('btn-edit-profile').addEventListener('click', async () => {
@@ -634,7 +635,7 @@
                             <div class="d-flex flex-column justify-content-center align-items-center" style="height: 80vh;">
                                 <h2 class="text-muted">Profile Not Found</h2>
                                 <p class="text-secondary">The artist with ID ${uid} has not set up a profile yet.</p>
-                                <button class="btn btn-danger mt-3" onclick="window.location.href=window.location.pathname">Go Home</button>
+                                <button class="btn btn-danger mt-3" onclick="window.location.href=window.location.href.split('?')[0]">Go Home</button>
                             </div>
                         `;
                     }
@@ -846,10 +847,13 @@
         };
 
         window.shareProfile = function(uid) {
-            // If uid is provided, assume it's the ID of the profile being viewed.
-            // If not provided (or 'undefined'), fallback to demo or current URL.
-            let link = window.location.origin + window.location.pathname;
+            // Safe sharing mechanism
+            // We avoid constructing the full URL if location is blob to prevent user confusion,
+            // but since we are copying to clipboard, we want the real shareable link if possible.
+            // In this environment, we will just construct a basic representation.
             
+            // If uid is provided, assume it's the ID of the profile being viewed.
+            let link = window.location.href.split('?')[0];
             if (uid && uid !== 'demo') {
                 link += `?uid=${uid}`;
             }
@@ -857,7 +861,6 @@
             navigator.clipboard.writeText(link).then(() => {
                 alert("Profile link copied to clipboard: " + link);
             }).catch(err => {
-                // Fallback for iframes where clipboard API might be restricted
                 prompt("Copy this link to share:", link);
             });
         };
@@ -879,3 +882,5 @@
         };
 
     </script>
+</body>
+</html>
