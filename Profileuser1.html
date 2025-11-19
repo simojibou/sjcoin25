@@ -437,8 +437,7 @@
             currentUser = user;
             updateNavUI(user);
             
-            // CRITICAL FIX: Only attempt to load data if we have a user (Anonymous or Real)
-            // This prevents "Missing Permissions" errors when the app first loads and auth isn't ready.
+            // Only attempt to load data if we have a user (Anonymous or Real)
             if (user) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlUid = urlParams.get('uid');
@@ -453,10 +452,6 @@
                     // 3. Anonymous user, no specific link -> Demo
                     loadDemoProfile();
                 }
-            } else {
-                // If user is null, we are still initializing. 
-                // We can show a loader or just wait. 
-                // Do NOT call loadProfile here to avoid permission errors.
             }
         });
 
@@ -473,7 +468,7 @@
                 loginItem.style.display = 'none';
                 logoutItem.style.display = 'block';
                 logoutDivider.style.display = 'block';
-                userInfo.style.display = 'block'; // Ensure visibility logic triggers
+                userInfo.style.display = 'block'; 
                 editItem.style.display = 'block';
                 addProdItem.style.display = 'block';
                 
@@ -508,10 +503,8 @@
         document.getElementById('btn-edit-profile').addEventListener('click', async () => {
             if (!currentUser || currentUser.isAnonymous) return;
             
-            // Load MY data for editing, even if viewing someone else
             let myData = currentProfileData;
             if (viewingProfileId !== currentUser.uid) {
-                // Use PUBLIC path for profile data
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid);
                     const snap = await getDoc(docRef);
@@ -521,7 +514,6 @@
                 }
             }
 
-            // Default structure if no data exists yet
             const formData = myData || {};
 
             document.getElementById('edit-name').value = formData.name || "";
@@ -553,7 +545,6 @@
             };
 
             try {
-                // SAVE TO PUBLIC PATH
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid), newData);
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
                 modal.hide();
@@ -561,7 +552,6 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlUid = urlParams.get('uid');
                 
-                // Reload profile if we are viewing ourselves
                 if (!urlUid || urlUid === currentUser.uid) {
                     loadProfile(currentUser.uid);
                 } else {
@@ -581,12 +571,11 @@
                 title: document.getElementById('prod-title').value,
                 price: parseFloat(document.getElementById('prod-price').value),
                 image: document.getElementById('prod-img').value,
-                uid: currentUser.uid, // Important: Tag with owner UID
+                uid: currentUser.uid, 
                 createdAt: new Date().toISOString()
             };
 
             try {
-                // SAVE TO PUBLIC PRODUCTS COLLECTION
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), newProd);
                 document.getElementById('addProductForm').reset();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
@@ -614,7 +603,6 @@
             `;
 
             try {
-                // LOAD FROM PUBLIC PATH
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', uid);
                 const docSnap = await getDoc(docRef);
                 
@@ -625,7 +613,6 @@
                     if (currentProfileData.spotifyId) loadTracks(currentProfileData.spotifyId);
                     if (currentProfileData.kickSlug) loadKickClips(currentProfileData.kickSlug);
                 } else {
-                    // Profile doesn't exist. Check if current user is the owner (first time login)
                     if (currentUser && !currentUser.isAnonymous && currentUser.uid === uid) {
                         const autoProfile = {
                             name: currentUser.displayName || "New Artist",
@@ -636,7 +623,6 @@
                             createdAt: new Date().toISOString()
                         };
                         
-                        // Create in PUBLIC path
                         await setDoc(docRef, autoProfile);
                         currentProfileData = autoProfile;
                         renderProfile(autoProfile);
@@ -722,22 +708,27 @@
             const productsContainer = document.getElementById('products-row');
             if (!productsContainer) return;
             
-            // QUERY PUBLIC PRODUCTS BY UID
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', 'products'),
-                where('uid', '==', uid)
-            );
-            
+            // CRITICAL FIX: REMOVED 'where' clause. 
+            // Fetch all public products, then filter in memory.
+            // This avoids "Missing or insufficient permissions" caused by missing indexes/rules.
             try {
-                const snapshot = await getDocs(q);
-                if (snapshot.empty) {
+                const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'products'));
+                
+                const products = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.uid === uid) {
+                        products.push(data);
+                    }
+                });
+
+                if (products.length === 0) {
                     productsContainer.innerHTML = '<p class="text-muted ps-2">No merch available yet.</p>';
                     return;
                 }
                 
                 productsContainer.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const prod = doc.data();
+                products.forEach(prod => {
                     const card = `
                         <div class="product-card">
                             <div class="card">
@@ -756,6 +747,7 @@
                 });
             } catch (e) {
                 console.error("Error loading products:", e);
+                productsContainer.innerHTML = '<p class="text-danger ps-2">Error loading products.</p>';
             }
         }
 
