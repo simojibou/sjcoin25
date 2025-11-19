@@ -423,7 +423,7 @@
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
             } else {
-               // Fallback to Anonymous auth so PUBLIC data can be read
+               // Fallback to Anonymous auth so PUBLIC data can be read without permission errors
                try {
                    await signInAnonymously(auth);
                } catch (error) {
@@ -437,18 +437,26 @@
             currentUser = user;
             updateNavUI(user);
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlUid = urlParams.get('uid');
+            // CRITICAL FIX: Only attempt to load data if we have a user (Anonymous or Real)
+            // This prevents "Missing Permissions" errors when the app first loads and auth isn't ready.
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlUid = urlParams.get('uid');
 
-            if (urlUid) {
-                // 1. If URL has a UID, load that profile specifically
-                await loadProfile(urlUid);
-            } else if (user && !user.isAnonymous) {
-                // 2. If User is Logged In (and not anon), go to their own profile
-                await loadProfile(user.uid);
+                if (urlUid) {
+                    // 1. Specific profile requested via URL
+                    await loadProfile(urlUid);
+                } else if (!user.isAnonymous) {
+                    // 2. Logged in user, show their own profile
+                    await loadProfile(user.uid);
+                } else {
+                    // 3. Anonymous user, no specific link -> Demo
+                    loadDemoProfile();
+                }
             } else {
-                // 3. Not logged in, no specific link -> Demo
-                loadDemoProfile();
+                // If user is null, we are still initializing. 
+                // We can show a loader or just wait. 
+                // Do NOT call loadProfile here to avoid permission errors.
             }
         });
 
@@ -504,20 +512,25 @@
             let myData = currentProfileData;
             if (viewingProfileId !== currentUser.uid) {
                 // Use PUBLIC path for profile data
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid);
-                const snap = await getDoc(docRef);
-                if (snap.exists()) myData = snap.data();
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', currentUser.uid);
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) myData = snap.data();
+                } catch (e) {
+                    console.error("Error loading own profile for edit", e);
+                }
             }
 
-            if(!myData) return; 
+            // Default structure if no data exists yet
+            const formData = myData || {};
 
-            document.getElementById('edit-name').value = myData.name || "";
-            document.getElementById('edit-desc').value = myData.description || "";
-            document.getElementById('edit-image').value = myData.imageUrl || "";
-            document.getElementById('edit-spotify').value = myData.spotifyId || "";
-            document.getElementById('edit-kick').value = myData.kickSlug || "";
-            document.getElementById('edit-instagram').value = myData.instagram || "";
-            document.getElementById('edit-verified').checked = myData.verified || false;
+            document.getElementById('edit-name').value = formData.name || "";
+            document.getElementById('edit-desc').value = formData.description || "";
+            document.getElementById('edit-image').value = formData.imageUrl || "";
+            document.getElementById('edit-spotify').value = formData.spotifyId || "";
+            document.getElementById('edit-kick').value = formData.kickSlug || "";
+            document.getElementById('edit-instagram').value = formData.instagram || "";
+            document.getElementById('edit-verified').checked = formData.verified || false;
             
             const modal = new bootstrap.Modal(document.getElementById('editModal'));
             modal.show();
@@ -548,6 +561,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlUid = urlParams.get('uid');
                 
+                // Reload profile if we are viewing ourselves
                 if (!urlUid || urlUid === currentUser.uid) {
                     loadProfile(currentUser.uid);
                 } else {
@@ -867,5 +881,3 @@
         };
 
     </script>
-</body>
-</html>
