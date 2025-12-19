@@ -1,554 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJPAY | The War Room</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons (SVGs) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SJPAY | War Room</title>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Montserrat', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        tate: {
-                            red: '#b91c1c',
-                            black: '#0a0a0a',
-                            gold: '#fbbf24'
-                        }
-                    }
-                }
-            }
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          red: "#b91c1c",
+          gold: "#fbbf24",
+          dark: "#050505"
         }
-    </script>
+      }
+    }
+  }
+}
+</script>
 
-    <style>
-        body { background-color: #050505; color: white; overflow-x: hidden; }
-        .matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.15; pointer-events: none; }
-        .hidden-view { display: none !important; }
-        .glow-text { text-shadow: 0 0 10px rgba(185, 28, 28, 0.5); }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #b91c1c; }
-    </style>
+<style>
+body { background:#050505; color:white }
+.hidden { display:none }
+</style>
 </head>
-<body class="antialiased min-h-screen flex flex-col">
 
-    <!-- MATRIX BACKGROUND CANVAS -->
-    <canvas id="matrixCanvas" class="matrix-bg"></canvas>
+<body class="min-h-screen">
 
-    <!-- LOADING OVERLAY -->
-    <div id="view-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
-        <div class="animate-pulse text-tate-red font-mono text-xl tracking-widest">CONNECTING TO MAINFRAME...</div>
+<!-- NAV -->
+<nav id="nav" class="hidden border-b border-white/10 bg-black/70 backdrop-blur">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex justify-between items-center">
+    <div class="font-black">SJ<span class="text-brand-red">PAY</span></div>
+    <div class="flex items-center gap-3">
+      <span id="userName" class="text-sm text-gray-400"></span>
+      <button onclick="logout()" class="text-xs border px-3 py-1">Logout</button>
     </div>
+  </div>
+</nav>
 
-    <!-- NAVBAR -->
-    <nav class="border-b border-white/10 bg-black/50 backdrop-blur-md sticky top-0 z-40 hidden" id="main-nav">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="shield" class="text-tate-red w-6 h-6"></i>
-                <span class="font-black text-xl tracking-tighter">SJ<span class="text-tate-red">PAY</span></span>
-            </div>
-            <div class="flex items-center gap-4">
-                <div id="user-info" class="hidden md:flex items-center gap-3 text-sm font-mono text-gray-400">
-                    <!-- User info injected here -->
-                </div>
-                <button onclick="handleLogout()" class="text-xs border border-white/20 px-3 py-1 hover:bg-white hover:text-black transition-colors uppercase font-bold tracking-widest">
-                    Logout
-                </button>
-            </div>
-        </div>
-    </nav>
+<!-- LANDING -->
+<section id="view-landing" class="min-h-screen flex items-center justify-center">
+  <div class="text-center space-y-6">
+    <h1 class="text-6xl font-black">ESCAPE THE <span class="text-brand-red">MATRIX</span></h1>
+    <p class="text-gray-400">Join. Share. Earn.</p>
+    <button onclick="login()" class="bg-white text-black px-8 py-4 font-bold">ACCESS</button>
+  </div>
+</section>
 
-    <!-- 1. LANDING PAGE VIEW -->
-    <section id="view-landing" class="flex-1 flex flex-col items-center justify-center p-6 text-center relative hidden-view">
-        <div class="max-w-4xl mx-auto space-y-8 relative z-10">
-            <div class="inline-block px-4 py-1 border border-tate-red bg-red-950/20 rounded-full text-tate-red font-mono text-xs animate-pulse">
-                SYSTEM STATUS: ONLINE
-            </div>
-            
-            <h1 class="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                Escape The <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-tate-red to-orange-600">Matrix</span>
-            </h1>
-            
-            <p class="text-lg md:text-2xl text-gray-400 max-w-2xl mx-auto font-light">
-                They want you broke. We want you rich. <br>
-                Join the network. Recruit soldiers. Get paid.
-            </p>
-            
-            <button onclick="handleLogin()" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 mt-8">
-                <div class="absolute -inset-3 transition-all duration-1000 opacity-30 group-hover:opacity-100 group-hover:duration-200 animate-tilt">
-                    <div class="w-full h-full bg-gradient-to-r from-tate-red via-yellow-500 to-tate-red blur-lg filter opacity-75"></div>
-                </div>
-                <span class="relative flex items-center gap-3 uppercase tracking-widest">
-                    Access Terminal <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                </span>
-            </button>
-        </div>
-    </section>
+<!-- PAYMENT -->
+<section id="view-payment" class="hidden min-h-screen flex items-center justify-center">
+  <div class="bg-neutral-900 border border-neutral-800 p-8 w-full max-w-md">
+    <h2 class="text-2xl font-black mb-4">ENTRY FEE</h2>
+    <p class="mb-6 text-gray-400">$20 One Time</p>
+    <div id="paypal-container"></div>
+  </div>
+</section>
 
-    <!-- 2. PAYMENT WALL VIEW -->
-    <section id="view-payment" class="flex-1 flex items-center justify-center p-4 hidden-view">
-        <div class="max-w-md w-full bg-neutral-900 border border-neutral-800 p-8 rounded-xl shadow-2xl relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-tate-red"></div>
-            
-            <div class="text-center mb-8">
-                <div class="inline-flex p-3 rounded-full bg-red-900/20 mb-4">
-                    <i data-lucide="lock" class="w-8 h-8 text-tate-red"></i>
-                </div>
-                <h2 class="text-2xl font-black uppercase tracking-tight">Access Restricted</h2>
-                <p class="text-gray-400 text-sm mt-2">Entry requires a one-time commitment.</p>
-            </div>
+<!-- DASHBOARD -->
+<section id="view-dashboard" class="hidden max-w-6xl mx-auto p-6">
+  <h2 class="text-3xl font-black mb-6">DASHBOARD</h2>
 
-            <div class="space-y-4 mb-8">
-                <div class="flex justify-between items-center p-4 bg-black border border-neutral-800">
-                    <span class="font-mono text-gray-400">ENTRY FEE</span>
-                    <span class="font-bold text-2xl text-tate-gold">$20.00</span>
-                </div>
-                <ul class="text-xs text-gray-500 space-y-2 font-mono">
-                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-green-500"></i> UNLOCK AFFILIATE LINK</li>
-                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-green-500"></i> $10 COMMISSION PER RECRUIT</li>
-                    <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-green-500"></i> INSTANT PAYOUTS</li>
-                </ul>
-            </div>
+  <div class="grid md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-neutral-900 p-4">EARNINGS: $<span id="earnings">0</span></div>
+    <div class="bg-neutral-900 p-4">CLICKS: <span id="clicks">0</span></div>
+    <div class="bg-neutral-900 p-4">STATUS: ACTIVE</div>
+  </div>
 
-            <div id="paypal-button-container" class="z-10 relative"></div>
-        </div>
-    </section>
+  <div class="bg-neutral-900 p-4">
+    <p class="text-xs text-gray-400 mb-2">AFFILIATE LINK</p>
+    <div class="flex">
+      <input id="refLink" readonly class="flex-1 bg-black p-2 text-xs" />
+      <button onclick="copyLink()" class="bg-white text-black px-4">COPY</button>
+    </div>
+  </div>
+</section>
 
-    <!-- 3. DASHBOARD VIEW -->
-    <section id="view-dashboard" class="flex-1 p-6 max-w-7xl mx-auto w-full hidden-view">
-        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-                <h2 class="text-3xl font-black uppercase text-white">Command Center</h2>
-                <p class="text-gray-500 text-sm font-mono">WELCOME TO THE WAR ROOM</p>
-            </div>
-            <div class="bg-neutral-900 px-4 py-2 rounded border border-neutral-800 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span class="text-xs font-mono text-gray-400">CONNECTED</span>
-            </div>
-        </header>
+<script type="module">
+/* ---------------- FIREBASE ---------------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Earnings Card -->
-            <div class="bg-gradient-to-br from-neutral-900 to-black p-6 rounded-lg border border-neutral-800 relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <i data-lucide="dollar-sign" class="w-16 h-16 text-tate-gold"></i>
-                </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Total Earnings</p>
-                <h3 class="text-4xl font-black text-white flex items-baseline gap-1">
-                    $<span id="dash-earnings">0</span><span class="text-lg text-gray-600">.00</span>
-                </h3>
-            </div>
-            
-            <!-- Clicks Card -->
-            <div class="bg-neutral-900 p-6 rounded-lg border border-neutral-800">
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Network Hits</p>
-                <h3 class="text-4xl font-black text-white" id="dash-clicks">0</h3>
-            </div>
-            
-            <!-- Status Card -->
-            <div class="bg-neutral-900 p-6 rounded-lg border border-neutral-800">
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Rank</p>
-                <div class="flex items-center gap-2">
-                    <i data-lucide="shield" class="text-tate-red w-5 h-5"></i>
-                    <h3 class="text-xl font-bold text-white uppercase">Soldier</h3>
-                </div>
-            </div>
-        </div>
+const firebaseConfig = {
+  apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
+  authDomain: "metawarefare-gaming.firebaseapp.com",
+  projectId: "metawarefare-gaming",
+};
 
-        <div class="bg-neutral-900 border border-neutral-800 rounded-lg p-6 md:p-8">
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <i data-lucide="link" class="w-5 h-5 text-tate-red"></i> AFFILIATE UPLINK
-            </h3>
-            
-            <div class="bg-black border border-neutral-700 rounded p-1 flex items-center">
-                <input type="text" readonly id="affiliate-link-input" class="bg-transparent border-none outline-none text-gray-300 font-mono text-sm flex-1 px-4" value="Loading...">
-                <button onclick="copyAffiliateLink()" id="copy-btn" class="bg-white text-black font-bold uppercase text-xs px-6 py-3 hover:bg-gray-200 transition-colors">
-                    Copy
-                </button>
-            </div>
-            <p class="text-gray-500 text-xs mt-3">
-                *Share this link. You receive <span class="text-tate-gold">$10</span> for every user who joins and pays the entry fee.
-            </p>
-        </div>
-    </section>
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    <!-- 4. ADMIN VIEW -->
-    <section id="view-admin" class="flex-1 p-6 max-w-7xl mx-auto w-full hidden-view">
-        <header class="mb-8 border-b border-gray-800 pb-4">
-            <h2 class="text-2xl font-black uppercase text-tate-red">Administrator Control</h2>
-            <p class="text-gray-500 text-xs font-mono">SJPAY // GOD MODE</p>
-        </header>
+/* ---------------- STATE ---------------- */
+let currentUser = null;
+let userData = null;
+let paypalLoaded = false;
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-neutral-900 p-4 border border-gray-800 rounded">
-                <p class="text-xs text-gray-500 uppercase">Gross Revenue</p>
-                <p class="text-2xl font-bold text-green-500" id="admin-revenue">$0</p>
-            </div>
-            <div class="bg-neutral-900 p-4 border border-gray-800 rounded">
-                <p class="text-xs text-gray-500 uppercase">Affiliate Payouts</p>
-                <p class="text-2xl font-bold text-tate-red" id="admin-payouts">$0</p>
-            </div>
-             <div class="bg-neutral-900 p-4 border border-gray-800 rounded">
-                <p class="text-xs text-gray-500 uppercase">Net Profit</p>
-                <p class="text-2xl font-bold text-tate-gold" id="admin-profit">$0</p>
-            </div>
-            <div class="bg-neutral-900 p-4 border border-gray-800 rounded">
-                <p class="text-xs text-gray-500 uppercase">Total Users</p>
-                <p class="text-2xl font-bold text-white" id="admin-users-count">0</p>
-            </div>
-        </div>
+/* ---------------- UI HELPERS ---------------- */
+function show(id){
+  document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+  document.getElementById("nav").classList.toggle("hidden", id==="view-landing");
+}
 
-        <div class="bg-neutral-900 border border-gray-800 rounded overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-black text-gray-500 font-mono text-xs uppercase">
-                        <tr>
-                            <th class="px-6 py-3">User</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3 text-right">Earnings</th>
-                            <th class="px-6 py-3 text-right">Referrer</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800" id="admin-table-body">
-                        <!-- Rows injected via JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
+/* ---------------- AUTH ---------------- */
+window.login = async () => {
+  await signInWithPopup(auth,new GoogleAuthProvider());
+};
 
-    <!-- SCRIPTS -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+window.logout = async () => {
+  await signOut(auth);
+  location.reload();
+};
 
-        // 1. CONFIGURATION
-        const firebaseConfig = {
-            apiKey: "AIzaSyCw46Dkka-64h7Rc3VIS9fZmvrfvbUCTjY",
-            authDomain: "metawarefare-gaming.firebaseapp.com",
-            databaseURL: "https://metawarefare-gaming-default-rtdb.firebaseio.com",
-            projectId: "metawarefare-gaming",
-            storageBucket: "metawarefare-gaming.appspot.com",
-            messagingSenderId: "551352148152",
-            appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
-        };
+/* ---------------- AUTH LISTENER ---------------- */
+onAuthStateChanged(auth, async user=>{
+  if(!user){
+    show("view-landing");
+    return;
+  }
 
-        const APP_ID = "sjpay-v1"; // Using a unique path for data isolation
-        const ADMIN_EMAIL = "simo.jibou@gmail.com";
-        const PAYPAL_CLIENT_ID = "AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN";
+  currentUser = user;
+  document.getElementById("userName").innerText = user.displayName;
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+  const ref = doc(db,"sjpay_users",user.uid);
+  const snap = await getDoc(ref);
 
-        // State Variables
-        let currentUser = null;
-        let userData = null;
+  if(!snap.exists()){
+    await setDoc(ref,{
+      uid:user.uid,
+      paid:false,
+      earnings:0,
+      clicks:0,
+      refBy: localStorage.getItem("ref") || null
+    });
+  }
 
-        // 2. MATRIX RAIN EFFECT
-        function startMatrix() {
-            const canvas = document.getElementById('matrixCanvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+  userData = (await getDoc(ref)).data();
 
-            const chars = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            const fontSize = 14;
-            const columns = canvas.width / fontSize;
-            const drops = Array(Math.floor(columns)).fill(1);
+  if(userData.paid){
+    loadDashboard();
+  }else{
+    show("view-payment");
+    loadPayPal();
+  }
+});
 
-            function draw() {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#b91c1c';
-                ctx.font = fontSize + 'px monospace';
+/* ---------------- DASHBOARD ---------------- */
+function loadDashboard(){
+  show("view-dashboard");
+  document.getElementById("earnings").innerText = userData.earnings;
+  document.getElementById("clicks").innerText = userData.clicks;
+  document.getElementById("refLink").value =
+    location.origin + location.pathname + "?ref=" + currentUser.uid;
+}
 
-                for (let i = 0; i < drops.length; i++) {
-                    const text = chars[Math.floor(Math.random() * chars.length)];
-                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                        drops[i] = 0;
-                    }
-                    drops[i]++;
-                }
-            }
-            setInterval(draw, 50);
+/* ---------------- COPY ---------------- */
+window.copyLink = ()=>{
+  navigator.clipboard.writeText(document.getElementById("refLink").value);
+};
+
+/* ---------------- PAYPAL ---------------- */
+function loadPayPal(){
+  if(paypalLoaded) return;
+  paypalLoaded = true;
+
+  const s=document.createElement("script");
+  s.src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD";
+  s.onload=()=>{
+    paypal.Buttons({
+      createOrder:(d,a)=>a.order.create({
+        purchase_units:[{amount:{value:"20.00"}}]
+      }),
+      onApprove:(d,a)=>a.order.capture().then(async ()=>{
+        const ref = doc(db,"sjpay_users",currentUser.uid);
+        await updateDoc(ref,{paid:true});
+
+        if(userData.refBy){
+          await updateDoc(doc(db,"sjpay_users",userData.refBy),{
+            earnings:increment(10)
+          });
         }
 
-        // 3. NAVIGATION & VIEW LOGIC
-        function switchView(viewId) {
-            document.querySelectorAll('section').forEach(el => el.classList.add('hidden-view'));
-            document.getElementById(viewId).classList.remove('hidden-view');
-            
-            const nav = document.getElementById('main-nav');
-            if(viewId === 'view-landing' || viewId === 'view-loading') {
-                nav.classList.add('hidden');
-            } else {
-                nav.classList.remove('hidden');
-            }
-            
-            // Re-render icons just in case
-            if(window.lucide) lucide.createIcons();
-        }
+        userData.paid=true;
+        loadDashboard();
+      })
+    }).render("#paypal-container");
+  };
+  document.body.appendChild(s);
+}
 
-        // 4. AUTH HANDLERS
-        window.handleLogin = async () => {
-            const provider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Login Error:", error);
-                alert("Access Denied. Try again.");
-            }
-        };
+/* ---------------- REF TRACK ---------------- */
+const params=new URLSearchParams(location.search);
+if(params.get("ref")){
+  localStorage.setItem("ref",params.get("ref"));
+}
 
-        window.handleLogout = async () => {
-            await signOut(auth);
-            window.location.reload();
-        };
-
-        // 5. DATA LOGIC
-        onAuthStateChanged(auth, async (user) => {
-            const loadingEl = document.getElementById('view-loading');
-            
-            if (!user) {
-                // Not logged in
-                currentUser = null;
-                loadingEl.classList.add('hidden-view');
-                switchView('view-landing');
-            } else {
-                currentUser = user;
-                
-                // Update Nav Info
-                document.getElementById('user-info').innerHTML = `
-                    <span class="text-white font-bold">${user.displayName}</span>
-                `;
-
-                // Firestore Reference
-                const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid);
-
-                // Realtime Listener for User Data
-                onSnapshot(userRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        userData = docSnap.data();
-                        handleUserRouting();
-                    } else {
-                        // Create New User
-                        const refCode = localStorage.getItem('sjpay_ref_code') || null;
-                        
-                        const newUserData = {
-                            uid: user.uid,
-                            email: user.email,
-                            displayName: user.displayName,
-                            photoURL: user.photoURL,
-                            paid: false,
-                            earnings: 0,
-                            clicks: 0,
-                            referredBy: refCode, // Who invited them
-                            joinedAt: serverTimestamp()
-                        };
-                        
-                        setDoc(userRef, newUserData)
-                            .then(() => console.log("User initialized"))
-                            .catch(err => console.error(err));
-                    }
-                    loadingEl.classList.add('hidden-view');
-                });
-
-                // If Admin, start listening to all users
-                if(user.email === ADMIN_EMAIL) {
-                    setupAdminListener();
-                }
-            }
-        });
-
-        function handleUserRouting() {
-            if (!userData) return;
-
-            // 1. Is Admin?
-            if (currentUser.email === ADMIN_EMAIL) {
-                switchView('view-admin');
-                return;
-            }
-
-            // 2. Has Paid?
-            if (userData.paid) {
-                updateDashboardUI();
-                switchView('view-dashboard');
-            } else {
-                switchView('view-payment');
-                renderPayPal();
-            }
-        }
-
-        // 6. DASHBOARD LOGIC
-        function updateDashboardUI() {
-            document.getElementById('dash-earnings').innerText = userData.earnings || 0;
-            document.getElementById('dash-clicks').innerText = userData.clicks || 0;
-            
-            const link = `${window.location.origin}${window.location.pathname}?ref=${currentUser.uid}`;
-            document.getElementById('affiliate-link-input').value = link;
-        }
-
-        window.copyAffiliateLink = () => {
-            const input = document.getElementById('affiliate-link-input');
-            input.select();
-            document.execCommand('copy');
-            
-            const btn = document.getElementById('copy-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "COPIED";
-            btn.classList.add('bg-green-500', 'text-white');
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.classList.remove('bg-green-500', 'text-white');
-            }, 2000);
-        };
-
-        // 7. PAYPAL INTEGRATION
-        let paypal rendered = false;
-        function renderPayPal() {
-            const container = document.getElementById('paypal-button-container');
-            if(container.innerHTML !== "") return; // Already rendered
-
-            // Dynamically load PayPal Script
-            const script = document.createElement('script');
-            script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
-            script.onload = () => {
-                paypal.Buttons({
-                    style: {
-                        layout: 'vertical',
-                        color:  'gold',
-                        shape:  'rect',
-                        label:  'pay'
-                    },
-                    createOrder: function(data, actions) {
-                        return actions.order.create({
-                            purchase_units: [{
-                                amount: { value: '20.00' }
-                            }]
-                        });
-                    },
-                    onApprove: function(data, actions) {
-                        return actions.order.capture().then(function(details) {
-                            handlePaymentSuccess(details);
-                        });
-                    }
-                }).render('#paypal-button-container');
-            };
-            document.body.appendChild(script);
-        }
-
-        async function handlePaymentSuccess(details) {
-            const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', currentUser.uid);
-            
-            // 1. Mark current user as paid
-            await updateDoc(userRef, {
-                paid: true,
-                paymentId: details.id,
-                paymentDate: serverTimestamp()
-            });
-
-            // 2. Pay the Referrer (Split logic)
-            if (userData.referredBy) {
-                try {
-                    // Assuming referrer ID is passed directly or stored
-                    const referrerId = userData.referredBy;
-                    const referrerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', referrerId);
-                    
-                    // Transaction: Add $10 to referrer
-                    await updateDoc(referrerRef, {
-                        earnings: increment(10),
-                        recruits: increment(1) // Optional counter
-                    });
-                } catch (e) {
-                    console.error("Referral Split Error:", e);
-                }
-            }
-            
-            // UI will auto-update via onSnapshot
-        }
-
-        // 8. ADMIN LOGIC
-        function setupAdminListener() {
-            const q = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
-            onSnapshot(q, (snapshot) => {
-                const users = snapshot.docs.map(d => d.data());
-                renderAdminTable(users);
-            });
-        }
-
-        function renderAdminTable(users) {
-            const tbody = document.getElementById('admin-table-body');
-            tbody.innerHTML = '';
-
-            let totalRevenue = 0;
-            let totalPayouts = 0;
-
-            users.forEach(u => {
-                if(u.paid) totalRevenue += 20;
-                totalPayouts += (u.earnings || 0);
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-800";
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-medium flex items-center gap-3">
-                        <img src="${u.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="w-8 h-8 rounded-full">
-                        <div>
-                            <div class="text-white text-xs">${u.displayName || 'Unknown'}</div>
-                            <div class="text-gray-500 text-[10px]">${u.email}</div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        ${u.paid 
-                            ? '<span class="px-2 py-1 rounded bg-green-900/30 text-green-500 text-[10px] border border-green-900">PAID</span>' 
-                            : '<span class="px-2 py-1 rounded bg-red-900/30 text-red-500 text-[10px] border border-red-900">PENDING</span>'}
-                    </td>
-                    <td class="px-6 py-4 text-right text-tate-gold font-mono">$${u.earnings || 0}</td>
-                    <td class="px-6 py-4 text-right text-gray-500 text-[10px] font-mono">${u.referredBy ? 'YES' : '-'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('admin-revenue').innerText = `$${totalRevenue}`;
-            document.getElementById('admin-payouts').innerText = `$${totalPayouts}`;
-            document.getElementById('admin-profit').innerText = `$${totalRevenue - totalPayouts}`;
-            document.getElementById('admin-users-count').innerText = users.length;
-        }
-
-        // 9. INITIALIZATION
-        window.onload = () => {
-            startMatrix();
-            if(window.lucide) lucide.createIcons();
-
-            // Capture Referral Code from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const ref = urlParams.get('ref');
-            if (ref) {
-                localStorage.setItem('sjpay_ref_code', ref);
-            }
-        };
-
-    </script>
+</script>
 </body>
 </html>
 
