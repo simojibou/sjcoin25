@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -19,7 +19,7 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Montserrat', 'sans-serif'],
+                        sans: ['Cairo', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
@@ -39,261 +39,255 @@
     </script>
 
     <style>
-        body { background-color: #050505; color: white; overflow-x: hidden; }
+        body { background-color: #050505; color: white; overflow-x: hidden; text-align: right; }
         .matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; pointer-events: none; }
         .content-layer { position: relative; z-index: 10; }
         .hidden-view { display: none !important; }
-        
-        /* Glassmorphism */
         .glass {
             background: rgba(10, 10, 10, 0.9);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        /* Button Glow */
-        .btn-glow:hover {
-            box-shadow: 0 0 20px rgba(185, 28, 28, 0.5);
-        }
+        /* عكس الاتجاه لبعض العناصر الإنجليزية */
+        .ltr { direction: ltr; text-align: left; }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col font-sans selection:bg-tate-red selection:text-white">
 
-    <!-- MATRIX CANVAS -->
+    <!-- خلفية ماتريكس -->
     <canvas id="matrixCanvas" class="matrix-bg"></canvas>
 
-    <!-- LOADING OVERLAY -->
+    <!-- شاشة التحميل -->
     <div id="view-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black content-layer">
         <div class="flex flex-col items-center gap-4">
             <i data-lucide="loader-2" class="w-12 h-12 text-tate-red animate-spin"></i>
-            <div class="font-mono text-tate-red tracking-widest text-sm animate-pulse-fast">CONNECTING TO SJPAY...</div>
+            <div class="font-mono text-tate-red tracking-widest text-sm animate-pulse-fast ltr">CONNECTING TO SJPAY...</div>
         </div>
-        <div id="loading-log" class="mt-4 text-xs font-mono text-gray-600"></div>
+        <div id="loading-log" class="mt-4 text-xs font-mono text-gray-600 ltr"></div>
     </div>
 
-    <!-- NAVBAR -->
+    <!-- الشريط العلوي -->
     <nav id="main-nav" class="fixed top-0 w-full z-40 border-b border-white/10 bg-black/80 backdrop-blur-md hidden content-layer">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-4">
+                <button id="btn-logout" class="bg-white/5 hover:bg-tate-red border border-white/10 text-white px-4 py-2 text-xs font-bold transition-all rounded">
+                    خروج
+                </button>
+                <div id="user-display" class="hidden md:flex flex-col items-end">
+                    <span id="user-name" class="text-sm font-bold text-white"></span>
+                    <span class="text-[10px] text-green-500 font-mono tracking-widest uppercase">● متصل</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 ltr">
+                <span class="font-black text-xl tracking-tighter text-white">SJ<span class="text-tate-red">PAY</span></span>
                 <div class="bg-tate-red/10 p-1 rounded">
                     <i data-lucide="shield" class="text-tate-red w-6 h-6"></i>
                 </div>
-                <span class="font-black text-xl tracking-tighter text-white">SJ<span class="text-tate-red">PAY</span></span>
-            </div>
-            <div class="flex items-center gap-4">
-                <div id="user-display" class="hidden md:flex flex-col items-end">
-                    <span id="user-name" class="text-sm font-bold text-white"></span>
-                    <span class="text-[10px] text-green-500 font-mono tracking-widest uppercase">● Soldier</span>
-                </div>
-                <button id="btn-logout" class="bg-white/5 hover:bg-tate-red border border-white/10 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all rounded">
-                    Logout
-                </button>
             </div>
         </div>
     </nav>
 
-    <!-- 1. LANDING PAGE -->
+    <!-- 1. صفحة البداية -->
     <section id="view-landing" class="flex-1 flex flex-col items-center justify-center p-6 text-center content-layer hidden-view min-h-screen">
         <div class="max-w-4xl mx-auto space-y-8 relative">
-            <div class="inline-flex items-center gap-2 px-4 py-1 border border-tate-red/50 bg-red-950/30 rounded-full text-tate-red font-mono text-xs mb-4">
+            <div class="inline-flex items-center gap-2 px-4 py-1 border border-tate-red/50 bg-red-950/30 rounded-full text-tate-red font-mono text-xs mb-4 ltr">
                 <span class="w-2 h-2 rounded-full bg-tate-red animate-pulse"></span>
                 SYSTEM ONLINE: SJPAY v2.0
             </div>
             
-            <h1 class="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none text-white drop-shadow-2xl">
+            <h1 class="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none text-white drop-shadow-2xl ltr">
                 SJ<span class="text-tate-red">PAY</span>
             </h1>
             
-            <h2 class="text-2xl md:text-4xl font-bold uppercase tracking-tight">
-                Escape The <span class="text-transparent bg-clip-text bg-gradient-to-r from-tate-red to-orange-600">Matrix</span>
+            <h2 class="text-2xl md:text-4xl font-bold">
+                اهرب من <span class="text-transparent bg-clip-text bg-gradient-to-r from-tate-red to-orange-600">المصفوفة</span>
             </h2>
             
             <p class="text-lg text-gray-400 max-w-xl mx-auto font-light leading-relaxed">
-                The world is designed to keep you poor. We are building an army to break free. Join the network. Recruit soldiers. Get paid.
+                العالم مصمم ليبقيك فقيراً. نحن نبني جيشاً للتحرر المالي. انضم للشبكة، جند المقاتلين، واجني الأرباح.
             </p>
             
             <div class="pt-8">
-                <button id="btn-login" class="btn-glow group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 cursor-pointer">
-                    <span class="relative flex items-center gap-3 uppercase tracking-widest">
-                        Access Terminal <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                <button id="btn-login" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 cursor-pointer rounded">
+                    <span class="relative flex items-center gap-3">
+                         الدخول للنظام <i data-lucide="arrow-left" class="w-5 h-5 group-hover:-translate-x-1 transition-transform"></i>
                     </span>
                 </button>
             </div>
         </div>
     </section>
 
-    <!-- 2. PAYMENT WALL -->
+    <!-- 2. جدار الدفع -->
     <section id="view-payment" class="flex-1 flex items-center justify-center p-4 content-layer hidden-view min-h-screen">
         <div class="max-w-md w-full glass p-8 rounded-xl shadow-2xl relative overflow-hidden border-t-4 border-t-tate-red">
             
             <div class="text-center mb-8">
-                <h2 class="text-3xl font-black uppercase tracking-tighter text-white mb-2">SJ<span class="text-tate-red">PAY</span></h2>
-                <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-red-500 text-xs font-mono uppercase tracking-widest">
-                    <i data-lucide="lock" class="w-3 h-3"></i> Payment Required
+                <h2 class="text-3xl font-black uppercase tracking-tighter text-white mb-2 ltr">SJ<span class="text-tate-red">PAY</span></h2>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-red-500 text-xs font-bold">
+                    <i data-lucide="lock" class="w-3 h-3"></i> الدفع مطلوب
                 </div>
             </div>
 
             <div class="bg-black/40 border border-white/5 rounded-lg p-6 mb-8">
                 <div class="flex justify-between items-end mb-4 border-b border-white/10 pb-4">
-                    <span class="font-mono text-gray-400 text-sm">ACCESS FEE</span>
+                    <span class="font-bold text-gray-400 text-sm">رسوم الانضمام</span>
                     <span class="font-black text-3xl text-tate-gold">$20.00</span>
                 </div>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                <div class="space-y-3 text-right">
+                    <div class="flex items-center gap-3 text-xs text-gray-300">
                         <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
-                        <span>UNLOCK AFFILIATE DASHBOARD</span>
+                        <span>تفعيل رابط الإحالة الخاص بك</span>
                     </div>
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                    <div class="flex items-center gap-3 text-xs text-gray-300">
                         <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
-                        <span>EARN $10 PER RECRUIT</span>
+                        <span>اربح $10 لكل عضو تقوم بدعوته</span>
                     </div>
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                    <div class="flex items-center gap-3 text-xs text-gray-300">
                         <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
-                        <span>INSTANT PAYOUT SYSTEM</span>
+                        <span>نظام دفع فوري وآمن</span>
                     </div>
                 </div>
             </div>
 
-            <div id="paypal-loader" class="text-center text-xs font-mono text-gray-500 mb-2 hidden">Loading Payment Gateway...</div>
+            <div id="paypal-loader" class="text-center text-xs font-mono text-gray-500 mb-2 hidden">جاري تحميل بوابة الدفع...</div>
             <div id="paypal-button-container" class="z-20 relative min-h-[150px]"></div>
             
             <div class="mt-6 text-center border-t border-white/5 pt-4">
-                <p class="text-[10px] text-gray-600 uppercase tracking-widest flex items-center justify-center gap-1">
-                    <i data-lucide="shield-check" class="w-3 h-3"></i> Secure Transaction
+                <p class="text-[10px] text-gray-600 flex items-center justify-center gap-1">
+                    دفع آمن ومحمي <i data-lucide="shield-check" class="w-3 h-3"></i> 
                 </p>
             </div>
         </div>
     </section>
 
-    <!-- 3. DASHBOARD -->
+    <!-- 3. لوحة التحكم (للمستخدم) -->
     <section id="view-dashboard" class="flex-1 p-6 pt-24 max-w-7xl mx-auto w-full content-layer hidden-view">
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-6">
             <div>
-                <h2 class="text-4xl font-black uppercase text-white tracking-tighter">SJ<span class="text-tate-red">PAY</span> HUB</h2>
-                <p class="text-gray-500 text-xs font-mono tracking-widest mt-1">OPERATIVE DASHBOARD // TIER 1</p>
+                <h2 class="text-3xl font-black uppercase text-white tracking-tighter ltr">SJ<span class="text-tate-red">PAY</span> HUB</h2>
+                <p class="text-gray-500 text-sm mt-1">غرفة العمليات // المستوى 1</p>
             </div>
             <div class="px-4 py-2 rounded bg-green-500/10 border border-green-500/20 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span class="text-xs font-mono text-green-500 font-bold">SYSTEM ACTIVE</span>
+                <span class="text-xs text-green-500 font-bold">النظام نشط</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Earnings -->
+            <!-- الأرباح -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group hover:border-tate-gold/30 transition-colors">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div class="absolute top-0 left-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="dollar-sign" class="w-16 h-16 text-tate-gold"></i>
                 </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Earnings</p>
-                <h3 class="text-5xl font-black text-white flex items-baseline gap-1">
+                <p class="text-gray-500 text-xs font-bold mb-2">إجمالي الأرباح</p>
+                <h3 class="text-5xl font-black text-white flex items-baseline gap-1 ltr">
                     $<span id="dash-earnings">0</span>
                 </h3>
                 <div class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-black bg-tate-gold px-2 py-0.5 rounded">
-                    WITHDRAWABLE
+                    قابل للسحب
                 </div>
             </div>
             
-            <!-- Referrals (sign-ups via link) -->
+            <!-- الزيارات -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div class="absolute top-0 left-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="mouse-pointer-2" class="w-16 h-16 text-white"></i>
                 </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Referrals</p>
-                <h3 class="text-5xl font-black text-white" id="dash-referrals">0</h3>
-                <p class="text-xs text-gray-500 mt-2 font-mono">REFERRED SIGN-UPS</p>
+                <p class="text-gray-500 text-xs font-bold mb-2">عدد الزيارات</p>
+                <h3 class="text-5xl font-black text-white ltr" id="dash-referrals">0</h3>
+                <p class="text-xs text-gray-500 mt-2">زيارة فريدة للرابط</p>
             </div>
             
-            <!-- Rank + Recruits (paid) -->
+            <!-- الرتبة -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div class="absolute top-0 left-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="crown" class="w-16 h-16 text-tate-red"></i>
                 </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Rank</p>
-                <h3 class="text-3xl font-bold text-white uppercase">Soldier</h3>
-                <p class="text-lg text-gray-400 font-mono mt-1"><span id="dash-recruits">0</span> Recruits</p>
-                <p class="text-xs text-tate-red mt-2 font-mono uppercase">Next: Commander (10 Recruits)</p>
+                <p class="text-gray-500 text-xs font-bold mb-2">الرتبة الحالية</p>
+                <h3 class="text-3xl font-bold text-white">جندي</h3>
+                <p class="text-lg text-gray-400 mt-1"><span id="dash-recruits">0</span> مجندين</p>
+                <p class="text-xs text-tate-red mt-2">التالي: قائد (عند 10 مجندين)</p>
             </div>
         </div>
 
-        <!-- Affiliate Link -->
-        <div class="glass rounded-xl p-6 md:p-8 border-l-4 border-l-tate-red bg-gradient-to-r from-red-950/30 to-transparent">
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-tight">
-                <i data-lucide="link-2" class="w-5 h-5 text-tate-red"></i> Your Recruitment Link
+        <!-- رابط الإحالة -->
+        <div class="glass rounded-xl p-6 md:p-8 border-r-4 border-r-tate-red bg-gradient-to-l from-red-950/30 to-transparent">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="link-2" class="w-5 h-5 text-tate-red"></i> رابط التجنيد الخاص بك
             </h3>
             
             <div class="flex flex-col md:flex-row gap-4">
                 <div class="flex-1 bg-black/60 border border-white/10 rounded-lg p-1 flex items-center gap-2">
-                    <code id="affiliate-link-text" class="flex-1 bg-transparent border-none outline-none text-gray-300 font-mono text-sm px-4 py-3 truncate">
+                    <code id="affiliate-link-text" class="flex-1 bg-transparent border-none outline-none text-gray-300 font-mono text-sm px-4 py-3 truncate ltr text-left">
                         Generating secure link...
                     </code>
                 </div>
                 <button id="btn-copy" class="bg-white text-black font-bold uppercase text-xs px-8 py-3 hover:bg-tate-gold transition-colors rounded shadow-lg">
-                    Copy Link
+                    نسخ الرابط
                 </button>
             </div>
-            <p class="text-gray-400 text-xs mt-4 font-mono flex items-center gap-2">
+            <p class="text-gray-400 text-xs mt-4 flex items-center gap-2">
                 <i data-lucide="info" class="w-4 h-4 text-tate-red"></i>
-                <span>Share this link. You receive <span class="text-tate-gold font-bold">$10.00</span> for every person who joins and pays via your link.</span>
+                <span>انشر هذا الرابط. ستحصل على <span class="text-tate-gold font-bold">$10.00</span> فورية لكل شخص ينضم ويدفع من خلالك.</span>
             </p>
         </div>
     </section>
 
-    <!-- 4. ADMIN DASHBOARD -->
+    <!-- 4. لوحة تحكم الأدمن -->
     <section id="view-admin" class="flex-1 p-6 pt-24 max-w-7xl mx-auto w-full content-layer hidden-view">
         <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-center">
             <div>
-                <h2 class="text-2xl font-black uppercase text-tate-red">Overseer Control</h2>
-                <p class="text-gray-500 text-xs font-mono">ADMINISTRATOR PRIVILEGES ENABLED</p>
+                <h2 class="text-2xl font-black text-tate-red">تحكم المشرف</h2>
+                <p class="text-gray-500 text-xs">صلاحيات المدير مفعلة</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-gray-500">SJPAY SYSTEM</p>
+            <div class="text-left ltr">
+                <p class="text-xs text-gray-500">SERVER TIME</p>
                 <p class="font-mono text-white" id="server-time">--:--:--</p>
             </div>
         </header>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-gray-900/50 p-4 border border-gray-800 rounded">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Gross Revenue</p>
-                <p class="text-2xl font-bold text-green-500" id="admin-revenue">$0</p>
+                <p class="text-[10px] text-gray-500 font-bold">إجمالي الإيرادات</p>
+                <p class="text-2xl font-bold text-green-500 ltr" id="admin-revenue">$0</p>
             </div>
             <div class="bg-gray-900/50 p-4 border border-gray-800 rounded">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Affiliate Payouts</p>
-                <p class="text-2xl font-bold text-tate-red" id="admin-payouts">$0</p>
+                <p class="text-[10px] text-gray-500 font-bold">مدفوعات الأعضاء</p>
+                <p class="text-2xl font-bold text-tate-red ltr" id="admin-payouts">$0</p>
             </div>
             <div class="bg-gray-900/50 p-4 border border-gray-800 rounded">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Net Profit</p>
-                <p class="text-2xl font-bold text-tate-gold" id="admin-profit">$0</p>
+                <p class="text-[10px] text-gray-500 font-bold">صافي الربح</p>
+                <p class="text-2xl font-bold text-tate-gold ltr" id="admin-profit">$0</p>
             </div>
             <div class="bg-gray-900/50 p-4 border border-gray-800 rounded">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Total Users</p>
-                <p class="text-2xl font-bold text-white" id="admin-users-count">0</p>
+                <p class="text-[10px] text-gray-500 font-bold">عدد المستخدمين</p>
+                <p class="text-2xl font-bold text-white ltr" id="admin-users-count">0</p>
             </div>
         </div>
 
         <div class="glass rounded overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-black/50 text-gray-500 font-mono text-xs uppercase">
+                <table class="w-full text-sm text-right">
+                    <thead class="bg-black/50 text-gray-500 font-bold text-xs">
                         <tr>
-                            <th class="px-6 py-3">Agent</th>
-                            <th class="px-6 py-3">Clearance</th>
-                            <th class="px-6 py-3 text-right">Earnings</th>
-                            <th class="px-6 py-3 text-right">Referrals</th>
-                            <th class="px-6 py-3 text-right">Recruits</th>
-                            <th class="px-6 py-3 text-right">Referred By</th>
+                            <th class="px-6 py-3">العميل</th>
+                            <th class="px-6 py-3">الحالة</th>
+                            <th class="px-6 py-3 text-left">أرباحه</th>
+                            <th class="px-6 py-3 text-left">زياراته</th>
+                            <th class="px-6 py-3 text-left">مجندين</th>
+                            <th class="px-6 py-3 text-left">جاء عن طريق</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-800" id="admin-table-body">
-                        <!-- Rows injected via JS -->
+                        <!-- سيتم ملء الجدول بالكود -->
                     </tbody>
                 </table>
             </div>
         </div>
     </section>
 
-    <!-- DEBUG CONSOLE -->
-    <div class="fixed bottom-2 left-2 z-50 pointer-events-none">
+    <!-- سجل النظام (للمطور) -->
+    <div class="fixed bottom-2 left-2 z-50 pointer-events-none ltr">
         <div id="status-log" class="text-[10px] font-mono text-gray-700 bg-black/80 px-2 py-1 rounded shadow-lg">System Ready</div>
     </div>
 
@@ -303,7 +297,7 @@
         import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIG ---
+        // --- إعدادات FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -319,12 +313,12 @@
         const ADMIN_EMAIL = "simo.jibou@gmail.com";
         const PAYPAL_CLIENT_ID = "AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN";
 
-        // --- STATE ---
+        // --- المتغيرات العامة ---
         let app, auth, db;
         let currentUser = null;
         let userData = null;
 
-        // --- LOGGING ---
+        // --- دوال التسجيل (Log) ---
         const log = (msg) => {
             console.log(`[SJPAY] ${msg}`);
             const el = document.getElementById('status-log');
@@ -345,7 +339,7 @@
             }
         };
 
-        // --- INIT FIREBASE ---
+        // --- تهيئة FIREBASE ---
         try {
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
@@ -355,7 +349,7 @@
             errorLog("DB Connection Failed: " + e.message);
         }
 
-        // --- REDIRECT HANDLER ---
+        // --- معالجة العودة من تسجيل الدخول (Redirect) ---
         getRedirectResult(auth)
         .then((result) => {
             if (result) {
@@ -366,14 +360,14 @@
              errorLog("Auth Error: " + error.message);
         });
 
-        // --- VIEW CONTROLLER ---
+        // --- التنقل بين الصفحات ---
         const views = ['view-loading', 'view-landing', 'view-payment', 'view-dashboard', 'view-admin'];
         const switchView = (id) => {
             views.forEach(v => document.getElementById(v).classList.add('hidden-view'));
             document.getElementById(id).classList.remove('hidden-view');
             
             const nav = document.getElementById('main-nav');
-            if (id === 'view-landing') {
+            if (id === 'view-landing' || id === 'view-loading') {
                 nav.classList.add('hidden');
             } else {
                 nav.classList.remove('hidden');
@@ -381,7 +375,7 @@
             if(window.lucide) lucide.createIcons();
         };
 
-        // --- AUTH LOGIC ---
+        // --- زر الدخول والخروج ---
         const loginBtn = document.getElementById('btn-login');
         if(loginBtn) {
             loginBtn.onclick = async () => {
@@ -409,7 +403,7 @@
             };
         }
 
-        // --- MAIN APP LOOP ---
+        // --- المنطق الرئيسي للتطبيق ---
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 currentUser = null;
@@ -436,15 +430,15 @@
                             photoURL: user.photoURL,
                             paid: false,
                             earnings: 0,
-                            clicks: 0,        // referrals (sign-ups via link)
-                            recruits: 0,      // paid recruits
+                            clicks: 0,        
+                            recruits: 0,      
                             referredBy: refCode,
                             joinedAt: serverTimestamp()
                         };
                         setDoc(userRef, newUser)
                             .then(() => {
                                 log("Operative registered.");
-                                // Count referral only when a new user signs up via the link (authenticated write)
+                                // احتساب الإحالة فقط عند التسجيل الجديد
                                 if (refCode) {
                                     const uplineRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', refCode);
                                     updateDoc(uplineRef, {
@@ -458,7 +452,7 @@
                             .catch(err => errorLog("Registration Failed: " + err.message));
                     }
                 }, (error) => {
-                    errorLog("Data Stream Interrupted");
+                    errorLog("Data Stream Interrupted (Check Firestore Rules)");
                 });
 
                 if(user.email === ADMIN_EMAIL) {
@@ -503,7 +497,7 @@
             };
             
             script.onerror = () => {
-                 document.getElementById('paypal-loader').innerText = "Connection Failed. Refresh.";
+                 document.getElementById('paypal-loader').innerText = "فشل الاتصال بـ PayPal. أعد تحميل الصفحة.";
                  errorLog("PayPal Gateway Connection Error");
             };
             
@@ -575,7 +569,8 @@
             document.getElementById('dash-referrals').innerText = userData.clicks || 0;
             document.getElementById('dash-recruits').innerText = userData.recruits || 0;
             
-            const link = `\( {window.location.origin} \){window.location.pathname}?ref=${currentUser.uid}`;
+            // تم إصلاح الخطأ النحوي هنا
+            const link = `${window.location.origin}${window.location.pathname}?ref=${currentUser.uid}`;
             const linkEl = document.getElementById('affiliate-link-text');
             if(linkEl) linkEl.innerText = link;
         };
@@ -585,10 +580,10 @@
             copyBtn.onclick = () => {
                 const text = document.getElementById('affiliate-link-text').innerText;
                 navigator.clipboard.writeText(text).then(() => {
-                    copyBtn.innerText = "COPIED";
+                    copyBtn.innerText = "تم النسخ";
                     copyBtn.classList.add("bg-green-500", "text-white");
                     setTimeout(() => {
-                        copyBtn.innerText = "COPY LINK";
+                        copyBtn.innerText = "نسخ الرابط";
                         copyBtn.classList.remove("bg-green-500", "text-white");
                     }, 2000);
                 });
@@ -623,30 +618,33 @@
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-white/5 transition-colors border-b border-gray-800/50";
+                
+                // تم إصلاح أخطاء القوالب النصية هنا
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-medium flex items-center gap-3">
                         <img src="${u.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="w-8 h-8 rounded-full border border-gray-700">
                         <div>
                             <div class="text-white text-xs font-bold">${u.displayName || 'Unknown'}</div>
-                            <div class="text-gray-500 text-[10px]">${u.email}</div>
+                            <div class="text-gray-500 text-[10px] ltr text-right">${u.email}</div>
                         </div>
                     </td>
                     <td class="px-6 py-4">
                         ${u.paid 
-                            ? '<span class="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] border border-green-500/30 font-bold">PAID OPERATIVE</span>' 
-                            : '<span class="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] border border-red-500/30">PENDING</span>'}
+                            ? '<span class="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] border border-green-500/30 font-bold">عضو مدفوع</span>' 
+                            : '<span class="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] border border-red-500/30">معلق</span>'}
                     </td>
-                    <td class="px-6 py-4 text-right text-tate-gold font-mono font-bold">\[ {u.earnings || 0}</td>
-                    <td class="px-6 py-4 text-right text-gray-300 font-mono">${u.clicks || 0}</td>
-                    <td class="px-6 py-4 text-right text-tate-red font-mono">${u.recruits || 0}</td>
-                    <td class="px-6 py-4 text-right text-gray-500 text-[10px] font-mono">${u.referredBy ? u.referredBy.substring(0,8)+'...' : 'Direct'}</td>
+                    <td class="px-6 py-4 text-left text-tate-gold font-mono font-bold ltr">$${u.earnings || 0}</td>
+                    <td class="px-6 py-4 text-left text-gray-300 font-mono">${u.clicks || 0}</td>
+                    <td class="px-6 py-4 text-left text-tate-red font-mono">${u.recruits || 0}</td>
+                    <td class="px-6 py-4 text-left text-gray-500 text-[10px] font-mono ltr">${u.referredBy ? u.referredBy.substring(0,8)+'...' : 'مباشر'}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('admin-revenue').innerText = ` \]{revenue}`;
-            document.getElementById('admin-payouts').innerText = `\[ {payouts}`;
-            document.getElementById('admin-profit').innerText = ` \]{revenue - payouts}`;
+            // تم إصلاح أخطاء القوالب النصية هنا أيضاً
+            document.getElementById('admin-revenue').innerText = `$${revenue}`;
+            document.getElementById('admin-payouts').innerText = `$${payouts}`;
+            document.getElementById('admin-profit').innerText = `$${revenue - payouts}`;
             document.getElementById('admin-users-count').innerText = users.length;
         };
 
@@ -696,7 +694,6 @@
             startMatrix();
             if(window.lucide) lucide.createIcons();
             
-            // Capture referral code from URL (for later use when user signs up)
             const urlParams = new URLSearchParams(window.location.search);
             const ref = urlParams.get('ref');
             if (ref) {
@@ -707,7 +704,10 @@
 
     </script>
 </body>
-    </html>
+</html>
+
+
+
 
 
 
