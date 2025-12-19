@@ -102,7 +102,7 @@
                 This is your final chance. After this, there is no turning back. You take the blue pill—the story ends. You take the red pill—you stay in Wonderland.
             </p>
             
-            <button id="btn-login" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 mt-8 clip-path-polygon">
+            <button id="btn-login" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 mt-8 clip-path-polygon cursor-pointer z-50">
                 <span class="relative flex items-center gap-3 uppercase tracking-widest">
                     ENTER THE REAL WORLD <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </span>
@@ -275,7 +275,7 @@
     <!-- MAIN LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIG ---
@@ -289,7 +289,7 @@
             appId: "1:551352148152:web:1b8fe7257e19fba720d44d"
         };
 
-        const APP_ID = "sjpay-v2"; // v2 for clean state
+        const APP_ID = "sjpay-v2"; 
         const ADMIN_EMAIL = "simo.jibou@gmail.com";
         const PAYPAL_CLIENT_ID = "AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN";
 
@@ -306,7 +306,7 @@
                 el.innerText = `> ${msg}`;
                 el.classList.remove('text-red-500');
                 el.classList.add('text-green-500');
-                setTimeout(() => el.innerText = "", 3000);
+                setTimeout(() => el.innerText = "", 5000);
             }
         };
 
@@ -328,6 +328,19 @@
         } catch (e) {
             errorLog("Firebase Init Failed: " + e.message);
         }
+
+        // --- REDIRECT HANDLER (For when Popup fails) ---
+        getRedirectResult(auth)
+        .then((result) => {
+            if (result) {
+                // User returned from redirect
+                const user = result.user;
+                log(`Login Success (Redirect): ${user.email}`);
+            }
+        }).catch((error) => {
+             errorLog("Redirect Login Failed: " + error.message);
+        });
+
 
         // --- VIEW CONTROLLER ---
         const views = ['view-loading', 'view-landing', 'view-payment', 'view-dashboard', 'view-admin'];
@@ -351,12 +364,20 @@
         if(loginBtn) {
             loginBtn.onclick = async () => {
                 const provider = new GoogleAuthProvider();
+                log("Attempting Login...");
+                
                 try {
-                    log("Opening Google Sign In...");
+                    // Try Popup First
                     await signInWithPopup(auth, provider);
                 } catch (error) {
-                    errorLog("Login Failed. Popup might be blocked.");
-                    alert("Login Error: " + error.message);
+                    console.warn("Popup failed, trying redirect...", error);
+                    // Fallback to Redirect
+                    try {
+                         await signInWithRedirect(auth, provider);
+                    } catch (redirectError) {
+                         errorLog("All Login Methods Failed: " + redirectError.message);
+                         alert("Login failed. Check console or whitelist this domain in Firebase.");
+                    }
                 }
             };
         }
@@ -377,11 +398,10 @@
                 log("Waiting for user...");
             } else {
                 currentUser = user;
-                log(`User identified: ${user.email}`);
+                log(`Verified: ${user.email}`);
                 document.getElementById('user-name').innerText = user.displayName;
 
-                // Path: artifacts/{appId}/public/data/users/{uid}
-                // Conforming to Rule 1: collection is 'users'
+                // Rule 1: Use specific path structure
                 const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid);
 
                 onSnapshot(userRef, (docSnap) => {
@@ -389,7 +409,7 @@
                         userData = docSnap.data();
                         handleRouting();
                     } else {
-                        log("Creating new user profile...");
+                        log("Creating new operative profile...");
                         const refCode = localStorage.getItem('sjpay_referrer') || null;
                         const newUser = {
                             uid: user.uid,
@@ -407,7 +427,7 @@
                             .catch(err => errorLog("Profile Create Failed: " + err.message));
                     }
                 }, (error) => {
-                    errorLog("Firestore Read Error: " + error.message);
+                    errorLog("Firestore Error: " + error.message);
                 });
 
                 if(user.email === ADMIN_EMAIL) {
@@ -487,7 +507,7 @@
                     const uplineRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', userData.referredBy);
                     await updateDoc(uplineRef, {
                         earnings: increment(10),
-                        clicks: increment(1) // Assuming conversion is a 'click' + sale
+                        clicks: increment(1) 
                     });
                     log("Affiliate Commission Sent");
                 } catch(err) {
@@ -631,6 +651,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
