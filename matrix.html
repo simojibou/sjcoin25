@@ -114,7 +114,7 @@
             </p>
             
             <div class="pt-8">
-                <button id="btn-login" class="btn-glow group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 cursor-pointer clip-path-polygon">
+                <button id="btn-login" class="btn-glow group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 cursor-pointer">
                     <span class="relative flex items-center gap-3 uppercase tracking-widest">
                         Access Terminal <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
                     </span>
@@ -180,7 +180,7 @@
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Stats -->
+            <!-- Earnings -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group hover:border-tate-gold/30 transition-colors">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="dollar-sign" class="w-16 h-16 text-tate-gold"></i>
@@ -194,23 +194,24 @@
                 </div>
             </div>
             
+            <!-- Clicks (now approximate unique visitors) -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="mouse-pointer-2" class="w-16 h-16 text-white"></i>
                 </div>
                 <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Clicks</p>
                 <h3 class="text-5xl font-black text-white" id="dash-clicks">0</h3>
-                <p class="text-xs text-gray-500 mt-2 font-mono">UNIQUE VISITORS</p>
+                <p class="text-xs text-gray-500 mt-2 font-mono">APPROX. UNIQUE VISITORS</p>
             </div>
             
+            <!-- Rank + Recruits -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="crown" class="w-16 h-16 text-tate-red"></i>
                 </div>
                 <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Rank</p>
-                <div class="flex items-center gap-2 mt-1">
-                    <h3 class="text-3xl font-bold text-white uppercase">Soldier</h3>
-                </div>
+                <h3 class="text-3xl font-bold text-white uppercase">Soldier</h3>
+                <p class="text-lg text-gray-400 font-mono mt-1"><span id="dash-recruits">0</span> Recruits</p>
                 <p class="text-xs text-tate-red mt-2 font-mono uppercase">Next: Commander (10 Recruits)</p>
             </div>
         </div>
@@ -277,8 +278,10 @@
                         <tr>
                             <th class="px-6 py-3">Agent</th>
                             <th class="px-6 py-3">Clearance</th>
-                            <th class="px-6 py-3 text-right">Bounty</th>
-                            <th class="px-6 py-3 text-right">Uplink</th>
+                            <th class="px-6 py-3 text-right">Earnings</th>
+                            <th class="px-6 py-3 text-right">Clicks</th>
+                            <th class="px-6 py-3 text-right">Recruits</th>
+                            <th class="px-6 py-3 text-right">Referred By</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-800" id="admin-table-body">
@@ -314,7 +317,6 @@
 
         const APP_ID = "sjpay-v3-prod"; 
         const ADMIN_EMAIL = "simo.jibou@gmail.com";
-        // Specific Client ID provided by user
         const PAYPAL_CLIENT_ID = "AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN";
 
         // --- STATE ---
@@ -373,10 +375,8 @@
             const nav = document.getElementById('main-nav');
             if(id === 'view-dashboard' || id === 'view-admin') {
                 nav.classList.remove('hidden');
-                nav.classList.add('flex');
             } else {
                 nav.classList.add('hidden');
-                nav.classList.remove('flex');
             }
             if(window.lucide) lucide.createIcons();
         };
@@ -418,7 +418,7 @@
             } else {
                 currentUser = user;
                 log(`Identity Confirmed: ${user.displayName}`);
-                document.getElementById('user-name').innerText = user.displayName;
+                document.getElementById('user-name').innerText = user.displayName || user.email;
 
                 const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid);
 
@@ -437,6 +437,7 @@
                             paid: false,
                             earnings: 0,
                             clicks: 0,
+                            recruits: 0,
                             referredBy: refCode,
                             joinedAt: serverTimestamp()
                         };
@@ -467,7 +468,7 @@
             }
         };
 
-        // --- PAYPAL (Robust Loading) ---
+        // --- PAYPAL ---
         let paypalLoaded = false;
         
         const loadPayPal = () => {
@@ -486,7 +487,7 @@
                 paypalLoaded = true;
                 document.getElementById('paypal-loader').classList.add('hidden');
                 log("Payment Gateway Secured");
-                setTimeout(renderPayPalButton, 500); // Small delay to ensure SDK init
+                setTimeout(renderPayPalButton, 500);
             };
             
             script.onerror = () => {
@@ -499,8 +500,7 @@
 
         const renderPayPalButton = () => {
             const container = document.getElementById('paypal-button-container');
-            if(!container) return;
-            if(container.children.length > 0) return; // Already rendered
+            if(!container || container.children.length > 0) return;
 
             if(window.paypal) {
                 try {
@@ -530,7 +530,6 @@
                     errorLog("Button Render Error: " + e.message);
                 }
             } else {
-                // Retry if window.paypal isn't ready yet
                 setTimeout(renderPayPalButton, 500);
             }
         };
@@ -538,20 +537,18 @@
         const handlePaymentSuccess = async (details) => {
             const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', currentUser.uid);
             
-            // 1. Update User
             await updateDoc(userRef, {
                 paid: true,
                 paymentId: details.id,
                 paymentDate: serverTimestamp()
             });
 
-            // 2. Pay Affiliate
             if(userData.referredBy) {
                 try {
                     const uplineRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', userData.referredBy);
                     await updateDoc(uplineRef, {
                         earnings: increment(10),
-                        clicks: increment(1) 
+                        recruits: increment(1)
                     });
                     log("Bounty Distributed");
                 } catch(err) {
@@ -564,8 +561,9 @@
         const updateDashboard = () => {
             document.getElementById('dash-earnings').innerText = (userData.earnings || 0).toFixed(2);
             document.getElementById('dash-clicks').innerText = userData.clicks || 0;
+            document.getElementById('dash-recruits').innerText = userData.recruits || 0;
             
-            const link = `${window.location.origin}${window.location.pathname}?ref=${currentUser.uid}`;
+            const link = `\( {window.location.origin} \){window.location.pathname}?ref=${currentUser.uid}`;
             const linkEl = document.getElementById('affiliate-link-text');
             if(linkEl) linkEl.innerText = link;
         };
@@ -626,15 +624,17 @@
                             ? '<span class="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] border border-green-500/30 font-bold">PAID OPERATIVE</span>' 
                             : '<span class="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] border border-red-500/30">PENDING</span>'}
                     </td>
-                    <td class="px-6 py-4 text-right text-tate-gold font-mono font-bold">$${u.earnings || 0}</td>
-                    <td class="px-6 py-4 text-right text-gray-500 text-[10px] font-mono">${u.referredBy ? u.referredBy.substring(0,5)+'...' : 'NONE'}</td>
+                    <td class="px-6 py-4 text-right text-tate-gold font-mono font-bold">\[ {u.earnings || 0}</td>
+                    <td class="px-6 py-4 text-right text-gray-300 font-mono">${u.clicks || 0}</td>
+                    <td class="px-6 py-4 text-right text-tate-red font-mono">${u.recruits || 0}</td>
+                    <td class="px-6 py-4 text-right text-gray-500 text-[10px] font-mono">${u.referredBy ? u.referredBy.substring(0,8)+'...' : 'Direct'}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('admin-revenue').innerText = `$${revenue}`;
-            document.getElementById('admin-payouts').innerText = `$${payouts}`;
-            document.getElementById('admin-profit').innerText = `$${revenue - payouts}`;
+            document.getElementById('admin-revenue').innerText = ` \]{revenue}`;
+            document.getElementById('admin-payouts').innerText = `\[ {payouts}`;
+            document.getElementById('admin-profit').innerText = ` \]{revenue - payouts}`;
             document.getElementById('admin-users-count').innerText = users.length;
         };
 
@@ -684,19 +684,29 @@
             startMatrix();
             if(window.lucide) lucide.createIcons();
             
-            // Check Ref
+            // Referral & Click Tracking
             const urlParams = new URLSearchParams(window.location.search);
             const ref = urlParams.get('ref');
             if (ref) {
                 localStorage.setItem('sjpay_referrer', ref);
                 log("Referral Code Captured");
+
+                const clickedKey = `sjpay_clicked_${ref}`;
+                if (localStorage.getItem(clickedKey) !== 'true') {
+                    localStorage.setItem(clickedKey, 'true');
+                    if (db) {
+                        const referrerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', ref);
+                        updateDoc(referrerRef, {
+                            clicks: increment(1)
+                        }).catch(() => {});
+                    }
+                }
             }
         };
 
     </script>
 </body>
 </html>
-
 
 
 
