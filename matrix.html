@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJPAY | The War Room</title>
+    <title>SJPAY | The Real World</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -46,10 +46,15 @@
         
         /* Glassmorphism */
         .glass {
-            background: rgba(10, 10, 10, 0.8);
+            background: rgba(10, 10, 10, 0.9);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Button Glow */
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(185, 28, 28, 0.5);
         }
     </style>
 </head>
@@ -62,7 +67,7 @@
     <div id="view-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black content-layer">
         <div class="flex flex-col items-center gap-4">
             <i data-lucide="loader-2" class="w-12 h-12 text-tate-red animate-spin"></i>
-            <div class="font-mono text-tate-red tracking-widest text-sm animate-pulse-fast">INITIALIZING SJPAY PROTOCOL...</div>
+            <div class="font-mono text-tate-red tracking-widest text-sm animate-pulse-fast">CONNECTING TO SJPAY...</div>
         </div>
         <div id="loading-log" class="mt-4 text-xs font-mono text-gray-600"></div>
     </div>
@@ -71,16 +76,18 @@
     <nav id="main-nav" class="fixed top-0 w-full z-40 border-b border-white/10 bg-black/80 backdrop-blur-md hidden content-layer">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <i data-lucide="shield" class="text-tate-red w-6 h-6"></i>
-                <span class="font-black text-xl tracking-tighter">SJ<span class="text-tate-red">PAY</span></span>
+                <div class="bg-tate-red/10 p-1 rounded">
+                    <i data-lucide="shield" class="text-tate-red w-6 h-6"></i>
+                </div>
+                <span class="font-black text-xl tracking-tighter text-white">SJ<span class="text-tate-red">PAY</span></span>
             </div>
             <div class="flex items-center gap-4">
                 <div id="user-display" class="hidden md:flex flex-col items-end">
                     <span id="user-name" class="text-sm font-bold text-white"></span>
-                    <span class="text-[10px] text-green-500 font-mono tracking-widest">● ONLINE</span>
+                    <span class="text-[10px] text-green-500 font-mono tracking-widest uppercase">● Soldier</span>
                 </div>
                 <button id="btn-logout" class="bg-white/5 hover:bg-tate-red border border-white/10 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all rounded">
-                    Disconnect
+                    Logout
                 </button>
             </div>
         </div>
@@ -88,130 +95,145 @@
 
     <!-- 1. LANDING PAGE -->
     <section id="view-landing" class="flex-1 flex flex-col items-center justify-center p-6 text-center content-layer hidden-view min-h-screen">
-        <div class="max-w-4xl mx-auto space-y-8">
-            <div class="inline-flex items-center gap-2 px-4 py-1 border border-tate-red/50 bg-red-950/30 rounded-full text-tate-red font-mono text-xs">
+        <div class="max-w-4xl mx-auto space-y-8 relative">
+            <div class="inline-flex items-center gap-2 px-4 py-1 border border-tate-red/50 bg-red-950/30 rounded-full text-tate-red font-mono text-xs mb-4">
                 <span class="w-2 h-2 rounded-full bg-tate-red animate-pulse"></span>
-                SYSTEM SECURE
+                SYSTEM ONLINE: SJPAY v2.0
             </div>
             
-            <h1 class="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none">
-                Escape The <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-tate-red to-orange-600">Matrix</span>
+            <h1 class="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none text-white drop-shadow-2xl">
+                SJ<span class="text-tate-red">PAY</span>
             </h1>
             
-            <p class="text-lg text-gray-400 max-w-xl mx-auto font-light">
-                This is your final chance. After this, there is no turning back. You take the blue pill—the story ends. You take the red pill—you stay in Wonderland.
+            <h2 class="text-2xl md:text-4xl font-bold uppercase tracking-tight">
+                Escape The <span class="text-transparent bg-clip-text bg-gradient-to-r from-tate-red to-orange-600">Matrix</span>
+            </h2>
+            
+            <p class="text-lg text-gray-400 max-w-xl mx-auto font-light leading-relaxed">
+                The world is designed to keep you poor. We are building an army to break free. Join the network. Recruit soldiers. Get paid.
             </p>
             
-            <button id="btn-login" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 mt-8 clip-path-polygon cursor-pointer z-50">
-                <span class="relative flex items-center gap-3 uppercase tracking-widest">
-                    ENTER THE REAL WORLD <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                </span>
-            </button>
+            <div class="pt-8">
+                <button id="btn-login" class="btn-glow group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-black transition-all duration-200 bg-white hover:bg-gray-200 cursor-pointer clip-path-polygon">
+                    <span class="relative flex items-center gap-3 uppercase tracking-widest">
+                        Access Terminal <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                    </span>
+                </button>
+            </div>
         </div>
     </section>
 
     <!-- 2. PAYMENT WALL -->
     <section id="view-payment" class="flex-1 flex items-center justify-center p-4 content-layer hidden-view min-h-screen">
-        <div class="max-w-md w-full glass p-8 rounded-xl shadow-2xl relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-tate-red to-orange-600"></div>
+        <div class="max-w-md w-full glass p-8 rounded-xl shadow-2xl relative overflow-hidden border-t-4 border-t-tate-red">
             
             <div class="text-center mb-8">
-                <div class="inline-flex p-4 rounded-full bg-red-900/10 mb-4 border border-red-900/30">
-                    <i data-lucide="lock" class="w-8 h-8 text-tate-red"></i>
-                </div>
-                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Access Restricted</h2>
-                <p class="text-gray-400 text-sm mt-2">Entry requires verification & commitment.</p>
-            </div>
-
-            <div class="space-y-4 mb-8">
-                <div class="flex justify-between items-center p-4 bg-black/50 border border-white/10 rounded">
-                    <span class="font-mono text-gray-400 text-sm">ENTRY FEE</span>
-                    <span class="font-bold text-2xl text-tate-gold">$20.00</span>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-400">
-                        <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
-                        <span>AFFILIATE LINK GENERATION</span>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-400">
-                        <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
-                        <span>$10 COMMISSION / RECRUIT</span>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs font-mono text-gray-400">
-                        <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
-                        <span>ADMIN DASHBOARD ACCESS</span>
-                    </div>
+                <h2 class="text-3xl font-black uppercase tracking-tighter text-white mb-2">SJ<span class="text-tate-red">PAY</span></h2>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-900/20 border border-red-900/50 rounded text-red-500 text-xs font-mono uppercase tracking-widest">
+                    <i data-lucide="lock" class="w-3 h-3"></i> Payment Required
                 </div>
             </div>
 
+            <div class="bg-black/40 border border-white/5 rounded-lg p-6 mb-8">
+                <div class="flex justify-between items-end mb-4 border-b border-white/10 pb-4">
+                    <span class="font-mono text-gray-400 text-sm">ACCESS FEE</span>
+                    <span class="font-black text-3xl text-tate-gold">$20.00</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                        <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                        <span>UNLOCK AFFILIATE DASHBOARD</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                        <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                        <span>EARN $10 PER RECRUIT</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-mono text-gray-300">
+                        <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                        <span>INSTANT PAYOUT SYSTEM</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="paypal-loader" class="text-center text-xs font-mono text-gray-500 mb-2 hidden">Loading Payment Gateway...</div>
             <div id="paypal-button-container" class="z-20 relative min-h-[150px]"></div>
             
-            <div class="mt-6 text-center">
-                <p class="text-[10px] text-gray-600 uppercase">Secure Payment via PayPal</p>
+            <div class="mt-6 text-center border-t border-white/5 pt-4">
+                <p class="text-[10px] text-gray-600 uppercase tracking-widest flex items-center justify-center gap-1">
+                    <i data-lucide="shield-check" class="w-3 h-3"></i> Secure Transaction
+                </p>
             </div>
         </div>
     </section>
 
     <!-- 3. DASHBOARD -->
     <section id="view-dashboard" class="flex-1 p-6 pt-24 max-w-7xl mx-auto w-full content-layer hidden-view">
-        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-6">
             <div>
-                <h2 class="text-3xl font-black uppercase text-white">War Room</h2>
-                <p class="text-gray-500 text-xs font-mono tracking-widest">STATUS: ACTIVE OPERATIVE</p>
+                <h2 class="text-4xl font-black uppercase text-white tracking-tighter">SJ<span class="text-tate-red">PAY</span> HUB</h2>
+                <p class="text-gray-500 text-xs font-mono tracking-widest mt-1">OPERATIVE DASHBOARD // TIER 1</p>
             </div>
-            <div class="px-4 py-2 rounded bg-green-900/10 border border-green-900/30 flex items-center gap-2">
+            <div class="px-4 py-2 rounded bg-green-500/10 border border-green-500/20 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span class="text-xs font-mono text-green-500 font-bold">LIVE NETWORK</span>
+                <span class="text-xs font-mono text-green-500 font-bold">SYSTEM ACTIVE</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <!-- Stats -->
-            <div class="glass p-6 rounded-xl relative overflow-hidden group">
+            <div class="glass p-6 rounded-xl relative overflow-hidden group hover:border-tate-gold/30 transition-colors">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="dollar-sign" class="w-16 h-16 text-tate-gold"></i>
                 </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Total Earnings</p>
-                <h3 class="text-4xl font-black text-white flex items-baseline gap-1">
+                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Earnings</p>
+                <h3 class="text-5xl font-black text-white flex items-baseline gap-1">
                     $<span id="dash-earnings">0</span>
                 </h3>
-                <p class="text-xs text-green-500 mt-2 font-mono flex items-center gap-1">
-                    <i data-lucide="trending-up" class="w-3 h-3"></i> REAL TIME
-                </p>
-            </div>
-            
-            <div class="glass p-6 rounded-xl">
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Link Clicks</p>
-                <h3 class="text-4xl font-black text-white" id="dash-clicks">0</h3>
-                <p class="text-xs text-gray-500 mt-2 font-mono">UNIQUE HITS</p>
-            </div>
-            
-            <div class="glass p-6 rounded-xl">
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-1">Rank</p>
-                <div class="flex items-center gap-2 mt-1">
-                    <i data-lucide="medal" class="text-tate-red w-6 h-6"></i>
-                    <h3 class="text-2xl font-bold text-white uppercase">Soldier</h3>
+                <div class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-black bg-tate-gold px-2 py-0.5 rounded">
+                    WITHDRAWABLE
                 </div>
-                <p class="text-xs text-gray-500 mt-2 font-mono">TIER 1 ACCESS</p>
+            </div>
+            
+            <div class="glass p-6 rounded-xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i data-lucide="mouse-pointer-2" class="w-16 h-16 text-white"></i>
+                </div>
+                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Clicks</p>
+                <h3 class="text-5xl font-black text-white" id="dash-clicks">0</h3>
+                <p class="text-xs text-gray-500 mt-2 font-mono">UNIQUE VISITORS</p>
+            </div>
+            
+            <div class="glass p-6 rounded-xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i data-lucide="crown" class="w-16 h-16 text-tate-red"></i>
+                </div>
+                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Rank</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <h3 class="text-3xl font-bold text-white uppercase">Soldier</h3>
+                </div>
+                <p class="text-xs text-tate-red mt-2 font-mono uppercase">Next: Commander (10 Recruits)</p>
             </div>
         </div>
 
         <!-- Affiliate Link -->
-        <div class="glass rounded-xl p-6 md:p-8 border-l-4 border-l-tate-red">
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <i data-lucide="link-2" class="w-5 h-5 text-tate-red"></i> DEPLOYMENT LINK
+        <div class="glass rounded-xl p-6 md:p-8 border-l-4 border-l-tate-red bg-gradient-to-r from-red-950/30 to-transparent">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-tight">
+                <i data-lucide="link-2" class="w-5 h-5 text-tate-red"></i> Your Recruitment Link
             </h3>
             
-            <div class="bg-black/50 border border-white/10 rounded-lg p-2 flex items-center gap-2">
-                <code id="affiliate-link-text" class="flex-1 bg-transparent border-none outline-none text-gray-300 font-mono text-sm px-4 truncate">
-                    Generating secure link...
-                </code>
-                <button id="btn-copy" class="bg-white text-black font-bold uppercase text-xs px-6 py-3 hover:bg-gray-200 transition-colors rounded">
-                    Copy
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 bg-black/60 border border-white/10 rounded-lg p-1 flex items-center gap-2">
+                    <code id="affiliate-link-text" class="flex-1 bg-transparent border-none outline-none text-gray-300 font-mono text-sm px-4 py-3 truncate">
+                        Generating secure link...
+                    </code>
+                </div>
+                <button id="btn-copy" class="bg-white text-black font-bold uppercase text-xs px-8 py-3 hover:bg-tate-gold transition-colors rounded shadow-lg">
+                    Copy Link
                 </button>
             </div>
-            <p class="text-gray-500 text-xs mt-3 font-mono">
-                <span class="text-tate-red">*MISSION:</span> Share this link. Receive $10 bounty for every paid recruit.
+            <p class="text-gray-400 text-xs mt-4 font-mono flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-tate-red"></i>
+                <span>Share this link. You receive <span class="text-tate-gold font-bold">$10.00</span> for every person who joins and pays via your link.</span>
             </p>
         </div>
     </section>
@@ -224,7 +246,7 @@
                 <p class="text-gray-500 text-xs font-mono">ADMINISTRATOR PRIVILEGES ENABLED</p>
             </div>
             <div class="text-right">
-                <p class="text-xs text-gray-500">SERVER TIME</p>
+                <p class="text-xs text-gray-500">SJPAY SYSTEM</p>
                 <p class="font-mono text-white" id="server-time">--:--:--</p>
             </div>
         </header>
@@ -269,7 +291,7 @@
 
     <!-- DEBUG CONSOLE -->
     <div class="fixed bottom-2 left-2 z-50 pointer-events-none">
-        <div id="status-log" class="text-[10px] font-mono text-gray-700 bg-black/80 px-2 py-1 rounded">System Ready</div>
+        <div id="status-log" class="text-[10px] font-mono text-gray-700 bg-black/80 px-2 py-1 rounded shadow-lg">System Ready</div>
     </div>
 
     <!-- MAIN LOGIC -->
@@ -290,8 +312,9 @@
             measurementId: "G-YQTVZQWXGB"
         };
 
-        const APP_ID = "sjpay-v2"; 
+        const APP_ID = "sjpay-v3-prod"; 
         const ADMIN_EMAIL = "simo.jibou@gmail.com";
+        // Specific Client ID provided by user
         const PAYPAL_CLIENT_ID = "AVyuqpKGTpOqNnILLQJXHiPxkIV7WQcABCRwlSnZyZxGLFSN_rUdT5deUvT63akXJjaLxaPEzAxEONgN";
 
         // --- STATE ---
@@ -325,23 +348,21 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            log("Firebase Initialized");
+            log("Connected to SJPAY Mainframe");
         } catch (e) {
-            errorLog("Firebase Init Failed: " + e.message);
+            errorLog("DB Connection Failed: " + e.message);
         }
 
-        // --- REDIRECT HANDLER (For when Popup fails) ---
+        // --- REDIRECT HANDLER ---
         getRedirectResult(auth)
         .then((result) => {
             if (result) {
-                // User returned from redirect
                 const user = result.user;
-                log(`Login Success (Redirect): ${user.email}`);
+                log(`Agent Verified: ${user.email}`);
             }
         }).catch((error) => {
-             errorLog("Redirect Login Failed: " + error.message);
+             errorLog("Auth Error: " + error.message);
         });
-
 
         // --- VIEW CONTROLLER ---
         const views = ['view-loading', 'view-landing', 'view-payment', 'view-dashboard', 'view-admin'];
@@ -365,19 +386,16 @@
         if(loginBtn) {
             loginBtn.onclick = async () => {
                 const provider = new GoogleAuthProvider();
-                log("Attempting Login...");
+                log("Initiating Secure Login...");
                 
                 try {
-                    // Try Popup First
                     await signInWithPopup(auth, provider);
                 } catch (error) {
-                    console.warn("Popup failed, trying redirect...", error);
-                    // Fallback to Redirect
+                    console.warn("Popup blocked, redirecting...", error);
                     try {
                          await signInWithRedirect(auth, provider);
                     } catch (redirectError) {
-                         errorLog("All Login Methods Failed: " + redirectError.message);
-                         alert("Login failed. Check console or whitelist this domain in Firebase.");
+                         errorLog("Login Failed. Check connection.");
                     }
                 }
             };
@@ -396,13 +414,12 @@
             if (!user) {
                 currentUser = null;
                 switchView('view-landing');
-                log("Waiting for user...");
+                log("Waiting for user input...");
             } else {
                 currentUser = user;
-                log(`Verified: ${user.email}`);
+                log(`Identity Confirmed: ${user.displayName}`);
                 document.getElementById('user-name').innerText = user.displayName;
 
-                // Rule 1: Use specific path structure
                 const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid);
 
                 onSnapshot(userRef, (docSnap) => {
@@ -410,7 +427,7 @@
                         userData = docSnap.data();
                         handleRouting();
                     } else {
-                        log("Creating new operative profile...");
+                        log("Initializing new operative...");
                         const refCode = localStorage.getItem('sjpay_referrer') || null;
                         const newUser = {
                             uid: user.uid,
@@ -424,11 +441,11 @@
                             joinedAt: serverTimestamp()
                         };
                         setDoc(userRef, newUser)
-                            .then(() => log("Profile created."))
-                            .catch(err => errorLog("Profile Create Failed: " + err.message));
+                            .then(() => log("Operative registered."))
+                            .catch(err => errorLog("Registration Failed: " + err.message));
                     }
                 }, (error) => {
-                    errorLog("Firestore Error: " + error.message);
+                    errorLog("Data Stream Interrupted");
                 });
 
                 if(user.email === ADMIN_EMAIL) {
@@ -450,45 +467,71 @@
             }
         };
 
-        // --- PAYPAL ---
+        // --- PAYPAL (Robust Loading) ---
         let paypalLoaded = false;
+        
         const loadPayPal = () => {
-            if(paypalLoaded) return;
+            if(paypalLoaded) {
+                 renderPayPalButton();
+                 return;
+            }
+            
+            document.getElementById('paypal-loader').classList.remove('hidden');
             
             const script = document.createElement('script');
             script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+            script.async = true;
+            
             script.onload = () => {
                 paypalLoaded = true;
-                log("PayPal SDK Loaded");
-                renderPayPalButton();
+                document.getElementById('paypal-loader').classList.add('hidden');
+                log("Payment Gateway Secured");
+                setTimeout(renderPayPalButton, 500); // Small delay to ensure SDK init
             };
-            script.onerror = () => errorLog("PayPal Script Failed to Load");
+            
+            script.onerror = () => {
+                 document.getElementById('paypal-loader').innerText = "Connection Failed. Refresh.";
+                 errorLog("PayPal Gateway Connection Error");
+            };
+            
             document.body.appendChild(script);
         };
 
         const renderPayPalButton = () => {
             const container = document.getElementById('paypal-button-container');
+            if(!container) return;
             if(container.children.length > 0) return; // Already rendered
 
             if(window.paypal) {
-                window.paypal.Buttons({
-                    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' },
-                    createOrder: (data, actions) => {
-                        return actions.order.create({
-                            purchase_units: [{ amount: { value: '20.00' } }]
-                        });
-                    },
-                    onApprove: (data, actions) => {
-                        return actions.order.capture().then((details) => {
-                            log("Payment Successful!");
-                            handlePaymentSuccess(details);
-                        });
-                    },
-                    onError: (err) => {
-                        errorLog("PayPal Checkout Error");
-                        console.error(err);
-                    }
-                }).render('#paypal-button-container');
+                try {
+                    window.paypal.Buttons({
+                        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' },
+                        createOrder: (data, actions) => {
+                            return actions.order.create({
+                                purchase_units: [{ 
+                                    amount: { value: '20.00' },
+                                    description: "SJPAY Membership Fee"
+                                }]
+                            });
+                        },
+                        onApprove: (data, actions) => {
+                            log("Processing Transaction...");
+                            return actions.order.capture().then((details) => {
+                                log("Transaction Complete: " + details.id);
+                                handlePaymentSuccess(details);
+                            });
+                        },
+                        onError: (err) => {
+                            errorLog("Transaction Failed");
+                            console.error(err);
+                        }
+                    }).render('#paypal-button-container');
+                } catch (e) {
+                    errorLog("Button Render Error: " + e.message);
+                }
+            } else {
+                // Retry if window.paypal isn't ready yet
+                setTimeout(renderPayPalButton, 500);
             }
         };
 
@@ -510,7 +553,7 @@
                         earnings: increment(10),
                         clicks: increment(1) 
                     });
-                    log("Affiliate Commission Sent");
+                    log("Bounty Distributed");
                 } catch(err) {
                     console.warn("Affiliate update failed", err);
                 }
@@ -535,7 +578,7 @@
                     copyBtn.innerText = "COPIED";
                     copyBtn.classList.add("bg-green-500", "text-white");
                     setTimeout(() => {
-                        copyBtn.innerText = "COPY";
+                        copyBtn.innerText = "COPY LINK";
                         copyBtn.classList.remove("bg-green-500", "text-white");
                     }, 2000);
                 });
@@ -545,7 +588,8 @@
         // --- ADMIN ---
         const setupAdmin = () => {
             setInterval(() => {
-                document.getElementById('server-time').innerText = new Date().toLocaleTimeString();
+                const timeEl = document.getElementById('server-time');
+                if(timeEl) timeEl.innerText = new Date().toLocaleTimeString();
             }, 1000);
 
             const q = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
@@ -652,6 +696,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
