@@ -194,17 +194,17 @@
                 </div>
             </div>
             
-            <!-- Clicks (now approximate unique visitors) -->
+            <!-- Referrals (sign-ups via link) -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="mouse-pointer-2" class="w-16 h-16 text-white"></i>
                 </div>
-                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Clicks</p>
-                <h3 class="text-5xl font-black text-white" id="dash-clicks">0</h3>
-                <p class="text-xs text-gray-500 mt-2 font-mono">APPROX. UNIQUE VISITORS</p>
+                <p class="text-gray-500 font-mono text-xs uppercase tracking-widest mb-2">Total Referrals</p>
+                <h3 class="text-5xl font-black text-white" id="dash-referrals">0</h3>
+                <p class="text-xs text-gray-500 mt-2 font-mono">REFERRED SIGN-UPS</p>
             </div>
             
-            <!-- Rank + Recruits -->
+            <!-- Rank + Recruits (paid) -->
             <div class="glass p-6 rounded-xl relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <i data-lucide="crown" class="w-16 h-16 text-tate-red"></i>
@@ -279,7 +279,7 @@
                             <th class="px-6 py-3">Agent</th>
                             <th class="px-6 py-3">Clearance</th>
                             <th class="px-6 py-3 text-right">Earnings</th>
-                            <th class="px-6 py-3 text-right">Clicks</th>
+                            <th class="px-6 py-3 text-right">Referrals</th>
                             <th class="px-6 py-3 text-right">Recruits</th>
                             <th class="px-6 py-3 text-right">Referred By</th>
                         </tr>
@@ -373,10 +373,10 @@
             document.getElementById(id).classList.remove('hidden-view');
             
             const nav = document.getElementById('main-nav');
-            if(id === 'view-dashboard' || id === 'view-admin') {
-                nav.classList.remove('hidden');
-            } else {
+            if (id === 'view-landing') {
                 nav.classList.add('hidden');
+            } else {
+                nav.classList.remove('hidden');
             }
             if(window.lucide) lucide.createIcons();
         };
@@ -418,7 +418,7 @@
             } else {
                 currentUser = user;
                 log(`Identity Confirmed: ${user.displayName}`);
-                document.getElementById('user-name').innerText = user.displayName || user.email;
+                document.getElementById('user-name').innerText = user.displayName || user.email.split('@')[0];
 
                 const userRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid);
 
@@ -436,13 +436,25 @@
                             photoURL: user.photoURL,
                             paid: false,
                             earnings: 0,
-                            clicks: 0,
-                            recruits: 0,
+                            clicks: 0,        // referrals (sign-ups via link)
+                            recruits: 0,      // paid recruits
                             referredBy: refCode,
                             joinedAt: serverTimestamp()
                         };
                         setDoc(userRef, newUser)
-                            .then(() => log("Operative registered."))
+                            .then(() => {
+                                log("Operative registered.");
+                                // Count referral only when a new user signs up via the link (authenticated write)
+                                if (refCode) {
+                                    const uplineRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', refCode);
+                                    updateDoc(uplineRef, {
+                                        clicks: increment(1)
+                                    }).then(() => {
+                                        log("Referral counted");
+                                        localStorage.removeItem('sjpay_referrer');
+                                    }).catch(err => errorLog("Failed to count referral: " + err.message));
+                                }
+                            })
                             .catch(err => errorLog("Registration Failed: " + err.message));
                     }
                 }, (error) => {
@@ -560,7 +572,7 @@
         // --- DASHBOARD ---
         const updateDashboard = () => {
             document.getElementById('dash-earnings').innerText = (userData.earnings || 0).toFixed(2);
-            document.getElementById('dash-clicks').innerText = userData.clicks || 0;
+            document.getElementById('dash-referrals').innerText = userData.clicks || 0;
             document.getElementById('dash-recruits').innerText = userData.recruits || 0;
             
             const link = `\( {window.location.origin} \){window.location.pathname}?ref=${currentUser.uid}`;
@@ -684,29 +696,18 @@
             startMatrix();
             if(window.lucide) lucide.createIcons();
             
-            // Referral & Click Tracking
+            // Capture referral code from URL (for later use when user signs up)
             const urlParams = new URLSearchParams(window.location.search);
             const ref = urlParams.get('ref');
             if (ref) {
                 localStorage.setItem('sjpay_referrer', ref);
                 log("Referral Code Captured");
-
-                const clickedKey = `sjpay_clicked_${ref}`;
-                if (localStorage.getItem(clickedKey) !== 'true') {
-                    localStorage.setItem(clickedKey, 'true');
-                    if (db) {
-                        const referrerRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', ref);
-                        updateDoc(referrerRef, {
-                            clicks: increment(1)
-                        }).catch(() => {});
-                    }
-                }
             }
         };
 
     </script>
 </body>
-</html>
+    </html>
 
 
 
