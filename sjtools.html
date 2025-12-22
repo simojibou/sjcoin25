@@ -3,671 +3,709 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Musician's Release Toolkit</title>
+    <title>Pro Studio: Real-Time FX</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- LameJS for MP3 Encoding -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
     <style>
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        /* Pro Dark Theme Styles */
+        body { background-color: #0f172a; color: #e2e8f0; }
         
-        input[type="range"] {
-            -webkit-appearance: none;
-            background: transparent;
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        input[type="range"]::-webkit-slider-thumb {
+        
+        .knob-range {
             -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            margin-top: -6px;
-        }
-        input[type="range"]::-webkit-slider-runnable-track {
-            width: 100%;
             height: 4px;
-            background: #4b5563;
+            background: #334155;
             border-radius: 2px;
+            outline: none;
         }
-        .tab-active {
-            border-bottom: 2px solid #3b82f6;
-            color: #60a5fa;
+        .knob-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
         }
-        .tab-inactive {
-            border-bottom: 2px solid transparent;
-            color: #9ca3af;
-        }
-        .tab-inactive:hover { color: #d1d5db; }
+        .knob-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
-        /* Font Imports for Cover Art */
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&display=swap');
+        .processing-active { animation: pulse-glow 2s infinite; border-color: #3b82f6; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+
+        /* Play button pulse when playing */
+        .playing-pulse {
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
+<body class="flex flex-col min-h-screen font-sans selection:bg-blue-500 selection:text-white">
 
-    <!-- Header -->
-    <header class="bg-gray-800 border-b border-gray-700 p-4 shadow-lg z-10 sticky top-0">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-                <i data-lucide="disc-3" class="text-blue-500 w-8 h-8"></i>
-                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">ReleaseReady</h1>
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass-panel border-b-0 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-lg shadow-lg">
+                        <i data-lucide="waves" class="text-white w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">VibeStudio Pro</h1>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Real-Time FX Engine</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="switchMode('studio')" id="nav-studio" class="text-blue-400 font-medium hover:text-white transition">Studio</button>
+                    <button onclick="switchMode('art')" id="nav-art" class="text-gray-400 font-medium hover:text-white transition">Cover Art</button>
+                </div>
             </div>
-            
-            <!-- Navigation Tabs -->
-            <nav class="flex space-x-8">
-                <button onclick="switchTab('audio')" id="tab-audio" class="tab-active pb-2 font-medium flex items-center gap-2 transition-colors">
-                    <i data-lucide="music-4" class="w-4 h-4"></i> Audio Master
-                </button>
-                <button onclick="switchTab('art')" id="tab-art" class="tab-inactive pb-2 font-medium flex items-center gap-2 transition-colors">
-                    <i data-lucide="image" class="w-4 h-4"></i> Cover Art (3000px)
-                </button>
-            </nav>
         </div>
-    </header>
+    </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow p-4 md:p-8 flex flex-col items-center gap-6 w-full max-w-6xl mx-auto">
+    <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full gap-6 grid grid-cols-1 lg:grid-cols-12">
 
-        <!-- ================= AUDIO SECTION ================= -->
-        <section id="audio-section" class="w-full animate-fade-in flex flex-col gap-6">
+        <!-- ================= STUDIO MODE ================= -->
+        
+        <!-- Sidebar: Effects Rack (Left) -->
+        <aside id="effects-rack" class="lg:col-span-3 glass-panel rounded-2xl p-5 space-y-6 h-fit lg:sticky lg:top-24">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="sliders" class="w-5 h-5 text-blue-400"></i>
+                <h2 class="text-lg font-bold">Live FX Rack</h2>
+            </div>
             
-            <!-- Upload Zone -->
-            <div id="audio-upload-zone" class="w-full h-48 border-2 border-dashed border-gray-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800 transition-all group">
-                <input type="file" id="audio-input" class="hidden" accept="audio/*">
-                <div class="p-4 bg-gray-800 rounded-full mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                    <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
+            <!-- Slow & Reverb Control -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <label class="text-sm font-semibold text-gray-300">Speed (Slow)</label>
+                    <span id="speed-val" class="text-xs font-mono text-blue-400">100%</span>
                 </div>
-                <h2 class="text-lg font-semibold text-gray-300">Upload Master Track</h2>
-                <p class="text-gray-500 mt-1 text-sm">MP3, WAV, AIFF supported</p>
-            </div>
-
-            <!-- Audio Editor UI -->
-            <div id="audio-editor-ui" class="hidden space-y-6">
+                <input type="range" id="speed-slider" min="50" max="120" value="100" class="knob-range w-full" oninput="updateLiveParams()">
+                <p class="text-xs text-gray-500">Updates in real-time while playing.</p>
                 
-                <!-- Waveform & Controls -->
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="overflow-hidden">
-                            <h3 id="filename-display" class="text-lg font-semibold text-white truncate">track.wav</h3>
-                            <p id="file-meta" class="text-sm text-gray-400">Loading...</p>
-                        </div>
-                        <button id="remove-audio" class="p-2 hover:bg-gray-700 rounded text-red-400">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-
-                    <div class="relative w-full h-32 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-                        <canvas id="waveform-canvas" class="w-full h-full"></canvas>
-                        <div id="playhead" class="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none" style="left: 0%"></div>
-                    </div>
-
-                    <div class="flex items-center gap-4 mt-4">
-                        <button id="btn-play" class="p-3 bg-blue-600 rounded-full hover:bg-blue-500 text-white shadow-lg">
-                            <i id="play-icon" data-lucide="play" class="w-6 h-6 fill-current"></i>
-                        </button>
-                        <div class="text-sm text-gray-400 font-mono">
-                            <span id="current-time">00:00</span> / <span id="total-time">00:00</span>
-                        </div>
-                        <div class="flex-grow"></div>
-                        <div class="flex items-center gap-2">
-                             <i data-lucide="volume-2" class="w-4 h-4 text-gray-400"></i>
-                             <input type="range" id="volume-slider" min="0" max="150" value="100" class="w-24">
-                        </div>
-                    </div>
+                <div class="flex justify-between items-center mt-4">
+                    <label class="text-sm font-semibold text-gray-300">Reverb (Space)</label>
+                    <span id="reverb-val" class="text-xs font-mono text-blue-400">0%</span>
                 </div>
+                <input type="range" id="reverb-slider" min="0" max="100" value="0" class="knob-range w-full" oninput="updateLiveParams()">
+            </div>
 
-                <!-- Export Controls -->
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
-                    <h4 class="text-blue-400 font-semibold mb-4 flex items-center gap-2">
-                        <i data-lucide="settings-2" class="w-4 h-4"></i> Export Settings
-                    </h4>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        
-                        <!-- Format Selection -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Format</label>
-                            <select id="export-format" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
-                                <option value="mp3">MP3 (320kbps)</option>
-                                <option value="wav">WAV (Lossless)</option>
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1" id="format-desc">Best for streaming preview.</p>
-                        </div>
+            <hr class="border-gray-700">
 
-                        <!-- Sample Rate -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Sample Rate</label>
-                            <select id="sample-rate" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
-                                <option value="44100">44.1 kHz</option>
-                                <option value="48000">48.0 kHz</option>
-                            </select>
-                        </div>
-
-                        <!-- Trim Start -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Trim Start (sec)</label>
-                            <input type="number" id="trim-start" value="0" step="0.1" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
-                        </div>
-
-                        <!-- Trim End -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Trim End (sec)</label>
-                            <input type="number" id="trim-end" value="0" step="0.1" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
-                        </div>
+            <!-- 3-Band EQ -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <label class="text-sm font-semibold text-gray-300">Master EQ</label>
+                    <button onclick="resetEQ()" class="text-xs text-gray-500 hover:text-white">Reset</button>
+                </div>
+                <div class="flex justify-between px-2">
+                    <div class="flex flex-col items-center gap-2">
+                        <input type="range" id="eq-high" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500" oninput="updateLiveParams()">
+                        <span class="text-xs text-gray-400">Hi</span>
                     </div>
-
-                    <div class="mt-6 pt-6 border-t border-gray-700 flex justify-end">
-                        <button id="convert-btn" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transform transition hover:scale-105">
-                            <span id="convert-text">Process & Download</span>
-                            <i data-lucide="download" class="w-5 h-5"></i>
-                        </button>
+                    <div class="flex flex-col items-center gap-2">
+                        <input type="range" id="eq-mid" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500" oninput="updateLiveParams()">
+                        <span class="text-xs text-gray-400">Mid</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <input type="range" id="eq-low" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500" oninput="updateLiveParams()">
+                        <span class="text-xs text-gray-400">Low</span>
                     </div>
                 </div>
             </div>
+
+            <hr class="border-gray-700">
+
+            <!-- Output Format -->
+             <div class="space-y-4">
+                <h3 class="text-sm font-bold text-gray-200 flex items-center gap-2">
+                    <i data-lucide="settings-2" class="w-4 h-4"></i> Output Settings
+                </h3>
+
+                <!-- Format -->
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">File Format</label>
+                    <select id="export-format" onchange="toggleBitrate()" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="mp3">MP3 (Compressed)</option>
+                        <option value="wav">WAV (Lossless)</option>
+                    </select>
+                </div>
+
+                <!-- Sample Rate -->
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Sample Rate (Hz)</label>
+                    <select id="sample-rate" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="44100" selected>44100 Hz (Music)</option>
+                        <option value="48000">48000 Hz (Video)</option>
+                    </select>
+                </div>
+
+                <!-- Bitrate (MP3 Only) -->
+                <div id="bitrate-container">
+                    <label class="text-xs text-gray-400 block mb-1">Bitrate (kbps)</label>
+                    <select id="bitrate" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="320" selected>320 kbps (High Quality)</option>
+                        <option value="192">192 kbps (Standard)</option>
+                        <option value="128">128 kbps (Low)</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace: Track List (Center) -->
+        <section id="studio-main" class="lg:col-span-9 space-y-6">
+            
+            <!-- Upload Area -->
+            <div id="drop-zone" class="glass-panel border-2 border-dashed border-gray-600 rounded-2xl h-48 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800/50 transition-all group relative overflow-hidden">
+                <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                <input type="file" id="file-input" multiple accept="audio/*" class="hidden">
+                <div class="p-4 bg-gray-800 rounded-full mb-3 shadow-xl group-hover:scale-110 transition-transform">
+                    <i data-lucide="layers" class="w-8 h-8 text-blue-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-200">Drop Tracks Here</h3>
+                <p class="text-gray-400 text-sm mt-1">Batch process 10+ tracks at once</p>
+            </div>
+
+            <!-- Queue Actions -->
+            <div id="queue-actions" class="hidden flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                <div class="flex items-center gap-3">
+                    <span class="text-gray-300 font-medium" id="track-count">0 Tracks Loaded</span>
+                    <button onclick="clearQueue()" class="text-xs text-red-400 hover:underline">Clear All</button>
+                </div>
+                <button onclick="processBatch()" id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg shadow-blue-900/40 flex items-center gap-2 transition-all active:scale-95">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span>Apply Effects & Convert All</span>
+                </button>
+            </div>
+
+            <!-- Track List -->
+            <div id="track-list" class="space-y-3">
+                <!-- Tracks inject here -->
+            </div>
+
         </section>
 
-
-        <!-- ================= ART SECTION ================= -->
-        <section id="art-section" class="w-full hidden flex flex-col md:flex-row gap-8">
-            
-            <!-- Controls (Left) -->
-            <div class="w-full md:w-1/3 space-y-6">
-                
-                <div class="bg-gray-800 rounded-xl p-5 border border-gray-700 shadow-xl">
-                    <h3 class="text-lg font-bold text-white mb-4">Art Configuration</h3>
-                    
-                    <!-- Image Upload -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Background Image</label>
-                        <button onclick="document.getElementById('img-input').click()" class="w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white border border-gray-600 transition flex items-center justify-center gap-2">
-                            <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Photo
-                        </button>
-                        <input type="file" id="img-input" class="hidden" accept="image/*">
-                    </div>
-
-                    <!-- Text Controls -->
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Artist Name</label>
-                            <input type="text" id="artist-text" placeholder="Artist Name" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Song Title</label>
-                            <input type="text" id="song-text" placeholder="Song Title" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Font Style</label>
-                            <select id="font-select" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
-                                <option value="Montserrat">Modern Sans (Montserrat)</option>
-                                <option value="Playfair Display">Elegant Serif (Playfair)</option>
-                                <option value="Roboto Mono">Digital Mono (Roboto)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Text Position</label>
-                            <select id="text-pos" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
-                                <option value="center">Center</option>
-                                <option value="bottom">Bottom</option>
-                                <option value="top">Top</option>
-                                <option value="corners">Corners</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Overlay Filter</label>
-                            <div class="flex gap-2">
-                                <button onclick="setFilter('none')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">None</button>
-                                <button onclick="setFilter('dark')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Dark</button>
-                                <button onclick="setFilter('grain')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Grain</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button id="download-art" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2">
-                        <i data-lucide="download" class="w-5 h-5"></i> Download (3000px)
+        <!-- ================= ART MODE (Hidden) ================= -->
+        <section id="art-main" class="hidden lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div class="glass-panel p-6 rounded-2xl">
+                <h2 class="text-xl font-bold mb-4">Cover Art Generator</h2>
+                <div class="space-y-4">
+                    <button onclick="document.getElementById('art-file').click()" class="w-full py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2">
+                        <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Background
                     </button>
-                    <p class="text-xs text-center text-gray-500 mt-2">Ready for Spotify & Apple Music</p>
+                    <input type="file" id="art-file" class="hidden" accept="image/*">
+                    
+                    <input type="text" id="art-artist" placeholder="Artist Name" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white">
+                    <input type="text" id="art-song" placeholder="Song/Album Title" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white">
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="downloadArt()" class="col-span-2 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg">Download 3000px</button>
+                    </div>
                 </div>
             </div>
-
-            <!-- Preview (Right) -->
-            <div class="w-full md:w-2/3 flex flex-col items-center">
-                <div class="relative w-full max-w-[500px] aspect-square bg-gray-800 rounded shadow-2xl border-4 border-gray-800 overflow-hidden">
-                    <!-- The actual logic runs on a hidden large canvas, but we draw to this visible one for preview -->
-                    <canvas id="art-preview" class="w-full h-full object-contain"></canvas>
-                </div>
-                <p class="text-sm text-gray-500 mt-2">Preview (Scaled down from 3000x3000px)</p>
+            <div class="flex justify-center items-start">
+                <canvas id="art-preview" class="w-full max-w-md aspect-square bg-gray-900 rounded-lg shadow-2xl border border-gray-700"></canvas>
+                <canvas id="art-hd" width="3000" height="3000" class="hidden"></canvas>
             </div>
-
-            <!-- Hidden HD Canvas -->
-            <canvas id="art-canvas" width="3000" height="3000" class="hidden"></canvas>
-
         </section>
-
-        <!-- Loading Overlay -->
-        <div id="loading-overlay" class="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50 hidden backdrop-blur-sm">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-            <h3 id="loading-text" class="text-xl font-bold text-white">Processing...</h3>
-            <p class="text-gray-400 text-sm mt-2">This happens locally on your device.</p>
-        </div>
 
     </main>
 
+    <!-- Global Scripts -->
     <script>
-        // Lucide Icons
         lucide.createIcons();
 
-        // --- GLOBAL STATE ---
-        const audioState = {
-            ctx: null,
-            buffer: null,
-            source: null,
-            gain: null,
-            isPlaying: false,
-            startAt: 0,
-            pausedAt: 0,
-            filename: 'track'
-        };
-
-        const artState = {
-            bgImage: null,
-            filter: 'none'
-        };
-
-        // --- TAB SWITCHING ---
-        function switchTab(tab) {
-            const audioSec = document.getElementById('audio-section');
-            const artSec = document.getElementById('art-section');
-            const tabAudio = document.getElementById('tab-audio');
-            const tabArt = document.getElementById('tab-art');
-
-            if (tab === 'audio') {
-                audioSec.classList.remove('hidden');
-                artSec.classList.add('hidden');
-                tabAudio.classList.replace('tab-inactive', 'tab-active');
-                tabArt.classList.replace('tab-active', 'tab-inactive');
-            } else {
-                audioSec.classList.add('hidden');
-                artSec.classList.remove('hidden');
-                tabAudio.classList.replace('tab-active', 'tab-inactive');
-                artSec.classList.add('flex'); // Restore flex layout
-                tabArt.classList.replace('tab-inactive', 'tab-active');
-                renderArt(); // Initial render
-            }
-        }
-
-        // ================= AUDIO LOGIC =================
-        const audioInput = document.getElementById('audio-input');
-        const uploadZone = document.getElementById('audio-upload-zone');
-        const audioEditor = document.getElementById('audio-editor-ui');
-        const formatSelect = document.getElementById('export-format');
-        const formatDesc = document.getElementById('format-desc');
-
-        // UI Interactions
-        uploadZone.addEventListener('click', () => audioInput.click());
-        audioInput.addEventListener('change', (e) => loadAudio(e.target.files[0]));
+        // --- GLOBAL VARIABLES ---
+        let audioCtx;
+        const trackQueue = []; // Array of { id, file, status, buffer, blob }
+        let isProcessing = false;
         
-        formatSelect.addEventListener('change', (e) => {
-            if(e.target.value === 'mp3') formatDesc.textContent = "320kbps Constant Bitrate (High Quality)";
-            else formatDesc.textContent = "Uncompressed PCM (Lossless, Large File)";
-        });
+        // --- LIVE AUDIO GRAPH ---
+        const liveAudio = {
+            source: null,
+            dryNode: null,
+            wetNode: null,
+            convolver: null,
+            filters: { low: null, mid: null, high: null },
+            isPlaying: false,
+            currentId: null,
+            impulseBuffer: null
+        };
 
-        document.getElementById('btn-play').addEventListener('click', toggleAudio);
-        document.getElementById('volume-slider').addEventListener('input', (e) => {
-            if(audioState.gain) audioState.gain.gain.value = e.target.value / 100;
-        });
-        document.getElementById('convert-btn').addEventListener('click', processAudioExport);
-        document.getElementById('remove-audio').addEventListener('click', resetAudio);
+        // --- UI SWITCHING ---
+        function switchMode(mode) {
+            const studio = document.getElementById('studio-main');
+            const rack = document.getElementById('effects-rack');
+            const art = document.getElementById('art-main');
+            const btnStudio = document.getElementById('nav-studio');
+            const btnArt = document.getElementById('nav-art');
 
-        async function loadAudio(file) {
-            if (!file) return;
-            showLoading(true, 'Decoding Audio...');
-            
-            try {
-                audioState.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const arrayBuffer = await file.arrayBuffer();
-                audioState.buffer = await audioState.ctx.decodeAudioData(arrayBuffer);
-                
-                // Set metadata
-                audioState.filename = file.name.replace(/\.[^/.]+$/, "");
-                document.getElementById('filename-display').textContent = file.name;
-                document.getElementById('file-meta').textContent = 
-                    `${formatTime(audioState.buffer.duration)} • ${audioState.buffer.sampleRate}Hz • ${audioState.buffer.numberOfChannels}ch`;
-
-                // Set trims
-                document.getElementById('trim-start').value = 0;
-                document.getElementById('trim-end').value = audioState.buffer.duration.toFixed(2);
-
-                drawWaveform();
-                
-                uploadZone.classList.add('hidden');
-                audioEditor.classList.remove('hidden');
-            } catch (e) {
-                alert("Error loading audio. Please try a different file.");
-                console.error(e);
-            }
-            showLoading(false);
-        }
-
-        function drawWaveform() {
-            const canvas = document.getElementById('waveform-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            // Draw center line
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(0,0,canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.strokeStyle = '#4b5563';
-            ctx.moveTo(0, canvas.height/2);
-            ctx.lineTo(canvas.width, canvas.height/2);
-            ctx.stroke();
-
-            // Simple visualization
-            const data = audioState.buffer.getChannelData(0);
-            const step = Math.ceil(data.length / canvas.width);
-            const amp = canvas.height / 2;
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#3b82f6';
-            for(let i=0; i < canvas.width; i++) {
-                let min = 1.0, max = -1.0;
-                for(let j=0; j<step; j++) {
-                    const datum = data[(i*step)+j];
-                    if(datum < min) min = datum;
-                    if(datum > max) max = datum;
-                }
-                ctx.moveTo(i, (1+min)*amp);
-                ctx.lineTo(i, (1+max)*amp);
-            }
-            ctx.stroke();
-        }
-
-        function toggleAudio() {
-            if(audioState.isPlaying) {
-                audioState.source.stop();
-                audioState.pausedAt = audioState.ctx.currentTime - audioState.startAt;
-                audioState.isPlaying = false;
-                document.getElementById('play-icon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>'; // Play
+            if(mode === 'studio') {
+                studio.classList.remove('hidden');
+                rack.classList.remove('hidden');
+                art.classList.add('hidden');
+                btnStudio.classList.add('text-blue-400');
+                btnStudio.classList.remove('text-gray-400');
+                btnArt.classList.remove('text-blue-400');
             } else {
-                audioState.source = audioState.ctx.createBufferSource();
-                audioState.source.buffer = audioState.buffer;
-                audioState.gain = audioState.ctx.createGain();
-                audioState.gain.gain.value = document.getElementById('volume-slider').value / 100;
-                
-                audioState.source.connect(audioState.gain);
-                audioState.gain.connect(audioState.ctx.destination);
-                
-                audioState.startAt = audioState.ctx.currentTime - audioState.pausedAt;
-                audioState.source.start(0, audioState.pausedAt);
-                audioState.isPlaying = true;
-                document.getElementById('play-icon').innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'; // Pause
-                
-                requestAnimationFrame(updatePlayhead);
-                audioState.source.onended = () => {
-                    if (audioState.ctx.currentTime - audioState.startAt >= audioState.buffer.duration) {
-                        audioState.isPlaying = false;
-                        audioState.pausedAt = 0;
-                        document.getElementById('play-icon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
-                        updatePlayheadUI(0);
-                    }
-                };
+                studio.classList.add('hidden');
+                rack.classList.add('hidden');
+                art.classList.remove('hidden');
+                btnStudio.classList.remove('text-blue-400');
+                btnArt.classList.add('text-blue-400');
+                renderArt(); 
+            }
+        }
+
+        function toggleBitrate() {
+            const format = document.getElementById('export-format').value;
+            const container = document.getElementById('bitrate-container');
+            if (format === 'wav') {
+                container.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                container.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        // --- DRAG & DROP & FILE HANDLING ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-gray-800/80'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-gray-800/80'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-gray-800/80');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const list = document.getElementById('track-list');
+            const actions = document.getElementById('queue-actions');
+
+            if (files.length > 0) actions.classList.remove('hidden');
+
+            Array.from(files).forEach(file => {
+                if(!file.type.startsWith('audio/')) return;
+
+                const id = Math.random().toString(36).substr(2, 9);
+                const trackObj = { id, file, status: 'pending', buffer: null };
+                trackQueue.push(trackObj);
+
+                const el = document.createElement('div');
+                el.id = `track-${id}`;
+                el.className = "glass-panel p-4 rounded-xl flex items-center justify-between animate-fade-in transition-all";
+                el.innerHTML = `
+                    <div class="flex items-center gap-4 min-w-0">
+                        <button onclick="togglePreview('${id}')" id="play-btn-${id}" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center flex-shrink-0 transition-all">
+                            <i data-lucide="play" class="w-4 h-4 text-white fill-current ml-0.5"></i>
+                        </button>
+
+                        <div class="min-w-0">
+                            <h4 class="font-medium text-white truncate max-w-xs md:max-w-md">${file.name}</h4>
+                            <p class="text-xs text-gray-400" id="status-${id}">Ready for FX</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div id="loader-${id}" class="hidden w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <button onclick="downloadTrack('${id}')" id="dl-${id}" class="hidden bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">
+                            <i data-lucide="download" class="w-3 h-3"></i> Save
+                        </button>
+                        <button onclick="removeTrack('${id}')" class="text-gray-500 hover:text-red-400 p-2">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+            lucide.createIcons();
+            updateCount();
+        }
+
+        // --- REAL-TIME AUDIO ENGINE ---
+
+        // Initialize Global Audio Context and Graph Nodes
+        async function initLiveAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create Nodes
+            liveAudio.dryNode = audioCtx.createGain();
+            liveAudio.wetNode = audioCtx.createGain();
+            liveAudio.convolver = audioCtx.createConvolver();
+            
+            liveAudio.filters.low = audioCtx.createBiquadFilter();
+            liveAudio.filters.low.type = 'lowshelf';
+            liveAudio.filters.low.frequency.value = 320;
+
+            liveAudio.filters.mid = audioCtx.createBiquadFilter();
+            liveAudio.filters.mid.type = 'peaking';
+            liveAudio.filters.mid.frequency.value = 1000;
+
+            liveAudio.filters.high = audioCtx.createBiquadFilter();
+            liveAudio.filters.high.type = 'highshelf';
+            liveAudio.filters.high.frequency.value = 3200;
+
+            // Generate Impulse for Reverb
+            liveAudio.impulseBuffer = await generateImpulseResponse(audioCtx, 2.5);
+            liveAudio.convolver.buffer = liveAudio.impulseBuffer;
+
+            // Connect Filters: Source -> Low -> Mid -> High
+            // We connect Source later.
+            // High -> Split to Dry/Wet
+        }
+
+        async function togglePreview(id) {
+            await initLiveAudio();
+
+            // Stop current if playing
+            if (liveAudio.currentId === id && liveAudio.isPlaying) {
+                stopLivePlayback();
+                return;
+            }
+            if (liveAudio.currentId && liveAudio.currentId !== id) {
+                stopLivePlayback();
+            }
+
+            const track = trackQueue.find(t => t.id === id);
+            if (!track) return;
+
+            // UI Update to Loading
+            const btn = document.getElementById(`play-btn-${id}`);
+            btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
+
+            // Decode if needed
+            if (!track.buffer) {
+                try {
+                    const arrayBuffer = await track.file.arrayBuffer();
+                    track.buffer = await audioCtx.decodeAudioData(arrayBuffer);
+                } catch(e) {
+                    console.error("Decode error", e);
+                    btn.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>`;
+                    return;
+                }
+            }
+
+            // Setup Source
+            liveAudio.source = audioCtx.createBufferSource();
+            liveAudio.source.buffer = track.buffer;
+            liveAudio.source.loop = true; // Loop for easier tweaking
+
+            // Build Graph: Source -> Low -> Mid -> High -> Dry/Convolver -> Dest
+            liveAudio.source.connect(liveAudio.filters.low);
+            liveAudio.filters.low.connect(liveAudio.filters.mid);
+            liveAudio.filters.mid.connect(liveAudio.filters.high);
+
+            liveAudio.filters.high.connect(liveAudio.dryNode);
+            liveAudio.filters.high.connect(liveAudio.convolver);
+            
+            liveAudio.convolver.connect(liveAudio.wetNode);
+            
+            liveAudio.dryNode.connect(audioCtx.destination);
+            liveAudio.wetNode.connect(audioCtx.destination);
+
+            // Apply Current Params
+            updateLiveParams();
+
+            // Start
+            liveAudio.source.start(0);
+            liveAudio.isPlaying = true;
+            liveAudio.currentId = id;
+
+            // UI Update to Playing
+            updatePlayIcon(id, true);
+        }
+
+        function stopLivePlayback() {
+            if (liveAudio.source) {
+                try { liveAudio.source.stop(); } catch(e){}
+                liveAudio.source.disconnect();
+            }
+            if(liveAudio.currentId) {
+                updatePlayIcon(liveAudio.currentId, false);
+            }
+            liveAudio.isPlaying = false;
+            liveAudio.currentId = null;
+        }
+
+        function updateLiveParams() {
+            if (!audioCtx) return;
+
+            // Slider Values
+            const speed = parseInt(document.getElementById('speed-slider').value);
+            const reverb = parseInt(document.getElementById('reverb-slider').value);
+            const high = parseInt(document.getElementById('eq-high').value);
+            const mid = parseInt(document.getElementById('eq-mid').value);
+            const low = parseInt(document.getElementById('eq-low').value);
+
+            // Update UI Labels
+            document.getElementById('speed-val').textContent = speed + '%';
+            document.getElementById('reverb-val').textContent = reverb + '%';
+
+            // Update Audio Nodes
+            if (liveAudio.source) {
+                // Smooth transition for pitch/speed to prevent clicks
+                liveAudio.source.playbackRate.setTargetAtTime(speed / 100, audioCtx.currentTime, 0.1);
+            }
+
+            if (liveAudio.dryNode && liveAudio.wetNode) {
+                const reverbAmt = reverb / 100;
+                liveAudio.dryNode.gain.setTargetAtTime(1.0 - (reverbAmt * 0.4), audioCtx.currentTime, 0.1);
+                liveAudio.wetNode.gain.setTargetAtTime(reverbAmt, audioCtx.currentTime, 0.1);
+            }
+
+            if (liveAudio.filters.low) liveAudio.filters.low.gain.setTargetAtTime(low, audioCtx.currentTime, 0.1);
+            if (liveAudio.filters.mid) liveAudio.filters.mid.gain.setTargetAtTime(mid, audioCtx.currentTime, 0.1);
+            if (liveAudio.filters.high) liveAudio.filters.high.gain.setTargetAtTime(high, audioCtx.currentTime, 0.1);
+        }
+
+        function updatePlayIcon(id, isPlaying) {
+            const btn = document.getElementById(`play-btn-${id}`);
+            if(!btn) return;
+            
+            if (isPlaying) {
+                btn.innerHTML = `<i data-lucide="pause" class="w-4 h-4 text-white fill-current"></i>`;
+                btn.classList.add('bg-green-600', 'playing-pulse');
+                btn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+            } else {
+                btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 text-white fill-current ml-0.5"></i>`;
+                btn.classList.remove('bg-green-600', 'playing-pulse');
+                btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
             }
             lucide.createIcons();
         }
 
-        function updatePlayhead() {
-            if(!audioState.isPlaying) return;
-            const elapsed = audioState.ctx.currentTime - audioState.startAt;
-            updatePlayheadUI(elapsed);
-            if(elapsed < audioState.buffer.duration) requestAnimationFrame(updatePlayhead);
+        function removeTrack(id) {
+            if(liveAudio.currentId === id) stopLivePlayback();
+            const idx = trackQueue.findIndex(t => t.id === id);
+            if(idx > -1) trackQueue.splice(idx, 1);
+            document.getElementById(`track-${id}`).remove();
+            updateCount();
         }
 
-        function updatePlayheadUI(time) {
-            const pct = (time / audioState.buffer.duration) * 100;
-            document.getElementById('playhead').style.left = `${pct}%`;
-            document.getElementById('current-time').textContent = formatTime(time);
+        function clearQueue() {
+            stopLivePlayback();
+            trackQueue.length = 0;
+            document.getElementById('track-list').innerHTML = '';
+            updateCount();
         }
 
-        function resetAudio() {
-            if(audioState.source) try{ audioState.source.stop() }catch(e){}
-            audioState.buffer = null;
-            audioState.isPlaying = false;
-            audioEditor.classList.add('hidden');
-            uploadZone.classList.remove('hidden');
-            document.getElementById('audio-input').value = '';
+        function updateCount() {
+            document.getElementById('track-count').textContent = `${trackQueue.length} Tracks Loaded`;
+            if(trackQueue.length === 0) document.getElementById('queue-actions').classList.add('hidden');
         }
 
-        // --- CONVERSION & EXPORT ---
-        async function processAudioExport() {
-            if(!audioState.buffer) return;
-            showLoading(true, 'Rendering Master...');
-
-            const format = document.getElementById('export-format').value;
-            const targetRate = parseInt(document.getElementById('sample-rate').value);
-            const start = parseFloat(document.getElementById('trim-start').value);
-            let end = parseFloat(document.getElementById('trim-end').value);
-            if(end <= start) end = audioState.buffer.duration;
-            const duration = end - start;
-
-            // Offline Render
-            const offlineCtx = new OfflineAudioContext(2, duration * targetRate, targetRate);
-            const source = offlineCtx.createBufferSource();
-            source.buffer = audioState.buffer;
-            
-            // Apply volume
-            const gain = offlineCtx.createGain();
-            gain.gain.value = document.getElementById('volume-slider').value / 100;
-            
-            source.connect(gain);
-            gain.connect(offlineCtx.destination);
-            source.start(0, start, duration);
-            
-            const renderedBuffer = await offlineCtx.startRendering();
-
-            // Encode
-            if(format === 'wav') {
-                const blob = bufferToWave(renderedBuffer, renderedBuffer.length);
-                downloadBlob(blob, `${audioState.filename}_master.wav`);
-            } else {
-                // MP3 Encoding using LameJS
-                const blob = await encodeMp3(renderedBuffer);
-                downloadBlob(blob, `${audioState.filename}_320kbps.mp3`);
-            }
-            
-            showLoading(false);
+        function resetEQ() {
+            document.getElementById('eq-high').value = 0;
+            document.getElementById('eq-mid').value = 0;
+            document.getElementById('eq-low').value = 0;
+            updateLiveParams();
         }
 
-        function encodeMp3(buffer) {
-            return new Promise((resolve, reject) => {
+
+        // --- BATCH PROCESSOR (OFFLINE RENDER) ---
+
+        async function processBatch() {
+            if(isProcessing) return;
+            isProcessing = true;
+            document.getElementById('btn-process').disabled = true;
+            document.getElementById('btn-process').classList.add('opacity-50');
+
+            await initLiveAudio(); // Ensure context
+            stopLivePlayback(); // Stop preview if running
+
+            // Loop through queue
+            for(const track of trackQueue) {
+                if(track.status === 'done') continue;
+
+                updateTrackStatus(track.id, 'processing');
+                
                 try {
-                    const channels = 2; // Stereo
-                    const sampleRate = buffer.sampleRate;
-                    const mp3enc = new lamejs.Mp3Encoder(channels, sampleRate, 320); // 320kbps
-                    const blockSize = 1152;
-                    
-                    const left = buffer.getChannelData(0);
-                    const right = buffer.getChannelData(1);
-                    
-                    // Convert floats to 16-bit integers
-                    const leftInt = new Int16Array(left.length);
-                    const rightInt = new Int16Array(right.length);
-                    
-                    for (let i = 0; i < left.length; i++) {
-                        leftInt[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF;
-                        rightInt[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF;
+                    // Decode if not already done by preview
+                    if (!track.buffer) {
+                        const arrayBuffer = await track.file.arrayBuffer();
+                        track.buffer = await audioCtx.decodeAudioData(arrayBuffer);
                     }
-                    
-                    const mp3Data = [];
-                    let remaining = leftInt.length;
-                    
-                    for (let i = 0; i < remaining; i += blockSize) {
-                        const leftChunk = leftInt.subarray(i, i + blockSize);
-                        const rightChunk = rightInt.subarray(i, i + blockSize);
-                        const mp3buf = mp3enc.encodeBuffer(leftChunk, rightChunk);
-                        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+
+                    // Get Settings
+                    const speed = parseInt(document.getElementById('speed-slider').value) / 100;
+                    const reverbAmt = parseInt(document.getElementById('reverb-slider').value) / 100;
+                    const sampleRate = parseInt(document.getElementById('sample-rate').value);
+                    const format = document.getElementById('export-format').value;
+                    const bitrate = parseInt(document.getElementById('bitrate').value);
+
+                    // Render Offline
+                    const renderedBuffer = await renderTrackOffline(track.buffer, speed, reverbAmt, sampleRate);
+
+                    // Encode
+                    let blob;
+                    if(format === 'mp3') {
+                         blob = await encodeMp3(renderedBuffer, sampleRate, bitrate);
+                    } else {
+                         blob = bufferToWave(renderedBuffer, renderedBuffer.length);
                     }
-                    
-                    const mp3buf = mp3enc.flush();
-                    if (mp3buf.length > 0) mp3Data.push(mp3buf);
-                    
-                    const blob = new Blob(mp3Data, { type: 'audio/mp3' });
-                    resolve(blob);
-                } catch(e) {
-                    reject(e);
+
+                    // Store
+                    track.blob = blob;
+                    track.status = 'done';
+                    track.ext = format;
+
+                    updateTrackStatus(track.id, 'done');
+
+                } catch (e) {
+                    console.error(e);
+                    updateTrackStatus(track.id, 'error');
                 }
-            });
+            }
+
+            isProcessing = false;
+            document.getElementById('btn-process').disabled = false;
+            document.getElementById('btn-process').classList.remove('opacity-50');
         }
 
-        // ================= ART LOGIC =================
-        const hdCanvas = document.getElementById('art-canvas');
-        const previewCanvas = document.getElementById('art-preview');
-        
-        // Art Inputs
-        document.getElementById('img-input').addEventListener('change', (e) => {
-            if(e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        artState.bgImage = img;
-                        renderArt();
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-
-        ['artist-text', 'song-text', 'font-select', 'text-pos'].forEach(id => {
-            document.getElementById(id).addEventListener('input', renderArt);
-        });
-        
-        document.getElementById('download-art').addEventListener('click', () => {
-             const link = document.createElement('a');
-             link.download = `CoverArt_3000px.jpg`;
-             // 0.9 quality JPG is standard
-             link.href = hdCanvas.toDataURL('image/jpeg', 0.9); 
-             link.click();
-        });
-
-        function setFilter(f) {
-            artState.filter = f;
-            renderArt();
-        }
-
-        function renderArt() {
-            const ctx = hdCanvas.getContext('2d');
-            const w = 3000;
-            const h = 3000;
-
-            // 1. Draw Background
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(0, 0, w, h);
-
-            if(artState.bgImage) {
-                // Cover fit logic
-                const img = artState.bgImage;
-                const ratio = Math.max(w / img.width, h / img.height);
-                const cx = (w - img.width * ratio) / 2;
-                const cy = (h - img.height * ratio) / 2;
-                
-                ctx.drawImage(img, 0, 0, img.width, img.height, cx, cy, img.width * ratio, img.height * ratio);
-            }
-
-            // 2. Apply Filters
-            if(artState.filter === 'dark') {
-                ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.fillRect(0,0,w,h);
-            } else if (artState.filter === 'grain') {
-                 // Simple noise overlay
-                 // (Simulated for performance, actually usually just a semi-transparent layer in canvas)
-                 ctx.fillStyle = 'rgba(255,255,255,0.05)';
-                 // In a real app we'd loop pixels, but for speed here we just lighten slightly or add a distinct overlay image
-                 // Let's do a simple vignette instead for "grain" feel vibe
-                 const grad = ctx.createRadialGradient(w/2, h/2, w/3, w/2, h/2, w);
-                 grad.addColorStop(0, 'rgba(0,0,0,0)');
-                 grad.addColorStop(1, 'rgba(0,0,0,0.5)');
-                 ctx.fillStyle = grad;
-                 ctx.fillRect(0,0,w,h);
-            }
-
-            // 3. Draw Text
-            const artist = document.getElementById('artist-text').value;
-            const song = document.getElementById('song-text').value;
-            const font = document.getElementById('font-select').value;
-            const pos = document.getElementById('text-pos').value;
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'white';
+        async function renderTrackOffline(buffer, speed, reverbAmt, sampleRate) {
+            // New duration (approx based on speed) + reverb tail
+            const newDuration = (buffer.duration / speed) + (reverbAmt > 0 ? 3 : 0);
             
-            // Artist Font
-            ctx.font = `bold 180px "${font}"`; 
-            if(pos === 'center') {
-                ctx.fillText(artist.toUpperCase(), w/2, h/2 - 50);
-                ctx.font = `italic 120px "${font}"`;
-                ctx.fillText(song, w/2, h/2 + 150);
-            } else if (pos === 'bottom') {
-                ctx.textBaseline = 'bottom';
-                ctx.fillText(artist.toUpperCase(), w/2, h - 350);
-                ctx.font = `italic 120px "${font}"`;
-                ctx.fillText(song, w/2, h - 150);
-            } else if (pos === 'top') {
-                ctx.textBaseline = 'top';
-                ctx.fillText(artist.toUpperCase(), w/2, 150);
-                ctx.font = `italic 120px "${font}"`;
-                ctx.fillText(song, w/2, 350);
-            } else if (pos === 'corners') {
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                ctx.font = `bold 150px "${font}"`;
-                ctx.fillText(artist.toUpperCase(), 150, 150);
+            const offlineCtx = new OfflineAudioContext(2, newDuration * sampleRate, sampleRate);
+
+            // Source
+            const source = offlineCtx.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = speed;
+
+            // Setup Nodes (Duplicate logic of live graph)
+            const low = offlineCtx.createBiquadFilter();
+            low.type = 'lowshelf'; low.frequency.value = 320; 
+            low.gain.value = parseInt(document.getElementById('eq-low').value);
+
+            const mid = offlineCtx.createBiquadFilter();
+            mid.type = 'peaking'; mid.frequency.value = 1000;
+            mid.gain.value = parseInt(document.getElementById('eq-mid').value);
+
+            const high = offlineCtx.createBiquadFilter();
+            high.type = 'highshelf'; high.frequency.value = 3200;
+            high.gain.value = parseInt(document.getElementById('eq-high').value);
+
+            source.connect(low);
+            low.connect(mid);
+            mid.connect(high);
+
+            if(reverbAmt > 0) {
+                const convolver = offlineCtx.createConvolver();
+                // Reuse the buffer we generated for live, or regenerate if needed
+                // OfflineCtx needs its own buffer usually, but we can reuse the data
+                convolver.buffer = liveAudio.impulseBuffer || await generateImpulseResponse(audioCtx, 2.5);
                 
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'bottom';
-                ctx.font = `italic 120px "${font}"`;
-                ctx.fillText(song, w - 150, h - 150);
+                const dry = offlineCtx.createGain();
+                const wet = offlineCtx.createGain();
+                
+                dry.gain.value = 1.0 - (reverbAmt * 0.4);
+                wet.gain.value = reverbAmt;
+
+                high.connect(dry);
+                high.connect(convolver);
+                convolver.connect(wet);
+
+                dry.connect(offlineCtx.destination);
+                wet.connect(offlineCtx.destination);
+            } else {
+                high.connect(offlineCtx.destination);
             }
 
-            // 4. Update Preview
-            const prevCtx = previewCanvas.getContext('2d');
-            previewCanvas.width = 500;
-            previewCanvas.height = 500;
-            prevCtx.drawImage(hdCanvas, 0, 0, 3000, 3000, 0, 0, 500, 500);
+            source.start(0);
+            return await offlineCtx.startRendering();
         }
 
-        // Helper: Convert to WAV
+        async function generateImpulseResponse(ctx, duration) {
+            const sampleRate = ctx.sampleRate;
+            const length = sampleRate * duration;
+            const impulse = ctx.createBuffer(2, length, sampleRate);
+            for (let channel = 0; channel < 2; channel++) {
+                const impulseData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+                }
+            }
+            return impulse;
+        }
+
+        // UI Updates
+        function updateTrackStatus(id, status) {
+            const statusText = document.getElementById(`status-${id}`);
+            const loader = document.getElementById(`loader-${id}`);
+            const dlBtn = document.getElementById(`dl-${id}`);
+            const card = document.getElementById(`track-${id}`);
+
+            if(status === 'processing') {
+                statusText.textContent = "Processing...";
+                statusText.className = "text-xs text-blue-400 font-bold";
+                loader.classList.remove('hidden');
+                card.classList.add('processing-active');
+            } else if (status === 'done') {
+                statusText.textContent = "Processing Complete";
+                statusText.className = "text-xs text-green-400 font-medium";
+                loader.classList.add('hidden');
+                dlBtn.classList.remove('hidden');
+                card.classList.remove('processing-active');
+                card.classList.add('border', 'border-green-500/30');
+            } else if (status === 'error') {
+                statusText.textContent = "Error";
+                statusText.className = "text-xs text-red-500";
+                loader.classList.add('hidden');
+                card.classList.remove('processing-active');
+            }
+        }
+
+        function downloadTrack(id) {
+            const track = trackQueue.find(t => t.id === id);
+            if(!track || !track.blob) return;
+            const url = URL.createObjectURL(track.blob);
+            const a = document.createElement('a');
+            a.href = url;
+            let suffix = parseInt(document.getElementById('speed-slider').value) < 100 ? '_slowed' : '_mastered';
+            a.download = `${track.file.name.replace(/\.[^/.]+$/, "")}${suffix}.${track.ext}`;
+            a.click();
+        }
+
+        // --- ENCODERS (WAV/MP3) ---
         function bufferToWave(abuffer, len) {
             let numOfChan = abuffer.numberOfChannels;
             let length = len * numOfChan * 2 + 44;
             let buffer = new ArrayBuffer(length);
             let view = new DataView(buffer);
             let channels = [], i, sample, offset = 0, pos = 0;
-
-            setUint32(0x46464952); // "RIFF"
-            setUint32(length - 8); 
-            setUint32(0x45564157); // "WAVE"
-            setUint32(0x20746d66); // "fmt "
-            setUint32(16); 
-            setUint16(1); // PCM
-            setUint16(numOfChan);
-            setUint32(abuffer.sampleRate);
-            setUint32(abuffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2);
-            setUint16(16); // 16-bit
-            setUint32(0x61746164); // "data"
+            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
+            function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
+            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+            setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164);
             setUint32(length - pos - 4);
-
-            for(i=0; i<abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-
+            for(i=0; i<numOfChan; i++) channels.push(abuffer.getChannelData(i));
             while(pos < len) {
                 for(i=0; i<numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][pos])); 
+                    sample = Math.max(-1, Math.min(1, channels[i][pos]));
                     sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
                     view.setInt16(offset, sample, true);
                     offset += 2;
@@ -675,36 +713,81 @@
                 pos++;
             }
             return new Blob([buffer], {type: "audio/wav"});
-            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
-            function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
         }
 
-        // Helper: Download
-        function downloadBlob(blob, name) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = name;
-            link.click();
-        }
-
-        // Helper: Format Time
-        function formatTime(s) {
-            const m = Math.floor(s / 60);
-            const sc = Math.floor(s % 60);
-            return `${m}:${sc.toString().padStart(2, '0')}`;
-        }
-        
-        function showLoading(show, text) {
-            const el = document.getElementById('loading-overlay');
-            if(show) {
-                document.getElementById('loading-text').textContent = text;
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
+        async function encodeMp3(buffer, sampleRate, bitrate) {
+            const channels = 2;
+            const mp3enc = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+            const blockSize = 1152;
+            const left = buffer.getChannelData(0);
+            const right = buffer.getChannelData(1);
+            const leftInt = new Int16Array(left.length);
+            const rightInt = new Int16Array(right.length);
+            for (let i = 0; i < left.length; i++) {
+                leftInt[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF;
+                rightInt[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF;
             }
+            const mp3Data = [];
+            for (let i = 0; i < leftInt.length; i += blockSize) {
+                const l = leftInt.subarray(i, i + blockSize);
+                const r = rightInt.subarray(i, i + blockSize);
+                const buf = mp3enc.encodeBuffer(l, r);
+                if (buf.length > 0) mp3Data.push(buf);
+            }
+            const buf = mp3enc.flush();
+            if (buf.length > 0) mp3Data.push(buf);
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        }
+
+
+        // --- ART LOGIC ---
+        const artCanvas = document.getElementById('art-hd');
+        const artPreview = document.getElementById('art-preview');
+        const artFile = document.getElementById('art-file');
+        let artImg = null;
+        artFile.addEventListener('change', (e) => {
+             const r = new FileReader();
+             r.onload = ev => {
+                 const i = new Image();
+                 i.onload = () => { artImg = i; renderArt(); };
+                 i.src = ev.target.result;
+             };
+             r.readAsDataURL(e.target.files[0]);
+        });
+        ['art-artist', 'art-song'].forEach(id => document.getElementById(id).addEventListener('input', renderArt));
+        function renderArt() {
+            const ctx = artCanvas.getContext('2d');
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0,0,3000,3000);
+            if(artImg) {
+                const ratio = Math.max(3000/artImg.width, 3000/artImg.height);
+                const cx = (3000 - artImg.width*ratio)/2;
+                const cy = (3000 - artImg.height*ratio)/2;
+                ctx.drawImage(artImg, 0,0, artImg.width, artImg.height, cx, cy, artImg.width*ratio, artImg.height*ratio);
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(0,0,3000,3000);
+            const artist = document.getElementById('art-artist').value;
+            const song = document.getElementById('art-song').value;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 200px sans-serif';
+            ctx.fillText(artist.toUpperCase(), 1500, 1400);
+            ctx.font = 'italic 150px serif';
+            ctx.fillText(song, 1500, 1700);
+            const pCtx = artPreview.getContext('2d');
+            artPreview.width=500; artPreview.height=500;
+            pCtx.drawImage(artCanvas, 0,0,3000,3000,0,0,500,500);
+        }
+        function downloadArt() {
+            const link = document.createElement('a');
+            link.download = 'Cover_Art_3000.jpg';
+            link.href = artCanvas.toDataURL('image/jpeg', 0.9);
+            link.click();
         }
     </script>
 </body>
 </html>
+
+
 
