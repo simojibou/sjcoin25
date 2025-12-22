@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musician's Release Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- LameJS for MP3 Encoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #4b5563;
+            border-radius: 2px;
+        }
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #60a5fa;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #9ca3af;
+        }
+        .tab-inactive:hover { color: #d1d5db; }
+
+        /* Font Imports for Cover Art */
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&display=swap');
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 p-4 shadow-lg z-10 sticky top-0">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <i data-lucide="disc-3" class="text-blue-500 w-8 h-8"></i>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">ReleaseReady</h1>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="flex space-x-8">
+                <button onclick="switchTab('audio')" id="tab-audio" class="tab-active pb-2 font-medium flex items-center gap-2 transition-colors">
+                    <i data-lucide="music-4" class="w-4 h-4"></i> Audio Master
+                </button>
+                <button onclick="switchTab('art')" id="tab-art" class="tab-inactive pb-2 font-medium flex items-center gap-2 transition-colors">
+                    <i data-lucide="image" class="w-4 h-4"></i> Cover Art (3000px)
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 md:p-8 flex flex-col items-center gap-6 w-full max-w-6xl mx-auto">
+
+        <!-- ================= AUDIO SECTION ================= -->
+        <section id="audio-section" class="w-full animate-fade-in flex flex-col gap-6">
+            
+            <!-- Upload Zone -->
+            <div id="audio-upload-zone" class="w-full h-48 border-2 border-dashed border-gray-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800 transition-all group">
+                <input type="file" id="audio-input" class="hidden" accept="audio/*">
+                <div class="p-4 bg-gray-800 rounded-full mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                    <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
+                </div>
+                <h2 class="text-lg font-semibold text-gray-300">Upload Master Track</h2>
+                <p class="text-gray-500 mt-1 text-sm">MP3, WAV, AIFF supported</p>
+            </div>
+
+            <!-- Audio Editor UI -->
+            <div id="audio-editor-ui" class="hidden space-y-6">
+                
+                <!-- Waveform & Controls -->
+                <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="overflow-hidden">
+                            <h3 id="filename-display" class="text-lg font-semibold text-white truncate">track.wav</h3>
+                            <p id="file-meta" class="text-sm text-gray-400">Loading...</p>
+                        </div>
+                        <button id="remove-audio" class="p-2 hover:bg-gray-700 rounded text-red-400">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="relative w-full h-32 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                        <canvas id="waveform-canvas" class="w-full h-full"></canvas>
+                        <div id="playhead" class="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none" style="left: 0%"></div>
+                    </div>
+
+                    <div class="flex items-center gap-4 mt-4">
+                        <button id="btn-play" class="p-3 bg-blue-600 rounded-full hover:bg-blue-500 text-white shadow-lg">
+                            <i id="play-icon" data-lucide="play" class="w-6 h-6 fill-current"></i>
+                        </button>
+                        <div class="text-sm text-gray-400 font-mono">
+                            <span id="current-time">00:00</span> / <span id="total-time">00:00</span>
+                        </div>
+                        <div class="flex-grow"></div>
+                        <div class="flex items-center gap-2">
+                             <i data-lucide="volume-2" class="w-4 h-4 text-gray-400"></i>
+                             <input type="range" id="volume-slider" min="0" max="150" value="100" class="w-24">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Controls -->
+                <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
+                    <h4 class="text-blue-400 font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i> Export Settings
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        
+                        <!-- Format Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Format</label>
+                            <select id="export-format" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
+                                <option value="mp3">MP3 (320kbps)</option>
+                                <option value="wav">WAV (Lossless)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1" id="format-desc">Best for streaming preview.</p>
+                        </div>
+
+                        <!-- Sample Rate -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Sample Rate</label>
+                            <select id="sample-rate" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
+                                <option value="44100">44.1 kHz</option>
+                                <option value="48000">48.0 kHz</option>
+                            </select>
+                        </div>
+
+                        <!-- Trim Start -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Trim Start (sec)</label>
+                            <input type="number" id="trim-start" value="0" step="0.1" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
+                        </div>
+
+                        <!-- Trim End -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Trim End (sec)</label>
+                            <input type="number" id="trim-end" value="0" step="0.1" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2.5 text-white">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-gray-700 flex justify-end">
+                        <button id="convert-btn" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transform transition hover:scale-105">
+                            <span id="convert-text">Process & Download</span>
+                            <i data-lucide="download" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= ART SECTION ================= -->
+        <section id="art-section" class="w-full hidden flex flex-col md:flex-row gap-8">
+            
+            <!-- Controls (Left) -->
+            <div class="w-full md:w-1/3 space-y-6">
+                
+                <div class="bg-gray-800 rounded-xl p-5 border border-gray-700 shadow-xl">
+                    <h3 class="text-lg font-bold text-white mb-4">Art Configuration</h3>
+                    
+                    <!-- Image Upload -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Background Image</label>
+                        <button onclick="document.getElementById('img-input').click()" class="w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white border border-gray-600 transition flex items-center justify-center gap-2">
+                            <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Photo
+                        </button>
+                        <input type="file" id="img-input" class="hidden" accept="image/*">
+                    </div>
+
+                    <!-- Text Controls -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Artist Name</label>
+                            <input type="text" id="artist-text" placeholder="Artist Name" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Song Title</label>
+                            <input type="text" id="song-text" placeholder="Song Title" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        </div>
+                         <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Font Style</label>
+                            <select id="font-select" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                                <option value="Montserrat">Modern Sans (Montserrat)</option>
+                                <option value="Playfair Display">Elegant Serif (Playfair)</option>
+                                <option value="Roboto Mono">Digital Mono (Roboto)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Text Position</label>
+                            <select id="text-pos" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                                <option value="center">Center</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="top">Top</option>
+                                <option value="corners">Corners</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Overlay Filter</label>
+                            <div class="flex gap-2">
+                                <button onclick="setFilter('none')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">None</button>
+                                <button onclick="setFilter('dark')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Dark</button>
+                                <button onclick="setFilter('grain')" class="flex-1 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Grain</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="download-art" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-5 h-5"></i> Download (3000px)
+                    </button>
+                    <p class="text-xs text-center text-gray-500 mt-2">Ready for Spotify & Apple Music</p>
+                </div>
+            </div>
+
+            <!-- Preview (Right) -->
+            <div class="w-full md:w-2/3 flex flex-col items-center">
+                <div class="relative w-full max-w-[500px] aspect-square bg-gray-800 rounded shadow-2xl border-4 border-gray-800 overflow-hidden">
+                    <!-- The actual logic runs on a hidden large canvas, but we draw to this visible one for preview -->
+                    <canvas id="art-preview" class="w-full h-full object-contain"></canvas>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Preview (Scaled down from 3000x3000px)</p>
+            </div>
+
+            <!-- Hidden HD Canvas -->
+            <canvas id="art-canvas" width="3000" height="3000" class="hidden"></canvas>
+
+        </section>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50 hidden backdrop-blur-sm">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <h3 id="loading-text" class="text-xl font-bold text-white">Processing...</h3>
+            <p class="text-gray-400 text-sm mt-2">This happens locally on your device.</p>
+        </div>
+
+    </main>
+
+    <script>
+        // Lucide Icons
+        lucide.createIcons();
+
+        // --- GLOBAL STATE ---
+        const audioState = {
+            ctx: null,
+            buffer: null,
+            source: null,
+            gain: null,
+            isPlaying: false,
+            startAt: 0,
+            pausedAt: 0,
+            filename: 'track'
+        };
+
+        const artState = {
+            bgImage: null,
+            filter: 'none'
+        };
+
+        // --- TAB SWITCHING ---
+        function switchTab(tab) {
+            const audioSec = document.getElementById('audio-section');
+            const artSec = document.getElementById('art-section');
+            const tabAudio = document.getElementById('tab-audio');
+            const tabArt = document.getElementById('tab-art');
+
+            if (tab === 'audio') {
+                audioSec.classList.remove('hidden');
+                artSec.classList.add('hidden');
+                tabAudio.classList.replace('tab-inactive', 'tab-active');
+                tabArt.classList.replace('tab-active', 'tab-inactive');
+            } else {
+                audioSec.classList.add('hidden');
+                artSec.classList.remove('hidden');
+                tabAudio.classList.replace('tab-active', 'tab-inactive');
+                artSec.classList.add('flex'); // Restore flex layout
+                tabArt.classList.replace('tab-inactive', 'tab-active');
+                renderArt(); // Initial render
+            }
+        }
+
+        // ================= AUDIO LOGIC =================
+        const audioInput = document.getElementById('audio-input');
+        const uploadZone = document.getElementById('audio-upload-zone');
+        const audioEditor = document.getElementById('audio-editor-ui');
+        const formatSelect = document.getElementById('export-format');
+        const formatDesc = document.getElementById('format-desc');
+
+        // UI Interactions
+        uploadZone.addEventListener('click', () => audioInput.click());
+        audioInput.addEventListener('change', (e) => loadAudio(e.target.files[0]));
+        
+        formatSelect.addEventListener('change', (e) => {
+            if(e.target.value === 'mp3') formatDesc.textContent = "320kbps Constant Bitrate (High Quality)";
+            else formatDesc.textContent = "Uncompressed PCM (Lossless, Large File)";
+        });
+
+        document.getElementById('btn-play').addEventListener('click', toggleAudio);
+        document.getElementById('volume-slider').addEventListener('input', (e) => {
+            if(audioState.gain) audioState.gain.gain.value = e.target.value / 100;
+        });
+        document.getElementById('convert-btn').addEventListener('click', processAudioExport);
+        document.getElementById('remove-audio').addEventListener('click', resetAudio);
+
+        async function loadAudio(file) {
+            if (!file) return;
+            showLoading(true, 'Decoding Audio...');
+            
+            try {
+                audioState.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const arrayBuffer = await file.arrayBuffer();
+                audioState.buffer = await audioState.ctx.decodeAudioData(arrayBuffer);
+                
+                // Set metadata
+                audioState.filename = file.name.replace(/\.[^/.]+$/, "");
+                document.getElementById('filename-display').textContent = file.name;
+                document.getElementById('file-meta').textContent = 
+                    `${formatTime(audioState.buffer.duration)} • ${audioState.buffer.sampleRate}Hz • ${audioState.buffer.numberOfChannels}ch`;
+
+                // Set trims
+                document.getElementById('trim-start').value = 0;
+                document.getElementById('trim-end').value = audioState.buffer.duration.toFixed(2);
+
+                drawWaveform();
+                
+                uploadZone.classList.add('hidden');
+                audioEditor.classList.remove('hidden');
+            } catch (e) {
+                alert("Error loading audio. Please try a different file.");
+                console.error(e);
+            }
+            showLoading(false);
+        }
+
+        function drawWaveform() {
+            const canvas = document.getElementById('waveform-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Draw center line
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.strokeStyle = '#4b5563';
+            ctx.moveTo(0, canvas.height/2);
+            ctx.lineTo(canvas.width, canvas.height/2);
+            ctx.stroke();
+
+            // Simple visualization
+            const data = audioState.buffer.getChannelData(0);
+            const step = Math.ceil(data.length / canvas.width);
+            const amp = canvas.height / 2;
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#3b82f6';
+            for(let i=0; i < canvas.width; i++) {
+                let min = 1.0, max = -1.0;
+                for(let j=0; j<step; j++) {
+                    const datum = data[(i*step)+j];
+                    if(datum < min) min = datum;
+                    if(datum > max) max = datum;
+                }
+                ctx.moveTo(i, (1+min)*amp);
+                ctx.lineTo(i, (1+max)*amp);
+            }
+            ctx.stroke();
+        }
+
+        function toggleAudio() {
+            if(audioState.isPlaying) {
+                audioState.source.stop();
+                audioState.pausedAt = audioState.ctx.currentTime - audioState.startAt;
+                audioState.isPlaying = false;
+                document.getElementById('play-icon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>'; // Play
+            } else {
+                audioState.source = audioState.ctx.createBufferSource();
+                audioState.source.buffer = audioState.buffer;
+                audioState.gain = audioState.ctx.createGain();
+                audioState.gain.gain.value = document.getElementById('volume-slider').value / 100;
+                
+                audioState.source.connect(audioState.gain);
+                audioState.gain.connect(audioState.ctx.destination);
+                
+                audioState.startAt = audioState.ctx.currentTime - audioState.pausedAt;
+                audioState.source.start(0, audioState.pausedAt);
+                audioState.isPlaying = true;
+                document.getElementById('play-icon').innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'; // Pause
+                
+                requestAnimationFrame(updatePlayhead);
+                audioState.source.onended = () => {
+                    if (audioState.ctx.currentTime - audioState.startAt >= audioState.buffer.duration) {
+                        audioState.isPlaying = false;
+                        audioState.pausedAt = 0;
+                        document.getElementById('play-icon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+                        updatePlayheadUI(0);
+                    }
+                };
+            }
+            lucide.createIcons();
+        }
+
+        function updatePlayhead() {
+            if(!audioState.isPlaying) return;
+            const elapsed = audioState.ctx.currentTime - audioState.startAt;
+            updatePlayheadUI(elapsed);
+            if(elapsed < audioState.buffer.duration) requestAnimationFrame(updatePlayhead);
+        }
+
+        function updatePlayheadUI(time) {
+            const pct = (time / audioState.buffer.duration) * 100;
+            document.getElementById('playhead').style.left = `${pct}%`;
+            document.getElementById('current-time').textContent = formatTime(time);
+        }
+
+        function resetAudio() {
+            if(audioState.source) try{ audioState.source.stop() }catch(e){}
+            audioState.buffer = null;
+            audioState.isPlaying = false;
+            audioEditor.classList.add('hidden');
+            uploadZone.classList.remove('hidden');
+            document.getElementById('audio-input').value = '';
+        }
+
+        // --- CONVERSION & EXPORT ---
+        async function processAudioExport() {
+            if(!audioState.buffer) return;
+            showLoading(true, 'Rendering Master...');
+
+            const format = document.getElementById('export-format').value;
+            const targetRate = parseInt(document.getElementById('sample-rate').value);
+            const start = parseFloat(document.getElementById('trim-start').value);
+            let end = parseFloat(document.getElementById('trim-end').value);
+            if(end <= start) end = audioState.buffer.duration;
+            const duration = end - start;
+
+            // Offline Render
+            const offlineCtx = new OfflineAudioContext(2, duration * targetRate, targetRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = audioState.buffer;
+            
+            // Apply volume
+            const gain = offlineCtx.createGain();
+            gain.gain.value = document.getElementById('volume-slider').value / 100;
+            
+            source.connect(gain);
+            gain.connect(offlineCtx.destination);
+            source.start(0, start, duration);
+            
+            const renderedBuffer = await offlineCtx.startRendering();
+
+            // Encode
+            if(format === 'wav') {
+                const blob = bufferToWave(renderedBuffer, renderedBuffer.length);
+                downloadBlob(blob, `${audioState.filename}_master.wav`);
+            } else {
+                // MP3 Encoding using LameJS
+                const blob = await encodeMp3(renderedBuffer);
+                downloadBlob(blob, `${audioState.filename}_320kbps.mp3`);
+            }
+            
+            showLoading(false);
+        }
+
+        function encodeMp3(buffer) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const channels = 2; // Stereo
+                    const sampleRate = buffer.sampleRate;
+                    const mp3enc = new lamejs.Mp3Encoder(channels, sampleRate, 320); // 320kbps
+                    const blockSize = 1152;
+                    
+                    const left = buffer.getChannelData(0);
+                    const right = buffer.getChannelData(1);
+                    
+                    // Convert floats to 16-bit integers
+                    const leftInt = new Int16Array(left.length);
+                    const rightInt = new Int16Array(right.length);
+                    
+                    for (let i = 0; i < left.length; i++) {
+                        leftInt[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF;
+                        rightInt[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF;
+                    }
+                    
+                    const mp3Data = [];
+                    let remaining = leftInt.length;
+                    
+                    for (let i = 0; i < remaining; i += blockSize) {
+                        const leftChunk = leftInt.subarray(i, i + blockSize);
+                        const rightChunk = rightInt.subarray(i, i + blockSize);
+                        const mp3buf = mp3enc.encodeBuffer(leftChunk, rightChunk);
+                        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+                    }
+                    
+                    const mp3buf = mp3enc.flush();
+                    if (mp3buf.length > 0) mp3Data.push(mp3buf);
+                    
+                    const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+                    resolve(blob);
+                } catch(e) {
+                    reject(e);
+                }
+            });
+        }
+
+        // ================= ART LOGIC =================
+        const hdCanvas = document.getElementById('art-canvas');
+        const previewCanvas = document.getElementById('art-preview');
+        
+        // Art Inputs
+        document.getElementById('img-input').addEventListener('change', (e) => {
+            if(e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        artState.bgImage = img;
+                        renderArt();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        ['artist-text', 'song-text', 'font-select', 'text-pos'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderArt);
+        });
+        
+        document.getElementById('download-art').addEventListener('click', () => {
+             const link = document.createElement('a');
+             link.download = `CoverArt_3000px.jpg`;
+             // 0.9 quality JPG is standard
+             link.href = hdCanvas.toDataURL('image/jpeg', 0.9); 
+             link.click();
+        });
+
+        function setFilter(f) {
+            artState.filter = f;
+            renderArt();
+        }
+
+        function renderArt() {
+            const ctx = hdCanvas.getContext('2d');
+            const w = 3000;
+            const h = 3000;
+
+            // 1. Draw Background
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, w, h);
+
+            if(artState.bgImage) {
+                // Cover fit logic
+                const img = artState.bgImage;
+                const ratio = Math.max(w / img.width, h / img.height);
+                const cx = (w - img.width * ratio) / 2;
+                const cy = (h - img.height * ratio) / 2;
+                
+                ctx.drawImage(img, 0, 0, img.width, img.height, cx, cy, img.width * ratio, img.height * ratio);
+            }
+
+            // 2. Apply Filters
+            if(artState.filter === 'dark') {
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(0,0,w,h);
+            } else if (artState.filter === 'grain') {
+                 // Simple noise overlay
+                 // (Simulated for performance, actually usually just a semi-transparent layer in canvas)
+                 ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                 // In a real app we'd loop pixels, but for speed here we just lighten slightly or add a distinct overlay image
+                 // Let's do a simple vignette instead for "grain" feel vibe
+                 const grad = ctx.createRadialGradient(w/2, h/2, w/3, w/2, h/2, w);
+                 grad.addColorStop(0, 'rgba(0,0,0,0)');
+                 grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+                 ctx.fillStyle = grad;
+                 ctx.fillRect(0,0,w,h);
+            }
+
+            // 3. Draw Text
+            const artist = document.getElementById('artist-text').value;
+            const song = document.getElementById('song-text').value;
+            const font = document.getElementById('font-select').value;
+            const pos = document.getElementById('text-pos').value;
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'white';
+            
+            // Artist Font
+            ctx.font = `bold 180px "${font}"`; 
+            if(pos === 'center') {
+                ctx.fillText(artist.toUpperCase(), w/2, h/2 - 50);
+                ctx.font = `italic 120px "${font}"`;
+                ctx.fillText(song, w/2, h/2 + 150);
+            } else if (pos === 'bottom') {
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(artist.toUpperCase(), w/2, h - 350);
+                ctx.font = `italic 120px "${font}"`;
+                ctx.fillText(song, w/2, h - 150);
+            } else if (pos === 'top') {
+                ctx.textBaseline = 'top';
+                ctx.fillText(artist.toUpperCase(), w/2, 150);
+                ctx.font = `italic 120px "${font}"`;
+                ctx.fillText(song, w/2, 350);
+            } else if (pos === 'corners') {
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.font = `bold 150px "${font}"`;
+                ctx.fillText(artist.toUpperCase(), 150, 150);
+                
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                ctx.font = `italic 120px "${font}"`;
+                ctx.fillText(song, w - 150, h - 150);
+            }
+
+            // 4. Update Preview
+            const prevCtx = previewCanvas.getContext('2d');
+            previewCanvas.width = 500;
+            previewCanvas.height = 500;
+            prevCtx.drawImage(hdCanvas, 0, 0, 3000, 3000, 0, 0, 500, 500);
+        }
+
+        // Helper: Convert to WAV
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels;
+            let length = len * numOfChan * 2 + 44;
+            let buffer = new ArrayBuffer(length);
+            let view = new DataView(buffer);
+            let channels = [], i, sample, offset = 0, pos = 0;
+
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8); 
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt "
+            setUint32(16); 
+            setUint16(1); // PCM
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2);
+            setUint16(16); // 16-bit
+            setUint32(0x61746164); // "data"
+            setUint32(length - pos - 4);
+
+            for(i=0; i<abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+
+            while(pos < len) {
+                for(i=0; i<numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][pos])); 
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+                    view.setInt16(offset, sample, true);
+                    offset += 2;
+                }
+                pos++;
+            }
+            return new Blob([buffer], {type: "audio/wav"});
+            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
+            function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
+        }
+
+        // Helper: Download
+        function downloadBlob(blob, name) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = name;
+            link.click();
+        }
+
+        // Helper: Format Time
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const sc = Math.floor(s % 60);
+            return `${m}:${sc.toString().padStart(2, '0')}`;
+        }
+        
+        function showLoading(show, text) {
+            const el = document.getElementById('loading-overlay');
+            if(show) {
+                document.getElementById('loading-text').textContent = text;
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
+
