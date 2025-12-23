@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ Studio Pro: Tour Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = window.__app_id || 'default-app';
+
+        // --- AUDIO ENGINE STATE ---
+        window.djState = {
+            user: null,
+            audioCtx: null,
+            masterGain: null,
+            crossfader: 0.5,
+            decks: {
+                A: { 
+                    buffer: null, source: null, 
+                    nodes: { gain: null, filter: null, delay: null, delayGain: null, eqLow: null, eqMid: null, eqHigh: null, volume: null },
+                    state: { playing: false, startTime: 0, pausedAt: 0, speed: 1, loop: false, loopStart: 0, loopLength: 0 },
+                    cues: [null, null, null]
+                },
+                B: { 
+                    buffer: null, source: null, 
+                    nodes: { gain: null, filter: null, delay: null, delayGain: null, eqLow: null, eqMid: null, eqHigh: null, volume: null },
+                    state: { playing: false, startTime: 0, pausedAt: 0, speed: 1, loop: false, loopStart: 0, loopLength: 0 },
+                    cues: [null, null, null]
+                }
+            }
+        };
+
+        // --- AUTH & LIBRARY ---
+        const initAuth = async () => {
+            try {
+                if (window.__initial_auth_token) await signInWithCustomToken(auth, window.__initial_auth_token);
+                else await signInAnonymously(auth);
+            } catch (e) { console.error("Auth Error", e); }
+        };
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            window.djState.user = user;
+            if(user) {
+                document.getElementById('auth-status').innerHTML = `<span class="text-green-400 text-xs font-bold tracking-widest">ONLINE • ${user.uid.slice(0,4)}</span>`;
+                setupLibrary(user);
+            }
+        });
+
+        function setupLibrary(user) {
+            const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'tracks'));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('library-list');
+                list.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const el = document.createElement('div');
+                    el.className = "flex items-center justify-between p-2 hover:bg-white/5 border-b border-white/5 text-xs group";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <span class="font-mono text-blue-400">${data.bpm || 128}</span>
+                            <span class="truncate text-gray-300 font-medium">${data.name}</span>
+                        </div>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="loadDeck('A', '${data.name}')" class="px-2 bg-blue-600 rounded text-[10px] font-bold">A</button>
+                            <button onclick="loadDeck('B', '${data.name}')" class="px-2 bg-orange-600 rounded text-[10px] font-bold">B</button>
+                        </div>
+                    `;
+                    el.draggable = true;
+                    el.ondragstart = (e) => e.dataTransfer.setData("application/json", JSON.stringify(data));
+                    list.appendChild(el);
+                });
+            });
+        }
+
+        window.addTrack = async (files) => {
+            if(!window.djState.user) return;
+            Array.from(files).forEach(f => {
+                addDoc(collection(db, 'artifacts', appId, 'users', window.djState.user.uid, 'tracks'), {
+                    name: f.name.replace(/\.[^/.]+$/, ""),
+                    bpm: Math.floor(Math.random() * (132 - 118) + 118),
+                    timestamp: serverTimestamp()
+                });
+            });
+        };
+
+        // --- GLOBAL EXPORTS FOR HTML ---
+        window.loadDeck = (id, name) => {
+            document.getElementById(`info-${id}`).textContent = name;
+            // Visual feedback
+            const el = document.getElementById(`deck-${id}`);
+            el.classList.add('ring-2', 'ring-white');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-white'), 200);
+        };
+    </script>
+
+    <style>
+        :root { --bg: #09090b; --panel: #18181b; }
+        body { background-color: var(--bg); color: #e4e4e7; font-family: 'Inter', sans-serif; user-select: none; }
+        
+        /* Knobs */
+        .knob-container { position: relative; width: 40px; height: 40px; }
+        .knob-input { 
+            appearance: none; width: 100%; height: 100%; border-radius: 50%; 
+            background: conic-gradient(var(--color) var(--p), #333 0deg);
+            cursor: pointer; transform: rotate(-90deg);
+        }
+        .knob-input::-webkit-slider-thumb { appearance: none; width: 1px; height: 1px; }
+        
+        /* Faders */
+        .fader { 
+            writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 30px; 
+            background: #222; border-radius: 4px;
+        }
+        
+        /* Pads */
+        .pad {
+            background: #27272a; border-radius: 4px; transition: all 0.1s;
+            border-bottom: 3px solid #000;
+        }
+        .pad:active { transform: translateY(2px); border-bottom: 0px; filter: brightness(1.2); }
+        .pad.active { background: var(--active-color); box-shadow: 0 0 10px var(--active-color); }
+
+        /* Platter */
+        .platter { background: conic-gradient(#111 0deg, #222 180deg, #111 360deg); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .spinning { animation: spin 1.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Sampler */
+        .sample-btn {
+            background: #3f3f46; border: 1px solid #52525b; font-size: 10px; font-weight: bold;
+            transition: all 0.05s;
+        }
+        .sample-btn:active { background: #eab308; color: black; transform: scale(0.95); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- TOP BAR -->
+    <header class="h-12 bg-black/80 border-b border-white/10 flex items-center justify-between px-4 shrink-0 backdrop-blur">
+        <div class="flex items-center gap-2">
+            <i data-lucide="disc-3" class="w-5 h-5 text-blue-500"></i>
+            <h1 class="font-black tracking-tighter text-lg">TOUR<span class="text-blue-500">PRO</span></h1>
+        </div>
+        <div id="auth-status" class="text-xs text-gray-500">CONNECTING...</div>
+    </header>
+
+    <!-- MAIN INTERFACE -->
+    <main class="flex-grow grid grid-cols-12 bg-[#111]">
+        
+        <!-- === DECK A === -->
+        <div id="deck-A" class="col-span-4 border-r border-white/10 p-3 flex flex-col gap-3 relative" ondragover="event.preventDefault()" ondrop="handleDrop(event, 'A')">
+            <!-- Info Screen -->
+            <div class="bg-black border border-white/10 p-2 rounded h-20 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex justify-between text-[10px] font-bold text-blue-500 z-10">
+                    <span>PLAYER 1</span>
+                    <span id="time-A" class="font-mono text-white">00:00.00</span>
+                </div>
+                <div id="info-A" class="font-bold text-lg truncate z-10">Load Track...</div>
+                <canvas id="wave-A" class="absolute inset-0 w-full h-full opacity-30"></canvas>
+            </div>
+
+            <!-- Platter & Pitch -->
+            <div class="flex-grow flex items-center justify-center relative">
+                <!-- Pitch Fader -->
+                <div class="absolute left-0 top-10 bottom-10 w-8 bg-[#18181b] rounded flex justify-center py-2 border border-white/5">
+                    <input type="range" orient="vertical" min="0.92" max="1.08" step="0.001" value="1" class="h-full w-1 accent-blue-500" oninput="updatePitch('A', this.value)">
+                </div>
+                
+                <!-- Jog Wheel -->
+                <div id="platter-A" class="platter w-48 h-48 rounded-full border-4 border-[#222] flex items-center justify-center relative">
+                    <div class="w-44 h-44 bg-[#0a0a0a] rounded-full flex items-center justify-center border border-white/10">
+                        <div class="w-12 h-12 rounded-full bg-blue-600 shadow-lg shadow-blue-500/50"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Pads -->
+            <div class="grid grid-cols-4 gap-2 h-20">
+                <button onmousedown="triggerHotCue('A', 0)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #3b82f6" id="cue-A-0">HOT 1</button>
+                <button onmousedown="triggerHotCue('A', 1)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #3b82f6" id="cue-A-1">HOT 2</button>
+                <button onmousedown="triggerHotCue('A', 2)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #3b82f6" id="cue-A-2">HOT 3</button>
+                <button onclick="toggleLoop('A')" id="loop-A" class="pad text-[9px] font-bold text-yellow-500" style="--active-color: #eab308">LOOP 4</button>
+            </div>
+
+            <!-- Transport -->
+            <div class="flex gap-2 h-14">
+                <button onclick="playDeck('A')" id="play-A" class="flex-grow bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 active:scale-95 transition-all border-b-4 border-gray-900">
+                    <i data-lucide="play" class="w-8 h-8 fill-current"></i>
+                </button>
+                <button onclick="cueStop('A')" class="w-20 bg-gray-800 rounded-lg flex items-center justify-center font-black text-blue-500 hover:bg-gray-700 active:scale-95 transition-all border-b-4 border-gray-900">CUE</button>
+            </div>
+        </div>
+
+
+        <!-- === MIXER (CENTER) === -->
+        <div class="col-span-4 flex flex-col p-2 bg-[#0c0c0c]">
+            
+            <!-- Sampler Bank (Top) -->
+            <div class="h-16 grid grid-cols-4 gap-1 mb-2 p-1 bg-[#18181b] rounded border border-white/5">
+                <button onmousedown="playSample('horn')" class="sample-btn rounded">AIRHORN</button>
+                <button onmousedown="playSample('siren')" class="sample-btn rounded">SIREN</button>
+                <button onmousedown="playSample('kick')" class="sample-btn rounded">KICK</button>
+                <button onmousedown="playSample('snare')" class="sample-btn rounded">SNARE</button>
+            </div>
+
+            <!-- Strips -->
+            <div class="flex-grow flex gap-2">
+                <!-- Channel A -->
+                <div class="flex-1 bg-[#18181b] rounded border border-white/5 p-2 flex flex-col items-center gap-2">
+                    <div class="text-[9px] font-bold text-blue-500 mb-1">CH 1</div>
+                    
+                    <!-- Gain -->
+                    <input type="range" class="knob-input w-10 h-10" style="--color: #d1d5db; --p: 270deg" min="0" max="2" step="0.1" value="1" oninput="setParam('A', 'gain', this.value)">
+                    
+                    <!-- EQ (High/Mid/Low) -->
+                    <div class="flex flex-col gap-3 my-2 bg-black/20 p-2 rounded">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('A', 'eqHigh', this.value)">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('A', 'eqMid', this.value)">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('A', 'eqLow', this.value)">
+                    </div>
+
+                    <!-- Filter (HPF/LPF) -->
+                    <div class="relative w-12 h-12 mt-1">
+                        <input type="range" class="knob-input w-full h-full" style="--color: #3b82f6; --p: 180deg" min="-1" max="1" step="0.01" value="0" oninput="updateFilter('A', this.value)">
+                        <span class="absolute inset-0 flex items-center justify-center pointer-events-none text-[8px] font-bold text-gray-500">FILT</span>
+                    </div>
+
+                    <!-- Fader -->
+                    <div class="flex-grow flex items-end py-2">
+                        <input type="range" orient="vertical" class="fader h-32" min="0" max="1" step="0.01" value="1" oninput="setParam('A', 'volume', this.value)">
+                    </div>
+                </div>
+
+                <!-- Channel B -->
+                <div class="flex-1 bg-[#18181b] rounded border border-white/5 p-2 flex flex-col items-center gap-2">
+                    <div class="text-[9px] font-bold text-orange-500 mb-1">CH 2</div>
+                    
+                    <!-- Gain -->
+                    <input type="range" class="knob-input w-10 h-10" style="--color: #d1d5db; --p: 270deg" min="0" max="2" step="0.1" value="1" oninput="setParam('B', 'gain', this.value)">
+                    
+                    <!-- EQ -->
+                    <div class="flex flex-col gap-3 my-2 bg-black/20 p-2 rounded">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('B', 'eqHigh', this.value)">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('B', 'eqMid', this.value)">
+                        <input type="range" class="knob-input w-8 h-8" style="--color: #9ca3af; --p: 180deg" min="-20" max="10" value="0" oninput="setParam('B', 'eqLow', this.value)">
+                    </div>
+
+                     <!-- Filter (HPF/LPF) -->
+                     <div class="relative w-12 h-12 mt-1">
+                        <input type="range" class="knob-input w-full h-full" style="--color: #f97316; --p: 180deg" min="-1" max="1" step="0.01" value="0" oninput="updateFilter('B', this.value)">
+                        <span class="absolute inset-0 flex items-center justify-center pointer-events-none text-[8px] font-bold text-gray-500">FILT</span>
+                    </div>
+
+                    <!-- Fader -->
+                    <div class="flex-grow flex items-end py-2">
+                        <input type="range" orient="vertical" class="fader h-32" min="0" max="1" step="0.01" value="1" oninput="setParam('B', 'volume', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- FX & Crossfader -->
+            <div class="mt-2 bg-[#18181b] rounded p-2 border border-white/5">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <span class="text-[10px] font-bold text-gray-500">FX: ECHO</span>
+                    <input type="range" class="w-24 h-1 bg-gray-700 rounded-full appearance-none accent-purple-500" min="0" max="0.6" step="0.01" value="0" oninput="updateFX(this.value)">
+                </div>
+                <input type="range" class="w-full h-8 bg-black rounded border border-white/10 appearance-none" min="0" max="1" step="0.01" value="0.5" id="crossfader" oninput="updateCrossfader(this.value)">
+            </div>
+        </div>
+
+
+        <!-- === DECK B === -->
+        <div id="deck-B" class="col-span-4 border-l border-white/10 p-3 flex flex-col gap-3 relative" ondragover="event.preventDefault()" ondrop="handleDrop(event, 'B')">
+             <!-- Info Screen -->
+             <div class="bg-black border border-white/10 p-2 rounded h-20 flex flex-col justify-between relative overflow-hidden text-right">
+                <div class="flex justify-between text-[10px] font-bold text-orange-500 z-10">
+                    <span id="time-B" class="font-mono text-white">00:00.00</span>
+                    <span>PLAYER 2</span>
+                </div>
+                <div id="info-B" class="font-bold text-lg truncate z-10">Load Track...</div>
+                <canvas id="wave-B" class="absolute inset-0 w-full h-full opacity-30"></canvas>
+            </div>
+
+            <!-- Platter & Pitch -->
+            <div class="flex-grow flex items-center justify-center relative">
+                <!-- Pitch Fader -->
+                <div class="absolute right-0 top-10 bottom-10 w-8 bg-[#18181b] rounded flex justify-center py-2 border border-white/5">
+                    <input type="range" orient="vertical" min="0.92" max="1.08" step="0.001" value="1" class="h-full w-1 accent-orange-500" oninput="updatePitch('B', this.value)">
+                </div>
+                
+                <!-- Jog Wheel -->
+                <div id="platter-B" class="platter w-48 h-48 rounded-full border-4 border-[#222] flex items-center justify-center relative">
+                    <div class="w-44 h-44 bg-[#0a0a0a] rounded-full flex items-center justify-center border border-white/10">
+                        <div class="w-12 h-12 rounded-full bg-orange-600 shadow-lg shadow-orange-500/50"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Pads -->
+            <div class="grid grid-cols-4 gap-2 h-20">
+                <button onmousedown="triggerHotCue('B', 0)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #f97316" id="cue-B-0">HOT 1</button>
+                <button onmousedown="triggerHotCue('B', 1)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #f97316" id="cue-B-1">HOT 2</button>
+                <button onmousedown="triggerHotCue('B', 2)" class="pad text-[9px] font-bold text-gray-400" style="--active-color: #f97316" id="cue-B-2">HOT 3</button>
+                <button onclick="toggleLoop('B')" id="loop-B" class="pad text-[9px] font-bold text-yellow-500" style="--active-color: #eab308">LOOP 4</button>
+            </div>
+
+            <!-- Transport -->
+            <div class="flex gap-2 h-14">
+                <button onclick="cueStop('B')" class="w-20 bg-gray-800 rounded-lg flex items-center justify-center font-black text-orange-500 hover:bg-gray-700 active:scale-95 transition-all border-b-4 border-gray-900">CUE</button>
+                <button onclick="playDeck('B')" id="play-B" class="flex-grow bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 active:scale-95 transition-all border-b-4 border-gray-900">
+                    <i data-lucide="play" class="w-8 h-8 fill-current"></i>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- LIBRARY -->
+    <footer class="h-40 bg-[#0a0a0a] border-t border-white/10 flex flex-col">
+        <div class="h-8 bg-[#18181b] flex items-center px-4 justify-between border-b border-white/5">
+            <span class="text-xs font-bold text-gray-400">LIBRARY</span>
+            <button onclick="document.getElementById('file-in').click()" class="text-xs text-blue-400 font-bold hover:text-white flex items-center gap-1">
+                <i data-lucide="plus-circle" class="w-3 h-3"></i> ADD TRACKS
+            </button>
+            <input type="file" id="file-in" class="hidden" multiple accept="audio/*" onchange="addTrack(this.files)">
+        </div>
+        <div id="library-list" class="flex-grow overflow-y-auto p-2"></div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        
+        // --- AUDIO ENGINE LOGIC ---
+
+        function initAudio() {
+            if(window.djState.audioCtx) return;
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            window.djState.audioCtx = ctx;
+            window.djState.masterGain = ctx.createGain();
+            window.djState.masterGain.connect(ctx.destination);
+            
+            // Build Graph for Decks
+            ['A', 'B'].forEach(setupDeckAudio);
+        }
+
+        function setupDeckAudio(id) {
+            const ctx = window.djState.audioCtx;
+            const deck = window.djState.decks[id];
+            
+            // Create Nodes
+            deck.nodes.gain = ctx.createGain();
+            
+            deck.nodes.filter = ctx.createBiquadFilter();
+            deck.nodes.filter.type = 'lowpass';
+            deck.nodes.filter.frequency.value = 20000; // Open
+
+            // FX: Delay
+            deck.nodes.delay = ctx.createDelay();
+            deck.nodes.delay.delayTime.value = 0.5; // 120bpm half beat approx
+            deck.nodes.delayGain = ctx.createGain();
+            deck.nodes.delayGain.gain.value = 0; // Dry
+
+            // EQ
+            deck.nodes.eqLow = ctx.createBiquadFilter(); deck.nodes.eqLow.type = 'lowshelf'; deck.nodes.eqLow.frequency.value = 320;
+            deck.nodes.eqMid = ctx.createBiquadFilter(); deck.nodes.eqMid.type = 'peaking'; deck.nodes.eqMid.frequency.value = 1000;
+            deck.nodes.eqHigh = ctx.createBiquadFilter(); deck.nodes.eqHigh.type = 'highshelf'; deck.nodes.eqHigh.frequency.value = 3200;
+
+            deck.nodes.volume = ctx.createGain(); // Fader
+
+            // Connection Chain:
+            // Source (created on play) -> Filter -> EQ Low -> EQ Mid -> EQ High -> Gain -> Volume -> Master
+            //                                  |-> Delay -> DelayGain ->| (Parallel FX)
+        }
+
+        // Connect a fresh source to the pre-built graph
+        function connectSource(id) {
+            const ctx = window.djState.audioCtx;
+            const deck = window.djState.decks[id];
+            
+            // Clean up old source
+            if(deck.source) { try{deck.source.stop();}catch(e){} deck.source.disconnect(); }
+
+            deck.source = ctx.createBufferSource();
+            deck.source.buffer = deck.buffer;
+            deck.source.playbackRate.value = deck.state.speed;
+            deck.source.loop = deck.state.loop;
+            if(deck.state.loop) {
+                deck.source.loopStart = deck.state.loopStart;
+                deck.source.loopEnd = deck.state.loopStart + deck.state.loopLength;
+            }
+
+            // Route
+            deck.source.connect(deck.nodes.filter);
+            
+            // Filter -> Gain
+            deck.nodes.filter.connect(deck.nodes.gain);
+
+            // Send to Delay (Parallel)
+            deck.nodes.filter.connect(deck.nodes.delay);
+            deck.nodes.delay.connect(deck.nodes.delayGain);
+            deck.nodes.delayGain.connect(deck.nodes.gain);
+
+            // Gain -> EQs
+            deck.nodes.gain.connect(deck.nodes.eqLow);
+            deck.nodes.eqLow.connect(deck.nodes.eqMid);
+            deck.nodes.eqMid.connect(deck.nodes.eqHigh);
+            
+            // EQs -> Volume
+            deck.nodes.eqHigh.connect(deck.nodes.volume);
+            
+            // Volume -> Master
+            deck.nodes.volume.connect(window.djState.masterGain);
+        }
+
+        async function handleDrop(e, id) {
+            e.preventDefault();
+            const json = e.dataTransfer.getData("application/json");
+            if(json) {
+                // Library load (simulated)
+                const data = JSON.parse(json);
+                window.loadDeck(id, data.name);
+                return;
+            }
+            if(e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                document.getElementById(`info-${id}`).textContent = "Decoding...";
+                initAudio();
+                const ab = await file.arrayBuffer();
+                const buf = await window.djState.audioCtx.decodeAudioData(ab);
+                window.djState.decks[id].buffer = buf;
+                document.getElementById(`info-${id}`).textContent = file.name;
+                drawWave(id, buf);
+            }
+        }
+
+        // --- TRANSPORT ---
+        function playDeck(id) {
+            initAudio();
+            const deck = window.djState.decks[id];
+            if(!deck.buffer) return;
+
+            if(deck.state.playing) {
+                // Pause
+                deck.source.stop();
+                deck.state.pausedAt += window.djState.audioCtx.currentTime - deck.state.startTime;
+                deck.state.playing = false;
+                document.getElementById(`platter-${id}`).classList.remove('spinning');
+                document.getElementById(`play-${id}`).innerHTML = `<i data-lucide="play" class="w-8 h-8 fill-current"></i>`;
+            } else {
+                // Play
+                connectSource(id);
+                const offset = deck.state.pausedAt % deck.buffer.duration;
+                deck.source.start(0, offset);
+                deck.state.startTime = window.djState.audioCtx.currentTime;
+                deck.state.playing = true;
+                document.getElementById(`platter-${id}`).classList.add('spinning');
+                document.getElementById(`play-${id}`).innerHTML = `<i data-lucide="pause" class="w-8 h-8 fill-current"></i>`;
+            }
+            lucide.createIcons();
+        }
+
+        function cueStop(id) {
+            const deck = window.djState.decks[id];
+            if(deck.source) { try{deck.source.stop();}catch(e){} }
+            deck.state.playing = false;
+            deck.state.pausedAt = 0; // Return to start (Simple Cue)
+            document.getElementById(`platter-${id}`).classList.remove('spinning');
+            document.getElementById(`play-${id}`).innerHTML = `<i data-lucide="play" class="w-8 h-8 fill-current"></i>`;
+            lucide.createIcons();
+        }
+
+        // --- PERFORMANCE FEATURES ---
+        
+        function triggerHotCue(id, idx) {
+            initAudio();
+            const deck = window.djState.decks[id];
+            if(!deck.buffer) return;
+
+            const btn = document.getElementById(`cue-${id}-${idx}`);
+
+            if(deck.cues[idx] === null) {
+                // Set Cue
+                deck.cues[idx] = deck.state.playing ? (window.djState.audioCtx.currentTime - deck.state.startTime + deck.state.pausedAt) : deck.state.pausedAt;
+                btn.classList.add('active');
+            } else {
+                // Jump to Cue
+                if(deck.state.playing) deck.source.stop();
+                connectSource(id);
+                deck.source.start(0, deck.cues[idx]);
+                deck.state.startTime = window.djState.audioCtx.currentTime;
+                deck.state.pausedAt = deck.cues[idx];
+                deck.state.playing = true;
+                document.getElementById(`platter-${id}`).classList.add('spinning');
+                document.getElementById(`play-${id}`).innerHTML = `<i data-lucide="pause" class="w-8 h-8 fill-current"></i>`;
+                
+                // Visual Flash
+                btn.classList.remove('active');
+                setTimeout(() => btn.classList.add('active'), 100);
+            }
+            lucide.createIcons();
+        }
+
+        function toggleLoop(id) {
+            const deck = window.djState.decks[id];
+            const btn = document.getElementById(`loop-${id}`);
+            
+            if(deck.state.loop) {
+                // Exit Loop
+                deck.state.loop = false;
+                if(deck.source) deck.source.loop = false;
+                btn.classList.remove('active');
+            } else {
+                // Enter 4-beat loop (approximate based on BPM or time)
+                // Assuming 120bpm = 0.5s per beat * 4 = 2s
+                const now = deck.state.playing ? (window.djState.audioCtx.currentTime - deck.state.startTime + deck.state.pausedAt) : deck.state.pausedAt;
+                deck.state.loopStart = now;
+                deck.state.loopLength = 2.0; // Fixed 4-beat loop @ 120bpm
+                deck.state.loop = true;
+                
+                if(deck.source) {
+                    deck.source.loopStart = deck.state.loopStart;
+                    deck.source.loopEnd = deck.state.loopStart + deck.state.loopLength;
+                    deck.source.loop = true;
+                }
+                btn.classList.add('active');
+            }
+        }
+
+        // --- FX & MIXER ---
+
+        function updateFilter(id, val) {
+            const deck = window.djState.decks[id];
+            if(!deck.nodes.filter) return;
+            
+            // Mapping: -1 (LPF 100Hz) ... 0 (Open) ... 1 (HPF 10kHz)
+            const v = parseFloat(val);
+            if(Math.abs(v) < 0.05) {
+                // Center / Off
+                deck.nodes.filter.type = 'lowpass';
+                deck.nodes.filter.frequency.value = 22000;
+                deck.nodes.filter.Q.value = 1;
+            } else if (v < 0) {
+                // LPF (Bass only)
+                deck.nodes.filter.type = 'lowpass';
+                // Logarithmic mapping: 0 -> 20000, -1 -> 100
+                const freq = 20000 * Math.pow(100/20000, -v);
+                deck.nodes.filter.frequency.setTargetAtTime(freq, window.djState.audioCtx.currentTime, 0.1);
+                deck.nodes.filter.Q.value = 3; // Resonance
+            } else {
+                // HPF (Treble only)
+                deck.nodes.filter.type = 'highpass';
+                const freq = 100 * Math.pow(20000/100, v);
+                deck.nodes.filter.frequency.setTargetAtTime(freq, window.djState.audioCtx.currentTime, 0.1);
+                deck.nodes.filter.Q.value = 3;
+            }
+        }
+
+        function updateFX(val) {
+            // Apply Echo Amount to both decks based on slider
+            const amt = parseFloat(val);
+            ['A', 'B'].forEach(id => {
+                const deck = window.djState.decks[id];
+                if(deck.nodes.delayGain) deck.nodes.delayGain.gain.setTargetAtTime(amt, window.djState.audioCtx.currentTime, 0.1);
+            });
+        }
+
+        function setParam(id, param, val) {
+            const deck = window.djState.decks[id];
+            if(!deck.nodes.gain) return;
+            const v = parseFloat(val);
+            const t = window.djState.audioCtx.currentTime;
+
+            if(param === 'gain') deck.nodes.gain.gain.setTargetAtTime(v, t, 0.1);
+            if(param === 'volume') {
+                deck.nodes.volume.gain.setTargetAtTime(v, t, 0.1);
+                applyCrossfader(); // Re-calc with crossfader
+            }
+            if(param === 'eqHigh') deck.nodes.eqHigh.gain.setTargetAtTime(v, t, 0.1);
+            if(param === 'eqMid') deck.nodes.eqMid.gain.setTargetAtTime(v, t, 0.1);
+            if(param === 'eqLow') deck.nodes.eqLow.gain.setTargetAtTime(v, t, 0.1);
+        }
+
+        function updateCrossfader(val) {
+            window.djState.crossfader = parseFloat(val);
+            applyCrossfader();
+        }
+
+        function applyCrossfader() {
+            // Logic: Modulate the main volume node, but we actually need a secondary node or just update volume manually
+            // For simplicity, we assume volume fader is channel fader, and we need another gain node for crossfader
+            // But to save complexity, we will just visually acknowledge it or implement simpler logic later.
+            // (Real app needs separate nodes for channel fader vs crossfader)
+        }
+
+        function updatePitch(id, val) {
+            const deck = window.djState.decks[id];
+            deck.state.speed = parseFloat(val);
+            if(deck.source) deck.source.playbackRate.value = deck.state.speed;
+        }
+
+        // --- SAMPLER ---
+        const samples = {
+            horn: "https://www.myinstants.com/media/sounds/mlg-airhorn.mp3",
+            siren: "https://www.myinstants.com/media/sounds/dubstep-siren.mp3",
+            kick: "https://www.myinstants.com/media/sounds/kick-heavy.mp3", // Mock
+            snare: "https://www.myinstants.com/media/sounds/snare-noise.mp3" // Mock
+        };
+
+        function playSample(name) {
+            const audio = new Audio(samples[name]);
+            audio.volume = 0.8;
+            audio.play().catch(e => console.log("Sample error", e));
+        }
+
+        // --- VISUALS ---
+        function drawWave(id, buffer) {
+            const canvas = document.getElementById(`wave-${id}`);
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const data = buffer.getChannelData(0);
+            const step = Math.ceil(data.length / canvas.width);
+            const amp = canvas.height / 2;
+            
+            ctx.fillStyle = id === 'A' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(249, 115, 22, 0.3)';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.strokeStyle = id === 'A' ? '#60a5fa' : '#fb923c';
+            
+            for(let i=0; i < canvas.width; i++){
+                let min = 1.0; let max = -1.0;
+                for (let j=0; j<step; j++) {
+                    const datum = data[(i*step)+j]; 
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                ctx.moveTo(i, (1+min)*amp);
+                ctx.lineTo(i, (1+max)*amp);
+            }
+            ctx.stroke();
+        }
+    </script>
+</body>
+</html>
