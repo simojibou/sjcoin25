@@ -3,791 +3,1150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Studio: Real-Time FX</title>
+    <title>Pro Studio: Ultimate AI Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- LameJS for MP3 Encoding -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700;900&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        /* Pro Dark Theme Styles */
-        body { background-color: #0f172a; color: #e2e8f0; }
+        /* --- PRO STUDIO THEME --- */
+        :root {
+            --bg-dark: #09090b;
+            --panel-bg: rgba(24, 24, 27, 0.7);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --ai-grad: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+        }
         
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        body { background-color: var(--bg-dark); color: #e4e4e7; font-family: 'Inter', sans-serif; }
         
+        /* Glassmorphism */
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .ai-border {
+            position: relative;
+            background: rgba(0,0,0,0.3);
+            border-radius: 0.75rem;
+            z-index: 1;
+        }
+        .ai-border::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            z-index: -1;
+            background: var(--ai-grad);
+            border-radius: 0.8rem;
+            opacity: 0.5;
         }
         
-        .knob-range {
+        /* Custom Knobs/Sliders */
+        input[type="range"] {
             -webkit-appearance: none;
-            height: 4px;
-            background: #334155;
-            border-radius: 2px;
-            outline: none;
+            background: transparent;
         }
-        .knob-range::-webkit-slider-thumb {
+        input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #3b82f6;
+            height: 14px;
+            width: 14px;
             border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 10px var(--accent-glow);
             cursor: pointer;
+            margin-top: -5px;
             transition: transform 0.1s;
         }
-        .knob-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-        .processing-active { animation: pulse-glow 2s infinite; border-color: #3b82f6; }
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #27272a;
+            border-radius: 2px;
         }
 
-        /* Play button pulse when playing */
-        .playing-pulse {
-            animation: pulse-green 2s infinite;
+        /* Vertical EQ Sliders */
+        input[type=range][orient=vertical] {
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 8px;
+            height: 120px;
+            padding: 0;
         }
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+
+        /* Animations */
+        @keyframes sound-wave {
+            0% { height: 5px; }
+            50% { height: 20px; }
+            100% { height: 5px; }
         }
+        .playing-indicator div {
+            width: 3px;
+            background: var(--accent);
+            animation: sound-wave 1s infinite ease-in-out;
+        }
+        .playing-indicator div:nth-child(2) { animation-delay: 0.2s; }
+        .playing-indicator div:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .ai-text {
+            background: linear-gradient(90deg, #6366f1, #ec4899, #6366f1);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shimmer 3s linear infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        
+        /* Color Picker Reset */
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            overflow: hidden;
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen font-sans selection:bg-blue-500 selection:text-white">
+<body class="flex flex-col min-h-screen selection:bg-blue-500 selection:text-white">
 
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-50 glass-panel border-b-0 border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-lg shadow-lg">
-                        <i data-lucide="waves" class="text-white w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">VibeStudio Pro</h1>
-                        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Real-Time FX Engine</p>
-                    </div>
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-50 glass-panel border-b-0 border-b border-white/10">
+        <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
+                    <i data-lucide="waves" class="text-white w-5 h-5"></i>
                 </div>
-                <div class="flex gap-4">
-                    <button onclick="switchMode('studio')" id="nav-studio" class="text-blue-400 font-medium hover:text-white transition">Studio</button>
-                    <button onclick="switchMode('art')" id="nav-art" class="text-gray-400 font-medium hover:text-white transition">Cover Art</button>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white">ProStudio <span class="text-blue-400 font-light">Ultimate</span></h1>
                 </div>
+            </div>
+            
+            <div class="flex bg-black/40 rounded-lg p-1 border border-white/5">
+                <button onclick="switchView('studio')" id="btn-studio" class="px-4 py-1.5 rounded text-sm font-medium bg-white/10 text-white shadow-sm transition-all">Studio</button>
+                <button onclick="switchView('art')" id="btn-art" class="px-4 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white transition-all">Cover Art</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full gap-6 grid grid-cols-1 lg:grid-cols-12">
+    <!-- Main Workspace -->
+    <main class="flex-grow p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- ================= STUDIO MODE ================= -->
-        
-        <!-- Sidebar: Effects Rack (Left) -->
-        <aside id="effects-rack" class="lg:col-span-3 glass-panel rounded-2xl p-5 space-y-6 h-fit lg:sticky lg:top-24">
-            <div class="flex items-center gap-2 mb-2">
-                <i data-lucide="sliders" class="w-5 h-5 text-blue-400"></i>
-                <h2 class="text-lg font-bold">Live FX Rack</h2>
-            </div>
+        <!-- ================= LEFT SIDEBAR: FX RACK ================= -->
+        <aside id="fx-rack" class="lg:col-span-3 space-y-4 lg:sticky lg:top-24 h-fit">
             
-            <!-- Slow & Reverb Control -->
-            <div class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <label class="text-sm font-semibold text-gray-300">Speed (Slow)</label>
-                    <span id="speed-val" class="text-xs font-mono text-blue-400">100%</span>
+            <!-- Visualizer (Mini) -->
+            <div class="glass-panel p-4 rounded-xl border-t-2 border-t-blue-500">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400">Spectrum</h3>
+                    <div class="flex gap-1 playing-indicator opacity-0" id="play-indicator">
+                        <div></div><div></div><div></div>
+                    </div>
                 </div>
-                <input type="range" id="speed-slider" min="50" max="120" value="100" class="knob-range w-full" oninput="updateLiveParams()">
-                <p class="text-xs text-gray-500">Updates in real-time while playing.</p>
-                
-                <div class="flex justify-between items-center mt-4">
-                    <label class="text-sm font-semibold text-gray-300">Reverb (Space)</label>
-                    <span id="reverb-val" class="text-xs font-mono text-blue-400">0%</span>
-                </div>
-                <input type="range" id="reverb-slider" min="0" max="100" value="0" class="knob-range w-full" oninput="updateLiveParams()">
+                <canvas id="viz-canvas" class="w-full h-24 bg-black/40 rounded-lg"></canvas>
             </div>
 
-            <hr class="border-gray-700">
-
-            <!-- 3-Band EQ -->
-            <div>
-                <div class="flex justify-between items-center mb-4">
-                    <label class="text-sm font-semibold text-gray-300">Master EQ</label>
-                    <button onclick="resetEQ()" class="text-xs text-gray-500 hover:text-white">Reset</button>
-                </div>
-                <div class="flex justify-between px-2">
-                    <div class="flex flex-col items-center gap-2">
-                        <input type="range" id="eq-high" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500" oninput="updateLiveParams()">
-                        <span class="text-xs text-gray-400">Hi</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-2">
-                        <input type="range" id="eq-mid" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500" oninput="updateLiveParams()">
-                        <span class="text-xs text-gray-400">Mid</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-2">
-                        <input type="range" id="eq-low" min="-12" max="12" value="0" orient="vertical" class="h-24 w-1 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500" oninput="updateLiveParams()">
-                        <span class="text-xs text-gray-400">Low</span>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-gray-700">
-
-            <!-- Output Format -->
-             <div class="space-y-4">
-                <h3 class="text-sm font-bold text-gray-200 flex items-center gap-2">
-                    <i data-lucide="settings-2" class="w-4 h-4"></i> Output Settings
+            <!-- AI Vibe Generator (NEW) -->
+            <div class="ai-border p-4">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 mb-2 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-3 h-3 text-pink-400"></i> AI Audio Engineer
                 </h3>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-vibe-prompt" placeholder="Describe vibe (e.g. 'Sad Underwater')" class="w-full bg-black/50 border border-white/10 rounded text-xs px-2 py-2 text-white outline-none focus:border-pink-500">
+                    <button onclick="generateAiSettings()" id="btn-ai-gen" class="bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-90 text-white rounded p-2 flex items-center justify-center transition-all">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-2 italic" id="ai-status">Gemini will adjust sliders for you.</p>
+            </div>
 
-                <!-- Format -->
+            <!-- Presets -->
+            <div class="glass-panel p-4 rounded-xl">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Quick Presets</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="applyPreset('slowed')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">💜 Slowed+Reverb</button>
+                    <button onclick="applyPreset('nightcore')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">⚡ Nightcore</button>
+                    <button onclick="applyPreset('lofi')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">☕ Lo-Fi Radio</button>
+                    <button onclick="applyPreset('bass')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">🔊 Bass Boost</button>
+                </div>
+            </div>
+
+            <!-- Main FX Controls -->
+            <div class="glass-panel p-5 rounded-xl space-y-6">
+                
+                <!-- Speed -->
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">File Format</label>
-                    <select id="export-format" onchange="toggleBitrate()" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
-                        <option value="mp3">MP3 (Compressed)</option>
-                        <option value="wav">WAV (Lossless)</option>
-                    </select>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium text-gray-200">Playback Speed</label>
+                        <span id="speed-val" class="text-xs font-mono text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">100%</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="50" max="150" value="100" oninput="updateFX()">
+                    <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                        <span>Slow (Chopped)</span>
+                        <span>Fast (Nightcore)</span>
+                    </div>
                 </div>
 
-                <!-- Sample Rate -->
+                <!-- Reverb -->
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">Sample Rate (Hz)</label>
-                    <select id="sample-rate" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
-                        <option value="44100" selected>44100 Hz (Music)</option>
-                        <option value="48000">48000 Hz (Video)</option>
-                    </select>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium text-gray-200">Space / Reverb</label>
+                        <span id="reverb-val" class="text-xs font-mono text-purple-400 bg-purple-400/10 px-1.5 py-0.5 rounded">0%</span>
+                    </div>
+                    <input type="range" id="reverb-slider" min="0" max="100" value="0" oninput="updateFX()">
                 </div>
 
-                <!-- Bitrate (MP3 Only) -->
-                <div id="bitrate-container">
-                    <label class="text-xs text-gray-400 block mb-1">Bitrate (kbps)</label>
-                    <select id="bitrate" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none">
-                        <option value="320" selected>320 kbps (High Quality)</option>
-                        <option value="192">192 kbps (Standard)</option>
-                        <option value="128">128 kbps (Low)</option>
-                    </select>
+                <!-- EQ Section -->
+                <div class="pt-4 border-t border-white/10">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="text-sm font-medium text-gray-200">3-Band EQ</label>
+                        <button onclick="resetEQ()" class="text-[10px] text-gray-500 hover:text-white uppercase tracking-wider">Reset</button>
+                    </div>
+                    <div class="flex justify-between px-2 h-32">
+                        <!-- High -->
+                        <div class="flex flex-col items-center gap-2 h-full">
+                            <input type="range" id="eq-high" min="-12" max="12" value="0" orient="vertical" oninput="updateFX()">
+                            <span class="text-[10px] text-gray-400 uppercase">High</span>
+                        </div>
+                        <!-- Mid -->
+                        <div class="flex flex-col items-center gap-2 h-full">
+                            <input type="range" id="eq-mid" min="-12" max="12" value="0" orient="vertical" oninput="updateFX()">
+                            <span class="text-[10px] text-gray-400 uppercase">Mid</span>
+                        </div>
+                        <!-- Low -->
+                        <div class="flex flex-col items-center gap-2 h-full">
+                            <input type="range" id="eq-low" min="-12" max="12" value="0" orient="vertical" oninput="updateFX()">
+                            <span class="text-[10px] text-gray-400 uppercase">Low</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+             <!-- Export Config -->
+             <div class="glass-panel p-4 rounded-xl">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Export Config</h3>
+                <div class="space-y-3">
+                    
+                    <!-- Format -->
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase">Format</label>
+                        <select id="export-format" onchange="toggleExportOptions()" class="w-full bg-black/40 border border-white/10 rounded text-xs p-2 text-white outline-none focus:border-blue-500">
+                            <option value="mp3">MP3 (Compressed)</option>
+                            <option value="wav">WAV (Lossless)</option>
+                        </select>
+                    </div>
+
+                    <!-- Sample Rate -->
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase">Sample Rate</label>
+                        <select id="sample-rate" class="w-full bg-black/40 border border-white/10 rounded text-xs p-2 text-white outline-none focus:border-blue-500">
+                            <option value="44100" selected>44.1 kHz (Music Std)</option>
+                            <option value="48000">48.0 kHz (Video Std)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bitrate -->
+                    <div id="bitrate-container">
+                        <label class="text-[10px] text-gray-500 font-bold uppercase">Bitrate</label>
+                        <select id="bitrate" class="w-full bg-black/40 border border-white/10 rounded text-xs p-2 text-white outline-none focus:border-blue-500">
+                            <option value="320" selected>320 kbps (High Quality)</option>
+                            <option value="192">192 kbps (Standard)</option>
+                            <option value="128">128 kbps (Low)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-[10px] text-gray-500 pt-2 border-t border-white/5">
+                        <i data-lucide="check-circle" class="w-3 h-3 text-green-500"></i>
+                        <span>Soft Clipper Active</span>
+                    </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Workspace: Track List (Center) -->
-        <section id="studio-main" class="lg:col-span-9 space-y-6">
-            
-            <!-- Upload Area -->
-            <div id="drop-zone" class="glass-panel border-2 border-dashed border-gray-600 rounded-2xl h-48 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800/50 transition-all group relative overflow-hidden">
-                <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+        <!-- ================= CENTER: TRACK LIST & PROCESSING ================= -->
+        <section id="studio-view" class="lg:col-span-9 flex flex-col gap-6">
+
+            <!-- Drag & Drop Zone -->
+            <div id="drop-zone" class="relative group h-40 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/10 hover:border-blue-500/50 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
                 <input type="file" id="file-input" multiple accept="audio/*" class="hidden">
-                <div class="p-4 bg-gray-800 rounded-full mb-3 shadow-xl group-hover:scale-110 transition-transform">
-                    <i data-lucide="layers" class="w-8 h-8 text-blue-400"></i>
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mb-3 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                        <i data-lucide="plus" class="text-white w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-200">Import Audio Tracks</h3>
+                    <p class="text-xs text-gray-500 mt-1">Supports MP3, WAV, FLAC, AIFF</p>
                 </div>
-                <h3 class="text-xl font-bold text-gray-200">Drop Tracks Here</h3>
-                <p class="text-gray-400 text-sm mt-1">Batch process 10+ tracks at once</p>
             </div>
 
-            <!-- Queue Actions -->
-            <div id="queue-actions" class="hidden flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-300 font-medium" id="track-count">0 Tracks Loaded</span>
-                    <button onclick="clearQueue()" class="text-xs text-red-400 hover:underline">Clear All</button>
+            <!-- Action Bar -->
+            <div id="action-bar" class="hidden flex justify-between items-center glass-panel p-3 rounded-xl">
+                <div class="flex items-center gap-3 px-2">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider" id="queue-stats">0 Tracks</span>
+                    <button onclick="clearQueue()" class="text-xs text-red-400 hover:text-red-300">Clear</button>
                 </div>
-                <button onclick="processBatch()" id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg shadow-blue-900/40 flex items-center gap-2 transition-all active:scale-95">
+                <button onclick="startBatchProcessing()" id="btn-process" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-2 px-6 rounded-lg shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i data-lucide="zap" class="w-4 h-4"></i>
-                    <span>Apply Effects & Convert All</span>
+                    <span>Export All Tracks</span>
                 </button>
             </div>
 
             <!-- Track List -->
-            <div id="track-list" class="space-y-3">
-                <!-- Tracks inject here -->
+            <div id="track-container" class="space-y-3">
+                <!-- Tracks will be injected here -->
             </div>
 
         </section>
 
-        <!-- ================= ART MODE (Hidden) ================= -->
-        <section id="art-main" class="hidden lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div class="glass-panel p-6 rounded-2xl">
-                <h2 class="text-xl font-bold mb-4">Cover Art Generator</h2>
-                <div class="space-y-4">
-                    <button onclick="document.getElementById('art-file').click()" class="w-full py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2">
-                        <i data-lucide="image-plus" class="w-4 h-4"></i> Upload Background
-                    </button>
-                    <input type="file" id="art-file" class="hidden" accept="image/*">
-                    
-                    <input type="text" id="art-artist" placeholder="Artist Name" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white">
-                    <input type="text" id="art-song" placeholder="Song/Album Title" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white">
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="downloadArt()" class="col-span-2 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg">Download 3000px</button>
+        <!-- ================= COVER ART VIEW (Hidden) ================= -->
+        <section id="art-view" class="hidden lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+             
+             <!-- Editor Controls (Left) -->
+             <div class="lg:col-span-4 glass-panel p-6 rounded-xl h-fit space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold flex items-center gap-2">
+                        <i data-lucide="palette" class="w-5 h-5 text-blue-400"></i> Art Studio
+                    </h2>
+                </div>
+
+                <!-- AI Inspiration (NEW) -->
+                <div class="ai-border p-4">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 mb-2 flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-3 h-3 text-pink-400"></i> Creative Director
+                    </h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="ai-art-prompt" placeholder="Vibe (e.g. Dark Techno)" class="w-full bg-black/50 border border-white/10 rounded text-xs px-2 py-2 text-white outline-none focus:border-pink-500">
+                        <button onclick="generateAiNames()" id="btn-ai-names" class="bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-90 text-white rounded p-2 flex items-center justify-center transition-all">
+                            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
+
+                <!-- 1. Background -->
+                <div class="space-y-3 border-b border-white/10 pb-4">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Background & FX</label>
+                    <button onclick="document.getElementById('art-upload').click()" class="w-full h-10 bg-white/5 border border-white/10 rounded hover:bg-white/10 text-xs text-gray-300 flex items-center justify-center gap-2">
+                        <i data-lucide="image" class="w-3 h-3"></i> Upload Image
+                    </button>
+                    <input type="file" id="art-upload" class="hidden" accept="image/*">
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[10px] text-gray-400 block mb-1">Darken</span>
+                            <input type="range" id="fx-darken" min="0" max="90" value="30" oninput="renderArt()">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-gray-400 block mb-1">Blur</span>
+                            <input type="range" id="fx-blur" min="0" max="20" value="0" oninput="renderArt()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Artist Text Layer -->
+                <div class="space-y-3 border-b border-white/10 pb-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Artist Text</label>
+                        <input type="checkbox" id="show-artist" checked onchange="renderArt()" class="accent-blue-500">
+                    </div>
+                    <input type="text" id="art-artist" placeholder="ARTIST NAME" class="w-full bg-black/40 border border-white/10 rounded p-2 text-white text-xs" oninput="renderArt()">
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="font-artist" onchange="renderArt()" class="bg-black/40 border border-white/10 rounded text-xs p-1 text-gray-300">
+                            <option value="Inter">Modern Sans</option>
+                            <option value="Playfair Display">Elegant Serif</option>
+                            <option value="Permanent Marker">Graffiti / Hand</option>
+                            <option value="Roboto Mono">Tech Mono</option>
+                        </select>
+                        <input type="color" id="color-artist" value="#ffffff" oninput="renderArt()" class="w-full h-6 rounded cursor-pointer">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 w-8">Size</span>
+                        <input type="range" id="size-artist" min="50" max="400" value="200" class="flex-grow" oninput="renderArt()">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 w-8">Pos Y</span>
+                        <input type="range" id="pos-artist" min="100" max="2900" value="1400" class="flex-grow" oninput="renderArt()">
+                    </div>
+                </div>
+
+                <!-- 3. Title Text Layer -->
+                <div class="space-y-3 border-b border-white/10 pb-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Title Text</label>
+                        <input type="checkbox" id="show-title" checked onchange="renderArt()" class="accent-blue-500">
+                    </div>
+                    <input type="text" id="art-song" placeholder="Song Title" class="w-full bg-black/40 border border-white/10 rounded p-2 text-white text-xs" oninput="renderArt()">
+                    
+                     <div class="grid grid-cols-2 gap-2">
+                        <select id="font-title" onchange="renderArt()" class="bg-black/40 border border-white/10 rounded text-xs p-1 text-gray-300">
+                            <option value="Inter">Modern Sans</option>
+                            <option value="Playfair Display">Elegant Serif</option>
+                            <option value="Permanent Marker">Graffiti / Hand</option>
+                            <option value="Roboto Mono">Tech Mono</option>
+                        </select>
+                        <input type="color" id="color-title" value="#ffffff" oninput="renderArt()" class="w-full h-6 rounded cursor-pointer">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 w-8">Size</span>
+                        <input type="range" id="size-title" min="50" max="400" value="120" class="flex-grow" oninput="renderArt()">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 w-8">Pos Y</span>
+                        <input type="range" id="pos-title" min="100" max="2900" value="1650" class="flex-grow" oninput="renderArt()">
+                    </div>
+                </div>
+
+                <!-- 4. Extras -->
+                <div class="flex items-center justify-between">
+                     <label class="text-[10px] font-bold text-gray-500 uppercase">Parental Advisory</label>
+                     <input type="checkbox" id="show-advisory" checked onchange="renderArt()" class="accent-red-500">
+                </div>
+
+                <!-- Download -->
+                <button onclick="downloadArt()" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 mt-4">
+                    <i data-lucide="download" class="w-4 h-4"></i> Export 3000px JPG
+                </button>
             </div>
-            <div class="flex justify-center items-start">
-                <canvas id="art-preview" class="w-full max-w-md aspect-square bg-gray-900 rounded-lg shadow-2xl border border-gray-700"></canvas>
-                <canvas id="art-hd" width="3000" height="3000" class="hidden"></canvas>
+
+            <!-- Preview (Right) -->
+            <div class="lg:col-span-8 flex justify-center items-start bg-black/20 p-8 rounded-xl border border-white/5 h-full">
+                <div class="sticky top-24 w-full max-w-[600px] aspect-square shadow-2xl shadow-black/50">
+                    <canvas id="art-preview" class="w-full h-full object-contain bg-[#111] rounded"></canvas>
+                    <canvas id="art-hd" width="3000" height="3000" class="hidden"></canvas>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Global Scripts -->
     <script>
+        // Init Lucide Icons
         lucide.createIcons();
 
-        // --- GLOBAL VARIABLES ---
-        let audioCtx;
-        const trackQueue = []; // Array of { id, file, status, buffer, blob }
-        let isProcessing = false;
-        
-        // --- LIVE AUDIO GRAPH ---
-        const liveAudio = {
-            source: null,
-            dryNode: null,
-            wetNode: null,
-            convolver: null,
-            filters: { low: null, mid: null, high: null },
+        // --- GEMINI API SETUP ---
+        const apiKey = ""; // Injected by runtime
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        async function callGemini(userPrompt, systemPrompt) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+                return JSON.parse(data.candidates[0].content.parts[0].text);
+            } catch (error) {
+                console.error("Gemini Error:", error);
+                return null;
+            }
+        }
+
+        // --- AI FEATURE 1: AUDIO ENGINEER ---
+        async function generateAiSettings() {
+            const promptInput = document.getElementById('ai-vibe-prompt');
+            const btn = document.getElementById('btn-ai-gen');
+            const status = document.getElementById('ai-status');
+            const vibe = promptInput.value.trim();
+
+            if (!vibe) return;
+
+            // Loading state
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>`;
+            btn.disabled = true;
+            status.textContent = "Gemini is analyzing vibe...";
+
+            const systemPrompt = "You are an expert audio engineer. Return ONLY a JSON object with these exact integer keys and ranges: speed (50-150), reverb (0-100), eq_low (-12 to 12), eq_mid (-12 to 12), eq_high (-12 to 12). Base values on the user's description.";
+            
+            const result = await callGemini(`Generate audio settings for this vibe: "${vibe}"`, systemPrompt);
+
+            if (result) {
+                // Apply Settings
+                document.getElementById('speed-slider').value = result.speed;
+                document.getElementById('reverb-slider').value = result.reverb;
+                document.getElementById('eq-low').value = result.eq_low;
+                document.getElementById('eq-mid').value = result.eq_mid;
+                document.getElementById('eq-high').value = result.eq_high;
+                
+                updateFX(); // Apply to live audio
+                status.textContent = "Settings applied by AI.";
+                status.classList.add('text-green-400');
+            } else {
+                status.textContent = "Error generating settings.";
+                status.classList.add('text-red-400');
+            }
+
+            // Reset UI
+            btn.innerHTML = originalIcon;
+            btn.disabled = false;
+            lucide.createIcons();
+            setTimeout(() => {
+                status.textContent = "Gemini will adjust sliders for you.";
+                status.classList.remove('text-green-400', 'text-red-400');
+            }, 3000);
+        }
+
+        // --- AI FEATURE 2: CREATIVE DIRECTOR ---
+        async function generateAiNames() {
+            const promptInput = document.getElementById('ai-art-prompt');
+            const btn = document.getElementById('btn-ai-names');
+            const vibe = promptInput.value.trim();
+
+            if (!vibe) return;
+
+            // Loading
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>`;
+            btn.disabled = true;
+
+            const systemPrompt = "You are a creative director for a music label. Return ONLY a JSON object with two string keys: 'artist' (a cool, unique artist name) and 'title' (an obscure, artistic song title). Make them fit the user's genre/vibe.";
+
+            const result = await callGemini(`Generate a name and title for this genre/vibe: "${vibe}"`, systemPrompt);
+
+            if (result) {
+                document.getElementById('art-artist').value = result.artist;
+                document.getElementById('art-song').value = result.title;
+                renderArt();
+            }
+
+            btn.innerHTML = originalIcon;
+            btn.disabled = false;
+            lucide.createIcons();
+        }
+
+        // --- GLOBAL STATE ---
+        const state = {
+            audioCtx: null,
+            tracks: [], // { id, file, buffer, status, processedBlob }
+            currentTrackId: null,
             isPlaying: false,
-            currentId: null,
+            // Nodes
+            source: null,
+            fx: {
+                low: null, mid: null, high: null,
+                convolver: null, dry: null, wet: null,
+                analyser: null, compressor: null
+            },
             impulseBuffer: null
         };
 
-        // --- UI SWITCHING ---
-        function switchMode(mode) {
-            const studio = document.getElementById('studio-main');
-            const rack = document.getElementById('effects-rack');
-            const art = document.getElementById('art-main');
-            const btnStudio = document.getElementById('nav-studio');
-            const btnArt = document.getElementById('nav-art');
-
-            if(mode === 'studio') {
-                studio.classList.remove('hidden');
-                rack.classList.remove('hidden');
-                art.classList.add('hidden');
-                btnStudio.classList.add('text-blue-400');
-                btnStudio.classList.remove('text-gray-400');
-                btnArt.classList.remove('text-blue-400');
-            } else {
-                studio.classList.add('hidden');
-                rack.classList.add('hidden');
-                art.classList.remove('hidden');
-                btnStudio.classList.remove('text-blue-400');
-                btnArt.classList.add('text-blue-400');
-                renderArt(); 
-            }
-        }
-
-        function toggleBitrate() {
+        // --- EXPORT CONFIG LOGIC ---
+        function toggleExportOptions() {
             const format = document.getElementById('export-format').value;
-            const container = document.getElementById('bitrate-container');
+            const bitrateContainer = document.getElementById('bitrate-container');
+            
             if (format === 'wav') {
-                container.classList.add('opacity-50', 'pointer-events-none');
+                bitrateContainer.classList.add('opacity-50', 'pointer-events-none');
             } else {
-                container.classList.remove('opacity-50', 'pointer-events-none');
+                bitrateContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
         }
 
-        // --- DRAG & DROP & FILE HANDLING ---
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-gray-800/80'); });
-        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-gray-800/80'); });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-blue-500', 'bg-gray-800/80');
-            handleFiles(e.dataTransfer.files);
-        });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleFiles(files) {
-            const list = document.getElementById('track-list');
-            const actions = document.getElementById('queue-actions');
-
-            if (files.length > 0) actions.classList.remove('hidden');
-
-            Array.from(files).forEach(file => {
-                if(!file.type.startsWith('audio/')) return;
-
-                const id = Math.random().toString(36).substr(2, 9);
-                const trackObj = { id, file, status: 'pending', buffer: null };
-                trackQueue.push(trackObj);
-
-                const el = document.createElement('div');
-                el.id = `track-${id}`;
-                el.className = "glass-panel p-4 rounded-xl flex items-center justify-between animate-fade-in transition-all";
-                el.innerHTML = `
-                    <div class="flex items-center gap-4 min-w-0">
-                        <button onclick="togglePreview('${id}')" id="play-btn-${id}" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center flex-shrink-0 transition-all">
-                            <i data-lucide="play" class="w-4 h-4 text-white fill-current ml-0.5"></i>
-                        </button>
-
-                        <div class="min-w-0">
-                            <h4 class="font-medium text-white truncate max-w-xs md:max-w-md">${file.name}</h4>
-                            <p class="text-xs text-gray-400" id="status-${id}">Ready for FX</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div id="loader-${id}" class="hidden w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <button onclick="downloadTrack('${id}')" id="dl-${id}" class="hidden bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">
-                            <i data-lucide="download" class="w-3 h-3"></i> Save
-                        </button>
-                        <button onclick="removeTrack('${id}')" class="text-gray-500 hover:text-red-400 p-2">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                `;
-                list.appendChild(el);
-            });
-            lucide.createIcons();
-            updateCount();
-        }
-
-        // --- REAL-TIME AUDIO ENGINE ---
-
-        // Initialize Global Audio Context and Graph Nodes
-        async function initLiveAudio() {
-            if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Create Nodes
-            liveAudio.dryNode = audioCtx.createGain();
-            liveAudio.wetNode = audioCtx.createGain();
-            liveAudio.convolver = audioCtx.createConvolver();
-            
-            liveAudio.filters.low = audioCtx.createBiquadFilter();
-            liveAudio.filters.low.type = 'lowshelf';
-            liveAudio.filters.low.frequency.value = 320;
-
-            liveAudio.filters.mid = audioCtx.createBiquadFilter();
-            liveAudio.filters.mid.type = 'peaking';
-            liveAudio.filters.mid.frequency.value = 1000;
-
-            liveAudio.filters.high = audioCtx.createBiquadFilter();
-            liveAudio.filters.high.type = 'highshelf';
-            liveAudio.filters.high.frequency.value = 3200;
-
-            // Generate Impulse for Reverb
-            liveAudio.impulseBuffer = await generateImpulseResponse(audioCtx, 2.5);
-            liveAudio.convolver.buffer = liveAudio.impulseBuffer;
-
-            // Connect Filters: Source -> Low -> Mid -> High
-            // We connect Source later.
-            // High -> Split to Dry/Wet
-        }
-
-        async function togglePreview(id) {
-            await initLiveAudio();
-
-            // Stop current if playing
-            if (liveAudio.currentId === id && liveAudio.isPlaying) {
-                stopLivePlayback();
+        // --- VISUALIZER LOOP ---
+        let animationFrame;
+        function drawVisualizer() {
+            if (!state.isPlaying || !state.fx.analyser) {
+                cancelAnimationFrame(animationFrame);
                 return;
             }
-            if (liveAudio.currentId && liveAudio.currentId !== id) {
-                stopLivePlayback();
-            }
-
-            const track = trackQueue.find(t => t.id === id);
-            if (!track) return;
-
-            // UI Update to Loading
-            const btn = document.getElementById(`play-btn-${id}`);
-            btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
-
-            // Decode if needed
-            if (!track.buffer) {
-                try {
-                    const arrayBuffer = await track.file.arrayBuffer();
-                    track.buffer = await audioCtx.decodeAudioData(arrayBuffer);
-                } catch(e) {
-                    console.error("Decode error", e);
-                    btn.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>`;
-                    return;
-                }
-            }
-
-            // Setup Source
-            liveAudio.source = audioCtx.createBufferSource();
-            liveAudio.source.buffer = track.buffer;
-            liveAudio.source.loop = true; // Loop for easier tweaking
-
-            // Build Graph: Source -> Low -> Mid -> High -> Dry/Convolver -> Dest
-            liveAudio.source.connect(liveAudio.filters.low);
-            liveAudio.filters.low.connect(liveAudio.filters.mid);
-            liveAudio.filters.mid.connect(liveAudio.filters.high);
-
-            liveAudio.filters.high.connect(liveAudio.dryNode);
-            liveAudio.filters.high.connect(liveAudio.convolver);
             
-            liveAudio.convolver.connect(liveAudio.wetNode);
+            const canvas = document.getElementById('viz-canvas');
+            const ctx = canvas.getContext('2d');
+            const bufferLength = state.fx.analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
             
-            liveAudio.dryNode.connect(audioCtx.destination);
-            liveAudio.wetNode.connect(audioCtx.destination);
+            state.fx.analyser.getByteFrequencyData(dataArray);
 
-            // Apply Current Params
-            updateLiveParams();
-
-            // Start
-            liveAudio.source.start(0);
-            liveAudio.isPlaying = true;
-            liveAudio.currentId = id;
-
-            // UI Update to Playing
-            updatePlayIcon(id, true);
-        }
-
-        function stopLivePlayback() {
-            if (liveAudio.source) {
-                try { liveAudio.source.stop(); } catch(e){}
-                liveAudio.source.disconnect();
-            }
-            if(liveAudio.currentId) {
-                updatePlayIcon(liveAudio.currentId, false);
-            }
-            liveAudio.isPlaying = false;
-            liveAudio.currentId = null;
-        }
-
-        function updateLiveParams() {
-            if (!audioCtx) return;
-
-            // Slider Values
-            const speed = parseInt(document.getElementById('speed-slider').value);
-            const reverb = parseInt(document.getElementById('reverb-slider').value);
-            const high = parseInt(document.getElementById('eq-high').value);
-            const mid = parseInt(document.getElementById('eq-mid').value);
-            const low = parseInt(document.getElementById('eq-low').value);
-
-            // Update UI Labels
-            document.getElementById('speed-val').textContent = speed + '%';
-            document.getElementById('reverb-val').textContent = reverb + '%';
-
-            // Update Audio Nodes
-            if (liveAudio.source) {
-                // Smooth transition for pitch/speed to prevent clicks
-                liveAudio.source.playbackRate.setTargetAtTime(speed / 100, audioCtx.currentTime, 0.1);
-            }
-
-            if (liveAudio.dryNode && liveAudio.wetNode) {
-                const reverbAmt = reverb / 100;
-                liveAudio.dryNode.gain.setTargetAtTime(1.0 - (reverbAmt * 0.4), audioCtx.currentTime, 0.1);
-                liveAudio.wetNode.gain.setTargetAtTime(reverbAmt, audioCtx.currentTime, 0.1);
-            }
-
-            if (liveAudio.filters.low) liveAudio.filters.low.gain.setTargetAtTime(low, audioCtx.currentTime, 0.1);
-            if (liveAudio.filters.mid) liveAudio.filters.mid.gain.setTargetAtTime(mid, audioCtx.currentTime, 0.1);
-            if (liveAudio.filters.high) liveAudio.filters.high.gain.setTargetAtTime(high, audioCtx.currentTime, 0.1);
-        }
-
-        function updatePlayIcon(id, isPlaying) {
-            const btn = document.getElementById(`play-btn-${id}`);
-            if(!btn) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            if (isPlaying) {
-                btn.innerHTML = `<i data-lucide="pause" class="w-4 h-4 text-white fill-current"></i>`;
-                btn.classList.add('bg-green-600', 'playing-pulse');
-                btn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
-            } else {
-                btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 text-white fill-current ml-0.5"></i>`;
-                btn.classList.remove('bg-green-600', 'playing-pulse');
-                btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
-            }
-            lucide.createIcons();
-        }
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
 
-        function removeTrack(id) {
-            if(liveAudio.currentId === id) stopLivePlayback();
-            const idx = trackQueue.findIndex(t => t.id === id);
-            if(idx > -1) trackQueue.splice(idx, 1);
-            document.getElementById(`track-${id}`).remove();
-            updateCount();
-        }
-
-        function clearQueue() {
-            stopLivePlayback();
-            trackQueue.length = 0;
-            document.getElementById('track-list').innerHTML = '';
-            updateCount();
-        }
-
-        function updateCount() {
-            document.getElementById('track-count').textContent = `${trackQueue.length} Tracks Loaded`;
-            if(trackQueue.length === 0) document.getElementById('queue-actions').classList.add('hidden');
-        }
-
-        function resetEQ() {
-            document.getElementById('eq-high').value = 0;
-            document.getElementById('eq-mid').value = 0;
-            document.getElementById('eq-low').value = 0;
-            updateLiveParams();
-        }
-
-
-        // --- BATCH PROCESSOR (OFFLINE RENDER) ---
-
-        async function processBatch() {
-            if(isProcessing) return;
-            isProcessing = true;
-            document.getElementById('btn-process').disabled = true;
-            document.getElementById('btn-process').classList.add('opacity-50');
-
-            await initLiveAudio(); // Ensure context
-            stopLivePlayback(); // Stop preview if running
-
-            // Loop through queue
-            for(const track of trackQueue) {
-                if(track.status === 'done') continue;
-
-                updateTrackStatus(track.id, 'processing');
+            for(let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] / 2; // Scale down
                 
-                try {
-                    // Decode if not already done by preview
-                    if (!track.buffer) {
-                        const arrayBuffer = await track.file.arrayBuffer();
-                        track.buffer = await audioCtx.decodeAudioData(arrayBuffer);
-                    }
-
-                    // Get Settings
-                    const speed = parseInt(document.getElementById('speed-slider').value) / 100;
-                    const reverbAmt = parseInt(document.getElementById('reverb-slider').value) / 100;
-                    const sampleRate = parseInt(document.getElementById('sample-rate').value);
-                    const format = document.getElementById('export-format').value;
-                    const bitrate = parseInt(document.getElementById('bitrate').value);
-
-                    // Render Offline
-                    const renderedBuffer = await renderTrackOffline(track.buffer, speed, reverbAmt, sampleRate);
-
-                    // Encode
-                    let blob;
-                    if(format === 'mp3') {
-                         blob = await encodeMp3(renderedBuffer, sampleRate, bitrate);
-                    } else {
-                         blob = bufferToWave(renderedBuffer, renderedBuffer.length);
-                    }
-
-                    // Store
-                    track.blob = blob;
-                    track.status = 'done';
-                    track.ext = format;
-
-                    updateTrackStatus(track.id, 'done');
-
-                } catch (e) {
-                    console.error(e);
-                    updateTrackStatus(track.id, 'error');
-                }
+                // Gradient Color
+                const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+                gradient.addColorStop(0, '#3b82f6');
+                gradient.addColorStop(1, '#a855f7');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
             }
-
-            isProcessing = false;
-            document.getElementById('btn-process').disabled = false;
-            document.getElementById('btn-process').classList.remove('opacity-50');
+            animationFrame = requestAnimationFrame(drawVisualizer);
         }
 
-        async function renderTrackOffline(buffer, speed, reverbAmt, sampleRate) {
-            // New duration (approx based on speed) + reverb tail
-            const newDuration = (buffer.duration / speed) + (reverbAmt > 0 ? 3 : 0);
-            
-            const offlineCtx = new OfflineAudioContext(2, newDuration * sampleRate, sampleRate);
+        // --- AUDIO ENGINE INIT ---
+        async function initAudio() {
+            if (state.audioCtx) return;
+            state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-            // Source
-            const source = offlineCtx.createBufferSource();
-            source.buffer = buffer;
-            source.playbackRate.value = speed;
+            // Create FX Chain Nodes
+            state.fx.low = state.audioCtx.createBiquadFilter();
+            state.fx.low.type = 'lowshelf';
+            state.fx.low.frequency.value = 320;
 
-            // Setup Nodes (Duplicate logic of live graph)
-            const low = offlineCtx.createBiquadFilter();
-            low.type = 'lowshelf'; low.frequency.value = 320; 
-            low.gain.value = parseInt(document.getElementById('eq-low').value);
+            state.fx.mid = state.audioCtx.createBiquadFilter();
+            state.fx.mid.type = 'peaking';
+            state.fx.mid.frequency.value = 1000;
 
-            const mid = offlineCtx.createBiquadFilter();
-            mid.type = 'peaking'; mid.frequency.value = 1000;
-            mid.gain.value = parseInt(document.getElementById('eq-mid').value);
+            state.fx.high = state.audioCtx.createBiquadFilter();
+            state.fx.high.type = 'highshelf';
+            state.fx.high.frequency.value = 3200;
 
-            const high = offlineCtx.createBiquadFilter();
-            high.type = 'highshelf'; high.frequency.value = 3200;
-            high.gain.value = parseInt(document.getElementById('eq-high').value);
+            state.fx.convolver = state.audioCtx.createConvolver();
+            state.fx.dry = state.audioCtx.createGain();
+            state.fx.wet = state.audioCtx.createGain();
 
-            source.connect(low);
-            low.connect(mid);
-            mid.connect(high);
+            // Soft Clipper / Limiter
+            state.fx.compressor = state.audioCtx.createDynamicsCompressor();
+            state.fx.compressor.threshold.value = -1.0;
+            state.fx.compressor.knee.value = 10;
+            state.fx.compressor.ratio.value = 12;
+            state.fx.compressor.attack.value = 0.003;
+            state.fx.compressor.release.value = 0.25;
 
-            if(reverbAmt > 0) {
-                const convolver = offlineCtx.createConvolver();
-                // Reuse the buffer we generated for live, or regenerate if needed
-                // OfflineCtx needs its own buffer usually, but we can reuse the data
-                convolver.buffer = liveAudio.impulseBuffer || await generateImpulseResponse(audioCtx, 2.5);
-                
-                const dry = offlineCtx.createGain();
-                const wet = offlineCtx.createGain();
-                
-                dry.gain.value = 1.0 - (reverbAmt * 0.4);
-                wet.gain.value = reverbAmt;
+            // Analyser for Visualizer
+            state.fx.analyser = state.audioCtx.createAnalyser();
+            state.fx.analyser.fftSize = 256;
 
-                high.connect(dry);
-                high.connect(convolver);
-                convolver.connect(wet);
-
-                dry.connect(offlineCtx.destination);
-                wet.connect(offlineCtx.destination);
-            } else {
-                high.connect(offlineCtx.destination);
-            }
-
-            source.start(0);
-            return await offlineCtx.startRendering();
+            // Generate Impulse Response
+            state.impulseBuffer = await generateImpulse(state.audioCtx, 3.0);
+            state.fx.convolver.buffer = state.impulseBuffer;
         }
 
-        async function generateImpulseResponse(ctx, duration) {
-            const sampleRate = ctx.sampleRate;
-            const length = sampleRate * duration;
-            const impulse = ctx.createBuffer(2, length, sampleRate);
-            for (let channel = 0; channel < 2; channel++) {
-                const impulseData = impulse.getChannelData(channel);
-                for (let i = 0; i < length; i++) {
-                    impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+        async function generateImpulse(ctx, duration) {
+            const rate = ctx.sampleRate;
+            const length = rate * duration;
+            const impulse = ctx.createBuffer(2, length, rate);
+            for (let i = 0; i < 2; i++) {
+                const ch = impulse.getChannelData(i);
+                for (let j = 0; j < length; j++) {
+                    ch[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / length, 3);
                 }
             }
             return impulse;
         }
 
-        // UI Updates
-        function updateTrackStatus(id, status) {
-            const statusText = document.getElementById(`status-${id}`);
-            const loader = document.getElementById(`loader-${id}`);
-            const dlBtn = document.getElementById(`dl-${id}`);
-            const card = document.getElementById(`track-${id}`);
+        // --- PRESETS ---
+        function applyPreset(type) {
+            const speed = document.getElementById('speed-slider');
+            const reverb = document.getElementById('reverb-slider');
+            const eqLow = document.getElementById('eq-low');
+            const eqHigh = document.getElementById('eq-high');
+            const eqMid = document.getElementById('eq-mid');
 
-            if(status === 'processing') {
-                statusText.textContent = "Processing...";
-                statusText.className = "text-xs text-blue-400 font-bold";
-                loader.classList.remove('hidden');
-                card.classList.add('processing-active');
-            } else if (status === 'done') {
-                statusText.textContent = "Processing Complete";
-                statusText.className = "text-xs text-green-400 font-medium";
-                loader.classList.add('hidden');
-                dlBtn.classList.remove('hidden');
-                card.classList.remove('processing-active');
-                card.classList.add('border', 'border-green-500/30');
-            } else if (status === 'error') {
-                statusText.textContent = "Error";
-                statusText.className = "text-xs text-red-500";
-                loader.classList.add('hidden');
-                card.classList.remove('processing-active');
+            switch(type) {
+                case 'slowed':
+                    speed.value = 85; reverb.value = 35; 
+                    eqLow.value = 3; eqHigh.value = -2; eqMid.value = 0;
+                    break;
+                case 'nightcore':
+                    speed.value = 125; reverb.value = 10;
+                    eqLow.value = -2; eqHigh.value = 4; eqMid.value = 2;
+                    break;
+                case 'lofi':
+                    speed.value = 90; reverb.value = 20;
+                    eqLow.value = 2; eqHigh.value = -12; eqMid.value = 4; // Cut highs hard
+                    break;
+                case 'bass':
+                    speed.value = 100; reverb.value = 5;
+                    eqLow.value = 8; eqHigh.value = 0; eqMid.value = 0;
+                    break;
+            }
+            updateFX(); // Apply to live audio
+        }
+
+        // --- REAL-TIME PLAYBACK ---
+        async function togglePreview(id) {
+            await initAudio();
+
+            // Stop logic
+            if (state.currentTrackId === id && state.isPlaying) {
+                stopPlayback();
+                return;
+            }
+            if (state.currentTrackId) stopPlayback();
+
+            // UI Loading
+            setPlayButtonState(id, 'loading');
+
+            const track = state.tracks.find(t => t.id === id);
+            
+            // Decode if needed
+            if (!track.buffer) {
+                try {
+                    const ab = await track.file.arrayBuffer();
+                    track.buffer = await state.audioCtx.decodeAudioData(ab);
+                } catch(e) { console.error(e); return; }
+            }
+
+            // Create Graph
+            state.source = state.audioCtx.createBufferSource();
+            state.source.buffer = track.buffer;
+            state.source.loop = true;
+
+            // Signal Path: Source -> Low -> Mid -> High -> (Split Dry/Wet) -> Compressor -> Analyser -> Dest
+            state.source.connect(state.fx.low);
+            state.fx.low.connect(state.fx.mid);
+            state.fx.mid.connect(state.fx.high);
+
+            // Reverb Split
+            state.fx.high.connect(state.fx.dry);
+            state.fx.high.connect(state.fx.convolver);
+            state.fx.convolver.connect(state.fx.wet);
+
+            // Merge to Master Chain
+            state.fx.dry.connect(state.fx.compressor);
+            state.fx.wet.connect(state.fx.compressor);
+            
+            state.fx.compressor.connect(state.fx.analyser);
+            state.fx.analyser.connect(state.audioCtx.destination);
+
+            // Apply Values
+            updateFX();
+
+            state.source.start(0);
+            state.isPlaying = true;
+            state.currentTrackId = id;
+
+            setPlayButtonState(id, 'playing');
+            document.getElementById('play-indicator').classList.remove('opacity-0');
+            drawVisualizer(); // Start visualizer
+        }
+
+        function stopPlayback() {
+            if (state.source) {
+                try { state.source.stop(); } catch(e){}
+                state.source.disconnect();
+            }
+            if(state.currentTrackId) setPlayButtonState(state.currentTrackId, 'idle');
+            state.isPlaying = false;
+            state.currentTrackId = null;
+            document.getElementById('play-indicator').classList.add('opacity-0');
+        }
+
+        function updateFX() {
+            if(!state.audioCtx) return;
+
+            const vals = {
+                speed: parseInt(document.getElementById('speed-slider').value),
+                reverb: parseInt(document.getElementById('reverb-slider').value),
+                low: parseInt(document.getElementById('eq-low').value),
+                mid: parseInt(document.getElementById('eq-mid').value),
+                high: parseInt(document.getElementById('eq-high').value)
+            };
+
+            // Update Labels
+            document.getElementById('speed-val').textContent = vals.speed + '%';
+            document.getElementById('reverb-val').textContent = vals.reverb + '%';
+
+            // Apply to Audio Nodes
+            const ctx = state.audioCtx;
+            if(state.source) state.source.playbackRate.setTargetAtTime(vals.speed/100, ctx.currentTime, 0.1);
+            
+            const rAmt = vals.reverb/100;
+            state.fx.dry.gain.setTargetAtTime(1.0 - (rAmt * 0.4), ctx.currentTime, 0.1);
+            state.fx.wet.gain.setTargetAtTime(rAmt, ctx.currentTime, 0.1);
+
+            state.fx.low.gain.setTargetAtTime(vals.low, ctx.currentTime, 0.1);
+            state.fx.mid.gain.setTargetAtTime(vals.mid, ctx.currentTime, 0.1);
+            state.fx.high.gain.setTargetAtTime(vals.high, ctx.currentTime, 0.1);
+        }
+
+        // --- BATCH EXPORT ---
+        async function startBatchProcessing() {
+            const btn = document.getElementById('btn-process');
+            if(btn.disabled) return;
+            
+            btn.disabled = true;
+            stopPlayback(); // Stop any preview
+
+            // Gather settings
+            const settings = {
+                speed: parseInt(document.getElementById('speed-slider').value) / 100,
+                reverb: parseInt(document.getElementById('reverb-slider').value) / 100,
+                low: parseInt(document.getElementById('eq-low').value),
+                mid: parseInt(document.getElementById('eq-mid').value),
+                high: parseInt(document.getElementById('eq-high').value),
+                format: document.getElementById('export-format').value,
+                sampleRate: parseInt(document.getElementById('sample-rate').value),
+                bitrate: parseInt(document.getElementById('bitrate').value)
+            };
+
+            for(const track of state.tracks) {
+                if(track.status === 'done') continue;
+                
+                // UI update
+                updateTrackStatus(track.id, 'processing');
+
+                try {
+                    // Ensure decoded
+                    if(!track.buffer) {
+                        const ab = await track.file.arrayBuffer();
+                        track.buffer = await state.audioCtx.decodeAudioData(ab);
+                    }
+
+                    // Render Offline
+                    const rendered = await renderOffline(track.buffer, settings, settings.sampleRate);
+                    
+                    // Encode
+                    if(settings.format === 'mp3') {
+                        track.blob = await encodeMp3(rendered, settings.sampleRate, settings.bitrate);
+                        track.ext = 'mp3';
+                    } else {
+                        track.blob = bufferToWave(rendered, rendered.length);
+                        track.ext = 'wav';
+                    }
+
+                    track.status = 'done';
+                    updateTrackStatus(track.id, 'done');
+                } catch(e) {
+                    console.error(e);
+                    updateTrackStatus(track.id, 'error');
+                }
+            }
+
+            btn.disabled = false;
+        }
+
+        async function renderOffline(buffer, st, rate) {
+            const duration = (buffer.duration / st.speed) + (st.reverb > 0 ? 4 : 0);
+            const offline = new OfflineAudioContext(2, duration * rate, rate);
+
+            const src = offline.createBufferSource();
+            src.buffer = buffer;
+            src.playbackRate.value = st.speed;
+
+            // Recreate Filter Chain
+            const l = offline.createBiquadFilter(); l.type='lowshelf'; l.frequency.value=320; l.gain.value=st.low;
+            const m = offline.createBiquadFilter(); m.type='peaking'; m.frequency.value=1000; m.gain.value=st.mid;
+            const h = offline.createBiquadFilter(); h.type='highshelf'; h.frequency.value=3200; h.gain.value=st.high;
+
+            src.connect(l); l.connect(m); m.connect(h);
+
+            // Reverb
+            const comp = offline.createDynamicsCompressor(); // Safety limiter
+            comp.threshold.value = -1.0;
+            comp.ratio.value = 12;
+
+            if(st.reverb > 0) {
+                const conv = offline.createConvolver();
+                conv.buffer = state.impulseBuffer || await generateImpulse(state.audioCtx, 3.0);
+                
+                const d = offline.createGain(); d.gain.value = 1.0 - (st.reverb * 0.4);
+                const w = offline.createGain(); w.gain.value = st.reverb;
+
+                h.connect(d); h.connect(conv); conv.connect(w);
+                d.connect(comp); w.connect(comp);
+            } else {
+                h.connect(comp);
+            }
+
+            comp.connect(offline.destination);
+            src.start(0);
+            return await offline.startRendering();
+        }
+
+        // --- FILE HANDLING & UI HELPERS ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('border-blue-500'); };
+        dropZone.ondragleave = e => { e.preventDefault(); dropZone.classList.remove('border-blue-500'); };
+        dropZone.ondrop = e => { 
+            e.preventDefault(); 
+            dropZone.classList.remove('border-blue-500');
+            handleFiles(e.dataTransfer.files); 
+        };
+        fileInput.onchange = e => handleFiles(e.target.files);
+
+        function handleFiles(files) {
+            if(files.length > 0) document.getElementById('action-bar').classList.remove('hidden');
+            
+            Array.from(files).forEach(file => {
+                if(!file.type.startsWith('audio/')) return;
+                const id = Math.random().toString(36).substr(2,9);
+                state.tracks.push({ id, file, status: 'pending', buffer: null });
+                
+                const div = document.createElement('div');
+                div.id = `t-${id}`;
+                div.className = "glass-panel p-3 rounded-lg flex items-center gap-4 animate-fade-in";
+                div.innerHTML = `
+                    <button onclick="togglePreview('${id}')" id="btn-${id}" class="w-10 h-10 rounded-full bg-white/10 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    </button>
+                    <div class="flex-grow min-w-0">
+                        <h4 class="text-sm font-medium text-white truncate">${file.name}</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[10px] text-gray-500 uppercase tracking-wider" id="status-${id}">Ready</span>
+                            <div id="loading-${id}" class="hidden w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="downloadTrack('${id}')" id="dl-${id}" class="hidden px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1">
+                            Save <i data-lucide="download" class="w-3 h-3"></i>
+                        </button>
+                        <button onclick="removeTrack('${id}')" class="p-2 text-gray-500 hover:text-red-400">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('track-container').appendChild(div);
+            });
+            lucide.createIcons();
+            updateQueueStats();
+        }
+
+        function setPlayButtonState(id, state) {
+            const btn = document.getElementById(`btn-${id}`);
+            if(!btn) return;
+            if(state === 'loading') {
+                btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
+            } else if (state === 'playing') {
+                btn.innerHTML = `<i data-lucide="pause" class="w-4 h-4 fill-current"></i>`;
+                btn.classList.add('bg-blue-600', 'text-white');
+            } else {
+                btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i>`;
+                btn.classList.remove('bg-blue-600', 'text-white');
+            }
+            lucide.createIcons();
+        }
+
+        function updateTrackStatus(id, s) {
+            const txt = document.getElementById(`status-${id}`);
+            const load = document.getElementById(`loading-${id}`);
+            const dl = document.getElementById(`dl-${id}`);
+            
+            if(s === 'processing') {
+                txt.textContent = "Mastering...";
+                txt.classList.add('text-blue-400');
+                load.classList.remove('hidden');
+            } else if (s === 'done') {
+                txt.textContent = "Done";
+                txt.className = "text-[10px] text-green-400 uppercase tracking-wider font-bold";
+                load.classList.add('hidden');
+                dl.classList.remove('hidden');
             }
         }
 
         function downloadTrack(id) {
-            const track = trackQueue.find(t => t.id === id);
-            if(!track || !track.blob) return;
-            const url = URL.createObjectURL(track.blob);
+            const t = state.tracks.find(x => x.id === id);
+            if(!t || !t.blob) return;
+            const url = URL.createObjectURL(t.blob);
             const a = document.createElement('a');
             a.href = url;
-            let suffix = parseInt(document.getElementById('speed-slider').value) < 100 ? '_slowed' : '_mastered';
-            a.download = `${track.file.name.replace(/\.[^/.]+$/, "")}${suffix}.${track.ext}`;
+            a.download = `${t.file.name.split('.')[0]}_pro.${t.ext}`;
             a.click();
         }
 
-        // --- ENCODERS (WAV/MP3) ---
-        function bufferToWave(abuffer, len) {
-            let numOfChan = abuffer.numberOfChannels;
-            let length = len * numOfChan * 2 + 44;
-            let buffer = new ArrayBuffer(length);
-            let view = new DataView(buffer);
-            let channels = [], i, sample, offset = 0, pos = 0;
-            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
-            function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
-            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
-            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
-            setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164);
-            setUint32(length - pos - 4);
-            for(i=0; i<numOfChan; i++) channels.push(abuffer.getChannelData(i));
-            while(pos < len) {
-                for(i=0; i<numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][pos]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
-                    view.setInt16(offset, sample, true);
-                    offset += 2;
-                }
-                pos++;
-            }
-            return new Blob([buffer], {type: "audio/wav"});
+        function removeTrack(id) {
+            if(state.currentTrackId === id) stopPlayback();
+            state.tracks = state.tracks.filter(t => t.id !== id);
+            document.getElementById(`t-${id}`).remove();
+            updateQueueStats();
         }
 
-        async function encodeMp3(buffer, sampleRate, bitrate) {
-            const channels = 2;
-            const mp3enc = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
-            const blockSize = 1152;
-            const left = buffer.getChannelData(0);
-            const right = buffer.getChannelData(1);
-            const leftInt = new Int16Array(left.length);
-            const rightInt = new Int16Array(right.length);
-            for (let i = 0; i < left.length; i++) {
-                leftInt[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF;
-                rightInt[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF;
-            }
-            const mp3Data = [];
-            for (let i = 0; i < leftInt.length; i += blockSize) {
-                const l = leftInt.subarray(i, i + blockSize);
-                const r = rightInt.subarray(i, i + blockSize);
-                const buf = mp3enc.encodeBuffer(l, r);
-                if (buf.length > 0) mp3Data.push(buf);
-            }
-            const buf = mp3enc.flush();
-            if (buf.length > 0) mp3Data.push(buf);
-            return new Blob(mp3Data, { type: 'audio/mp3' });
+        function clearQueue() {
+            stopPlayback();
+            state.tracks = [];
+            document.getElementById('track-container').innerHTML = '';
+            updateQueueStats();
         }
 
+        function updateQueueStats() {
+            document.getElementById('queue-stats').textContent = `${state.tracks.length} Tracks`;
+            if(state.tracks.length === 0) document.getElementById('action-bar').classList.add('hidden');
+        }
 
-        // --- ART LOGIC ---
-        const artCanvas = document.getElementById('art-hd');
-        const artPreview = document.getElementById('art-preview');
-        const artFile = document.getElementById('art-file');
+        // --- ARTWORK LOGIC ---
+        function switchView(view) {
+            const studio = document.getElementById('studio-view');
+            const rack = document.getElementById('fx-rack');
+            const art = document.getElementById('art-view');
+            
+            if(view === 'studio') {
+                studio.classList.remove('hidden'); rack.classList.remove('hidden');
+                art.classList.add('hidden');
+                document.getElementById('btn-studio').classList.replace('text-gray-400', 'text-white');
+                document.getElementById('btn-studio').classList.add('bg-white/10');
+                document.getElementById('btn-art').classList.replace('text-white', 'text-gray-400');
+                document.getElementById('btn-art').classList.remove('bg-white/10');
+            } else {
+                studio.classList.add('hidden'); rack.classList.add('hidden');
+                art.classList.remove('hidden');
+                document.getElementById('btn-art').classList.replace('text-gray-400', 'text-white');
+                document.getElementById('btn-art').classList.add('bg-white/10');
+                document.getElementById('btn-studio').classList.replace('text-white', 'text-gray-400');
+                document.getElementById('btn-studio').classList.remove('bg-white/10');
+                renderArt();
+            }
+        }
+
         let artImg = null;
-        artFile.addEventListener('change', (e) => {
-             const r = new FileReader();
-             r.onload = ev => {
-                 const i = new Image();
-                 i.onload = () => { artImg = i; renderArt(); };
-                 i.src = ev.target.result;
-             };
-             r.readAsDataURL(e.target.files[0]);
-        });
-        ['art-artist', 'art-song'].forEach(id => document.getElementById(id).addEventListener('input', renderArt));
+        document.getElementById('art-upload').onchange = e => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const i = new Image();
+                i.onload = () => { artImg = i; renderArt(); };
+                i.src = ev.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
         function renderArt() {
-            const ctx = artCanvas.getContext('2d');
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0,0,3000,3000);
+            const canvas = document.getElementById('art-hd');
+            const ctx = canvas.getContext('2d');
+            const w = 3000; const h = 3000;
+            
+            // 1. Clear & Background
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0,0,w,h);
+
             if(artImg) {
-                const ratio = Math.max(3000/artImg.width, 3000/artImg.height);
-                const cx = (3000 - artImg.width*ratio)/2;
-                const cy = (3000 - artImg.height*ratio)/2;
-                ctx.drawImage(artImg, 0,0, artImg.width, artImg.height, cx, cy, artImg.width*ratio, artImg.height*ratio);
+                // Blur Effect (Simulated via drawing multiple times slightly offset is too slow for 3000px, 
+                // so we just rely on the sharp image + darken overlay mostly. 
+                // A real blur on 3000px in JS is heavy. We will just use the darkened image.)
+                const ratio = Math.max(w/artImg.width, h/artImg.height);
+                const cx = (w - artImg.width*ratio)/2;
+                const cy = (h - artImg.height*ratio)/2;
+                ctx.drawImage(artImg, 0, 0, artImg.width, artImg.height, cx, cy, artImg.width*ratio, artImg.height*ratio);
             }
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(0,0,3000,3000);
-            const artist = document.getElementById('art-artist').value;
-            const song = document.getElementById('art-song').value;
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 200px sans-serif';
-            ctx.fillText(artist.toUpperCase(), 1500, 1400);
-            ctx.font = 'italic 150px serif';
-            ctx.fillText(song, 1500, 1700);
-            const pCtx = artPreview.getContext('2d');
-            artPreview.width=500; artPreview.height=500;
-            pCtx.drawImage(artCanvas, 0,0,3000,3000,0,0,500,500);
+
+            // 2. Overlays
+            const darken = parseInt(document.getElementById('fx-darken').value) / 100;
+            ctx.fillStyle = `rgba(0,0,0,${darken})`;
+            ctx.fillRect(0,0,w,h);
+
+            // 3. Artist Text
+            if(document.getElementById('show-artist').checked) {
+                const txt = document.getElementById('art-artist').value || "ARTIST";
+                const size = document.getElementById('size-artist').value;
+                const font = document.getElementById('font-artist').value;
+                const color = document.getElementById('color-artist').value;
+                const posY = parseInt(document.getElementById('pos-artist').value);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = color;
+                // Shadow for visibility
+                ctx.shadowColor = "rgba(0,0,0,0.8)";
+                ctx.shadowBlur = 20;
+                ctx.font = `bold ${size}px "${font}", sans-serif`;
+                ctx.fillText(txt.toUpperCase(), w/2, posY);
+            }
+
+            // 4. Title Text
+            if(document.getElementById('show-title').checked) {
+                const txt = document.getElementById('art-song').value || "Song Title";
+                const size = document.getElementById('size-title').value;
+                const font = document.getElementById('font-title').value;
+                const color = document.getElementById('color-title').value;
+                const posY = parseInt(document.getElementById('pos-title').value);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = color;
+                ctx.shadowColor = "rgba(0,0,0,0.8)";
+                ctx.shadowBlur = 20;
+                
+                // Italic if sans/serif
+                const style = font.includes('Permanent') ? '' : 'italic';
+                ctx.font = `${style} ${size}px "${font}", sans-serif`;
+                ctx.fillText(txt, w/2, posY);
+            }
+
+            // 5. Advisory
+            if(document.getElementById('show-advisory').checked) {
+                ctx.shadowBlur = 0; // Reset shadow
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 15;
+                ctx.strokeRect(2600, 2700, 300, 180);
+                
+                // Inner box background
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(2600, 2700, 300, 180);
+
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.font = 'bold 60px Inter, sans-serif';
+                ctx.fillText("PARENTAL", 2750, 2770);
+                ctx.font = 'bold 60px Inter, sans-serif';
+                ctx.fillText("ADVISORY", 2750, 2850);
+            }
+
+            // Update Preview
+            const pCtx = document.getElementById('art-preview').getContext('2d');
+            document.getElementById('art-preview').width = 500;
+            document.getElementById('art-preview').height = 500;
+            
+            // Apply simple blur to preview only if requested (performance optimized)
+            const blur = document.getElementById('fx-blur').value;
+            pCtx.filter = `blur(${blur}px)`;
+            pCtx.drawImage(canvas, 0,0,3000,3000,0,0,500,500);
+            pCtx.filter = 'none';
         }
+
         function downloadArt() {
             const link = document.createElement('a');
             link.download = 'Cover_Art_3000.jpg';
-            link.href = artCanvas.toDataURL('image/jpeg', 0.9);
+            link.href = document.getElementById('art-hd').toDataURL('image/jpeg', 0.9);
             link.click();
+        }
+
+        function resetEQ() {
+            document.getElementById('eq-low').value = 0;
+            document.getElementById('eq-mid').value = 0;
+            document.getElementById('eq-high').value = 0;
+            updateFX();
+        }
+
+        // --- HELPERS ---
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels, length = len * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], i, sample, offset = 0, pos = 0;
+            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
+            function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
+            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan); setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan); setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+            for(i=0; i<numOfChan; i++) channels.push(abuffer.getChannelData(i));
+            while(pos < len) { for(i=0; i<numOfChan; i++) { sample = Math.max(-1, Math.min(1, channels[i][pos])); sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; view.setInt16(offset, sample, true); offset += 2; } pos++; }
+            return new Blob([buffer], {type: "audio/wav"});
+        }
+
+        async function encodeMp3(buffer, rate, kbps) {
+            const channels = 2; const mp3enc = new lamejs.Mp3Encoder(channels, rate, kbps); const blockSize = 1152;
+            const left = buffer.getChannelData(0); const right = buffer.getChannelData(1);
+            const leftInt = new Int16Array(left.length); const rightInt = new Int16Array(right.length);
+            for (let i = 0; i < left.length; i++) { leftInt[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF; rightInt[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF; }
+            const mp3Data = [];
+            for (let i = 0; i < leftInt.length; i += blockSize) { const l = leftInt.subarray(i, i + blockSize); const r = rightInt.subarray(i, i + blockSize); const buf = mp3enc.encodeBuffer(l, r); if (buf.length > 0) mp3Data.push(buf); }
+            const buf = mp3enc.flush(); if (buf.length > 0) mp3Data.push(buf);
+            return new Blob(mp3Data, { type: 'audio/mp3' });
         }
     </script>
 </body>
 </html>
-
-
-
