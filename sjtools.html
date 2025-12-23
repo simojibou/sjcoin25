@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Studio: Ultimate AI Edition</title>
+    <title>Pro Studio: Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
@@ -16,7 +16,6 @@
             --panel-bg: rgba(24, 24, 27, 0.7);
             --accent: #3b82f6;
             --accent-glow: rgba(59, 130, 246, 0.5);
-            --ai-grad: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
         }
         
         body { background-color: var(--bg-dark); color: #e4e4e7; font-family: 'Inter', sans-serif; }
@@ -27,22 +26,6 @@
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .ai-border {
-            position: relative;
-            background: rgba(0,0,0,0.3);
-            border-radius: 0.75rem;
-            z-index: 1;
-        }
-        .ai-border::before {
-            content: "";
-            position: absolute;
-            inset: -1px;
-            z-index: -1;
-            background: var(--ai-grad);
-            border-radius: 0.8rem;
-            opacity: 0.5;
         }
         
         /* Custom Knobs/Sliders */
@@ -91,19 +74,6 @@
         }
         .playing-indicator div:nth-child(2) { animation-delay: 0.2s; }
         .playing-indicator div:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        .ai-text {
-            background: linear-gradient(90deg, #6366f1, #ec4899, #6366f1);
-            background-size: 200% auto;
-            color: transparent;
-            -webkit-background-clip: text;
-            background-clip: text;
-            animation: shimmer 3s linear infinite;
-        }
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
@@ -162,23 +132,9 @@
                 <canvas id="viz-canvas" class="w-full h-24 bg-black/40 rounded-lg"></canvas>
             </div>
 
-            <!-- AI Vibe Generator (NEW) -->
-            <div class="ai-border p-4">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 mb-2 flex items-center gap-2">
-                    <i data-lucide="sparkles" class="w-3 h-3 text-pink-400"></i> AI Audio Engineer
-                </h3>
-                <div class="flex gap-2">
-                    <input type="text" id="ai-vibe-prompt" placeholder="Describe vibe (e.g. 'Sad Underwater')" class="w-full bg-black/50 border border-white/10 rounded text-xs px-2 py-2 text-white outline-none focus:border-pink-500">
-                    <button onclick="generateAiSettings()" id="btn-ai-gen" class="bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-90 text-white rounded p-2 flex items-center justify-center transition-all">
-                        <i data-lucide="wand-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-                <p class="text-[10px] text-gray-500 mt-2 italic" id="ai-status">Gemini will adjust sliders for you.</p>
-            </div>
-
             <!-- Presets -->
             <div class="glass-panel p-4 rounded-xl">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Quick Presets</h3>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Vibe Presets</h3>
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="applyPreset('slowed')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">💜 Slowed+Reverb</button>
                     <button onclick="applyPreset('nightcore')" class="p-2 text-xs bg-white/5 hover:bg-white/10 rounded border border-white/5 text-left transition-colors">⚡ Nightcore</button>
@@ -326,19 +282,6 @@
                     </h2>
                 </div>
 
-                <!-- AI Inspiration (NEW) -->
-                <div class="ai-border p-4">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 mb-2 flex items-center gap-2">
-                        <i data-lucide="sparkles" class="w-3 h-3 text-pink-400"></i> Creative Director
-                    </h3>
-                    <div class="flex gap-2">
-                        <input type="text" id="ai-art-prompt" placeholder="Vibe (e.g. Dark Techno)" class="w-full bg-black/50 border border-white/10 rounded text-xs px-2 py-2 text-white outline-none focus:border-pink-500">
-                        <button onclick="generateAiNames()" id="btn-ai-names" class="bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-90 text-white rounded p-2 flex items-center justify-center transition-all">
-                            <i data-lucide="lightbulb" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- 1. Background -->
                 <div class="space-y-3 border-b border-white/10 pb-4">
                     <label class="text-[10px] font-bold text-gray-500 uppercase">Background & FX</label>
@@ -439,104 +382,6 @@
     <script>
         // Init Lucide Icons
         lucide.createIcons();
-
-        // --- GEMINI API SETUP ---
-        const apiKey = ""; // Injected by runtime
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-        async function callGemini(userPrompt, systemPrompt) {
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: userPrompt }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                        generationConfig: { responseMimeType: "application/json" }
-                    })
-                });
-                
-                if (!response.ok) throw new Error('API Error');
-                const data = await response.json();
-                return JSON.parse(data.candidates[0].content.parts[0].text);
-            } catch (error) {
-                console.error("Gemini Error:", error);
-                return null;
-            }
-        }
-
-        // --- AI FEATURE 1: AUDIO ENGINEER ---
-        async function generateAiSettings() {
-            const promptInput = document.getElementById('ai-vibe-prompt');
-            const btn = document.getElementById('btn-ai-gen');
-            const status = document.getElementById('ai-status');
-            const vibe = promptInput.value.trim();
-
-            if (!vibe) return;
-
-            // Loading state
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>`;
-            btn.disabled = true;
-            status.textContent = "Gemini is analyzing vibe...";
-
-            const systemPrompt = "You are an expert audio engineer. Return ONLY a JSON object with these exact integer keys and ranges: speed (50-150), reverb (0-100), eq_low (-12 to 12), eq_mid (-12 to 12), eq_high (-12 to 12). Base values on the user's description.";
-            
-            const result = await callGemini(`Generate audio settings for this vibe: "${vibe}"`, systemPrompt);
-
-            if (result) {
-                // Apply Settings
-                document.getElementById('speed-slider').value = result.speed;
-                document.getElementById('reverb-slider').value = result.reverb;
-                document.getElementById('eq-low').value = result.eq_low;
-                document.getElementById('eq-mid').value = result.eq_mid;
-                document.getElementById('eq-high').value = result.eq_high;
-                
-                updateFX(); // Apply to live audio
-                status.textContent = "Settings applied by AI.";
-                status.classList.add('text-green-400');
-            } else {
-                status.textContent = "Error generating settings.";
-                status.classList.add('text-red-400');
-            }
-
-            // Reset UI
-            btn.innerHTML = originalIcon;
-            btn.disabled = false;
-            lucide.createIcons();
-            setTimeout(() => {
-                status.textContent = "Gemini will adjust sliders for you.";
-                status.classList.remove('text-green-400', 'text-red-400');
-            }, 3000);
-        }
-
-        // --- AI FEATURE 2: CREATIVE DIRECTOR ---
-        async function generateAiNames() {
-            const promptInput = document.getElementById('ai-art-prompt');
-            const btn = document.getElementById('btn-ai-names');
-            const vibe = promptInput.value.trim();
-
-            if (!vibe) return;
-
-            // Loading
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>`;
-            btn.disabled = true;
-
-            const systemPrompt = "You are a creative director for a music label. Return ONLY a JSON object with two string keys: 'artist' (a cool, unique artist name) and 'title' (an obscure, artistic song title). Make them fit the user's genre/vibe.";
-
-            const result = await callGemini(`Generate a name and title for this genre/vibe: "${vibe}"`, systemPrompt);
-
-            if (result) {
-                document.getElementById('art-artist').value = result.artist;
-                document.getElementById('art-song').value = result.title;
-                renderArt();
-            }
-
-            btn.innerHTML = originalIcon;
-            btn.disabled = false;
-            lucide.createIcons();
-        }
 
         // --- GLOBAL STATE ---
         const state = {
