@@ -2,14 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport: Prevent zooming but allow standard scrolling -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Mobile App Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>SJ STORE - Login</title>
     
-    <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -21,62 +18,47 @@
             --apple-btn: #ffffff;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            /* Mobile: Remove tap highlight color */
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Roboto', sans-serif;
             background-color: var(--bg-color);
             color: #ffffff;
-            /* Use dvh (dynamic viewport height) for better mobile browser support */
             min-height: 100dvh; 
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            /* Allow scrolling if content overflows on small screens */
-            overflow-y: auto; 
-            overflow-x: hidden;
-            /* UX: Allow text selection for accessibility/copying IDs */
-            user-select: text;
-            -webkit-user-select: text;
+            overflow: hidden;
+            user-select: none;
         }
 
-        /* Ambient Background Effect */
+        /* Ambient Background */
         .ambient-light {
-            position: fixed; /* Keep background fixed while content can scroll */
+            position: fixed;
             width: 150vw;
             height: 150vw;
             background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0) 70%);
             top: -50%;
             left: -25%;
             z-index: 0;
-            pointer-events: none; /* Critical: Click-through */
+            pointer-events: none;
             animation: pulse 10s infinite alternate;
         }
-
         @keyframes pulse {
             0% { transform: scale(1); opacity: 0.5; }
             100% { transform: scale(1.1); opacity: 0.8; }
         }
 
-        /* 3D Logo Container */
+        /* 3D Logo */
         .logo-container {
             perspective: 1000px;
             width: 140px;
             height: 140px;
             margin-bottom: 2.5rem;
             z-index: 10;
-            /* Prevent touch actions on the logo to avoid scroll blocking */
-            pointer-events: none; 
         }
-
         .logo-3d {
             width: 100%;
             height: 100%;
@@ -84,7 +66,6 @@
             transform-style: preserve-3d;
             animation: rotate3D 6s infinite linear;
         }
-
         .logo-face {
             position: absolute;
             width: 100%;
@@ -98,17 +79,9 @@
             border: 2px solid rgba(255,255,255,0.2);
             box-shadow: 0 0 30px rgba(255,255,255,0.1);
         }
-
         .logo-face.front { transform: translateZ(10px); }
         .logo-face.back { transform: rotateY(180deg) translateZ(10px); }
-
-        .logo-face img {
-            width: 85%;
-            height: 85%;
-            object-fit: contain;
-            border-radius: 50%;
-        }
-
+        .logo-face img { width: 85%; height: 85%; object-fit: contain; border-radius: 50%; }
         @keyframes rotate3D {
             0% { transform: rotateY(0deg) rotateX(10deg); }
             100% { transform: rotateY(360deg) rotateX(10deg); }
@@ -127,24 +100,10 @@
             z-index: 10;
             text-align: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            /* Ensure it sits above background */
-            position: relative; 
-            /* Hidden by default until we know auth state is false */
-            display: none; 
+            display: none; /* Hidden until loaded */
         }
-
-        .login-card h1 {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-            letter-spacing: 2px;
-            font-weight: 700;
-        }
-
-        .login-card p {
-            color: #aaa;
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
-        }
+        .login-card h1 { font-size: 1.8rem; margin-bottom: 0.5rem; letter-spacing: 2px; font-weight: 700; }
+        .login-card p { color: #aaa; margin-bottom: 2rem; font-size: 0.95rem; }
 
         /* Buttons */
         .auth-btn {
@@ -160,63 +119,32 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: transform 0.1s, opacity 0.2s;
             position: relative;
-            overflow: hidden;
-            /* Optimization for touch responsiveness */
             touch-action: manipulation; 
         }
-
-        .auth-btn:active {
-            transform: scale(0.96);
-            opacity: 0.9;
-        }
-
-        .google-btn {
-            background-color: var(--google-btn);
-            color: white;
-            box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
-        }
-        
-        .apple-btn {
-            background-color: var(--apple-btn);
-            color: black;
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
-        }
-
+        .google-btn { background-color: var(--google-btn); color: white; }
+        .apple-btn { background-color: var(--apple-btn); color: black; }
         .auth-btn i { font-size: 1.3rem; }
 
-        /* Loading Overlay */
+        /* Loader */
         #loading-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: #000;
             z-index: 100;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             transition: opacity 0.4s ease;
-            /* Visible by default to prevent flash of content */
-            opacity: 1;
         }
-        
         .loader {
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 0.8s ease-in-out infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Success Message styling */
+        /* User Info */
         .user-info {
             display: none;
             text-align: center;
@@ -224,71 +152,36 @@
             width: 90%;
             max-width: 400px;
             animation: fadeIn 0.5s ease;
-            position: relative;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .user-avatar {
-            width: 90px;
-            height: 90px;
+            width: 90px; height: 90px;
             border-radius: 50%;
             border: 3px solid #fff;
             margin-bottom: 1.5rem;
             box-shadow: 0 0 20px rgba(255,255,255,0.2);
             object-fit: cover;
         }
-
-        .user-name {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
+        .user-name { font-size: 1.5rem; margin-bottom: 0.5rem; }
         .btn-continue {
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 16px 40px;
-            margin-top: 25px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            width: 100%;
-            font-size: 1rem;
-            box-shadow: 0 5px 20px rgba(255,255,255,0.15);
-            transition: transform 0.1s;
+            background: #fff; color: #000; border: none;
+            padding: 16px 40px; margin-top: 25px;
+            border-radius: 50px; cursor: pointer; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1px; width: 100%;
+            font-size: 1rem; box-shadow: 0 5px 20px rgba(255,255,255,0.15);
         }
-
-        .btn-continue:active {
-            transform: scale(0.96);
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 25px;
-            color: rgba(255,255,255,0.3);
-            font-size: 0.75rem;
-            z-index: 10;
-        }
-
+        .footer { position: fixed; bottom: 25px; color: rgba(255,255,255,0.3); font-size: 0.75rem; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <!-- Ambient Light Background -->
     <div class="ambient-light"></div>
 
-    <!-- Loading Screen (Visible by default) -->
     <div id="loading-overlay">
         <span class="loader"></span>
     </div>
 
-    <!-- 3D Logo Section -->
     <div class="logo-container">
         <div class="logo-3d">
             <div class="logo-face front">
@@ -300,59 +193,34 @@
         </div>
     </div>
 
-    <!-- Login Form -->
     <div class="login-card" id="login-card">
         <h1>SJ STORE</h1>
         <p>Welcome back</p>
-
         <button id="google-login-btn" class="auth-btn google-btn">
-            <i class="fab fa-google"></i>
-            Sign in with Google
+            <i class="fab fa-google"></i> Sign in with Google
         </button>
-
         <button id="apple-login-btn" class="auth-btn apple-btn">
-            <i class="fab fa-apple"></i>
-            Sign in with Apple
+            <i class="fab fa-apple"></i> Sign in with Apple
         </button>
     </div>
 
-    <!-- User Authenticated View -->
     <div class="user-info" id="user-info">
         <img id="user-pic" class="user-avatar" src="" alt="User">
         <h2 class="user-name" id="user-name">Welcome</h2>
         <p style="color: #888;">You are securely logged in</p>
-        
         <button id="continue-btn" class="btn-continue">Enter Store</button>
         <br><br>
-        <button id="logout-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; font-size: 0.9rem; padding: 10px;">Sign Out</button>
+        <button id="logout-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer;">Sign Out</button>
     </div>
 
-    <div class="footer">
-        &copy; 2024 SJ Store
-    </div>
+    <div class="footer">&copy; 2024 SJ Store</div>
 
-    <!-- Firebase SDK v12.3.0 (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-        import { 
-            getAuth, 
-            GoogleAuthProvider, 
-            OAuthProvider,
-            signInWithPopup, 
-            signInWithRedirect,
-            getRedirectResult,
-            onAuthStateChanged, 
-            signOut 
-        } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-        import { 
-            getDatabase, 
-            ref, 
-            set, 
-            get, 
-            update 
-        } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+        import { getAuth, GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
-        // Firebase Configuration
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -364,159 +232,119 @@
             measurementId: "G-YQTVZQWXGB"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
-
-        // Providers Config
+        
         const googleProvider = new GoogleAuthProvider();
         const appleProvider = new OAuthProvider('apple.com');
         appleProvider.addScope('email');
         appleProvider.addScope('name');
 
-        // DOM Elements
+        // Elements
         const loadingOverlay = document.getElementById('loading-overlay');
         const loginCard = document.getElementById('login-card');
         const userInfo = document.getElementById('user-info');
         const googleBtn = document.getElementById('google-login-btn');
         const appleBtn = document.getElementById('apple-login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
         const continueBtn = document.getElementById('continue-btn');
+        const logoutBtn = document.getElementById('logout-btn');
 
-        // --- HELPER: Mobile Detection ---
-        // Detects Mobile/Tablet to prefer Redirect over Popup
-        const isMobile = () => {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        };
+        // --- Logic: Authentication ---
+        
+        // Detect Mobile for optional behavior
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // --- CORE: Authenticate Logic ---
-        // Handles the split between Popup (Desktop) and Redirect (Mobile/WebView)
-        async function authenticateUser(provider) {
+        async function attemptLogin(provider) {
             loadingOverlay.style.display = 'flex';
             loadingOverlay.style.opacity = '1';
-
+            
             try {
-                if (isMobile()) {
-                    // Mobile: Use Redirect (Safer for WebViews/iOS)
-                    await signInWithRedirect(auth, provider);
-                } else {
-                    // Desktop: Use Popup (Better UX)
-                    await signInWithPopup(auth, provider);
-                    // Popup resolves immediately, redirect does not.
-                }
+                // We use Popup primarily as it's easier to debug and works on most devices now.
+                // If you are on a strict iOS WebView, Redirect might be needed, but Popup is safer to start.
+                await signInWithPopup(auth, provider);
             } catch (error) {
-                console.error("Auth Error:", error);
                 loadingOverlay.style.display = 'none';
-                if(error.code !== 'auth/popup-closed-by-user') {
-                    alert(`Login Failed: ${error.message}`);
+                console.error(error);
+                if (error.code === 'auth/unauthorized-domain') {
+                    alert("Domain Error: Go to Firebase Console > Authentication > Settings and add this domain to 'Authorized Domains'.");
+                } else if (error.code !== 'auth/popup-closed-by-user') {
+                    alert("Login Failed: " + error.message);
                 }
             }
         }
 
-        // --- GLOBAL EVENT LISTENERS ---
-        
-        googleBtn.addEventListener('click', () => authenticateUser(googleProvider));
-        
-        appleBtn.addEventListener('click', () => authenticateUser(appleProvider));
+        googleBtn.addEventListener('click', () => attemptLogin(googleProvider));
+        appleBtn.addEventListener('click', () => attemptLogin(appleProvider));
+
+        // --- Logic: Navigation ---
 
         continueBtn.addEventListener('click', () => {
-            continueBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
-            continueBtn.style.opacity = '0.7';
-            // Direct navigation
+            continueBtn.innerHTML = 'Loading...';
+            // Explicitly navigate to the requested URL
             window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html";
         });
 
-        logoutBtn.addEventListener('click', async () => {
-            loadingOverlay.style.display = 'flex';
-            loadingOverlay.style.opacity = '1';
-            await signOut(auth);
-            // onAuthStateChanged will handle the UI reset
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).then(() => window.location.reload());
         });
 
-        // --- AUTH STATE MANAGEMENT ---
+        // --- Logic: State Management ---
 
-        // 1. Handle Redirect Return (For Mobile Flow)
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    console.log("Returned from redirect login.");
-                }
-            })
-            .catch((error) => {
-                console.error("Redirect Result Error:", error);
-                alert(`Login Error: ${error.message}`);
-                loadingOverlay.style.display = 'none';
-            });
-
-        // 2. Monitor Auth State (The Truth Source)
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                await handleUserSuccess(user);
+                updateUserData(user);
+                showUserUI(user);
             } else {
                 showLoginUI();
             }
         });
 
-        // --- DATABASE & UI LOGIC ---
-
-        async function handleUserSuccess(user) {
+        async function updateUserData(user) {
             const userRef = ref(db, `users/${user.uid}`);
-            
             try {
-                // Production Safe Write: Check first, then update or set
                 const snapshot = await get(userRef);
-                
-                if (snapshot.exists()) {
-                    // User exists: SAFELY UPDATE (don't overwrite entire node)
-                    await update(userRef, {
-                        lastLogin: Date.now()
-                    });
-                } else {
-                    // New User: Create Initial Record
-                    await set(userRef, {
+                if (!snapshot.exists()) {
+                    set(userRef, {
                         email: user.email,
-                        name: user.displayName || "Anonymous",
-                        currency: 'DH',
-                        language: 'English',
+                        name: user.displayName || "User",
                         createdAt: Date.now(),
                         lastLogin: Date.now()
                     });
+                } else {
+                    update(userRef, { lastLogin: Date.now() });
                 }
-            } catch (dbError) {
-                console.error("Database Error:", dbError);
-                // Continue anyway to show UI even if DB write fails (Offline mode support)
-            }
-
-            showAuthenticatedUI(user);
+            } catch(e) { console.error("DB Error", e); }
         }
 
-        function showAuthenticatedUI(user) {
-            // Update Data
+        function showUserUI(user) {
             document.getElementById('user-pic').src = user.photoURL || "https://via.placeholder.com/90";
             document.getElementById('user-name').textContent = "Hi, " + (user.displayName ? user.displayName.split(' ')[0] : "User");
-
-            // Transitions
             loginCard.style.display = 'none';
             userInfo.style.display = 'block';
-            
-            // Hide Loader
-            loadingOverlay.style.opacity = '0';
-            setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
+            hideLoader();
         }
 
         function showLoginUI() {
             userInfo.style.display = 'none';
             loginCard.style.display = 'block';
-            
-            // Hide Loader
+            hideLoader();
+        }
+
+        function hideLoader() {
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
         }
 
+        // Safety: Hide loader after 4s if Auth hangs
+        setTimeout(() => {
+            if (loadingOverlay.style.display !== 'none') hideLoader();
+        }, 4000);
+
     </script>
 </body>
 </html>
+
 
 
 
