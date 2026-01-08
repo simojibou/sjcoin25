@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- strict viewport settings to prevent zooming -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Mobile App Capable Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>SJ STORE - Login</title>
     
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -269,12 +273,15 @@
 </head>
 <body>
 
+    <!-- Ambient Light Background -->
     <div class="ambient-light"></div>
 
+    <!-- Loading Screen -->
     <div id="loading-overlay">
         <span class="loader"></span>
     </div>
 
+    <!-- 3D Logo Section -->
     <div class="logo-container" id="logo-container">
         <div class="logo-3d">
             <div class="logo-face front">
@@ -286,6 +293,7 @@
         </div>
     </div>
 
+    <!-- Login Form -->
     <div class="login-card" id="login-card">
         <h1>SJ STORE</h1>
         <p>Welcome back</p>
@@ -301,6 +309,7 @@
         </button>
     </div>
 
+    <!-- User Authenticated View -->
     <div class="user-info" id="user-info">
         <img id="user-pic" class="user-avatar" src="" alt="User">
         <h2 class="user-name" id="user-name">Welcome</h2>
@@ -315,6 +324,7 @@
         &copy; 2024 SJ Store
     </div>
 
+    <!-- Firebase SDK v12.3.0 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
         import { 
@@ -358,17 +368,27 @@
         const googleBtn = document.getElementById('google-login-btn');
         const appleBtn = document.getElementById('apple-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
+        const continueBtn = document.getElementById('continue-btn');
+
+        // --- GLOBAL EVENT LISTENER (THE FIX) ---
+        // We attach this here to ensure it ALWAYS exists, even if DB fails.
+        continueBtn.addEventListener('click', () => {
+            console.log("Enter Store Clicked");
+            continueBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Redirecting...';
+            // Force location change
+            window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html";
+        });
+
 
         // --- AUTH LOGIC ---
         
-        // 1. Check for Redirect Result (Runs on page load after coming back from Google)
+        // 1. Check for Redirect Result
         getRedirectResult(auth)
             .then((result) => {
-                // Successful login after redirect
+                // Successful login
             })
             .catch((error) => {
                 console.error("Redirect Error:", error);
-                alert("Login Error: " + error.message);
                 loadingOverlay.style.display = 'none';
             });
 
@@ -381,7 +401,7 @@
             }
         });
 
-        // 3. Google Login with REDIRECT (Fixes iOS/Mobile blocks)
+        // 3. Google Login with REDIRECT
         googleBtn.addEventListener('click', async () => {
             try {
                 loadingOverlay.style.display = 'flex';
@@ -443,10 +463,7 @@
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
             
-            // Redirect to main store on button click
-            document.getElementById('continue-btn').onclick = () => {
-                window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html"; 
-            };
+            // Note: The click listener for continueBtn is now handled globally at the top
         }
 
         function showLoginUI() {
@@ -460,6 +477,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
