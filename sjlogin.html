@@ -2,16 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- strict viewport settings to prevent zooming -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Mobile App Capable Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>SJ STORE - Login</title>
     
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -28,7 +24,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* Critical for mobile feel */
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
         }
@@ -43,11 +38,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden; /* Prevents scroll bounce */
-            position: fixed; /* Locks body in place */
-            user-select: none; /* Prevents text selection */
+            overflow: hidden;
+            position: fixed;
+            user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Disables browser gestures like pinch-zoom */
+            touch-action: none;
         }
 
         /* Ambient Background Effect */
@@ -108,7 +103,7 @@
             object-fit: contain;
             border-radius: 50%;
             filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-            pointer-events: none; /* Prevent image dragging */
+            pointer-events: none;
         }
 
         @keyframes rotate3D {
@@ -148,7 +143,7 @@
         /* Buttons */
         .auth-btn {
             width: 100%;
-            padding: 16px; /* Larger touch target */
+            padding: 16px;
             margin-bottom: 1rem;
             border: none;
             border-radius: 14px;
@@ -162,7 +157,7 @@
             transition: transform 0.1s, opacity 0.2s;
             position: relative;
             overflow: hidden;
-            touch-action: manipulation; /* Improves tap response */
+            touch-action: manipulation;
         }
 
         .auth-btn:active {
@@ -269,20 +264,16 @@
             font-size: 0.75rem;
             z-index: 10;
         }
-
     </style>
 </head>
 <body>
 
-    <!-- Ambient Light Background -->
     <div class="ambient-light"></div>
 
-    <!-- Loading Screen -->
     <div id="loading-overlay">
         <span class="loader"></span>
     </div>
 
-    <!-- 3D Logo Section -->
     <div class="logo-container" id="logo-container">
         <div class="logo-3d">
             <div class="logo-face front">
@@ -294,7 +285,6 @@
         </div>
     </div>
 
-    <!-- Login Form -->
     <div class="login-card" id="login-card">
         <h1>SJ STORE</h1>
         <p>Welcome back</p>
@@ -310,7 +300,6 @@
         </button>
     </div>
 
-    <!-- User Authenticated View -->
     <div class="user-info" id="user-info">
         <img id="user-pic" class="user-avatar" src="" alt="User">
         <h2 class="user-name" id="user-name">Welcome</h2>
@@ -325,7 +314,6 @@
         &copy; 2024 SJ Store
     </div>
 
-    <!-- Firebase SDK v12.3.0 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
         import { 
@@ -333,8 +321,8 @@
             GoogleAuthProvider, 
             OAuthProvider,
             signInWithPopup, 
-            signInWithRedirect,
-            getRedirectResult,
+            signInWithRedirect,     // Added for Mobile support
+            getRedirectResult,      // Added to handle return from Google
             onAuthStateChanged, 
             signOut 
         } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
@@ -370,7 +358,22 @@
         const appleBtn = document.getElementById('apple-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
-        // AUTH STATE LISTENER
+        // --- AUTH LOGIC (The Fix) ---
+        
+        // 1. Check for Redirect Result (Runs on page load after coming back from Google)
+        getRedirectResult(auth)
+            .then((result) => {
+                // If the user just came back from Google, result will be populated.
+                // onAuthStateChanged will handle the UI update, but we catch errors here.
+            })
+            .catch((error) => {
+                console.error("Redirect Error:", error);
+                alert("Login Error: " + error.message);
+                // Reset UI if needed
+                loadingOverlay.style.display = 'none';
+            });
+
+        // 2. Auth State Listener
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 showAuthenticatedUI(user);
@@ -379,32 +382,25 @@
             }
         });
 
-        // --- GOOGLE LOGIN (FIXED) ---
-        // Using Popup is often better for immediate feedback on modern mobile browsers 
-        // unless you have strictly configured domains for Redirects.
+        // 3. Google Login with REDIRECT (Fixes iOS/Mobile blocks)
         googleBtn.addEventListener('click', async () => {
             try {
-                // Show a mini-loader or disable button
-                googleBtn.style.opacity = '0.5';
-                googleBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Connecting...';
+                // Show loader immediately because redirect takes a moment
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.style.opacity = '1';
                 
-                await signInWithPopup(auth, googleProvider);
-                // State change handles the UI update automatically
+                await signInWithRedirect(auth, googleProvider);
+                // The page will now navigate away to Google. 
+                // When it comes back, getRedirectResult and onAuthStateChanged will run.
             } catch (error) {
                 console.error(error);
-                googleBtn.style.opacity = '1';
-                googleBtn.innerHTML = '<i class="fab fa-google"></i> Sign in with Google';
-                
-                // Friendly error handling
-                if(error.code === 'auth/popup-closed-by-user') {
-                    // Ignore
-                } else {
-                    alert("Login failed: " + error.message);
-                }
+                loadingOverlay.style.display = 'none';
+                alert("Login failed: " + error.message);
             }
         });
 
-        // --- APPLE LOGIN ---
+        // Apple Login (Keeping Popup for Apple as it often requires specific setup for redirect)
+        // If Apple fails on mobile, you can switch this to redirect as well.
         appleBtn.addEventListener('click', async () => {
             try {
                 appleBtn.style.opacity = '0.5';
@@ -427,9 +423,8 @@
 
         // --- UI HELPERS ---
         function showAuthenticatedUI(user) {
-            // 1. Save User Data
+            // Save User Data
             const userRef = ref(db, `users/${user.uid}`);
-            // We use update logic via set to ensure latest data
             get(userRef).then((snapshot) => {
                 if (!snapshot.exists()) {
                     set(userRef, { 
@@ -439,27 +434,33 @@
                         language: 'English',
                         lastLogin: Date.now()
                     });
+                } else {
+                    // Update last login
+                    set(ref(db, `users/${user.uid}/lastLogin`), Date.now());
                 }
             });
 
-            // 2. Update UI Elements
             document.getElementById('user-pic').src = user.photoURL || "https://via.placeholder.com/90";
             document.getElementById('user-name').textContent = "Hi, " + (user.displayName ? user.displayName.split(' ')[0] : "User");
             
-            // 3. Transitions
             loginCard.style.display = 'none';
             userInfo.style.display = 'block';
             
-            // Fade out loader if it's still there
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
+            
+            // Redirect to main store after small delay (optional)
+            document.getElementById('continue-btn').onclick = () => {
+                // Assuming your store is at index.html or you want to hide this overlay
+                // For now, we just stay here or redirect:
+                window.location.href = "index.html"; 
+            };
         }
 
         function showLoginUI() {
             loginCard.style.display = 'block';
             userInfo.style.display = 'none';
             
-            // Fade out loader
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
         }
@@ -467,5 +468,6 @@
     </script>
 </body>
 </html>
+
 
 
