@@ -24,6 +24,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            /* Critical for mobile feel */
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
         }
@@ -38,11 +39,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            position: fixed;
-            user-select: none;
+            overflow: hidden; /* Prevents scroll bounce */
+            position: fixed; /* Locks body in place */
+            user-select: none; /* Prevents text selection */
             -webkit-user-select: none;
-            touch-action: none;
+            touch-action: none; /* Disables browser gestures like pinch-zoom */
         }
 
         /* Ambient Background Effect */
@@ -103,7 +104,7 @@
             object-fit: contain;
             border-radius: 50%;
             filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-            pointer-events: none;
+            pointer-events: none; /* Prevent image dragging */
         }
 
         @keyframes rotate3D {
@@ -143,7 +144,7 @@
         /* Buttons */
         .auth-btn {
             width: 100%;
-            padding: 16px;
+            padding: 16px; /* Larger touch target */
             margin-bottom: 1rem;
             border: none;
             border-radius: 14px;
@@ -157,7 +158,7 @@
             transition: transform 0.1s, opacity 0.2s;
             position: relative;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: manipulation; /* Improves tap response */
         }
 
         .auth-btn:active {
@@ -321,8 +322,8 @@
             GoogleAuthProvider, 
             OAuthProvider,
             signInWithPopup, 
-            signInWithRedirect,     // Added for Mobile support
-            getRedirectResult,      // Added to handle return from Google
+            signInWithRedirect,
+            getRedirectResult,
             onAuthStateChanged, 
             signOut 
         } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
@@ -358,18 +359,16 @@
         const appleBtn = document.getElementById('apple-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
-        // --- AUTH LOGIC (The Fix) ---
+        // --- AUTH LOGIC ---
         
         // 1. Check for Redirect Result (Runs on page load after coming back from Google)
         getRedirectResult(auth)
             .then((result) => {
-                // If the user just came back from Google, result will be populated.
-                // onAuthStateChanged will handle the UI update, but we catch errors here.
+                // Successful login after redirect
             })
             .catch((error) => {
                 console.error("Redirect Error:", error);
                 alert("Login Error: " + error.message);
-                // Reset UI if needed
                 loadingOverlay.style.display = 'none';
             });
 
@@ -385,13 +384,10 @@
         // 3. Google Login with REDIRECT (Fixes iOS/Mobile blocks)
         googleBtn.addEventListener('click', async () => {
             try {
-                // Show loader immediately because redirect takes a moment
                 loadingOverlay.style.display = 'flex';
                 loadingOverlay.style.opacity = '1';
                 
                 await signInWithRedirect(auth, googleProvider);
-                // The page will now navigate away to Google. 
-                // When it comes back, getRedirectResult and onAuthStateChanged will run.
             } catch (error) {
                 console.error(error);
                 loadingOverlay.style.display = 'none';
@@ -399,8 +395,7 @@
             }
         });
 
-        // Apple Login (Keeping Popup for Apple as it often requires specific setup for redirect)
-        // If Apple fails on mobile, you can switch this to redirect as well.
+        // Apple Login
         appleBtn.addEventListener('click', async () => {
             try {
                 appleBtn.style.opacity = '0.5';
@@ -435,7 +430,6 @@
                         lastLogin: Date.now()
                     });
                 } else {
-                    // Update last login
                     set(ref(db, `users/${user.uid}/lastLogin`), Date.now());
                 }
             });
@@ -449,11 +443,9 @@
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 400);
             
-            // Redirect to main store after small delay (optional)
+            // Redirect to main store on button click
             document.getElementById('continue-btn').onclick = () => {
-                // Assuming your store is at index.html or you want to hide this overlay
-                // For now, we just stay here or redirect:
-                window.location.href = "index.html"; 
+                window.location.href = "https://simojibou.github.io/sjcoin25/sjstore.html"; 
             };
         }
 
@@ -468,6 +460,7 @@
     </script>
 </body>
 </html>
+
 
 
 
