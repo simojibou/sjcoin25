@@ -5,79 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>City Delivery</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-        .slide-in { animation: slideIn 0.2s ease-out forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-enter { animation: enter 0.3s ease-out forwards; }
+        @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-gray-100 flex justify-center h-screen overflow-hidden">
 
-    <!-- Mobile App Container -->
     <div id="app" class="w-full max-w-md h-full bg-gray-50 flex flex-col shadow-2xl relative overflow-hidden">
-        <!-- Content will be injected here by JS -->
         <div class="flex items-center justify-center h-full">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
     </div>
 
-    <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, arrayUnion, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Configuration ---
+        // --- Config ---
         const ADMIN_EMAIL = 'simo.jibou@gmail.com';
         const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'delivery-app-v1';
         const firebaseConfig = JSON.parse(__firebase_config);
 
-        // --- Init Firebase ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- State Management ---
+        // --- State ---
         const state = {
             user: null,
-            view: 'loading', // loading, login, cities, services, chat, admin
+            view: 'loading',
             selectedCity: '',
             services: [],
             activeService: null,
             chats: {},
             isAdmin: false,
-            inputText: ''
+            inputText: '' 
         };
 
-        // --- DOM Elements ---
         const appContainer = document.getElementById('app');
+        let unsubscribeServices = null;
+        let unsubscribeChats = null;
 
-        // --- Auth & Data Listeners ---
+        // --- Auth ---
         async function initAuth() {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch (e) {
-                    console.error("Token auth failed", e);
-                }
-            } else {
-                // Fallback or wait for user interaction
+                try { await signInWithCustomToken(auth, __initial_auth_token); } catch (e) { console.error(e); }
             }
         }
         initAuth();
 
         onAuthStateChanged(auth, (user) => {
+            const previousUser = state.user?.uid;
             state.user = user;
+            
             if (user) {
                 state.isAdmin = user.email === ADMIN_EMAIL;
-                state.view = 'cities';
+                if (!previousUser) {
+                    // Only change view if we weren't already logged in
+                    state.view = 'cities'; 
+                }
                 subscribeToData();
             } else {
+                cleanupListeners();
                 state.view = 'login';
                 state.services = [];
                 state.chats = {};
@@ -85,55 +81,51 @@
             render();
         });
 
-        let unsubscribeServices = null;
-        let unsubscribeChats = null;
+        // --- Data Subscription (Fixed Loop) ---
+        function cleanupListeners() {
+            if (unsubscribeServices) { unsubscribeServices(); unsubscribeServices = null; }
+            if (unsubscribeChats) { unsubscribeChats(); unsubscribeChats = null; }
+        }
 
         function subscribeToData() {
             if (!state.user) return;
+            
+            // Prevent duplicate listeners
+            if (unsubscribeServices || unsubscribeChats) return;
 
-            // Subscribe to Services
-            const servicesRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'services');
-            unsubscribeServices = onSnapshot(servicesRef, (snapshot) => {
+            // Services Listener
+            unsubscribeServices = onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'services'), (snapshot) => {
                 state.services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 render();
             });
 
-            // Subscribe to Chats
-            const chatsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'chats');
-            unsubscribeChats = onSnapshot(chatsRef, (snapshot) => {
+            // Chats Listener
+            unsubscribeChats = onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'chats'), (snapshot) => {
                 const chatData = {};
                 snapshot.docs.forEach(doc => {
                     const data = doc.data();
-                    // Security filter: Only show if it's my chat or I am admin
                     if (data.userId === state.user.uid || (state.isAdmin && data.participants?.includes(state.user.email))) {
                         chatData[data.serviceId] = { id: doc.id, ...data };
                     }
                 });
                 state.chats = chatData;
                 
-                // If in chat view, re-render to show new messages
                 if (state.view === 'chat') {
-                    render();
+                    render(); 
+                    // Only scroll if we are near bottom? For now, simple scroll
                     scrollToBottom();
                 }
             });
         }
 
         // --- Actions ---
-
         window.handleLogin = async () => {
-            try {
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.warn("Popup failed, trying anonymous", error);
-                await signInAnonymously(auth);
-            }
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+            catch (e) { await signInAnonymously(auth); }
         };
 
         window.handleLogout = () => {
-            if(unsubscribeServices) unsubscribeServices();
-            if(unsubscribeChats) unsubscribeChats();
+            cleanupListeners();
             signOut(auth);
         };
 
@@ -155,12 +147,17 @@
             scrollToBottom();
         };
 
+        window.updateInput = (val) => {
+            state.inputText = val;
+        };
+
         window.sendMessage = async () => {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
+            const text = state.inputText.trim();
             if (!text || !state.activeService) return;
 
-            input.value = ''; // Clear immediately
+            state.inputText = ''; // Clear local state immediately
+            render(); // Re-render to clear input visually
+
             const chatId = `${state.user.uid}_${state.activeService.id}`;
             const message = {
                 text: text,
@@ -174,14 +171,12 @@
 
             try {
                 if (existingChat) {
-                    const chatRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'chats', existingChat.id);
-                    await updateDoc(chatRef, {
+                    await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'chats', existingChat.id), {
                         messages: arrayUnion(message),
                         lastUpdated: serverTimestamp()
                     });
                 } else {
-                    const newChatRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'chats', chatId);
-                    await setDoc(newChatRef, {
+                    await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'chats', chatId), {
                         userId: state.user.uid,
                         userEmail: state.user.email,
                         serviceId: state.activeService.id,
@@ -194,8 +189,8 @@
                     });
                 }
             } catch (e) {
-                console.error("Send error", e);
-                alert("Failed to send message");
+                console.error("Send failed", e);
+                alert("Could not send message");
             }
         };
 
@@ -209,36 +204,35 @@
 
             try {
                 await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'services'), {
-                    name,
-                    city,
-                    type,
+                    name, city, type,
                     createdAt: serverTimestamp(),
                     createdBy: state.user.email
                 });
                 alert('Service added!');
-                document.getElementById('adminForm').reset();
+                state.view = 'cities'; // Go back to list
+                render();
             } catch (error) {
-                console.error("Error adding service", error);
-                alert("Error adding service");
+                console.error(error);
             }
         };
 
         function scrollToBottom() {
             setTimeout(() => {
-                const container = document.getElementById('messagesContainer');
-                if (container) container.scrollTop = container.scrollHeight;
-            }, 100);
+                const c = document.getElementById('messagesContainer');
+                if (c) c.scrollTop = c.scrollHeight;
+            }, 50);
         }
 
-        // --- Render Logic ---
-
+        // --- Render ---
         function render() {
-            lucide.createIcons();
-            
-            // Login View
+            if (state.view === 'loading') return; // Initial spinner is static in HTML
+
+            let content = '';
+
+            // 1. LOGIN
             if (state.view === 'login') {
-                appContainer.innerHTML = `
-                    <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 slide-in">
+                content = `
+                    <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 animate-enter">
                         <div class="bg-white p-8 rounded-2xl shadow-xl w-full text-center">
                             <div class="bg-blue-100 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
                                 <i data-lucide="truck" class="w-10 h-10 text-blue-600"></i>
@@ -249,154 +243,133 @@
                                 <i data-lucide="user" class="w-5 h-5"></i> Sign in to Order
                             </button>
                         </div>
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
-            }
+                    </div>`;
+            } else {
+                // 2. MAIN APP SHELL
+                // Header
+                let backBtn = state.view !== 'cities' ? 
+                    `<button onclick="setView('${state.view === 'chat' ? 'services' : 'cities'}')" class="p-1 hover:bg-gray-100 rounded-full mr-2"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-600"></i></button>` : '';
+                
+                let title = 'Select City';
+                if (state.view === 'services') title = state.selectedCity;
+                if (state.view === 'chat') title = state.activeService?.name;
+                if (state.view === 'admin') title = 'Admin Dashboard';
 
-            // Authenticated Shell
-            let headerContent = '';
-            let mainContent = '';
-
-            // Header Logic
-            const backBtn = state.view !== 'cities' ? 
-                `<button onclick="setView('${state.view === 'chat' ? 'services' : 'cities'}')" class="p-1 hover:bg-gray-100 rounded-full mr-2"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-600"></i></button>` : '';
-            
-            let title = 'Select City';
-            if (state.view === 'services') title = state.selectedCity;
-            if (state.view === 'chat') title = state.activeService?.name;
-            if (state.view === 'admin') title = 'Admin Dashboard';
-
-            const rightActions = state.view === 'cities' ? `
-                <div class="flex items-center gap-2">
-                    ${state.isAdmin ? `<button onclick="setView(state.view === 'admin' ? 'cities' : 'admin')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium">Admin</button>` : ''}
-                    <button onclick="handleLogout()" class="text-gray-400 hover:text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
-                </div>
-            ` : '';
-
-            // View Content Logic
-            if (state.view === 'cities') {
-                const uniqueCities = [...new Set(state.services.map(s => s.city))].sort();
-                const citiesList = uniqueCities.length ? uniqueCities.map(city => `
-                    <button onclick="selectCity('${city}')" class="w-full text-left bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition flex items-center justify-between group mb-3 slide-in">
-                        <span class="font-medium text-gray-700 text-lg">${city}</span>
-                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition"></i>
-                    </button>
-                `).join('') : `<div class="text-center py-10 text-gray-400">No cities available yet.</div>`;
-
-                mainContent = `
-                    <div class="p-4">
-                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-4 bg-blue-50 p-3 rounded-lg">
-                            <i data-lucide="map-pin" class="w-4 h-4"></i>
-                            <span>Choose your location</span>
+                let adminBtn = (state.view === 'cities' && state.isAdmin) ? 
+                    `<button onclick="setView('admin')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium mr-2">Admin</button>` : '';
+                
+                let header = `
+                    <div class="bg-white px-4 py-3 shadow-sm z-10 flex items-center justify-between">
+                        <div class="flex items-center">
+                            ${backBtn}
+                            <h1 class="font-bold text-lg text-gray-800 truncate max-w-[200px]">${title}</h1>
                         </div>
-                        ${citiesList}
-                    </div>
-                `;
-            } else if (state.view === 'admin' && state.isAdmin) {
-                mainContent = `
-                    <div class="p-4 slide-in">
+                        <div class="flex items-center">
+                            ${adminBtn}
+                            <button onclick="handleLogout()" class="text-gray-400 hover:text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>`;
+
+                // Body Content
+                let body = '';
+
+                if (state.view === 'cities') {
+                    const uniqueCities = [...new Set(state.services.map(s => s.city))].sort();
+                    const list = uniqueCities.map(city => `
+                        <button onclick="selectCity('${city}')" class="w-full text-left bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition flex items-center justify-between group mb-3 animate-enter">
+                            <span class="font-medium text-gray-700 text-lg">${city}</span>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>
+                        </button>`).join('') || `<div class="text-center py-10 text-gray-400">No cities added yet.</div>`;
+                    
+                    body = `<div class="p-4">${list}</div>`;
+                }
+                else if (state.view === 'services') {
+                    const svcs = state.services.filter(s => s.city === state.selectedCity);
+                    const list = svcs.map(s => {
+                        let icon = 'truck', color = 'text-blue-500';
+                        if(s.type === 'food') { icon = 'utensils'; color = 'text-orange-500'; }
+                        if(s.type === 'grocery') { icon = 'shopping-bag'; color = 'text-green-500'; }
+                        return `
+                        <div onclick="selectService('${s.id}')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer flex items-center gap-4 mb-3 animate-enter">
+                            <div class="bg-gray-50 p-3 rounded-full"><i data-lucide="${icon}" class="w-6 h-6 ${color}"></i></div>
+                            <div class="flex-1"><h3 class="font-bold text-gray-800">${s.name}</h3><p class="text-xs text-gray-500">Tap to order</p></div>
+                        </div>`;
+                    }).join('') || `<div class="text-center py-10 text-gray-400">No services in ${state.selectedCity}.</div>`;
+                    
+                    body = `<div class="p-4">${list}</div>`;
+                }
+                else if (state.view === 'admin') {
+                    body = `
+                    <div class="p-4 animate-enter">
                         <div class="bg-white p-5 rounded-xl shadow-sm border border-purple-100">
-                            <h2 class="font-bold text-lg mb-4 text-purple-800 flex items-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> Add New Service</h2>
-                            <form id="adminForm" onsubmit="addService(event)" class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Service Name</label>
-                                    <input type="text" id="svcName" placeholder="e.g. Fast Pizza" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">City</label>
-                                    <input type="text" id="svcCity" placeholder="e.g. Casablanca" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Type</label>
-                                    <select id="svcType" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                        <option value="generic">General Delivery</option>
-                                        <option value="food">Food</option>
-                                        <option value="grocery">Grocery</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">Add Service</button>
+                            <h2 class="font-bold text-lg mb-4 text-purple-800 flex items-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> New Service</h2>
+                            <form onsubmit="addService(event)" class="space-y-4">
+                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Name</label>
+                                <input id="svcName" type="text" placeholder="e.g. Pizza Hut" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" required></div>
+                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">City</label>
+                                <input id="svcCity" type="text" placeholder="e.g. New York" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" required></div>
+                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Type</label>
+                                <select id="svcType" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="generic">Generic</option><option value="food">Food</option><option value="grocery">Grocery</option>
+                                </select></div>
+                                <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">Add</button>
                             </form>
                         </div>
-                    </div>
-                `;
-            } else if (state.view === 'services') {
-                const cityServices = state.services.filter(s => s.city === state.selectedCity);
-                const servicesList = cityServices.length ? cityServices.map(service => {
-                    let icon = 'truck';
-                    let color = 'text-blue-500';
-                    if(service.type === 'food') { icon = 'utensils'; color = 'text-orange-500'; }
-                    if(service.type === 'grocery') { icon = 'shopping-bag'; color = 'text-green-500'; }
+                    </div>`;
+                }
+                else if (state.view === 'chat') {
+                    const msgs = (state.activeService && state.chats[state.activeService.id]) ? state.chats[state.activeService.id].messages : [];
+                    const msgList = msgs.map(m => {
+                        const isMe = m.sender === state.user.uid;
+                        return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
+                            <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}">${m.text}</div>
+                        </div>`;
+                    }).join('') || `<div class="text-center p-4 text-gray-400 text-sm">Start your order...</div>`;
 
-                    return `
-                    <div onclick="selectService('${service.id}')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer flex items-center gap-4 mb-3 slide-in">
-                        <div class="bg-gray-50 p-3 rounded-full">
-                            <i data-lucide="${icon}" class="w-6 h-6 ${color}"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-bold text-gray-800">${service.name}</h3>
-                            <p class="text-xs text-gray-500">Tap to chat & order</p>
-                        </div>
-                        <div class="bg-blue-50 text-blue-600 p-2 rounded-lg">
-                            <i data-lucide="message-square" class="w-5 h-5"></i>
-                        </div>
-                    </div>
-                `}).join('') : `<div class="text-center py-10 text-gray-400">No services found for ${state.selectedCity}.</div>`;
-
-                mainContent = `<div class="p-4">${servicesList}</div>`;
-            } else if (state.view === 'chat') {
-                const currentMsgs = (state.activeService && state.chats[state.activeService.id]) ? state.chats[state.activeService.id].messages : [];
-                
-                const msgsHtml = currentMsgs.length ? currentMsgs.map(msg => {
-                    const isMe = msg.sender === state.user.uid;
-                    return `
-                        <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3 slide-in">
-                            <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'}">
-                                ${msg.text}
-                            </div>
-                        </div>
-                    `;
-                }).join('') : `<div class="text-center p-4 bg-white rounded-lg shadow-sm mx-4 mt-4 text-gray-600">👋 Hi! What would you like to have delivered?</div>`;
-
-                mainContent = `
+                    body = `
                     <div class="flex flex-col h-full bg-gray-100">
                         <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            <div class="text-center text-xs text-gray-400 my-4">Order with ${state.activeService.name}</div>
-                            ${msgsHtml}
+                            <div class="text-center text-xs text-gray-400 my-4">Ordering from ${state.activeService.name}</div>
+                            ${msgList}
                         </div>
                         <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
-                            <input id="chatInput" type="text" placeholder="Type your order..." class="flex-1 bg-gray-100 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" onkeydown="if(event.key === 'Enter') sendMessage()">
+                            <input id="chatInput" type="text" value="${state.inputText}" 
+                                oninput="updateInput(this.value)" 
+                                onkeydown="if(event.key==='Enter') sendMessage()"
+                                placeholder="Type order..." 
+                                class="flex-1 bg-gray-100 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                             <button onclick="sendMessage()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition shadow-md">
                                 <i data-lucide="send" class="w-5 h-5"></i>
                             </button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
+                }
+
+                content = header + `<div class="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 relative h-full">` + body + `</div>`;
             }
 
-            // Assemble UI
-            appContainer.innerHTML = `
-                <div class="bg-white px-4 py-3 shadow-sm z-10 flex items-center justify-between">
-                    <div class="flex items-center">
-                        ${backBtn}
-                        <h1 class="font-bold text-lg text-gray-800 truncate max-w-[200px]">${title}</h1>
-                    </div>
-                    ${rightActions}
-                </div>
-                <div class="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 relative">
-                    ${mainContent}
-                </div>
-            `;
+            // Simple Virtual DOM replacement
+            appContainer.innerHTML = content;
             lucide.createIcons();
             
-            // Auto scroll logic must run after DOM update
-            if(state.view === 'chat') scrollToBottom();
+            // Restore focus if in chat
+            if (state.view === 'chat') {
+                const input = document.getElementById('chatInput');
+                if(input) {
+                    input.focus();
+                    // Move cursor to end
+                    const val = input.value;
+                    input.value = '';
+                    input.value = val;
+                }
+            }
         }
-
     </script>
 </body>
 </html>
+
+
+
 
 
 
