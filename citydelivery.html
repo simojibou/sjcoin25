@@ -25,17 +25,36 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, arrayUnion, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Config ---
-        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
-        const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'delivery-app-v1';
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // --- Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1",
+            measurementId: "G-YQTVZQWXGB"
+        };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
+        // Internal App ID for data separation within Firestore
+        const APP_ID = 'delivery-app-v1'; 
+
+        // --- Init Firebase ---
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            document.getElementById('app').innerHTML = `<div class="p-4 text-red-500 text-center">Error initializing app. Check console.<br>${error.message}</div>`;
+        }
 
         // --- State ---
         const state = {
@@ -53,80 +72,114 @@
         let unsubscribeServices = null;
         let unsubscribeChats = null;
 
-        // --- Auth ---
-        async function initAuth() {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                try { await signInWithCustomToken(auth, __initial_auth_token); } catch (e) { console.error(e); }
-            }
-        }
-        initAuth();
-
+        // --- Auth Listener ---
         onAuthStateChanged(auth, (user) => {
             const previousUser = state.user?.uid;
             state.user = user;
             
             if (user) {
+                console.log("User logged in:", user.email || "Anonymous");
                 state.isAdmin = user.email === ADMIN_EMAIL;
+                
+                // If we were loading or logged out, go to main view
                 if (!previousUser) {
-                    // Only change view if we weren't already logged in
                     state.view = 'cities'; 
                 }
                 subscribeToData();
             } else {
+                console.log("User logged out");
                 cleanupListeners();
                 state.view = 'login';
                 state.services = [];
                 state.chats = {};
+                state.isAdmin = false;
             }
+            render();
+        }, (error) => {
+            console.error("Auth state change error:", error);
+            state.view = 'login'; // Fallback
             render();
         });
 
-        // --- Data Subscription (Fixed Loop) ---
+        // --- Data Subscription ---
         function cleanupListeners() {
-            if (unsubscribeServices) { unsubscribeServices(); unsubscribeServices = null; }
-            if (unsubscribeChats) { unsubscribeChats(); unsubscribeChats = null; }
+            if (unsubscribeServices) { 
+                unsubscribeServices(); 
+                unsubscribeServices = null; 
+            }
+            if (unsubscribeChats) { 
+                unsubscribeChats(); 
+                unsubscribeChats = null; 
+            }
         }
 
         function subscribeToData() {
-            if (!state.user) return;
+            if (!state.user || !db) return;
             
             // Prevent duplicate listeners
             if (unsubscribeServices || unsubscribeChats) return;
 
+            console.log("Subscribing to Firestore data...");
+
             // Services Listener
-            unsubscribeServices = onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'services'), (snapshot) => {
-                state.services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-            });
+            try {
+                const servicesRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'services');
+                unsubscribeServices = onSnapshot(servicesRef, (snapshot) => {
+                    state.services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    render();
+                }, (error) => {
+                    console.error("Services listener error:", error);
+                });
+            } catch (e) {
+                console.error("Error setting up services listener:", e);
+            }
 
             // Chats Listener
-            unsubscribeChats = onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'chats'), (snapshot) => {
-                const chatData = {};
-                snapshot.docs.forEach(doc => {
-                    const data = doc.data();
-                    if (data.userId === state.user.uid || (state.isAdmin && data.participants?.includes(state.user.email))) {
-                        chatData[data.serviceId] = { id: doc.id, ...data };
+            try {
+                const chatsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'chats');
+                unsubscribeChats = onSnapshot(chatsRef, (snapshot) => {
+                    const chatData = {};
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        // Security/Privacy filtering on client side
+                        if (data.userId === state.user.uid || (state.isAdmin && data.participants?.includes(state.user.email))) {
+                            chatData[data.serviceId] = { id: doc.id, ...data };
+                        }
+                    });
+                    state.chats = chatData;
+                    
+                    if (state.view === 'chat') {
+                        render(); 
+                        scrollToBottom();
                     }
+                }, (error) => {
+                    console.error("Chats listener error:", error);
                 });
-                state.chats = chatData;
-                
-                if (state.view === 'chat') {
-                    render(); 
-                    // Only scroll if we are near bottom? For now, simple scroll
-                    scrollToBottom();
-                }
-            });
+            } catch (e) {
+                console.error("Error setting up chats listener:", e);
+            }
         }
 
         // --- Actions ---
         window.handleLogin = async () => {
-            try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
-            catch (e) { await signInAnonymously(auth); }
+            try { 
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider); 
+            } 
+            catch (e) { 
+                console.warn("Google Sign-In failed or closed:", e);
+                // Optional: Enable Anonymous fallback if you have it enabled in Firebase Console
+                // await signInAnonymously(auth); 
+            }
         };
 
-        window.handleLogout = () => {
+        window.handleLogout = async () => {
             cleanupListeners();
-            signOut(auth);
+            try {
+                await signOut(auth);
+            } catch (e) {
+                console.error("Sign out error:", e);
+            }
         };
 
         window.setView = (view) => {
@@ -190,7 +243,7 @@
                 }
             } catch (e) {
                 console.error("Send failed", e);
-                alert("Could not send message");
+                alert("Could not send message. Check permissions.");
             }
         };
 
@@ -212,7 +265,8 @@
                 state.view = 'cities'; // Go back to list
                 render();
             } catch (error) {
-                console.error(error);
+                console.error("Error adding service:", error);
+                alert("Failed to add service. Are you logged in as Admin?");
             }
         };
 
@@ -225,12 +279,19 @@
 
         // --- Render ---
         function render() {
-            if (state.view === 'loading') return; // Initial spinner is static in HTML
-
+            // Initial spinner logic handled by HTML structure, state updates replace it
+            
             let content = '';
 
-            // 1. LOGIN
-            if (state.view === 'login') {
+            // 1. LOADING
+            if (state.view === 'loading') {
+                content = `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    </div>`;
+            }
+            // 2. LOGIN
+            else if (state.view === 'login') {
                 content = `
                     <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 animate-enter">
                         <div class="bg-white p-8 rounded-2xl shadow-xl w-full text-center">
@@ -245,7 +306,7 @@
                         </div>
                     </div>`;
             } else {
-                // 2. MAIN APP SHELL
+                // 3. MAIN APP SHELL
                 // Header
                 let backBtn = state.view !== 'cities' ? 
                     `<button onclick="setView('${state.view === 'chat' ? 'services' : 'cities'}')" class="p-1 hover:bg-gray-100 rounded-full mr-2"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-600"></i></button>` : '';
@@ -367,6 +428,7 @@
     </script>
 </body>
 </html>
+
 
 
 
