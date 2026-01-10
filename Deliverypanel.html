@@ -47,7 +47,8 @@
             activeChat: null,
             editId: null,
             form: { email: '', pass: '' },
-            msgInput: ''
+            msgInput: '',
+            providerService: null // Stores the service object owned by the provider
         };
 
         // --- Logic ---
@@ -60,13 +61,15 @@
                 return;
             }
 
+            const email = user.email.toLowerCase();
+
             // Determine Role
-            if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+            if (email === ADMIN_EMAIL.toLowerCase()) {
                 state.role = 'admin';
                 state.view = 'admin_list';
                 subscribeServices();
             } else {
-                state.role = 'provider'; // Tentative, verified by service check
+                state.role = 'provider'; 
                 subscribeServices(); // We need services to know if this user owns one
             }
         });
@@ -78,15 +81,17 @@
             unsubServices = onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 
-                if (state.role === 'provider') {
-                    const myService = state.services.find(s => s.ownerEmail?.toLowerCase() === state.user.email.toLowerCase());
+                if (state.role === 'provider' && state.user) {
+                    // Critical Fix: Case insensitive matching for ownership
+                    const myService = state.services.find(s => s.ownerEmail && s.ownerEmail.toLowerCase() === state.user.email.toLowerCase());
+                    
                     if (myService) {
-                        state.view = state.view === 'chat' ? 'chat' : 'provider_list';
+                        state.providerService = myService;
+                        if(state.view !== 'chat') state.view = 'provider_list';
                         subscribeChats(state.user.email.toLowerCase());
                     } else {
                         // User logged in but is not an owner of any service
-                        alert("No service assigned to this email.");
-                        logout();
+                        state.view = 'no_service';
                     }
                 }
                 render();
@@ -95,12 +100,13 @@
 
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
-            // Admin sees all? Or provider only sees theirs? Let's make this Panel for providers mostly. 
-            // If admin wants to see chats, they can check database. This panel focuses on Admin managing services.
-            
+            // Critical Fix: Query matches the exact lowercase email stored in the Chat Document
             const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            
             unsubChats = onSnapshot(q, (snap) => {
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.lastUpdated - a.lastUpdated);
+                
+                // If we are inside a chat, update it in real-time
                 if(state.view === 'chat' && state.activeChat) {
                     const updated = state.chats.find(c => c.id === state.activeChat.id);
                     if(updated) state.activeChat = updated;
@@ -124,7 +130,7 @@
             try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); }
             catch(err) { alert(err.message); }
         };
-        window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); // For Admin
+        window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
         window.logout = () => signOut(auth);
 
         // Admin Actions
@@ -135,7 +141,7 @@
                 name: form.get('name'),
                 city: form.get('city'),
                 type: form.get('type'),
-                ownerEmail: form.get('ownerEmail').toLowerCase().trim(),
+                ownerEmail: form.get('ownerEmail').toLowerCase().trim(), // Force lowercase save
                 assignedPassword: form.get('assignedPassword'),
                 logo: form.get('logo'),
                 lastUpdated: serverTimestamp()
@@ -175,7 +181,7 @@
             
             const msg = {
                 text: txt,
-                sender: state.user.uid, // Provider ID
+                sender: state.user.uid,
                 timestamp: Date.now()
             };
             
@@ -228,6 +234,15 @@
                         </div>
                     </div>`;
             }
+            else if (state.view === 'no_service') {
+                content = `
+                    <div class="flex flex-col items-center justify-center h-full p-8 text-center animate-up">
+                        <i data-lucide="alert-circle" class="w-12 h-12 text-red-400 mb-4"></i>
+                        <h2 class="text-xl font-bold">Access Denied</h2>
+                        <p class="text-gray-400 mt-2 mb-6">No delivery service is linked to <b>${state.user.email}</b>.</p>
+                        <button onclick="logout()" class="px-6 py-2 bg-gray-700 rounded-full hover:bg-gray-600">Logout</button>
+                    </div>`;
+            }
             else if (state.view === 'admin_list') {
                 content = `
                     <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
@@ -243,8 +258,11 @@
                                 <div class="bg-gray-700/50 p-4 rounded-xl border border-white/5 flex items-center justify-between group">
                                     <div>
                                         <h3 class="font-bold">${s.name}</h3>
-                                        <p class="text-xs text-gray-400">${s.city} • ${s.ownerEmail}</p>
-                                        <p class="text-xs text-purple-400 mt-1">Pass: ${s.assignedPassword || 'N/A'}</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-white">${s.city}</span>
+                                            <span class="text-xs text-gray-400">${s.type}</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2">${s.ownerEmail}</p>
                                     </div>
                                     <div class="flex gap-2">
                                         <button onclick="editService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-blue-400 transition"><i data-lucide="pencil" class="w-4 h-4"></i></button>
@@ -274,9 +292,10 @@
                                 </select>
                             </div>
                             <div class="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl space-y-3">
-                                <h3 class="text-sm font-bold text-purple-400">Provider Login</h3>
-                                <div><label class="text-xs uppercase font-bold text-gray-500">Owner Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                                <div><label class="text-xs uppercase font-bold text-gray-500">Assigned Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                                <h3 class="text-sm font-bold text-purple-400 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4"></i> Provider Account</h3>
+                                <div><label class="text-xs uppercase font-bold text-gray-500">Account Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                                <div><label class="text-xs uppercase font-bold text-gray-500">Account Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                                <p class="text-xs text-gray-400">The delivery driver will use these credentials to log in.</p>
                             </div>
                             <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none"></div>
                             
@@ -288,23 +307,27 @@
                 content = `
                     <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
                         <div>
-                            <h2 class="font-bold text-lg">Incoming Orders</h2>
-                            <p class="text-xs text-gray-400">${state.user.email}</p>
+                            <h2 class="font-bold text-lg">Orders</h2>
+                            <p class="text-xs text-purple-400 font-medium">${state.providerService?.city} • ${state.providerService?.name}</p>
                         </div>
                         <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
                         ${state.chats.length === 0 ? 
-                            `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2"></i><p>No active orders</p></div>` : 
+                            `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : 
                             state.chats.map(c => {
                                 const last = c.messages[c.messages.length-1];
                                 return `
-                                <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up">
+                                <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up group border border-transparent hover:border-gray-600">
                                     <div class="flex justify-between items-start mb-1">
-                                        <span class="font-bold text-white text-sm">${c.userEmail}</span>
-                                        <span class="text-[10px] text-gray-400">${new Date(last.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                                        <div class="flex items-center gap-2">
+                                             <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                                             <span class="font-bold text-white text-sm truncate">${c.userEmail}</span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-400 whitespace-nowrap">${new Date(last.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
                                     </div>
-                                    <p class="text-sm text-gray-400 truncate">${last.text}</p>
+                                    <p class="text-xs text-gray-300 ml-4 mb-1"><span class="bg-gray-600 text-gray-200 px-1.5 py-0.5 rounded text-[10px] mr-1">${c.city}</span></p>
+                                    <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${last.text}</p>
                                 </button>`;
                             }).join('')
                         }
@@ -317,7 +340,7 @@
                         <button onclick="nav('provider_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
                         <div class="flex-1 min-w-0">
                             <h2 class="font-bold text-sm truncate">${state.activeChat.userEmail}</h2>
-                            <p class="text-xs text-green-400">Live Order</p>
+                            <p class="text-xs text-green-400 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live Order</p>
                         </div>
                     </div>
                     <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900">
@@ -332,8 +355,8 @@
                         }).join('')}
                     </div>
                     <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0">
-                        <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none">
-                        <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500"><i data-lucide="send" class="w-5 h-5"></i></button>
+                        <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white">
+                        <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
                     </div>`;
             }
 
@@ -343,4 +366,7 @@
     </script>
 </body>
 </html>
+
+
+
 
