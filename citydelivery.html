@@ -23,8 +23,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, arrayUnion, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -47,8 +47,14 @@
             chats: {},
             selectedCity: null,
             activeService: null,
+            activeChat: null,
+            activeMessages: [],
+            unsubscribeMessages: null,
             darkMode: localStorage.getItem('darkMode') === 'true',
-            msgInput: ''
+            msgInput: '',
+            // Login Form State
+            loginEmail: '',
+            loginPass: ''
         };
 
         if(state.darkMode) document.documentElement.classList.add('dark');
@@ -66,7 +72,6 @@
         });
 
         function subscribeServices() {
-            // Fetch all services. We filter by city in the render/UI logic.
             onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 if (state.view === 'loading') state.view = 'cities';
@@ -75,31 +80,90 @@
         }
 
         function subscribeChats() {
-            // Fetch chats where I am the customer
             const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
             onSnapshot(q, (snap) => {
                 const map = {};
-                snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
+                snap.forEach(d => {
+                    const data = d.data();
+                    map[data.serviceId] = {id: d.id, ...data};
+                });
                 state.chats = map;
-                if(state.view === 'chat') { render(); scrollToBottom(); }
+            });
+        }
+
+        function subscribeToMessages(chatId) {
+            const q = query(collection(db, `delivery_chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
+            return onSnapshot(q, (snap) => {
+                state.activeMessages = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if (state.view === 'chat') {
+                    renderMessages();
+                    scrollToBottom();
+                }
             });
         }
 
         // --- Actions ---
-        window.login = () => signInWithPopup(auth, new GoogleAuthProvider());
+        window.updateLogin = (field, val) => { state[field] = val; };
+        
+        window.loginEmail = async (e) => {
+            if(e) e.preventDefault();
+            if(!state.loginEmail || !state.loginPass) return alert("Please enter email and password");
+            try {
+                await signInWithEmailAndPassword(auth, state.loginEmail, state.loginPass);
+            } catch (err) {
+                alert("Login failed: " + err.message);
+            }
+        };
+
+        window.registerEmail = async () => {
+            if(!state.loginEmail || !state.loginPass) return alert("Please enter email and password");
+            try {
+                await createUserWithEmailAndPassword(auth, state.loginEmail, state.loginPass);
+                alert("Account created!");
+            } catch (err) {
+                alert("Registration failed: " + err.message);
+            }
+        };
+
+        window.loginGoogle = async () => {
+            try {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+            } catch (err) {
+                console.error(err);
+                alert("Google Login failed. Please try Email/Password.");
+            }
+        };
+
         window.logout = () => { signOut(auth); window.location.reload(); };
         window.setCity = (c) => { state.selectedCity = c; state.view = 'services'; render(); };
         
         window.openService = (id) => {
             state.activeService = state.services.find(s => s.id === id);
+            state.activeChat = state.chats[state.activeService.id] || null;
             state.view = 'chat';
             render();
-            scrollToBottom();
+            if (state.unsubscribeMessages) state.unsubscribeMessages();
+            state.activeMessages = [];
+            state.unsubscribeMessages = null;
+            if (state.activeChat) {
+                state.unsubscribeMessages = subscribeToMessages(state.activeChat.id);
+            } else {
+                renderMessages();
+            }
+            scrollToBottom(true);
         };
 
         window.goBack = () => {
-            if(state.view === 'chat') state.view = 'services';
-            else if(state.view === 'services') state.view = 'cities';
+            if (state.view === 'chat') {
+                if (state.unsubscribeMessages) state.unsubscribeMessages();
+                state.unsubscribeMessages = null;
+                state.activeMessages = [];
+                state.activeChat = null;
+                state.activeService = null;
+                state.view = 'services';
+            } else if (state.view === 'services') {
+                state.view = 'cities';
+            }
             render();
         };
 
@@ -114,54 +178,85 @@
         
         window.send = async () => {
             const txt = state.msgInput.trim();
-            if(!txt || !state.activeService) return;
-            state.msgInput = ''; render(); 
+            if (!txt || !state.activeService) return;
+            state.msgInput = '';
+            const inputEl = document.getElementById('msg-input');
+            if (inputEl) inputEl.value = '';
 
-            const chatId = `${state.user.uid}_${state.activeService.id}`;
-            const existingChat = state.chats[state.activeService.id];
-            
-            // Critical: Ensure we have the owner email to link to the Provider Panel
-            const ownerEmail = state.activeService.ownerEmail ? state.activeService.ownerEmail.toLowerCase() : '';
-
-            const msg = {
-                text: txt,
-                sender: state.user.uid,
-                timestamp: Date.now()
-            };
-
-            const chatRef = doc(db, 'delivery_chats', existingChat ? existingChat.id : chatId);
+            let chatId = state.activeChat ? state.activeChat.id : `\( {state.user.uid}_ \){state.activeService.id}`;
+            const chatRef = doc(db, 'delivery_chats', chatId);
+            const isNew = !state.activeChat;
 
             try {
-                if(existingChat) {
-                    await updateDoc(chatRef, { 
-                        messages: arrayUnion(msg), 
-                        lastUpdated: serverTimestamp() 
-                    });
-                } else {
-                    // Create new chat document
+                if (isNew) {
+                    const ownerEmail = state.activeService.ownerEmail ? state.activeService.ownerEmail.toLowerCase() : '';
                     await setDoc(chatRef, {
                         userId: state.user.uid,
                         userEmail: state.user.email,
                         serviceId: state.activeService.id,
                         serviceName: state.activeService.name,
-                        serviceOwnerEmail: ownerEmail, // This allows the provider to query this chat
+                        serviceOwnerEmail: ownerEmail,
                         city: state.activeService.city,
-                        messages: [msg],
                         createdAt: serverTimestamp(),
                         lastUpdated: serverTimestamp()
                     });
+                    state.activeChat = {
+                        id: chatId,
+                        userId: state.user.uid,
+                        userEmail: state.user.email,
+                        serviceId: state.activeService.id,
+                        serviceName: state.activeService.name,
+                        serviceOwnerEmail: ownerEmail,
+                        city: state.activeService.city
+                    };
+                    state.chats[state.activeService.id] = state.activeChat;
+                    state.unsubscribeMessages = subscribeToMessages(chatId);
                 }
+
+                const messagesRef = collection(db, `delivery_chats/${chatId}/messages`);
+                await addDoc(messagesRef, {
+                    text: txt,
+                    sender: state.user.uid,
+                    timestamp: serverTimestamp()
+                });
+
+                await updateDoc(chatRef, { lastUpdated: serverTimestamp() });
             } catch (e) {
                 console.error("Error sending message:", e);
                 alert("Failed to send. Please try again.");
             }
         };
 
-        function scrollToBottom() {
+        function scrollToBottom(force = false) {
             setTimeout(() => {
                 const el = document.getElementById('chat-scroll');
-                if(el) el.scrollTop = el.scrollHeight;
+                if (!el) return;
+                const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+                if (force || atBottom) {
+                    el.scrollTop = el.scrollHeight;
+                }
             }, 50);
+        }
+
+        function renderMessages() {
+            const messagesEl = document.getElementById('messages');
+            if (!messagesEl) return;
+            let html = '';
+            if (!state.activeMessages.length) {
+                html = '<div class="flex flex-col items-center justify-center mt-20 text-gray-400"><i data-lucide="message-square-dashed" class="w-12 h-12 mb-2 opacity-30"></i><p>Start chatting to place an order!</p></div>';
+            } else {
+                html = state.activeMessages.map(m => {
+                    const me = m.sender === state.user.uid;
+                    return `
+                        <div class="flex ${me ? 'justify-end' : 'justify-start'} mb-2">
+                            <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${me ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}">
+                                ${m.text}
+                            </div>
+                        </div>`;
+                }).join('');
+            }
+            messagesEl.innerHTML = html;
+            lucide.createIcons();
         }
 
         // --- Render ---
@@ -169,7 +264,6 @@
             const app = document.getElementById('app');
             let content = '';
 
-            // Header Component
             const header = (title, showBack) => `
                 <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
@@ -187,14 +281,29 @@
             } 
             else if (state.view === 'login') {
                 content = `
-                    <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900">
-                        <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400">
+                    <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
+                        <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 shrink-0">
                             <i data-lucide="shopping-bag" class="w-10 h-10"></i>
                         </div>
                         <h1 class="text-3xl font-bold mb-2 text-gray-800 dark:text-white">City Delivery</h1>
                         <p class="text-gray-500 dark:text-gray-400 mb-8">Order from your favorite local services instantly.</p>
-                        <button onclick="login()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95">
-                            <i data-lucide="log-in" class="w-5 h-5"></i> Continue with Google
+                        
+                        <div class="w-full space-y-3 mb-6">
+                            <input type="email" onchange="updateLogin('loginEmail', this.value)" placeholder="Email" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                            <input type="password" onchange="updateLogin('loginPass', this.value)" placeholder="Password" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                            <div class="flex gap-2">
+                                <button onclick="loginEmail()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">Login</button>
+                                <button onclick="registerEmail()" class="flex-1 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-bold transition">Register</button>
+                            </div>
+                        </div>
+
+                        <div class="relative w-full mb-6">
+                             <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
+                             <div class="relative flex justify-center text-sm"><span class="px-2 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span></div>
+                        </div>
+
+                        <button onclick="loginGoogle()" class="w-full py-3 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-bold flex items-center justify-center gap-3 transition dark:text-white">
+                            <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> Google
                         </button>
                     </div>`;
             }
@@ -224,7 +333,7 @@
                         ${list.map(s => `
                             <button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-95 animate-fade hover:shadow-md">
                                 <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border dark:border-gray-600">
-                                    ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
+                                    \( {s.logo ? `<img src=" \){s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 truncate">${s.name}</h3>
@@ -238,22 +347,13 @@
                     </div>`;
             }
             else if (state.view === 'chat') {
-                const msgs = (state.chats[state.activeService.id]?.messages || []);
                 content = `
                     ${header(state.activeService.name, true)}
                     <div id="chat-scroll" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-                        ${msgs.map(m => {
-                            const me = m.sender === state.user.uid;
-                            return `
-                                <div class="flex ${me ? 'justify-end' : 'justify-start'} mb-2 animate-fade">
-                                    <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${me ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}">
-                                        ${m.text}
-                                    </div>
-                                </div>`;
-                        }).join('') || '<div class="flex flex-col items-center justify-center mt-20 text-gray-400"><i data-lucide="message-square-dashed" class="w-12 h-12 mb-2 opacity-30"></i><p>Start chatting to place an order!</p></div>'}
+                        <div id="messages"></div>
                     </div>
                     <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                        <input value="${state.msgInput}" oninput="updateMsg(this.value)" onkeyup="if(event.key==='Enter') send()" type="text" placeholder="Type your order..." class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input id="msg-input" value="${state.msgInput}" oninput="updateMsg(this.value)" onkeyup="if(event.key==='Enter') send()" type="text" placeholder="Type your order..." class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button onclick="send()" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-transform shadow-lg shadow-blue-200 dark:shadow-none"><i data-lucide="send-horizontal" class="w-5 h-5"></i></button>
                     </div>`;
             }
@@ -263,9 +363,7 @@
         }
     </script>
 </body>
-</html>
-
-
+    </html>
 
 
 
