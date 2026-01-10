@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City Delivery</title>
+    <title>City Delivery Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
         .animate-enter { animation: enter 0.3s ease-out forwards; }
         @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-gray-100 flex justify-center h-screen overflow-hidden">
+<body class="bg-gray-100 dark:bg-black flex justify-center h-screen overflow-hidden transition-colors duration-300">
 
-    <div id="app" class="w-full max-w-md h-full bg-gray-50 flex flex-col shadow-2xl relative overflow-hidden">
+    <div id="app" class="w-full max-w-md h-full bg-gray-50 dark:bg-gray-900 flex flex-col shadow-2xl relative overflow-hidden transition-colors duration-300">
         <div class="flex items-center justify-center h-full">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -25,8 +31,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, arrayUnion, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, arrayUnion, setDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Configuration ---
         const firebaseConfig = {
@@ -48,10 +54,9 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            console.log("Firebase initialized successfully");
         } catch (error) {
-            console.error("Firebase initialization error:", error);
-            document.getElementById('app').innerHTML = `<div class="p-4 text-red-500 text-center">Error initializing app. Check console.<br>${error.message}</div>`;
+            console.error("Firebase Init Error:", error);
+            document.getElementById('app').innerHTML = `<div class="p-4 text-red-500 text-center">Error initializing. Check console.</div>`;
         }
 
         // --- State ---
@@ -63,39 +68,40 @@
             activeService: null,
             chats: {},
             isAdmin: false,
-            inputText: '' 
+            inputText: '',
+            darkMode: localStorage.getItem('deliveryApp_darkMode') === 'true'
         };
 
         const appContainer = document.getElementById('app');
         let unsubscribeServices = null;
         let unsubscribeChats = null;
 
-        // --- Auth Listener ---
+        // Apply dark mode immediately on load
+        if (state.darkMode) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // --- Auth Logic ---
         onAuthStateChanged(auth, (user) => {
             const previousUser = state.user?.uid;
             state.user = user;
             
             if (user) {
-                console.log("User logged in:", user.email || "Anonymous");
-                state.isAdmin = user.email === ADMIN_EMAIL;
+                // Fix: Case insensitive check
+                const email = user.email ? user.email.toLowerCase() : '';
+                state.isAdmin = email === ADMIN_EMAIL.toLowerCase();
                 
-                // If we were loading or logged out, go to main view
                 if (!previousUser) {
                     state.view = 'cities'; 
                 }
                 subscribeToData();
             } else {
-                console.log("User logged out");
                 cleanupListeners();
                 state.view = 'login';
                 state.services = [];
                 state.chats = {};
                 state.isAdmin = false;
             }
-            render();
-        }, (error) => {
-            console.error("Auth state change error:", error);
-            state.view = 'login'; // Fallback
             render();
         });
 
@@ -107,11 +113,9 @@
 
         function subscribeToData() {
             if (!state.user || !db) return;
-            if (unsubscribeServices || unsubscribeChats) return; // Prevent duplicates
+            if (unsubscribeServices || unsubscribeChats) return; 
 
-            console.log("Subscribing to Firestore data...");
-
-            // 1. SERVICES Listener (Matches rule: match /delivery_services/{serviceId})
+            // 1. Subscribe to Services
             try {
                 const servicesRef = collection(db, 'delivery_services');
                 unsubscribeServices = onSnapshot(servicesRef, (snapshot) => {
@@ -120,38 +124,51 @@
                 }, (error) => console.error("Services Error:", error));
             } catch (e) { console.error(e); }
 
-            // 2. CHATS Listener (Matches rule: match /delivery_chats/{chatId})
+            // 2. Subscribe to Chats
             try {
-                const chatsRef = collection(db, 'delivery_chats');
-                unsubscribeChats = onSnapshot(chatsRef, (snapshot) => {
+                let chatsQuery;
+                if (state.isAdmin) {
+                    chatsQuery = collection(db, 'delivery_chats');
+                } else {
+                    chatsQuery = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
+                }
+
+                unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
                     const chatData = {};
                     snapshot.docs.forEach(doc => {
                         const data = doc.data();
-                        // Filter in memory (Rules already protect data, but this keeps UI clean)
-                        if (data.userId === state.user.uid || state.isAdmin) {
-                            chatData[data.serviceId] = { id: doc.id, ...data };
-                        }
+                        chatData[data.serviceId] = { id: doc.id, ...data };
                     });
                     state.chats = chatData;
-                    if (state.view === 'chat') { render(); scrollToBottom(); }
+                    
+                    if (state.view === 'chat') {
+                        render(); 
+                        scrollToBottom();
+                    }
                 }, (error) => console.error("Chats Error:", error));
             } catch (e) { console.error(e); }
         }
 
         // --- Actions ---
         window.handleLogin = async () => {
-            try { 
-                await signInWithPopup(auth, new GoogleAuthProvider()); 
-            } 
-            catch (e) { 
-                console.warn("Google Sign-In failed:", e);
-                // await signInAnonymously(auth); // Optional fallback
-            }
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+            catch (e) { console.warn("Login failed", e); alert("Login failed. Check console."); }
         };
 
         window.handleLogout = async () => {
             cleanupListeners();
             await signOut(auth);
+        };
+
+        window.toggleDarkMode = () => {
+            state.darkMode = !state.darkMode;
+            localStorage.setItem('deliveryApp_darkMode', state.darkMode);
+            if (state.darkMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            render();
         };
 
         window.setView = (view) => { state.view = view; render(); };
@@ -183,14 +200,11 @@
             const existingChat = state.chats[state.activeService.id];
 
             try {
+                const chatRef = doc(db, 'delivery_chats', existingChat ? existingChat.id : chatId);
                 if (existingChat) {
-                    await updateDoc(doc(db, 'delivery_chats', existingChat.id), {
-                        messages: arrayUnion(message),
-                        lastUpdated: serverTimestamp()
-                    });
+                    await updateDoc(chatRef, { messages: arrayUnion(message), lastUpdated: serverTimestamp() });
                 } else {
-                    // Create new chat document
-                    await setDoc(doc(db, 'delivery_chats', chatId), {
+                    await setDoc(chatRef, {
                         userId: state.user.uid,
                         userEmail: state.user.email,
                         serviceId: state.activeService.id,
@@ -201,10 +215,7 @@
                         lastUpdated: serverTimestamp()
                     });
                 }
-            } catch (e) {
-                console.error("Send failed:", e);
-                alert("Error sending message. Check console.");
-            }
+            } catch (e) { console.error("Send failed:", e); alert("Could not send message."); }
         };
 
         window.addService = async (e) => {
@@ -216,18 +227,20 @@
             if (!name || !city) return;
 
             try {
-                // Add to 'delivery_services' collection
+                console.log("Attempting to add service as:", state.user.email);
+                
                 await addDoc(collection(db, 'delivery_services'), {
                     name, city, type,
                     createdAt: serverTimestamp(),
                     createdBy: state.user.email
                 });
-                alert('Service added!');
+                alert('Service added successfully!');
                 state.view = 'cities'; 
                 render();
             } catch (error) {
                 console.error("Error adding service:", error);
-                alert("Failed. Only Admin (simo.jibou@gmail.com) can add services.");
+                // Detailed error message for debugging
+                alert(`Failed to add service.\n\nError: ${error.message}\n\nLogged in as: ${state.user.email}\nAdmin Required: ${ADMIN_EMAIL}`);
             }
         };
 
@@ -244,27 +257,30 @@
 
             // 1. LOADING
             if (state.view === 'loading') {
-                content = `<div class="flex items-center justify-center h-full"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>`;
+                content = `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    </div>`;
             }
             // 2. LOGIN
             else if (state.view === 'login') {
                 content = `
-                    <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 animate-enter">
-                        <div class="bg-white p-8 rounded-2xl shadow-xl w-full text-center">
-                            <div class="bg-blue-100 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-                                <i data-lucide="truck" class="w-10 h-10 text-blue-600"></i>
+                    <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-6 animate-enter">
+                        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full text-center border dark:border-gray-700">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                                <i data-lucide="truck" class="w-10 h-10 text-blue-600 dark:text-blue-400"></i>
                             </div>
-                            <h1 class="text-2xl font-bold text-gray-800 mb-2">City Delivery</h1>
-                            <p class="text-gray-500 mb-8">Fast, reliable delivery in your city.</p>
-                            <button onclick="handleLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                                <i data-lucide="user" class="w-5 h-5"></i> Sign in to Order
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">City Delivery</h1>
+                            <p class="text-gray-500 dark:text-gray-400 mb-8">Fast, reliable delivery in your city.</p>
+                            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none">
+                                <i data-lucide="log-in" class="w-5 h-5"></i> Sign in with Google
                             </button>
                         </div>
                     </div>`;
             } else {
                 // 3. MAIN APP SHELL
                 let backBtn = state.view !== 'cities' ? 
-                    `<button onclick="setView('${state.view === 'chat' ? 'services' : 'cities'}')" class="p-1 hover:bg-gray-100 rounded-full mr-2"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-600"></i></button>` : '';
+                    `<button onclick="setView('${state.view === 'chat' ? 'services' : 'cities'}')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full mr-2 transition"><i data-lucide="arrow-left" class="w-5 h-5 text-gray-700 dark:text-gray-300"></i></button>` : '';
                 
                 let title = 'Select City';
                 if (state.view === 'services') title = state.selectedCity;
@@ -272,92 +288,133 @@
                 if (state.view === 'admin') title = 'Admin Dashboard';
 
                 let adminBtn = (state.view === 'cities' && state.isAdmin) ? 
-                    `<button onclick="setView('admin')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium mr-2">Admin</button>` : '';
+                    `<button onclick="setView('admin')" class="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-3 py-1.5 rounded-full font-bold mr-2 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition">Admin</button>` : '';
                 
+                let modeIcon = state.darkMode ? 'sun' : 'moon';
+
                 let header = `
-                    <div class="bg-white px-4 py-3 shadow-sm z-10 flex items-center justify-between">
+                    <div class="bg-white dark:bg-gray-800 px-4 py-4 shadow-sm border-b dark:border-gray-700 z-10 flex items-center justify-between sticky top-0 transition-colors duration-300">
                         <div class="flex items-center">
                             ${backBtn}
-                            <h1 class="font-bold text-lg text-gray-800 truncate max-w-[200px]">${title}</h1>
+                            <h1 class="font-bold text-lg text-gray-800 dark:text-white truncate max-w-[200px]">${title}</h1>
                         </div>
-                        <div class="flex items-center">
+                        <div class="flex items-center gap-1">
                             ${adminBtn}
-                            <button onclick="handleLogout()" class="text-gray-400 hover:text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                            <button onclick="toggleDarkMode()" class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-full transition"><i data-lucide="${modeIcon}" class="w-5 h-5"></i></button>
+                            <button onclick="handleLogout()" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-full transition"><i data-lucide="log-out" class="w-5 h-5"></i></button>
                         </div>
                     </div>`;
 
                 let body = '';
 
+                // CITIES VIEW
                 if (state.view === 'cities') {
                     const uniqueCities = [...new Set(state.services.map(s => s.city))].sort();
                     const list = uniqueCities.map(city => `
-                        <button onclick="selectCity('${city}')" class="w-full text-left bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition flex items-center justify-between group mb-3 animate-enter">
-                            <span class="font-medium text-gray-700 text-lg">${city}</span>
-                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>
-                        </button>`).join('') || `<div class="text-center py-10 text-gray-400">No cities added yet.</div>`;
-                    body = `<div class="p-4">${list}</div>`;
+                        <button onclick="selectCity('${city}')" class="w-full text-left bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition flex items-center justify-between group mb-3 animate-enter">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
+                                <span class="font-semibold text-gray-700 dark:text-gray-200 text-lg">${city}</span>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition"></i>
+                        </button>`).join('') || `
+                        <div class="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+                            <i data-lucide="map" class="w-12 h-12 mb-2 opacity-20"></i>
+                            <p>No cities available.</p>
+                        </div>`;
+                    body = `<div class="p-4 pb-20">${list}</div>`;
                 }
+                // SERVICES VIEW
                 else if (state.view === 'services') {
                     const svcs = state.services.filter(s => s.city === state.selectedCity);
                     const list = svcs.map(s => {
-                        let icon = 'truck', color = 'text-blue-500';
-                        if(s.type === 'food') { icon = 'utensils'; color = 'text-orange-500'; }
-                        if(s.type === 'grocery') { icon = 'shopping-bag'; color = 'text-green-500'; }
+                        let icon = 'truck', color = 'text-blue-500 dark:text-blue-400', bg = 'bg-blue-50 dark:bg-blue-900/20';
+                        if(s.type === 'food') { icon = 'utensils'; color = 'text-orange-500 dark:text-orange-400'; bg = 'bg-orange-50 dark:bg-orange-900/20'; }
+                        if(s.type === 'grocery') { icon = 'shopping-bag'; color = 'text-green-500 dark:text-green-400'; bg = 'bg-green-50 dark:bg-green-900/20'; }
                         return `
-                        <div onclick="selectService('${s.id}')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer flex items-center gap-4 mb-3 animate-enter">
-                            <div class="bg-gray-50 p-3 rounded-full"><i data-lucide="${icon}" class="w-6 h-6 ${color}"></i></div>
-                            <div class="flex-1"><h3 class="font-bold text-gray-800">${s.name}</h3><p class="text-xs text-gray-500">Tap to order</p></div>
+                        <div onclick="selectService('${s.id}')" class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition cursor-pointer flex items-center gap-4 mb-3 animate-enter">
+                            <div class="${bg} p-3 rounded-full"><i data-lucide="${icon}" class="w-6 h-6 ${color}"></i></div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-lg">${s.name}</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">${s.type}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-2 rounded-full text-gray-400 dark:text-gray-300">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            </div>
                         </div>`;
-                    }).join('') || `<div class="text-center py-10 text-gray-400">No services in ${state.selectedCity}.</div>`;
+                    }).join('') || `<div class="text-center py-10 text-gray-400 dark:text-gray-500">No services in this city.</div>`;
                     body = `<div class="p-4">${list}</div>`;
                 }
+                // ADMIN VIEW
                 else if (state.view === 'admin') {
                     body = `
                     <div class="p-4 animate-enter">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-purple-100">
-                            <h2 class="font-bold text-lg mb-4 text-purple-800 flex items-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> New Service</h2>
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-gray-700">
+                            <h2 class="font-bold text-xl mb-6 text-purple-800 dark:text-purple-400 flex items-center gap-2"><i data-lucide="plus-circle" class="w-6 h-6"></i> New Service</h2>
                             <form onsubmit="addService(event)" class="space-y-4">
-                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Name</label>
-                                <input id="svcName" type="text" placeholder="e.g. Pizza Hut" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" required></div>
-                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">City</label>
-                                <input id="svcCity" type="text" placeholder="e.g. New York" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500" required></div>
-                                <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Type</label>
-                                <select id="svcType" class="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                    <option value="generic">Generic</option><option value="food">Food</option><option value="grocery">Grocery</option>
-                                </select></div>
-                                <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">Add</button>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 ml-1">Service Name</label>
+                                    <input id="svcName" type="text" placeholder="e.g. Pizza Hut" class="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 ml-1">City</label>
+                                    <input id="svcCity" type="text" placeholder="e.g. New York" class="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 ml-1">Category</label>
+                                    <div class="relative">
+                                        <select id="svcType" class="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none transition">
+                                            <option value="generic">📦 Delivery</option>
+                                            <option value="food">🍕 Food</option>
+                                            <option value="grocery">🛒 Grocery</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-purple-600 text-white py-3.5 rounded-xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg shadow-purple-200 dark:shadow-none mt-2">Add Service</button>
                             </form>
                         </div>
                     </div>`;
                 }
+                // CHAT VIEW
                 else if (state.view === 'chat') {
                     const msgs = (state.activeService && state.chats[state.activeService.id]) ? state.chats[state.activeService.id].messages : [];
                     const msgList = msgs.map(m => {
                         const isMe = m.sender === state.user.uid;
-                        return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
-                            <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}">${m.text}</div>
+                        const time = new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3 animate-enter">
+                            <div class="max-w-[85%]">
+                                <div class="p-3.5 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-bl-none'}">
+                                    ${m.text}
+                                </div>
+                                <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-1 px-1 ${isMe ? 'text-right' : 'text-left'}">${time}</div>
+                            </div>
                         </div>`;
-                    }).join('') || `<div class="text-center p-4 text-gray-400 text-sm">Start your order...</div>`;
+                    }).join('') || `
+                        <div class="flex flex-col items-center justify-center h-full text-center p-8 opacity-50 dark:opacity-30">
+                            <i data-lucide="message-square" class="w-12 h-12 text-gray-300 mb-2"></i>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Start your order with ${state.activeService.name}...</p>
+                        </div>`;
 
                     body = `
-                    <div class="flex flex-col h-full bg-gray-100">
+                    <div class="flex flex-col h-full bg-slate-100 dark:bg-gray-900/50">
                         <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            <div class="text-center text-xs text-gray-400 my-4">Ordering from ${state.activeService.name}</div>
                             ${msgList}
                         </div>
-                        <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
+                        <div class="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 pb-safe transition-colors duration-300">
                             <input id="chatInput" type="text" value="${state.inputText}" 
                                 oninput="updateInput(this.value)" 
                                 onkeydown="if(event.key==='Enter') sendMessage()"
-                                placeholder="Type order..." 
-                                class="flex-1 bg-gray-100 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            <button onclick="sendMessage()" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition shadow-md">
+                                placeholder="Type your order..." 
+                                class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 p-3.5 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition">
+                            <button onclick="sendMessage()" class="bg-blue-600 text-white p-3.5 rounded-full hover:bg-blue-700 active:scale-90 transition shadow-md disabled:opacity-50" ${!state.inputText.trim() ? 'disabled' : ''}>
                                 <i data-lucide="send" class="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>`;
                 }
-                content = header + `<div class="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 relative h-full">` + body + `</div>`;
+
+                content = header + `<div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-gray-900 relative h-full transition-colors duration-300">` + body + `</div>`;
             }
 
             appContainer.innerHTML = content;
@@ -376,6 +433,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
