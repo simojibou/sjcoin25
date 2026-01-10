@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-up { animation: up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center">
+
+    <div id="root" class="w-full max-w-md h-full sm:h-[90vh] bg-gray-800 sm:rounded-3xl shadow-2xl relative flex flex-col overflow-hidden ring-1 ring-white/10"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1"
+        };
+
+        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const state = {
+            user: null,
+            role: 'loading', // 'loading', 'admin', 'provider', 'guest'
+            view: 'login', // 'login', 'admin_list', 'admin_edit', 'provider_list', 'chat'
+            services: [],
+            chats: [],
+            activeChat: null,
+            editId: null,
+            form: { email: '', pass: '' },
+            msgInput: ''
+        };
+
+        // --- Logic ---
+        onAuthStateChanged(auth, async (user) => {
+            state.user = user;
+            if(!user) {
+                state.role = 'guest';
+                state.view = 'login';
+                render();
+                return;
+            }
+
+            // Determine Role
+            if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                state.role = 'admin';
+                state.view = 'admin_list';
+                subscribeServices();
+            } else {
+                state.role = 'provider'; // Tentative, verified by service check
+                subscribeServices(); // We need services to know if this user owns one
+            }
+        });
+
+        let unsubServices, unsubChats;
+
+        function subscribeServices() {
+            if(unsubServices) unsubServices();
+            unsubServices = onSnapshot(collection(db, 'delivery_services'), (snap) => {
+                state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                if (state.role === 'provider') {
+                    const myService = state.services.find(s => s.ownerEmail?.toLowerCase() === state.user.email.toLowerCase());
+                    if (myService) {
+                        state.view = state.view === 'chat' ? 'chat' : 'provider_list';
+                        subscribeChats(state.user.email.toLowerCase());
+                    } else {
+                        // User logged in but is not an owner of any service
+                        alert("No service assigned to this email.");
+                        logout();
+                    }
+                }
+                render();
+            });
+        }
+
+        function subscribeChats(ownerEmail) {
+            if(unsubChats) unsubChats();
+            // Admin sees all? Or provider only sees theirs? Let's make this Panel for providers mostly. 
+            // If admin wants to see chats, they can check database. This panel focuses on Admin managing services.
+            
+            const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            unsubChats = onSnapshot(q, (snap) => {
+                state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.lastUpdated - a.lastUpdated);
+                if(state.view === 'chat' && state.activeChat) {
+                    const updated = state.chats.find(c => c.id === state.activeChat.id);
+                    if(updated) state.activeChat = updated;
+                    render(); 
+                    scrollChat();
+                } else if (state.view === 'provider_list') {
+                    render();
+                }
+            });
+        }
+
+        // --- Actions ---
+        window.input = (f, v) => state.form[f] = v;
+        window.loginEmail = async (e) => {
+            e.preventDefault();
+            try { await signInWithEmailAndPassword(auth, state.form.email, state.form.pass); }
+            catch(err) { alert(err.message); }
+        };
+        window.register = async () => {
+            if(!confirm("Register new account with these credentials?")) return;
+            try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); }
+            catch(err) { alert(err.message); }
+        };
+        window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); // For Admin
+        window.logout = () => signOut(auth);
+
+        // Admin Actions
+        window.saveService = async (e) => {
+            e.preventDefault();
+            const form = new FormData(e.target);
+            const data = {
+                name: form.get('name'),
+                city: form.get('city'),
+                type: form.get('type'),
+                ownerEmail: form.get('ownerEmail').toLowerCase().trim(),
+                assignedPassword: form.get('assignedPassword'),
+                logo: form.get('logo'),
+                lastUpdated: serverTimestamp()
+            };
+
+            if(state.editId) {
+                await updateDoc(doc(db, 'delivery_services', state.editId), data);
+            } else {
+                data.createdAt = serverTimestamp();
+                await addDoc(collection(db, 'delivery_services'), data);
+            }
+            state.editId = null;
+            state.view = 'admin_list';
+            render();
+        };
+        window.delService = async (id) => {
+            if(confirm("Delete service?")) await deleteDoc(doc(db, 'delivery_services', id));
+        };
+        window.editService = (id) => {
+            state.editId = id;
+            state.view = 'admin_edit';
+            render();
+        };
+        window.nav = (v) => { state.view = v; state.editId = null; render(); };
+
+        // Provider Actions
+        window.openChat = (id) => {
+            state.activeChat = state.chats.find(c => c.id === id);
+            state.view = 'chat';
+            render();
+            scrollChat();
+        };
+        window.chatInput = (v) => state.msgInput = v;
+        window.reply = async () => {
+            const txt = state.msgInput.trim();
+            if(!txt || !state.activeChat) return;
+            
+            const msg = {
+                text: txt,
+                sender: state.user.uid, // Provider ID
+                timestamp: Date.now()
+            };
+            
+            state.msgInput = '';
+            // Optimistic Update
+            state.activeChat.messages.push(msg);
+            render(); scrollChat();
+
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), {
+                messages: arrayUnion(msg),
+                lastUpdated: serverTimestamp()
+            });
+        };
+
+        function scrollChat() {
+            setTimeout(() => {
+                const el = document.getElementById('msgs');
+                if(el) el.scrollTop = el.scrollHeight;
+            }, 50);
+        }
+
+        // --- Render ---
+        function render() {
+            const root = document.getElementById('root');
+            let content = '';
+
+            // Views
+            if (state.view === 'login') {
+                content = `
+                    <div class="flex flex-col items-center justify-center h-full p-8 animate-up">
+                        <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-900/50">
+                            <i data-lucide="lock" class="w-8 h-8 text-white"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold mb-1">Delivery Panel</h2>
+                        <p class="text-gray-400 mb-8 text-sm">Staff & Admin Access Only</p>
+
+                        <form onsubmit="loginEmail(event)" class="w-full space-y-4">
+                            <input onchange="input('email',this.value)" type="email" placeholder="Email" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none" required>
+                            <input onchange="input('pass',this.value)" type="password" placeholder="Password" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none" required>
+                            <div class="flex gap-2">
+                                <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition">Login</button>
+                                <button type="button" onclick="register()" class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition">Register</button>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-8 pt-8 border-t border-gray-700 w-full">
+                             <button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 transition">
+                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login
+                             </button>
+                        </div>
+                    </div>`;
+            }
+            else if (state.view === 'admin_list') {
+                content = `
+                    <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
+                        <h2 class="font-bold text-lg">Admin Dashboard</h2>
+                        <button onclick="logout()" class="text-red-400"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        <div class="grid gap-3">
+                            <button onclick="nav('admin_edit')" class="w-full p-4 border-2 border-dashed border-gray-600 rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-400 hover:bg-purple-400/10 transition flex items-center justify-center gap-2">
+                                <i data-lucide="plus" class="w-5 h-5"></i> Add New Service
+                            </button>
+                            ${state.services.map(s => `
+                                <div class="bg-gray-700/50 p-4 rounded-xl border border-white/5 flex items-center justify-between group">
+                                    <div>
+                                        <h3 class="font-bold">${s.name}</h3>
+                                        <p class="text-xs text-gray-400">${s.city} • ${s.ownerEmail}</p>
+                                        <p class="text-xs text-purple-400 mt-1">Pass: ${s.assignedPassword || 'N/A'}</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="editService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-blue-400 transition"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                        <button onclick="delService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-red-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+            else if (state.view === 'admin_edit') {
+                const s = state.editId ? state.services.find(i => i.id === state.editId) : {};
+                content = `
+                    <div class="h-16 flex items-center gap-4 px-6 bg-gray-800 border-b border-white/5 shrink-0">
+                        <button onclick="nav('admin_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <h2 class="font-bold text-lg">${state.editId ? 'Edit' : 'New'} Service</h2>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 hide-scrollbar">
+                        <form onsubmit="saveService(event)" class="space-y-4">
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Name</label><input name="name" value="${s.name||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">City</label><input name="city" value="${s.city||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Type</label>
+                                <select name="type" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none">
+                                    <option value="food" ${s.type==='food'?'selected':''}>Food</option>
+                                    <option value="grocery" ${s.type==='grocery'?'selected':''}>Grocery</option>
+                                    <option value="delivery" ${s.type==='delivery'?'selected':''}>Delivery</option>
+                                </select>
+                            </div>
+                            <div class="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl space-y-3">
+                                <h3 class="text-sm font-bold text-purple-400">Provider Login</h3>
+                                <div><label class="text-xs uppercase font-bold text-gray-500">Owner Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                                <div><label class="text-xs uppercase font-bold text-gray-500">Assigned Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
+                            </div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none"></div>
+                            
+                            <button class="w-full py-4 bg-purple-600 rounded-xl font-bold hover:bg-purple-500 transition shadow-lg shadow-purple-900/50">Save Service</button>
+                        </form>
+                    </div>`;
+            }
+            else if (state.view === 'provider_list') {
+                content = `
+                    <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
+                        <div>
+                            <h2 class="font-bold text-lg">Incoming Orders</h2>
+                            <p class="text-xs text-gray-400">${state.user.email}</p>
+                        </div>
+                        <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        ${state.chats.length === 0 ? 
+                            `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2"></i><p>No active orders</p></div>` : 
+                            state.chats.map(c => {
+                                const last = c.messages[c.messages.length-1];
+                                return `
+                                <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="font-bold text-white text-sm">${c.userEmail}</span>
+                                        <span class="text-[10px] text-gray-400">${new Date(last.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-400 truncate">${last.text}</p>
+                                </button>`;
+                            }).join('')
+                        }
+                    </div>`;
+            }
+            else if (state.view === 'chat') {
+                const msgs = state.activeChat.messages || [];
+                content = `
+                    <div class="h-16 flex items-center gap-4 px-4 bg-gray-800 border-b border-white/5 shrink-0">
+                        <button onclick="nav('provider_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <div class="flex-1 min-w-0">
+                            <h2 class="font-bold text-sm truncate">${state.activeChat.userEmail}</h2>
+                            <p class="text-xs text-green-400">Live Order</p>
+                        </div>
+                    </div>
+                    <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900">
+                        ${msgs.map(m => {
+                            const isMe = m.sender === state.user.uid;
+                            return `
+                                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
+                                    <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">
+                                        ${m.text}
+                                    </div>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0">
+                        <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none">
+                        <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500"><i data-lucide="send" class="w-5 h-5"></i></button>
+                    </div>`;
+            }
+
+            root.innerHTML = content;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
+
