@@ -195,8 +195,9 @@
             const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
 
             try {
-                // Check if chat document exists first
-                const chatSnapshot = await getDoc(chatDocRef);
+                // FIXED: We check our local state to see if the chat exists. 
+                // Calling getDoc() on a non-existent document will fail due to Firestore Security Rules.
+                const existingChat = state.chats[state.activeService.id];
                 const batch = writeBatch(db);
 
                 // 1. Prepare Message
@@ -210,7 +211,7 @@
                 // 2. Create or Update Chat Metadata
                 const ownerEmail = state.activeService.ownerEmail || '';
 
-                if (!chatSnapshot.exists()) {
+                if (!existingChat) {
                      batch.set(chatDocRef, {
                         userId: state.user.uid,
                         userEmail: state.user.email || 'anon',
