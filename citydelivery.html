@@ -296,17 +296,38 @@
 
         // --- Render Functions (Strings) ---
 
-        const header = (title, showBack) => `
-            <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
+        const header = (title, showBack) => {
+            const user = state.user;
+            // Generate user profile HTML if on root screen (no back button) and user exists
+            const showProfile = !showBack && user;
+            
+            const leftSection = showProfile ? `
+                <div class="flex items-center gap-3 overflow-hidden">
+                    ${user.photoURL 
+                        ? `<img src="${user.photoURL}" alt="Profile" class="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 object-cover shrink-0">` 
+                        : `<div class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><i data-lucide="user" class="w-5 h-5"></i></div>`
+                    }
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 leading-tight">Welcome</span>
+                        <span class="font-bold text-sm truncate text-gray-800 dark:text-white leading-tight">${(user.displayName || 'User').split(' ')[0]}</span>
+                    </div>
+                </div>
+            ` : `
                 <div class="flex items-center gap-3 min-w-0">
                     ${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>` : ''}
                     <h1 class="font-bold text-lg truncate text-gray-800 dark:text-white">${title}</h1>
                 </div>
+            `;
+
+            return `
+            <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
+                ${leftSection}
                 <div class="flex gap-2 shrink-0">
                     <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>
                     <button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
                 </div>
             </div>`;
+        };
 
         function renderLoading() {
             return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`;
