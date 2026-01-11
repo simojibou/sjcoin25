@@ -23,6 +23,8 @@
         .animate-fade { animation: fade 0.3s ease-out forwards; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         input { font-size: 16px !important; } 
+        /* RTL support for icons */
+        [dir="rtl"] .rtl-flip { transform: scaleX(-1); }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
@@ -52,18 +54,120 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- Translations ---
+        const translations = {
+            en: {
+                loginTitle: "Profile Login",
+                loginDesc: "Sign in to view your SJ Code and rewards.",
+                loginBtn: "Sign in with Google",
+                profileTitle: "My Profile",
+                freeDelivery: "Free Delivery Active",
+                standard: "Standard Account",
+                codeTitle: "My Affiliate Code",
+                copy: "Copy",
+                copied: "Copied",
+                share: "Share with friends",
+                referred: "Referred",
+                historyTitle: "Referral History",
+                noHistory: "No referrals yet.",
+                historyDesc: "Share your code to earn history!",
+                redeemTitle: "Redeem Code",
+                redeemPlaceholder: "Enter SJ-CODE",
+                apply: "Apply",
+                oneTime: "You can only redeem one code per account.",
+                alreadyRedeemed: "You have already redeemed a code.",
+                signOut: "Sign Out",
+                used: "Used",
+                codeRedeemed: "Code Redeemed",
+                alertEnter: "Please enter a code",
+                alertUsed: "You have already used a referral code.",
+                alertOwn: "You cannot use your own code.",
+                alertInvalid: "Invalid Code Format (Must start with SJ-)",
+                alertNotFound: "Invalid Code: No user found with this code.",
+                alertSuccess: "Code Redeemed! Free Delivery Activated."
+            },
+            fr: {
+                loginTitle: "Connexion Profil",
+                loginDesc: "Connectez-vous pour voir votre code SJ et vos récompenses.",
+                loginBtn: "Se connecter avec Google",
+                profileTitle: "Mon Profil",
+                freeDelivery: "Livraison Gratuite",
+                standard: "Compte Standard",
+                codeTitle: "Mon Code Affilié",
+                copy: "Copier",
+                copied: "Copié",
+                share: "Partager avec des amis",
+                referred: "Parrainé(s)",
+                historyTitle: "Historique",
+                noHistory: "Aucun parrainage.",
+                historyDesc: "Partagez votre code !",
+                redeemTitle: "Échanger un Code",
+                redeemPlaceholder: "Entrer SJ-CODE",
+                apply: "Appliquer",
+                oneTime: "Un seul code par compte.",
+                alreadyRedeemed: "Code déjà échangé.",
+                signOut: "Se Déconnecter",
+                used: "Utilisé",
+                codeRedeemed: "Code Échangé",
+                alertEnter: "Veuillez entrer un code",
+                alertUsed: "Vous avez déjà utilisé un code.",
+                alertOwn: "Vous ne pouvez pas utiliser votre propre code.",
+                alertInvalid: "Format invalide (Doit commencer par SJ-)",
+                alertNotFound: "Code invalide : Aucun utilisateur trouvé.",
+                alertSuccess: "Code échangé ! Livraison gratuite activée."
+            },
+            ar: {
+                loginTitle: "تسجيل الدخول",
+                loginDesc: "سجل الدخول لعرض كود SJ والمكافآت.",
+                loginBtn: "تواصل مع جوجل",
+                profileTitle: "ملفي الشخصي",
+                freeDelivery: "توصيل مجاني",
+                standard: "حساب قياسي",
+                codeTitle: "كود الإحالة",
+                copy: "نسخ",
+                copied: "تم النسخ",
+                share: "شارك مع الأصدقاء",
+                referred: "إحالات",
+                historyTitle: "السجل",
+                noHistory: "لا توجد إحالات.",
+                historyDesc: "شارك الكود للكسب!",
+                redeemTitle: "استبدال الكود",
+                redeemPlaceholder: "أدخل كود SJ",
+                apply: "تطبيق",
+                oneTime: "كود واحد لكل حساب.",
+                alreadyRedeemed: "تم استبدال الكود مسبقاً.",
+                signOut: "خروج",
+                used: "مستخدم",
+                codeRedeemed: "تم الاستبدال",
+                alertEnter: "الرجاء إدخال كود",
+                alertUsed: "لقد استخدمت كود إحالة بالفعل.",
+                alertOwn: "لا يمكنك استخدام كودك الخاص.",
+                alertInvalid: "تنسيق غير صالح (يجب أن يبدأ بـ SJ-)",
+                alertNotFound: "كود غير صالح: المستخدم غير موجود.",
+                alertSuccess: "تم تفعيل التوصيل المجاني!"
+            }
+        };
+
         const state = {
             user: null,
             profile: null,
-            referrals: [], // Stores list of users who used my code
+            referrals: [],
             darkMode: localStorage.getItem('darkMode') === 'true',
+            language: localStorage.getItem('language') || 'en',
             listeners: {
                 profile: null,
                 referrals: null
             }
         };
 
+        // Init Direction & Theme
         if(state.darkMode) document.documentElement.classList.add('dark');
+        document.documentElement.lang = state.language;
+        document.documentElement.dir = state.language === 'ar' ? 'rtl' : 'ltr';
+
+        function t(key) {
+            return translations[state.language][key] || key;
+        }
 
         // --- Auth Logic ---
         onAuthStateChanged(auth, async (user) => {
@@ -80,12 +184,9 @@
             const userRef = doc(db, 'users', user.uid);
             try {
                 const snap = await getDoc(userRef);
-                
-                // Logic to generate code based on UID
                 const newCode = 'SJ-' + user.uid.slice(-5).toUpperCase();
 
                 if (!snap.exists()) {
-                    // Create new profile for brand new users
                     await setDoc(userRef, {
                         uid: user.uid,
                         displayName: user.displayName || 'User',
@@ -97,15 +198,12 @@
                         createdAt: serverTimestamp()
                     });
                 } else {
-                    // FIX: Update existing legacy users who might miss code or photo
                     const data = snap.data();
                     const updates = {};
-                    
                     if (!data.myCode) updates.myCode = newCode;
                     if (data.photoURL !== user.photoURL) updates.photoURL = user.photoURL;
                     if (data.displayName !== user.displayName) updates.displayName = user.displayName;
                     
-                    // If any updates needed, apply them
                     if (Object.keys(updates).length > 0) {
                         await updateDoc(userRef, updates);
                     }
@@ -128,11 +226,9 @@
 
         function subscribeReferrals(myCode) {
             if(state.listeners.referrals) state.listeners.referrals();
-            // Query users who have 'referredByCode' equal to my code
             const q = query(collection(db, 'users'), where('referredByCode', '==', myCode));
             state.listeners.referrals = onSnapshot(q, (snap) => {
                 state.referrals = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                // Sort by redeemedAt locally since we didn't index
                 state.referrals.sort((a,b) => (b.redeemedAt?.seconds || 0) - (a.redeemedAt?.seconds || 0));
                 renderProfile();
             });
@@ -145,32 +241,40 @@
         };
 
         window.logout = () => {
-            // Unsub listeners
             if(state.listeners.profile) state.listeners.profile();
             if(state.listeners.referrals) state.listeners.referrals();
             signOut(auth);
         };
 
+        window.setLanguage = (lang) => {
+            state.language = lang;
+            localStorage.setItem('language', lang);
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            // Re-render current view
+            if(state.user) renderProfile();
+            else renderLogin();
+        }
+
         window.redeemCode = async () => {
             const input = document.getElementById('redeem-input');
             const code = input.value.trim().toUpperCase();
             
-            if(!code) return alert("Please enter a code");
-            if(state.profile.redeemedReferral) return alert("You have already used a referral code.");
-            if(code === state.profile.myCode) return alert("You cannot use your own code.");
-            if(!code.startsWith('SJ-')) return alert("Invalid Code Format (Must start with SJ-)");
+            if(!code) return alert(t('alertEnter'));
+            if(state.profile.redeemedReferral) return alert(t('alertUsed'));
+            if(code === state.profile.myCode) return alert(t('alertOwn'));
+            if(!code.startsWith('SJ-')) return alert(t('alertInvalid'));
 
             try {
-                // 1. Verify code exists in DB
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('myCode', '==', code));
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    return alert("Invalid Code: No user found with this code.");
+                    return alert(t('alertNotFound'));
                 }
 
-                // 2. Apply Redemption
                 await updateDoc(doc(db, 'users', state.user.uid), {
                     redeemedReferral: true,
                     freeDeliveryAvailable: true,
@@ -178,7 +282,7 @@
                     redeemedAt: serverTimestamp()
                 });
                 
-                alert("Code Redeemed! Free Delivery Activated.");
+                alert(t('alertSuccess'));
                 input.value = '';
             } catch(e) {
                 console.error(e);
@@ -191,7 +295,7 @@
                 navigator.clipboard.writeText(state.profile.myCode);
                 const btn = document.getElementById('copy-btn');
                 const original = btn.innerHTML;
-                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Copied';
+                btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> ${t('copied')}`;
                 lucide.createIcons();
                 setTimeout(() => {
                     btn.innerHTML = original;
@@ -204,21 +308,36 @@
             state.darkMode = !state.darkMode;
             localStorage.setItem('darkMode', state.darkMode);
             document.documentElement.classList.toggle('dark');
-            renderProfile();
+            if(state.user) renderProfile(); else renderLogin();
         };
 
         // --- Renders ---
+        function renderLanguageSelector() {
+            return `
+            <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                <button onclick="setLanguage('en')" class="px-2 py-1 rounded-md text-xs font-bold ${state.language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">EN</button>
+                <button onclick="setLanguage('fr')" class="px-2 py-1 rounded-md text-xs font-bold ${state.language === 'fr' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">FR</button>
+                <button onclick="setLanguage('ar')" class="px-2 py-1 rounded-md text-xs font-bold ${state.language === 'ar' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">AR</button>
+            </div>`;
+        }
+
         function renderLogin() {
             document.getElementById('app').innerHTML = `
+                <!-- Login Header for Lang Switch -->
+                <div class="absolute top-4 right-4 z-20 flex gap-2">
+                    ${renderLanguageSelector()}
+                    <button onclick="toggleTheme()" class="p-2 rounded-full bg-gray-100 dark:bg-gray-800"><i data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-4 h-4 text-gray-600 dark:text-gray-300"></i></button>
+                </div>
+
                 <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900">
                     <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400">
                         <i data-lucide="user-circle" class="w-10 h-10"></i>
                     </div>
-                    <h1 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Profile Login</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-8">Sign in to view your SJ Code and rewards.</p>
+                    <h1 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">${t('loginTitle')}</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-8">${t('loginDesc')}</p>
                     <button onclick="loginGoogle()" class="w-full max-w-xs py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm">
                         <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> 
-                        <span>Sign in with Google</span>
+                        <span>${t('loginBtn')}</span>
                     </button>
                 </div>`;
             lucide.createIcons();
@@ -232,12 +351,13 @@
                 <!-- Header -->
                 <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
-                        <a href="https://simojibou.github.io/sjcoin25/citydelivery.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        <a href="https://simojibou.github.io/sjcoin25/citydelivery.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rtl-flip">
                             <i data-lucide="arrow-left" class="w-5 h-5"></i>
                         </a>
-                        <h1 class="font-bold text-lg text-gray-800 dark:text-white">My Profile</h1>
+                        <h1 class="font-bold text-lg text-gray-800 dark:text-white">${t('profileTitle')}</h1>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center">
+                        ${renderLanguageSelector()}
                         <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>
                     </div>
                 </div>
@@ -255,9 +375,9 @@
                         
                         ${p.freeDeliveryAvailable ? 
                             `<div class="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-bold flex items-center gap-2 ring-1 ring-emerald-500/20">
-                                <i data-lucide="sparkles" class="w-4 h-4"></i> Free Delivery Active
+                                <i data-lucide="sparkles" class="w-4 h-4"></i> ${t('freeDelivery')}
                             </div>` : 
-                            `<div class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-full text-sm font-bold">Standard Account</div>`
+                            `<div class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-full text-sm font-bold">${t('standard')}</div>`
                         }
                     </div>
 
@@ -267,34 +387,34 @@
                         
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="text-blue-100 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                <i data-lucide="qr-code" class="w-4 h-4"></i> My Affiliate Code
+                                <i data-lucide="qr-code" class="w-4 h-4"></i> ${t('codeTitle')}
                             </h3>
                         </div>
 
                         <div class="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 mb-3">
                             <code class="text-2xl font-mono font-bold tracking-widest text-white shadow-sm">${p.myCode || '...'}</code>
                             <button id="copy-btn" onclick="copyCode()" class="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-50 transition flex items-center gap-1 shadow-sm">
-                                <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                                <i data-lucide="copy" class="w-3 h-3"></i> ${t('copy')}
                             </button>
                         </div>
                         
                         <div class="flex items-center justify-between text-xs text-blue-200 pt-2 border-t border-white/10">
-                            <span>Share with friends</span>
-                            <span class="bg-white/20 px-2 py-0.5 rounded text-white font-medium">${refs.length} Referred</span>
+                            <span>${t('share')}</span>
+                            <span class="bg-white/20 px-2 py-0.5 rounded text-white font-medium">${refs.length} ${t('referred')}</span>
                         </div>
                     </div>
                     
                     <!-- Referral History List -->
                     <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-4 animate-fade">
                         <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
-                            <i data-lucide="users" class="w-4 h-4 text-blue-500"></i> Referral History
+                            <i data-lucide="users" class="w-4 h-4 text-blue-500"></i> ${t('historyTitle')}
                         </h3>
                         
                         <div class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scroll">
                             ${refs.length === 0 ? `
                                 <div class="text-center py-4 text-gray-400 text-sm">
-                                    <p>No referrals yet.</p>
-                                    <p class="text-xs mt-1">Share your code to earn history!</p>
+                                    <p>${t('noHistory')}</p>
+                                    <p class="text-xs mt-1">${t('historyDesc')}</p>
                                 </div>
                             ` : refs.map(ref => `
                                 <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700/50">
@@ -304,12 +424,12 @@
                                         </div>
                                         <div>
                                             <p class="text-sm font-bold text-gray-800 dark:text-gray-200">${ref.displayName || 'User'}</p>
-                                            <p class="text-[10px] text-gray-400">Code Redeemed</p>
+                                            <p class="text-[10px] text-gray-400">${t('codeRedeemed')}</p>
                                         </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="flex items-center gap-1 text-green-500 text-xs font-bold">
-                                            <i data-lucide="check-circle" class="w-3 h-3"></i> Used
+                                            <i data-lucide="check-circle" class="w-3 h-3"></i> ${t('used')}
                                         </div>
                                     </div>
                                 </div>
@@ -321,24 +441,24 @@
                     <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 animate-fade">
                         <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                             <div class="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-lg text-purple-600 dark:text-purple-400"><i data-lucide="gift" class="w-5 h-5"></i></div>
-                            Redeem Code
+                            ${t('redeemTitle')}
                         </h3>
                         ${!p.redeemedReferral ? `
                             <div class="flex gap-2">
-                                <input id="redeem-input" type="text" placeholder="Enter SJ-CODE" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white transition-all">
-                                <button onclick="redeemCode()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 rounded-xl transition shadow-lg shadow-purple-500/20 active:scale-95">Apply</button>
+                                <input id="redeem-input" type="text" placeholder="${t('redeemPlaceholder')}" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white transition-all">
+                                <button onclick="redeemCode()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 rounded-xl transition shadow-lg shadow-purple-500/20 active:scale-95">${t('apply')}</button>
                             </div>
-                            <p class="text-xs text-gray-400 mt-2 ml-1">You can only redeem one code per account.</p>
+                            <p class="text-xs text-gray-400 mt-2 ml-1">${t('oneTime')}</p>
                         ` : `
                             <div class="flex items-center gap-3 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
                                 <div class="bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full p-1"><i data-lucide="check" class="w-4 h-4"></i></div>
-                                <span class="text-sm font-medium">You have already redeemed a code.</span>
+                                <span class="text-sm font-medium">${t('alreadyRedeemed')}</span>
                             </div>
                         `}
                     </div>
 
                     <button onclick="logout()" class="w-full py-4 rounded-2xl border border-red-100 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-bold transition flex items-center justify-center gap-2 mb-safe">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                        <i data-lucide="log-out" class="w-4 h-4 rtl-flip"></i> ${t('signOut')}
                     </button>
                 </div>`;
             lucide.createIcons();
