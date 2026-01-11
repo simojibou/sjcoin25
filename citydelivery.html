@@ -2,30 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>City Delivery</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    height: { 'screen-dvh': '100dvh' }
+                }
+            }
+        }
+    </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        /* Mobile Scroll Optimization */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .animate-fade { animation: fade 0.3s ease-out forwards; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Prevent iOS input zoom */
+        input, textarea { font-size: 16px !important; } 
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen overflow-hidden flex justify-center">
+<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
 
     <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
-        <!-- Content injected by JS -->
+        <!-- Views are injected here -->
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- Configuration ---
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -40,343 +53,343 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- State Management ---
         const state = {
             user: null,
-            view: 'loading',
             services: [],
-            chats: {},
+            chats: {}, // Map of serviceId -> chatData
             selectedCity: null,
             activeService: null,
-            activeChat: null,
-            activeMessages: [],
-            unsubscribeMessages: null,
             darkMode: localStorage.getItem('darkMode') === 'true',
-            msgInput: '',
-            // Login Form State
-            loginEmail: '',
-            loginPass: ''
+            listeners: {
+                services: null,
+                chatsList: null,
+                activeChat: null
+            }
         };
 
         if(state.darkMode) document.documentElement.classList.add('dark');
 
-        // --- Auth & Data ---
+        // --- Main Router ---
+        function setView(viewName) {
+            const appEl = document.getElementById('app');
+            // Clean up chat listener if leaving chat view
+            if (state.listeners.activeChat && viewName !== 'chat') {
+                state.listeners.activeChat();
+                state.listeners.activeChat = null;
+            }
+
+            // Render specific view
+            switch(viewName) {
+                case 'loading': appEl.innerHTML = renderLoading(); break;
+                case 'login': appEl.innerHTML = renderLogin(); break;
+                case 'cities': appEl.innerHTML = renderCities(); break;
+                case 'services': appEl.innerHTML = renderServices(); break;
+                case 'chat': 
+                    appEl.innerHTML = renderChatLayout(); 
+                    mountChatLogic(); 
+                    break;
+            }
+            lucide.createIcons();
+        }
+
+        // --- Auth & Global Subscriptions ---
         onAuthStateChanged(auth, (user) => {
             state.user = user;
             if (user) {
-                subscribeServices();
-                subscribeChats();
+                if(!state.listeners.services) subscribeServices();
+                if(!state.listeners.chatsList) subscribeChatsList();
+                setView('cities');
             } else {
-                state.view = 'login';
-                render();
+                unsubscribeAll();
+                setView('login');
             }
         });
 
         function subscribeServices() {
-            onSnapshot(collection(db, 'delivery_services'), (snap) => {
+            state.listeners.services = onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (state.view === 'loading') state.view = 'cities';
-                render();
-            });
-        }
-
-        function subscribeChats() {
-            const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
-            onSnapshot(q, (snap) => {
-                const map = {};
-                snap.forEach(d => {
-                    const data = d.data();
-                    map[data.serviceId] = {id: d.id, ...data};
-                });
-                state.chats = map;
-            });
-        }
-
-        function subscribeToMessages(chatId) {
-            const q = query(collection(db, `delivery_chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
-            return onSnapshot(q, (snap) => {
-                state.activeMessages = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (state.view === 'chat') {
-                    renderMessages();
-                    scrollToBottom();
+                // Only re-render if we are in a browsing view to reflect changes
+                const currentHeader = document.querySelector('h1')?.innerText;
+                if (currentHeader === 'Select Location' || (state.selectedCity && currentHeader === state.selectedCity)) {
+                    // Slight heuristic to avoid full re-render, ideally we'd use more robust routing
+                    if (document.getElementById('city-list')) setView('cities');
+                    if (document.getElementById('service-list')) setView('services');
                 }
             });
         }
 
-        // --- Actions ---
-        window.updateLogin = (field, val) => { state[field] = val; };
-        
-        window.loginEmail = async (e) => {
-            if(e) e.preventDefault();
-            if(!state.loginEmail || !state.loginPass) return alert("Please enter email and password");
-            try {
-                await signInWithEmailAndPassword(auth, state.loginEmail, state.loginPass);
-            } catch (err) {
-                alert("Login failed: " + err.message);
-            }
-        };
+        function subscribeChatsList() {
+            // Listen for changes to the chat METADATA only
+            const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
+            state.listeners.chatsList = onSnapshot(q, (snap) => {
+                const map = {};
+                snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
+                state.chats = map;
+            });
+        }
 
-        window.registerEmail = async () => {
-            if(!state.loginEmail || !state.loginPass) return alert("Please enter email and password");
+        function unsubscribeAll() {
+            if(state.listeners.services) state.listeners.services();
+            if(state.listeners.chatsList) state.listeners.chatsList();
+            if(state.listeners.activeChat) state.listeners.activeChat();
+            state.listeners = { services: null, chatsList: null, activeChat: null };
+            state.services = [];
+            state.chats = {};
+        }
+
+        // --- Chat Architecture (Subcollections) ---
+        function mountChatLogic() {
+            const chatId = getChatId(state.user.uid, state.activeService.id);
+            const container = document.getElementById('chat-messages');
+            
+            // Subcollection Listener
+            const msgsRef = collection(db, 'delivery_chats', chatId, 'messages');
+            const q = query(msgsRef, orderBy('timestamp', 'asc'));
+
+            state.listeners.activeChat = onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const msg = change.doc.data();
+                        const isMe = msg.sender === state.user.uid;
+                        const div = document.createElement('div');
+                        
+                        // Layout Logic
+                        div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-fade`;
+                        div.innerHTML = `
+                            <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
+                                isMe 
+                                ? 'bg-blue-600 text-white rounded-br-sm' 
+                                : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
+                            }">
+                                ${escapeHtml(msg.text)}
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    }
+                });
+                
+                // Scroll to bottom on updates
+                scrollToBottom();
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const txt = input.value.trim();
+            if(!txt || !state.activeService) return;
+
+            input.value = ''; // Instant UI feedback
+            input.focus();
+
+            const chatId = getChatId(state.user.uid, state.activeService.id);
+            const chatDocRef = doc(db, 'delivery_chats', chatId);
+            const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
+
             try {
-                await createUserWithEmailAndPassword(auth, state.loginEmail, state.loginPass);
-                alert("Account created!");
-            } catch (err) {
-                alert("Registration failed: " + err.message);
+                // Check if chat document exists first
+                const chatSnapshot = await getDoc(chatDocRef);
+                const batch = writeBatch(db);
+
+                // 1. Prepare Message
+                const newMsgRef = doc(messagesColRef);
+                batch.set(newMsgRef, {
+                    text: txt,
+                    sender: state.user.uid,
+                    timestamp: serverTimestamp()
+                });
+
+                // 2. Create or Update Chat Metadata
+                if (!chatSnapshot.exists()) {
+                     batch.set(chatDocRef, {
+                        userId: state.user.uid,
+                        userEmail: state.user.email || 'anon',
+                        serviceId: state.activeService.id,
+                        serviceName: state.activeService.name,
+                        city: state.activeService.city,
+                        createdAt: serverTimestamp(),
+                        lastMessage: txt,
+                        lastUpdated: serverTimestamp()
+                    });
+                } else {
+                    batch.update(chatDocRef, {
+                        lastMessage: txt,
+                        lastUpdated: serverTimestamp()
+                    });
+                }
+
+                await batch.commit();
+            } catch (e) {
+                console.error("Send error:", e);
+                alert("Failed to send message.");
             }
-        };
+        }
+
+        // --- Helpers ---
+        function getChatId(uid, serviceId) {
+            return `${uid}_${serviceId}`;
+        }
+
+        function scrollToBottom() {
+            const el = document.getElementById('chat-messages');
+            if(el) {
+                requestAnimationFrame(() => {
+                    el.scrollTop = el.scrollHeight;
+                });
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        // --- UI Interactions ---
 
         window.loginGoogle = async () => {
-            try {
-                await signInWithPopup(auth, new GoogleAuthProvider());
-            } catch (err) {
-                console.error(err);
-                alert("Google Login failed. Please try Email/Password.");
-            }
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+            catch(e) { console.error(e); }
         };
 
-        window.logout = () => { signOut(auth); window.location.reload(); };
-        window.setCity = (c) => { state.selectedCity = c; state.view = 'services'; render(); };
+        window.logout = () => signOut(auth);
         
+        window.setCity = (c) => { 
+            state.selectedCity = c; 
+            setView('services'); 
+        };
+
         window.openService = (id) => {
             state.activeService = state.services.find(s => s.id === id);
-            state.activeChat = state.chats[state.activeService.id] || null;
-            state.view = 'chat';
-            render();
-            if (state.unsubscribeMessages) state.unsubscribeMessages();
-            state.activeMessages = [];
-            state.unsubscribeMessages = null;
-            if (state.activeChat) {
-                state.unsubscribeMessages = subscribeToMessages(state.activeChat.id);
-            } else {
-                renderMessages();
-            }
-            scrollToBottom(true);
+            setView('chat');
         };
 
         window.goBack = () => {
-            if (state.view === 'chat') {
-                if (state.unsubscribeMessages) state.unsubscribeMessages();
-                state.unsubscribeMessages = null;
-                state.activeMessages = [];
-                state.activeChat = null;
-                state.activeService = null;
-                state.view = 'services';
-            } else if (state.view === 'services') {
-                state.view = 'cities';
-            }
-            render();
+            if(document.getElementById('chat-messages')) setView('services');
+            else if(document.getElementById('service-list')) setView('cities');
         };
 
         window.toggleTheme = () => {
             state.darkMode = !state.darkMode;
             localStorage.setItem('darkMode', state.darkMode);
             document.documentElement.classList.toggle('dark');
-            render();
+            // Re-render current view to update icons, keeping input state if in chat is unnecessary as theme toggle usually redraws
+            // Simple approach: Toggle class is enough for CSS, but we need to update the lucide icon manually or re-render
+            const icon = document.getElementById('theme-icon');
+            if(icon) {
+                 // Fast swap without full re-render
+                 icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon');
+                 lucide.createIcons();
+            }
         };
 
-        window.updateMsg = (v) => state.msgInput = v;
+        window.triggerSend = () => sendMessage();
         
-        window.send = async () => {
-            const txt = state.msgInput.trim();
-            if (!txt || !state.activeService) return;
-            state.msgInput = '';
-            const inputEl = document.getElementById('msg-input');
-            if (inputEl) inputEl.value = '';
-
-            let chatId = state.activeChat ? state.activeChat.id : `\( {state.user.uid}_ \){state.activeService.id}`;
-            const chatRef = doc(db, 'delivery_chats', chatId);
-            const isNew = !state.activeChat;
-
-            try {
-                if (isNew) {
-                    const ownerEmail = state.activeService.ownerEmail ? state.activeService.ownerEmail.toLowerCase() : '';
-                    await setDoc(chatRef, {
-                        userId: state.user.uid,
-                        userEmail: state.user.email,
-                        serviceId: state.activeService.id,
-                        serviceName: state.activeService.name,
-                        serviceOwnerEmail: ownerEmail,
-                        city: state.activeService.city,
-                        createdAt: serverTimestamp(),
-                        lastUpdated: serverTimestamp()
-                    });
-                    state.activeChat = {
-                        id: chatId,
-                        userId: state.user.uid,
-                        userEmail: state.user.email,
-                        serviceId: state.activeService.id,
-                        serviceName: state.activeService.name,
-                        serviceOwnerEmail: ownerEmail,
-                        city: state.activeService.city
-                    };
-                    state.chats[state.activeService.id] = state.activeChat;
-                    state.unsubscribeMessages = subscribeToMessages(chatId);
-                }
-
-                const messagesRef = collection(db, `delivery_chats/${chatId}/messages`);
-                await addDoc(messagesRef, {
-                    text: txt,
-                    sender: state.user.uid,
-                    timestamp: serverTimestamp()
-                });
-
-                await updateDoc(chatRef, { lastUpdated: serverTimestamp() });
-            } catch (e) {
-                console.error("Error sending message:", e);
-                alert("Failed to send. Please try again.");
-            }
+        // Handle "Enter" key in chat
+        window.handleChatKey = (e) => {
+            if(e.key === 'Enter') sendMessage();
         };
 
-        function scrollToBottom(force = false) {
-            setTimeout(() => {
-                const el = document.getElementById('chat-scroll');
-                if (!el) return;
-                const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
-                if (force || atBottom) {
-                    el.scrollTop = el.scrollHeight;
-                }
-            }, 50);
+        // --- Render Functions (Strings) ---
+
+        const header = (title, showBack) => `
+            <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
+                <div class="flex items-center gap-3 min-w-0">
+                    ${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>` : ''}
+                    <h1 class="font-bold text-lg truncate text-gray-800 dark:text-white">${title}</h1>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>
+                    <button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                </div>
+            </div>`;
+
+        function renderLoading() {
+            return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`;
         }
 
-        function renderMessages() {
-            const messagesEl = document.getElementById('messages');
-            if (!messagesEl) return;
-            let html = '';
-            if (!state.activeMessages.length) {
-                html = '<div class="flex flex-col items-center justify-center mt-20 text-gray-400"><i data-lucide="message-square-dashed" class="w-12 h-12 mb-2 opacity-30"></i><p>Start chatting to place an order!</p></div>';
-            } else {
-                html = state.activeMessages.map(m => {
-                    const me = m.sender === state.user.uid;
-                    return `
-                        <div class="flex ${me ? 'justify-end' : 'justify-start'} mb-2">
-                            <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${me ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}">
-                                ${m.text}
-                            </div>
-                        </div>`;
-                }).join('');
-            }
-            messagesEl.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        // --- Render ---
-        function render() {
-            const app = document.getElementById('app');
-            let content = '';
-
-            const header = (title, showBack) => `
-                <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
-                    <div class="flex items-center gap-3">
-                        ${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>` : ''}
-                        <h1 class="font-bold text-lg truncate text-gray-800 dark:text-white">${title}</h1>
+        function renderLogin() {
+            return `
+                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
+                    <div class="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-8 text-blue-600 dark:text-blue-400 shrink-0 ring-4 ring-blue-50 dark:ring-blue-900/10">
+                        <i data-lucide="shopping-bag" class="w-12 h-12"></i>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>
-                        <button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
-                    </div>
+                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white tracking-tight">City Delivery</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs leading-relaxed">Your favorite local services, delivered instantly to your door.</p>
+
+                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md dark:text-white group relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> 
+                        <span>Continue with Google</span>
+                    </button>
+                    
+                    <p class="mt-8 text-xs text-gray-400">By continuing, you agree to our Terms of Service.</p>
                 </div>`;
+        }
 
-            if (state.view === 'loading') {
-                content = `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`;
-            } 
-            else if (state.view === 'login') {
-                content = `
-                    <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
-                        <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 shrink-0">
-                            <i data-lucide="shopping-bag" class="w-10 h-10"></i>
-                        </div>
-                        <h1 class="text-3xl font-bold mb-2 text-gray-800 dark:text-white">City Delivery</h1>
-                        <p class="text-gray-500 dark:text-gray-400 mb-8">Order from your favorite local services instantly.</p>
-                        
-                        <div class="w-full space-y-3 mb-6">
-                            <input type="email" onchange="updateLogin('loginEmail', this.value)" placeholder="Email" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-                            <input type="password" onchange="updateLogin('loginPass', this.value)" placeholder="Password" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-                            <div class="flex gap-2">
-                                <button onclick="loginEmail()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">Login</button>
-                                <button onclick="registerEmail()" class="flex-1 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-bold transition">Register</button>
+        function renderCities() {
+            const cities = [...new Set(state.services.map(s => s.city))].sort();
+            return `
+                ${header('Select Location', false)}
+                <div id="city-list" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Available Cities</h2>
+                    ${cities.map(c => `
+                        <button onclick="setCity('${c}')" class="w-full bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 mb-3 flex items-center justify-between group transition-all animate-fade text-left active:scale-[0.98]">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
+                                <span class="font-semibold text-lg text-gray-800 dark:text-gray-100">${c}</span>
                             </div>
-                        </div>
-
-                        <div class="relative w-full mb-6">
-                             <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
-                             <div class="relative flex justify-center text-sm"><span class="px-2 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span></div>
-                        </div>
-
-                        <button onclick="loginGoogle()" class="w-full py-3 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-bold flex items-center justify-center gap-3 transition dark:text-white">
-                            <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> Google
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors"></i>
                         </button>
-                    </div>`;
-            }
-            else if (state.view === 'cities') {
-                const cities = [...new Set(state.services.map(s => s.city))].sort();
-                content = `
-                    ${header('Select Location', false)}
-                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Available Cities</h2>
-                        ${cities.map(c => `
-                            <button onclick="setCity('${c}')" class="w-full bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 mb-3 flex items-center justify-between group transition-all animate-fade text-left">
-                                <div class="flex items-center gap-3">
-                                    <div class="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
-                                    <span class="font-semibold text-lg text-gray-800 dark:text-gray-100">${c}</span>
-                                </div>
-                                <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors"></i>
-                            </button>
-                        `).join('') || '<div class="text-center text-gray-400 mt-10">No cities configured.</div>'}
-                    </div>`;
-            }
-            else if (state.view === 'services') {
-                const list = state.services.filter(s => s.city === state.selectedCity);
-                content = `
-                    ${header(state.selectedCity, true)}
-                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services in ${state.selectedCity}</h2>
-                        ${list.map(s => `
-                            <button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-95 animate-fade hover:shadow-md">
-                                <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border dark:border-gray-600">
-                                    \( {s.logo ? `<img src=" \){s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 truncate">${s.name}</h3>
-                                    <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${s.type}</span>
-                                </div>
-                                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full">
-                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
-                                </div>
-                            </button>
-                        `).join('') || '<div class="text-center text-gray-400 mt-10">No services found in this city.</div>'}
-                    </div>`;
-            }
-            else if (state.view === 'chat') {
-                content = `
-                    ${header(state.activeService.name, true)}
-                    <div id="chat-scroll" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-                        <div id="messages"></div>
-                    </div>
-                    <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                        <input id="msg-input" value="${state.msgInput}" oninput="updateMsg(this.value)" onkeyup="if(event.key==='Enter') send()" type="text" placeholder="Type your order..." class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button onclick="send()" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-transform shadow-lg shadow-blue-200 dark:shadow-none"><i data-lucide="send-horizontal" class="w-5 h-5"></i></button>
-                    </div>`;
-            }
+                    `).join('') || '<div class="text-center text-gray-400 mt-10">No cities configured.</div>'}
+                </div>`;
+        }
 
-            app.innerHTML = content;
-            lucide.createIcons();
+        function renderServices() {
+            const list = state.services.filter(s => s.city === state.selectedCity);
+            return `
+                ${header(state.selectedCity, true)}
+                <div id="service-list" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services in ${state.selectedCity}</h2>
+                    ${list.map(s => {
+                        // Check if we have an active chat for this service to show indicator
+                        const hasChat = state.chats[s.id];
+                        return `
+                        <button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md">
+                            <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border dark:border-gray-600">
+                                ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 truncate">${s.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${s.type}</span>
+                                    ${hasChat ? '<span class="w-2 h-2 rounded-full bg-green-500"></span>' : ''}
+                                </div>
+                            </div>
+                            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            </div>
+                        </button>
+                    `}).join('') || '<div class="text-center text-gray-400 mt-10">No services found in this city.</div>'}
+                </div>`;
+        }
+
+        // Only renders the layout. Messages are mounted via mountChatLogic
+        function renderChatLayout() {
+            return `
+                ${header(state.activeService.name, true)}
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900 scroll-smooth">
+                    <!-- Messages injected by Firestore listener -->
+                    <div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50 pointer-events-none">
+                        <i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i>
+                        <p class="text-xs">Connecting to ${state.activeService.name}...</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+                    <input id="chat-input" type="text" onkeyup="handleChatKey(event)" placeholder="Type your order..." autocomplete="off" class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                    <button onclick="triggerSend()" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-transform shadow-lg shadow-blue-200 dark:shadow-none"><i data-lucide="send-horizontal" class="w-5 h-5"></i></button>
+                </div>`;
         }
     </script>
 </body>
-    </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+</html>
