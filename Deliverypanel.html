@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery & Affiliate Panel</title>
+    <title>Delivery App - Earnings & Status</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -33,59 +33,28 @@
             appId: "1:426335553508:web:248f76772f6f78419ca9f1"
         };
 
-        // --- ADMIN & MANAGER LIST ---
-        const AUTHORIZED_STAFF = [
-            'simo.jibou@gmail.com',
-            'manager@gmail.com',
-            'admin2@gmail.com' 
-        ].map(email => email.toLowerCase());
+        const AUTHORIZED_STAFF = ['simo.jibou@gmail.com', 'manager@gmail.com', 'admin2@gmail.com'].map(e => e.toLowerCase());
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
         const state = {
-            user: null,
-            role: 'loading',
-            view: 'login',
-            services: [],
-            chats: [],
-            activeChat: null,
-            activeMessages: [], 
-            editId: null,
-            form: { email: '', pass: '' },
-            msgInput: '',
-            providerService: null,
-            showBillForm: false,
-            billAmount: '',
-            billDesc: '',
-            deliveryFee: 5,
-            promoActive: false,
-            // --- NEW STATS STATE ---
-            stats: {
-                totalOrders: 0,
-                affiliates: [], // List of { code: 'Name', count: 10 }
-                totalUsers: 0
-            }
+            user: null, role: 'loading', view: 'login',
+            services: [], chats: [], activeChat: null, activeMessages: [], 
+            editId: null, form: { email: '', pass: '' }, msgInput: '',
+            providerService: null, providerEarnings: 0, // NEW: Provider Wallet
+            showBillForm: false, billAmount: '', billDesc: '', deliveryFee: 5, promoActive: false,
+            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 } // NEW: Admin Revenue
         };
 
         // --- Logic ---
         onAuthStateChanged(auth, async (user) => {
             state.user = user;
-            if(!user) {
-                state.role = 'guest';
-                state.view = 'login';
-                render();
-                return;
-            }
-
-            const email = user.email.toLowerCase();
-
-            if (AUTHORIZED_STAFF.includes(email)) {
-                state.role = 'admin'; 
-                state.view = 'admin_list';
-                subscribeServices();
-                subscribeAdminStats(); // NEW: Listen to stats
+            if(!user) { state.role = 'guest'; state.view = 'login'; render(); return; }
+            if (AUTHORIZED_STAFF.includes(user.email.toLowerCase())) {
+                state.role = 'admin'; state.view = 'admin_list';
+                subscribeServices(); subscribeAdminStats();
             } else {
                 state.role = 'provider'; 
                 subscribeServices();
@@ -94,37 +63,37 @@
 
         let unsubServices, unsubChats, unsubActiveMsg, unsubStatsOrders, unsubStatsUsers;
 
-        // --- NEW: Analytics Subscriptions ---
         function subscribeAdminStats() {
-            // 1. Count Total Orders (Chats)
             if(unsubStatsOrders) unsubStatsOrders();
+            // Listen to ALL chats for Admin Stats
             unsubStatsOrders = onSnapshot(collection(db, 'delivery_chats'), (snap) => {
                 state.stats.totalOrders = snap.size;
+                // Calculate Total Revenue (Sum of all delivered order totals)
+                let rev = 0;
+                snap.forEach(d => {
+                    const data = d.data();
+                    if(data.status === 'delivered' && data.orderTotal) {
+                        rev += parseFloat(data.orderTotal);
+                    }
+                });
+                state.stats.totalRevenue = rev;
                 render();
             });
 
-            // 2. Affiliate Logic (Count Referred Users)
-            // Assumes a 'users' collection where documents have a 'referredBy' field
             if(unsubStatsUsers) unsubStatsUsers();
             unsubStatsUsers = onSnapshot(collection(db, 'users'), (snap) => {
                 state.stats.totalUsers = snap.size;
-                
                 const referralCounts = {};
-                
                 snap.forEach(doc => {
                     const data = doc.data();
-                    // Check if user was referred by someone (referredBy field)
                     if(data.referredBy) {
                         const code = data.referredBy.toUpperCase();
                         referralCounts[code] = (referralCounts[code] || 0) + 1;
                     }
                 });
-
-                // Convert to array and sort by highest count
                 state.stats.affiliates = Object.entries(referralCounts)
                     .map(([code, count]) => ({ code, count }))
                     .sort((a, b) => b.count - a.count);
-
                 render();
             });
         }
@@ -133,17 +102,13 @@
             if(unsubServices) unsubServices();
             unsubServices = onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                
                 if (state.role === 'provider' && state.user) {
                     const myService = state.services.find(s => s.ownerEmail && s.ownerEmail.toLowerCase() === state.user.email.toLowerCase());
-                    
                     if (myService) {
                         state.providerService = myService;
                         if(state.view !== 'chat') state.view = 'provider_list';
                         subscribeChats(state.user.email.toLowerCase());
-                    } else {
-                        state.view = 'no_service';
-                    }
+                    } else { state.view = 'no_service'; }
                 }
                 render();
             });
@@ -152,24 +117,24 @@
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
             const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
-            
             unsubChats = onSnapshot(q, (snap) => {
-                state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => {
-                    const tA = a.lastUpdated?.seconds || 0;
-                    const tB = b.lastUpdated?.seconds || 0;
-                    return tB - tA;
-                });
+                state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
                 
-                if (state.view === 'provider_list') {
-                    render();
-                }
+                // NEW: Calculate Provider Earnings (Sum of delivered orders)
+                state.providerEarnings = state.chats.reduce((sum, chat) => {
+                    if(chat.status === 'delivered' && chat.orderTotal) {
+                        return sum + parseFloat(chat.orderTotal);
+                    }
+                    return sum;
+                }, 0);
+
+                if (state.view === 'provider_list') render();
             });
         }
 
         function subscribeActiveChat(chatId) {
             if(unsubActiveMsg) unsubActiveMsg();
             const q = query(collection(db, 'delivery_chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
-            
             unsubActiveMsg = onSnapshot(q, (snap) => {
                 state.activeMessages = snap.docs.map(d => d.data());
                 render();
@@ -179,349 +144,224 @@
 
         // --- Actions ---
         window.input = (f, v) => state.form[f] = v;
-        window.loginEmail = async (e) => {
-            e.preventDefault();
-            try { await signInWithEmailAndPassword(auth, state.form.email, state.form.pass); }
-            catch(err) { alert(err.message); }
-        };
-        window.register = async () => {
-            if(!confirm("Register new account with these credentials?")) return;
-            try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); }
-            catch(err) { alert(err.message); }
-        };
+        window.loginEmail = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
+        window.register = async () => { if(!confirm("Register?")) return; try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
         window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
         window.logout = () => signOut(auth);
 
-        // Admin Actions
         window.saveService = async (e) => {
-            e.preventDefault();
-            const form = new FormData(e.target);
-            const data = {
-                name: form.get('name'),
-                city: form.get('city'),
-                type: form.get('type'),
-                ownerEmail: form.get('ownerEmail').toLowerCase().trim(),
-                assignedPassword: form.get('assignedPassword'),
-                logo: form.get('logo'),
-                lastUpdated: serverTimestamp()
-            };
+            e.preventDefault(); const form = new FormData(e.target);
+            const data = { name: form.get('name'), city: form.get('city'), type: form.get('type'), ownerEmail: form.get('ownerEmail').toLowerCase().trim(), assignedPassword: form.get('assignedPassword'), logo: form.get('logo'), lastUpdated: serverTimestamp() };
+            if(state.editId) await updateDoc(doc(db, 'delivery_services', state.editId), data);
+            else { data.createdAt = serverTimestamp(); await addDoc(collection(db, 'delivery_services'), data); }
+            state.editId = null; state.view = 'admin_list'; render();
+        };
+        window.delService = async (id) => { if(confirm("Delete?")) await deleteDoc(doc(db, 'delivery_services', id)); };
+        window.editService = (id) => { state.editId = id; state.view = 'admin_edit'; render(); };
+        window.nav = (v) => { state.view = v; state.editId = null; state.showBillForm = false; if(v !== 'chat' && unsubActiveMsg) { unsubActiveMsg(); unsubActiveMsg = null; state.activeMessages = []; } render(); };
 
-            if(state.editId) {
-                await updateDoc(doc(db, 'delivery_services', state.editId), data);
-            } else {
-                data.createdAt = serverTimestamp();
-                await addDoc(collection(db, 'delivery_services'), data);
-            }
-            state.editId = null;
-            state.view = 'admin_list';
-            render();
-        };
-        window.delService = async (id) => {
-            if(confirm("Delete service?")) await deleteDoc(doc(db, 'delivery_services', id));
-        };
-        window.editService = (id) => {
-            state.editId = id;
-            state.view = 'admin_edit';
-            render();
-        };
-        
-        // Navigation Helper
-        window.nav = (v) => { 
-            state.view = v; 
-            state.editId = null; 
-            state.showBillForm = false; 
-            
-            if(v !== 'chat' && unsubActiveMsg) {
-                unsubActiveMsg();
-                unsubActiveMsg = null;
-                state.activeMessages = [];
-            }
-            render(); 
-        };
-
-        // Provider Actions
-        window.openChat = (id) => {
-            state.activeChat = state.chats.find(c => c.id === id);
-            state.view = 'chat';
-            state.activeMessages = []; 
-            render();
-            subscribeActiveChat(id);
-        };
-        
+        window.openChat = (id) => { state.activeChat = state.chats.find(c => c.id === id); state.view = 'chat'; state.activeMessages = []; render(); subscribeActiveChat(id); };
         window.chatInput = (v) => state.msgInput = v;
         
-        // --- Bill Logic ---
+        // --- Bill & Status Actions ---
         window.toggleBill = () => {
+            if(state.activeChat?.status === 'delivered') return alert("Order is already delivered!");
             state.showBillForm = !state.showBillForm;
             if (state.showBillForm) {
-                const hasPromo = state.activeMessages.some(m => m.text && m.text.toUpperCase().trim() === 'SJ CODE' && m.sender !== state.user.uid);
+                const hasPromo = state.activeMessages.some(m => m.text?.toUpperCase().trim() === 'SJ CODE' && m.sender !== state.user.uid);
                 state.promoActive = hasPromo;
                 state.deliveryFee = hasPromo ? 0 : 5;
                 setTimeout(() => document.getElementById('billAmount')?.focus(), 50);
             }
             render();
         };
-
         window.setBillAmount = (v) => { state.billAmount = v; render(); };
         window.setDeliveryFee = (v) => { state.deliveryFee = v; render(); };
         window.setBillDesc = (v) => state.billDesc = v;
 
         window.sendBill = async () => {
             if(!state.activeChat) return;
-            const amt = parseFloat(state.billAmount);
-            const fee = parseFloat(state.deliveryFee);
-
-            if(!amt || amt <= 0) return alert("Please enter a valid amount");
-            if(isNaN(fee)) return alert("Invalid delivery fee");
+            const amt = parseFloat(state.billAmount); const fee = parseFloat(state.deliveryFee);
+            if(!amt || amt <= 0) return alert("Invalid amount");
             
             const total = amt + fee;
-            const desc = state.billDesc.trim() || 'Order Total';
+            const msg = { type: 'bill', text: `Bill: $${total.toFixed(2)}`, amount: amt, deliveryFee: fee, total: total, description: state.billDesc.trim() || 'Order Total', sender: state.user.uid, status: 'pending', timestamp: serverTimestamp() };
 
-            const msg = {
-                type: 'bill',
-                text: `Bill: $${total.toFixed(2)}`,
-                amount: amt,
-                deliveryFee: fee,
-                total: total,
-                description: desc,
-                sender: state.user.uid,
-                status: 'pending',
-                timestamp: serverTimestamp()
-            };
+            const chatId = state.activeChat.id;
+            // Add message AND update Chat with orderTotal
+            await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msg);
+            await updateDoc(doc(db, 'delivery_chats', chatId), {
+                lastMessage: `💵 Bill: $${total.toFixed(2)}`,
+                orderTotal: total, // NEW: Save total in chat doc for earnings calc
+                lastUpdated: serverTimestamp()
+            });
 
-            await sendMessage(msg);
-            state.billAmount = '';
-            state.billDesc = '';
-            state.showBillForm = false;
+            state.billAmount = ''; state.billDesc = ''; state.showBillForm = false; render();
+        };
+
+        // NEW: Mark Order as Done (Delivered)
+        window.markDone = async () => {
+            if(!state.activeChat) return;
+            if(!confirm("Are you sure you delivered this order?")) return;
+            
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), {
+                status: 'delivered',
+                completedAt: serverTimestamp()
+            });
+
+            // Update local state to reflect change immediately
+            state.activeChat.status = 'delivered';
+            
+            // Go back to list
+            state.view = 'provider_list';
             render();
         };
 
         window.reply = async () => {
-            const txt = state.msgInput.trim();
-            if(!txt || !state.activeChat) return;
-            const msg = { type: 'text', text: txt, sender: state.user.uid, timestamp: serverTimestamp() };
+            const txt = state.msgInput.trim(); if(!txt || !state.activeChat) return;
+            await addDoc(collection(db, 'delivery_chats', state.activeChat.id, 'messages'), { type: 'text', text: txt, sender: state.user.uid, timestamp: serverTimestamp() });
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), { lastMessage: txt, lastUpdated: serverTimestamp() });
             state.msgInput = '';
-            await sendMessage(msg);
         };
 
-        async function sendMessage(msgData) {
-            const chatId = state.activeChat.id;
-            try {
-                await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msgData);
-                await updateDoc(doc(db, 'delivery_chats', chatId), {
-                    lastMessage: msgData.type === 'bill' ? `💵 Bill: $${msgData.total.toFixed(2)}` : msgData.text,
-                    lastUpdated: serverTimestamp()
-                });
-            } catch(e) {
-                console.error(e);
-                alert("Error sending: " + e.message);
-            }
-        }
-
-        function scrollChat() {
-            setTimeout(() => {
-                const el = document.getElementById('msgs');
-                if(el) el.scrollTop = el.scrollHeight;
-            }, 50);
-        }
+        function scrollChat() { setTimeout(() => { const el = document.getElementById('msgs'); if(el) el.scrollTop = el.scrollHeight; }, 50); }
 
         // --- Render ---
         function render() {
             const root = document.getElementById('root');
             let content = '';
 
-            // Views
             if (state.view === 'login') {
                 content = `
                     <div class="flex flex-col items-center justify-center h-full p-8 animate-up">
-                        <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-900/50">
-                            <i data-lucide="lock" class="w-8 h-8 text-white"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold mb-1">Admin Panel</h2>
-                        <p class="text-gray-400 mb-8 text-sm">Authorized Access Only</p>
-
+                        <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-900/50"><i data-lucide="lock" class="w-8 h-8 text-white"></i></div>
+                        <h2 class="text-2xl font-bold mb-1">Staff Access</h2>
+                        <p class="text-gray-400 mb-8 text-sm">Log in to manage orders</p>
                         <form onsubmit="loginEmail(event)" class="w-full space-y-4">
-                            <input onchange="input('email',this.value)" type="email" placeholder="Email" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none" required>
-                            <input onchange="input('pass',this.value)" type="password" placeholder="Password" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none" required>
-                            <div class="flex gap-2">
-                                <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition">Login</button>
-                                <button type="button" onclick="register()" class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition">Register</button>
-                            </div>
+                            <input onchange="input('email',this.value)" type="email" placeholder="Email" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white outline-none" required>
+                            <input onchange="input('pass',this.value)" type="password" placeholder="Password" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white outline-none" required>
+                            <div class="flex gap-2"><button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition">Login</button><button type="button" onclick="register()" class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl">Register</button></div>
                         </form>
-                        
-                        <div class="mt-8 pt-8 border-t border-gray-700 w-full">
-                             <button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 transition">
-                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login
-                             </button>
-                        </div>
+                        <div class="mt-8 pt-8 border-t border-gray-700 w-full"><button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100"><i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login</button></div>
                     </div>`;
-            }
-            else if (state.view === 'no_service') {
-                content = `
-                    <div class="flex flex-col items-center justify-center h-full p-8 text-center animate-up">
-                        <i data-lucide="alert-circle" class="w-12 h-12 text-red-400 mb-4"></i>
-                        <h2 class="text-xl font-bold">Access Denied</h2>
-                        <p class="text-gray-400 mt-2 mb-6">No delivery service is linked to <b>${state.user.email}</b>.</p>
-                        <button onclick="logout()" class="px-6 py-2 bg-gray-700 rounded-full hover:bg-gray-600">Logout</button>
-                    </div>`;
-            }
-            else if (state.view === 'admin_list') {
+            } else if (state.view === 'no_service') {
+                content = `<div class="flex flex-col items-center justify-center h-full p-8 text-center animate-up"><i data-lucide="alert-circle" class="w-12 h-12 text-red-400 mb-4"></i><h2 class="text-xl font-bold">Access Denied</h2><p class="text-gray-400 mt-2 mb-6">No service linked.</p><button onclick="logout()" class="px-6 py-2 bg-gray-700 rounded-full">Logout</button></div>`;
+            } else if (state.view === 'admin_list') {
                 content = `
                     <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
                         <h2 class="font-bold text-lg">Dashboard</h2>
                         <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
                     </div>
-                    
                     <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
-                        <div class="grid grid-cols-2 gap-3 mb-6">
-                            <div class="bg-blue-600/20 border border-blue-500/30 p-4 rounded-xl flex flex-col justify-center">
-                                <div class="flex items-center gap-2 text-blue-400 mb-1">
-                                    <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                                    <span class="text-xs font-bold uppercase">Total Orders</span>
-                                </div>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div class="bg-blue-600/20 border border-blue-500/30 p-4 rounded-xl">
+                                <div class="flex items-center gap-2 text-blue-400 mb-1"><i data-lucide="shopping-bag" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Orders</span></div>
                                 <span class="text-2xl font-bold text-white">${state.stats.totalOrders}</span>
                             </div>
-                            <div class="bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex flex-col justify-center">
-                                <div class="flex items-center gap-2 text-purple-400 mb-1">
-                                    <i data-lucide="users" class="w-4 h-4"></i>
-                                    <span class="text-xs font-bold uppercase">Total Users</span>
-                                </div>
+                            <div class="bg-green-600/20 border border-green-500/30 p-4 rounded-xl">
+                                <div class="flex items-center gap-2 text-green-400 mb-1"><i data-lucide="dollar-sign" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Revenue</span></div>
+                                <span class="text-2xl font-bold text-white">$${state.stats.totalRevenue.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl mb-6 flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 text-purple-400 mb-1"><i data-lucide="users" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Total Users</span></div>
                                 <span class="text-2xl font-bold text-white">${state.stats.totalUsers}</span>
                             </div>
+                            <i data-lucide="trending-up" class="w-8 h-8 text-purple-500/50"></i>
                         </div>
 
                         <div class="mb-6">
-                            <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Top Affiliates (By Referrals)</h3>
+                            <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Top Affiliates</h3>
                             <div class="bg-gray-800 border border-white/5 rounded-xl overflow-hidden">
-                                ${state.stats.affiliates.length === 0 ? 
-                                    `<div class="p-4 text-center text-gray-500 text-sm">No affiliate data yet</div>` :
-                                    state.stats.affiliates.map((aff, index) => `
-                                    <div class="flex items-center justify-between p-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-6 h-6 rounded-full ${index === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'} flex items-center justify-center text-xs font-bold">
-                                                ${index + 1}
-                                            </div>
-                                            <span class="font-bold text-white text-sm">${aff.code}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1 text-green-400 text-sm font-bold">
-                                            <span>${aff.count}</span>
-                                            <i data-lucide="user-plus" class="w-3 h-3"></i>
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                ${state.stats.affiliates.length === 0 ? `<div class="p-4 text-center text-gray-500 text-sm">No data</div>` : state.stats.affiliates.map((aff, i) => `
+                                    <div class="flex items-center justify-between p-3 border-b border-white/5 last:border-0 hover:bg-white/5">
+                                        <div class="flex items-center gap-3"><div class="w-6 h-6 rounded-full ${i===0?'bg-yellow-500 text-black':'bg-gray-700'} flex items-center justify-center text-xs font-bold">${i+1}</div><span class="font-bold text-white text-sm">${aff.code}</span></div>
+                                        <div class="flex items-center gap-1 text-green-400 text-sm font-bold"><span>${aff.count}</span><i data-lucide="user-plus" class="w-3 h-3"></i></div>
+                                    </div>`).join('')}
                             </div>
                         </div>
 
-                        <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Manage Services</h3>
+                        <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Services</h3>
                         <div class="grid gap-3">
-                            <button onclick="nav('admin_edit')" class="w-full p-4 border-2 border-dashed border-gray-600 rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-400 hover:bg-purple-400/10 transition flex items-center justify-center gap-2">
-                                <i data-lucide="plus" class="w-5 h-5"></i> Add New Service
-                            </button>
+                            <button onclick="nav('admin_edit')" class="w-full p-4 border-2 border-dashed border-gray-600 rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-400 hover:bg-purple-400/10 transition flex items-center justify-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> Add New Service</button>
                             ${state.services.map(s => `
                                 <div class="bg-gray-700/50 p-4 rounded-xl border border-white/5 flex items-center justify-between group">
-                                    <div>
-                                        <h3 class="font-bold">${s.name}</h3>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-white">${s.city}</span>
-                                            <span class="text-xs text-gray-400">${s.type}</span>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-2">${s.ownerEmail}</p>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="editService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-blue-400 transition"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                                        <button onclick="delService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-red-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                                    <div><h3 class="font-bold">${s.name}</h3><div class="flex items-center gap-2 mt-1"><span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-white">${s.city}</span><span class="text-xs text-gray-400">${s.type}</span></div><p class="text-xs text-gray-500 mt-2">${s.ownerEmail}</p></div>
+                                    <div class="flex gap-2"><button onclick="editService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-blue-400"><i data-lucide="pencil" class="w-4 h-4"></i></button><button onclick="delService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>
+                                </div>`).join('')}
                         </div>
                     </div>`;
-            }
-            else if (state.view === 'admin_edit') {
+            } else if (state.view === 'admin_edit') {
                 const s = state.editId ? state.services.find(i => i.id === state.editId) : {};
                 content = `
-                    <div class="h-16 flex items-center gap-4 px-6 bg-gray-800 border-b border-white/5 shrink-0">
-                        <button onclick="nav('admin_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <h2 class="font-bold text-lg">${state.editId ? 'Edit' : 'New'} Service</h2>
-                    </div>
+                    <div class="h-16 flex items-center gap-4 px-6 bg-gray-800 border-b border-white/5 shrink-0"><button onclick="nav('admin_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button><h2 class="font-bold text-lg">${state.editId ? 'Edit' : 'New'} Service</h2></div>
                     <div class="flex-1 overflow-y-auto p-6 hide-scrollbar">
                         <form onsubmit="saveService(event)" class="space-y-4">
-                            <div><label class="text-xs uppercase font-bold text-gray-500">Name</label><input name="name" value="${s.name||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                            <div><label class="text-xs uppercase font-bold text-gray-500">City</label><input name="city" value="${s.city||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                            <div><label class="text-xs uppercase font-bold text-gray-500">Type</label>
-                                <select name="type" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none">
-                                    <option value="food" ${s.type==='food'?'selected':''}>Food</option>
-                                    <option value="grocery" ${s.type==='grocery'?'selected':''}>Grocery</option>
-                                    <option value="delivery" ${s.type==='delivery'?'selected':''}>Delivery</option>
-                                </select>
-                            </div>
-                            <div class="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl space-y-3">
-                                <h3 class="text-sm font-bold text-purple-400 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4"></i> Provider Account</h3>
-                                <div><label class="text-xs uppercase font-bold text-gray-500">Account Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                                <div><label class="text-xs uppercase font-bold text-gray-500">Account Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                            </div>
-                            <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none"></div>
-                            
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Name</label><input name="name" value="${s.name||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">City</label><input name="city" value="${s.city||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Type</label><select name="type" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none"><option value="food" ${s.type==='food'?'selected':''}>Food</option><option value="grocery" ${s.type==='grocery'?'selected':''}>Grocery</option><option value="delivery" ${s.type==='delivery'?'selected':''}>Delivery</option></select></div>
+                            <div class="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl space-y-3"><h3 class="text-sm font-bold text-purple-400 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4"></i> Provider Account</h3><div><label class="text-xs uppercase font-bold text-gray-500">Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white outline-none" required></div><div><label class="text-xs uppercase font-bold text-gray-500">Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white outline-none" required></div></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none"></div>
                             <button class="w-full py-4 bg-purple-600 rounded-xl font-bold hover:bg-purple-500 transition shadow-lg shadow-purple-900/50">Save Service</button>
                         </form>
                     </div>`;
-            }
-            else if (state.view === 'provider_list') {
+            } else if (state.view === 'provider_list') {
                 content = `
                     <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
-                        <div>
-                            <h2 class="font-bold text-lg">Orders</h2>
-                            <p class="text-xs text-purple-400 font-medium">${state.providerService?.city} • ${state.providerService?.name}</p>
-                        </div>
+                        <div><h2 class="font-bold text-lg">Orders</h2><p class="text-xs text-purple-400 font-medium">${state.providerService?.city}</p></div>
                         <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
                     </div>
+                    <div class="px-4 mt-4">
+                        <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-4 rounded-xl shadow-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-green-100 font-medium uppercase opacity-80">Total Earnings</p>
+                                <h3 class="text-2xl font-bold text-white">$${state.providerEarnings.toFixed(2)}</h3>
+                            </div>
+                            <div class="bg-white/20 p-2 rounded-lg"><i data-lucide="wallet" class="w-6 h-6 text-white"></i></div>
+                        </div>
+                    </div>
                     <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
-                        ${state.chats.length === 0 ? 
-                            `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : 
-                            state.chats.map(c => {
-                                const timeStr = c.lastUpdated ? new Date(c.lastUpdated.seconds * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Just now';
-                                return `
-                                <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up group border border-transparent hover:border-gray-600">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <div class="flex items-center gap-2">
-                                             <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                                             <span class="font-bold text-white text-sm truncate">${c.userEmail}</span>
-                                        </div>
-                                        <span class="text-[10px] text-gray-400 whitespace-nowrap">${timeStr}</span>
+                        ${state.chats.length === 0 ? `<div class="flex flex-col items-center justify-center h-48 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : state.chats.map(c => {
+                            const timeStr = c.lastUpdated ? new Date(c.lastUpdated.seconds * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Just now';
+                            const isDone = c.status === 'delivered';
+                            return `
+                            <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up group border border-transparent hover:border-gray-600 relative overflow-hidden">
+                                ${isDone ? `<div class="absolute right-0 top-0 bg-green-500 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold">DELIVERED</div>` : ''}
+                                <div class="flex justify-between items-start mb-1">
+                                    <div class="flex items-center gap-2">
+                                         <div class="w-2 h-2 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}"></div>
+                                         <span class="font-bold text-white text-sm truncate">${c.userEmail}</span>
                                     </div>
-                                    <p class="text-xs text-gray-300 ml-4 mb-1"><span class="bg-gray-600 text-gray-200 px-1.5 py-0.5 rounded text-[10px] mr-1">${c.city}</span></p>
-                                    <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${c.lastMessage || 'New Order'}</p>
-                                </button>`;
-                            }).join('')
-                        }
+                                    <span class="text-[10px] text-gray-400">${timeStr}</span>
+                                </div>
+                                <p class="text-xs text-gray-300 ml-4 mb-1"><span class="bg-gray-600 text-gray-200 px-1.5 py-0.5 rounded text-[10px] mr-1">${c.city}</span></p>
+                                <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${c.lastMessage || 'New Order'}</p>
+                            </button>`;
+                        }).join('')}
                     </div>`;
-            }
-            else if (state.view === 'chat') {
+            } else if (state.view === 'chat') {
                 const msgs = state.activeMessages || [];
-                const currentTotal = (parseFloat(state.billAmount) || 0) + (parseFloat(state.deliveryFee) || 0);
+                const isDelivered = state.activeChat.status === 'delivered';
 
                 content = `
                     <div class="h-16 flex items-center gap-4 px-4 bg-gray-800 border-b border-white/5 shrink-0">
                         <button onclick="nav('provider_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
                         <div class="flex-1 min-w-0">
                             <h2 class="font-bold text-sm truncate">${state.activeChat.userEmail}</h2>
-                            <p class="text-xs text-green-400 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live Order</p>
+                            <p class="text-xs ${isDelivered ? 'text-green-400' : 'text-blue-400'} flex items-center gap-1">
+                                ${isDelivered ? '<i data-lucide="check-circle" class="w-3 h-3"></i> Delivered' : '<span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span> Active'}
+                            </p>
                         </div>
+                        ${!isDelivered ? `<button onclick="markDone()" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-lg shadow-green-900/20"><i data-lucide="check" class="w-3 h-3"></i> Done</button>` : ''}
                     </div>
                     
                     <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900 relative">
                         ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
                             const isMe = m.sender === state.user.uid;
                             if(m.type === 'bill') {
-                                const feeDisplay = m.deliveryFee === 0 ? 'FREE' : `$${m.deliveryFee.toFixed(2)}`;
-                                return `
-                                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
-                                    <div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-56 shadow-lg">
-                                        <div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent</div>
-                                        <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Items:</span><span>$${m.amount.toFixed(2)}</span></div>
-                                        <div class="flex justify-between text-xs text-gray-400 mb-3"><span>Delivery:</span><span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${feeDisplay}</span></div>
-                                        <div class="flex justify-between items-end border-t border-white/10 pt-2"><span class="text-sm text-gray-300">Total:</span><span class="text-xl font-bold text-white">$${(m.total || m.amount).toFixed(2)}</span></div>
-                                    </div>
-                                </div>`;
+                                return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-56 shadow-lg"><div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent</div><div class="flex justify-between text-xs text-gray-400 mb-1"><span>Items:</span><span>$${m.amount.toFixed(2)}</span></div><div class="flex justify-between text-xs text-gray-400 mb-3"><span>Fee:</span><span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${m.deliveryFee === 0 ? 'FREE' : '$'+m.deliveryFee.toFixed(2)}</span></div><div class="flex justify-between items-end border-t border-white/10 pt-2"><span class="text-sm text-gray-300">Total:</span><span class="text-xl font-bold text-white">$${(m.total||m.amount).toFixed(2)}</span></div></div></div>`;
                             }
                             return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">${m.text}</div></div>`;
                         }).join('')}
@@ -529,22 +369,19 @@
 
                     ${state.showBillForm ? `
                     <div class="bg-gray-800 border-t border-purple-500 p-4 animate-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="font-bold text-purple-400 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Send Bill</h3>
-                            <button onclick="toggleBill()" class="p-1 hover:bg-gray-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button>
-                        </div>
+                        <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-purple-400 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Send Bill</h3><button onclick="toggleBill()" class="p-1 hover:bg-gray-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button></div>
                         ${state.promoActive ? `<div class="mb-3 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-xs text-green-400 font-medium"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>` : ''}
                         <div class="flex gap-2 mb-2">
                              <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Subtotal</label><input id="billAmount" type="number" step="0.01" value="${state.billAmount}" oninput="setBillAmount(this.value)" placeholder="0.00" class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2 pl-2 text-white outline-none focus:border-purple-500"></div>
                              <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Fee</label><input type="number" step="0.01" value="${state.deliveryFee}" oninput="setDeliveryFee(this.value)" class="w-full bg-gray-900 border ${state.promoActive ? 'border-green-500/50 text-green-400' : 'border-gray-600 text-white'} rounded-lg py-2 pl-2 outline-none focus:border-purple-500"></div>
                         </div>
                         <div class="mb-3"><input type="text" value="${state.billDesc}" oninput="setBillDesc(this.value)" placeholder="Items description" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500 text-sm"></div>
-                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition flex justify-between px-4"><span>Send Bill</span><span>$${currentTotal.toFixed(2)}</span></button>
+                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition flex justify-between px-4"><span>Send Bill</span><span>$${((parseFloat(state.billAmount)||0)+(parseFloat(state.deliveryFee)||0)).toFixed(2)}</span></button>
                     </div>` : `
                     <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 items-center">
-                        <button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition"><i data-lucide="receipt" class="w-5 h-5"></i></button>
-                        <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white">
-                        <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
+                        ${!isDelivered ? `<button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition"><i data-lucide="receipt" class="w-5 h-5"></i></button>` : ''}
+                        <input ${isDelivered ? 'disabled placeholder="Order Delivered"' : 'placeholder="Reply..."'} value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white disabled:opacity-50">
+                        <button onclick="reply()" ${isDelivered ? 'disabled' : ''} class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white disabled:opacity-50"><i data-lucide="send" class="w-5 h-5"></i></button>
                     </div>`}
                     `;
             }
