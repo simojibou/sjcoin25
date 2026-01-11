@@ -80,21 +80,38 @@
             const userRef = doc(db, 'users', user.uid);
             try {
                 const snap = await getDoc(userRef);
+                
+                // Logic to generate code based on UID
+                const newCode = 'SJ-' + user.uid.slice(-5).toUpperCase();
+
                 if (!snap.exists()) {
+                    // Create new profile for brand new users
                     await setDoc(userRef, {
                         uid: user.uid,
                         displayName: user.displayName || 'User',
                         email: user.email,
                         photoURL: user.photoURL,
-                        // Generate SJ CODE: SJ- + Last 5 of UID
-                        myCode: 'SJ-' + user.uid.slice(-5).toUpperCase(),
+                        myCode: newCode,
                         freeDeliveryAvailable: true,
                         redeemedReferral: false,
                         createdAt: serverTimestamp()
                     });
+                } else {
+                    // FIX: Update existing legacy users who might miss code or photo
+                    const data = snap.data();
+                    const updates = {};
+                    
+                    if (!data.myCode) updates.myCode = newCode;
+                    if (data.photoURL !== user.photoURL) updates.photoURL = user.photoURL;
+                    if (data.displayName !== user.displayName) updates.displayName = user.displayName;
+                    
+                    // If any updates needed, apply them
+                    if (Object.keys(updates).length > 0) {
+                        await updateDoc(userRef, updates);
+                    }
                 }
             } catch (e) {
-                console.error("Error creating profile:", e);
+                console.error("Error creating/updating profile:", e);
             }
         }
 
@@ -215,7 +232,7 @@
                 <!-- Header -->
                 <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
-                        <a href="index.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        <a href="https://simojibou.github.io/sjcoin25/citydelivery.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
                             <i data-lucide="arrow-left" class="w-5 h-5"></i>
                         </a>
                         <h1 class="font-bold text-lg text-gray-800 dark:text-white">My Profile</h1>
@@ -233,7 +250,7 @@
                         <div class="w-24 h-24 rounded-full p-1 border-2 border-blue-500 mb-4 shadow-lg shadow-blue-500/20">
                             ${p.photoURL ? `<img src="${p.photoURL}" class="w-full h-full rounded-full object-cover">` : `<div class="w-full h-full bg-gray-200 rounded-full"></div>`}
                         </div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">${p.displayName}</h2>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">${p.displayName || 'User'}</h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${p.email}</p>
                         
                         ${p.freeDeliveryAvailable ? 
