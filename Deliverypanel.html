@@ -33,7 +33,14 @@
             appId: "1:426335553508:web:248f76772f6f78419ca9f1"
         };
 
-        const ADMIN_EMAIL = 'simo.jibou@gmail.com';
+        // --- UPDATED: LIST OF ADMINS AND MANAGERS ---
+        // Add all emails here that should see ALL services
+        const AUTHORIZED_STAFF = [
+            'simo.jibou@gmail.com',
+            'manager@gmail.com',  // Example Manager Email
+            'admin2@gmail.com'    // Another Admin
+        ].map(email => email.toLowerCase());
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -70,8 +77,9 @@
 
             const email = user.email.toLowerCase();
 
-            if (email === ADMIN_EMAIL.toLowerCase()) {
-                state.role = 'admin';
+            // --- UPDATED CHECK: Check if email is in the list ---
+            if (AUTHORIZED_STAFF.includes(email)) {
+                state.role = 'admin'; // Both Admins and Managers get 'admin' role logic
                 state.view = 'admin_list';
                 subscribeServices();
             } else {
@@ -331,7 +339,7 @@
                         
                         <div class="mt-8 pt-8 border-t border-gray-700 w-full">
                              <button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 transition">
-                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login
+                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin/Manager Login
                              </button>
                         </div>
                     </div>`;
@@ -496,7 +504,6 @@
                         }).join('')}
                     </div>
 
-                    <!-- Bill Form Overlay -->
                     ${state.showBillForm ? `
                     <div class="bg-gray-800 border-t border-purple-500 p-4 animate-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10">
                         <div class="flex justify-between items-center mb-3">
@@ -535,7 +542,6 @@
                     </div>
                     ` : ''}
 
-                    <!-- Input Bar -->
                     ${!state.showBillForm ? `
                     <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 items-center">
                         <button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition" title="Send Bill">
