@@ -11,26 +11,17 @@
         body { font-family: -apple-system, system-ui, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .animate-up { animation: up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade { animation: fade 0.2s ease-out forwards; }
         @keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center">
 
-    <div id="root" class="w-full max-w-md h-full sm:h-[90vh] bg-gray-800 sm:rounded-3xl shadow-2xl relative flex flex-col overflow-hidden ring-1 ring-white/10">
-        <!-- Added Initial Loading State -->
-        <div class="flex flex-col items-center justify-center h-full text-gray-500 animate-pulse">
-            <i data-lucide="loader-2" class="w-8 h-8 mb-2 animate-spin"></i>
-            <p>Loading Panel...</p>
-        </div>
-    </div>
+    <div id="root" class="w-full max-w-md h-full sm:h-[90vh] bg-gray-800 sm:rounded-3xl shadow-2xl relative flex flex-col overflow-hidden ring-1 ring-white/10"></div>
 
     <script type="module">
-        // FIXED: Downgraded to stable Firebase version 10.12.2 (11.6.1 does not exist yet)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -47,9 +38,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Initialize icons immediately for the loading screen
-        if(window.lucide) window.lucide.createIcons();
-
         const state = {
             user: null,
             role: 'loading',
@@ -57,14 +45,15 @@
             services: [],
             chats: [],
             activeChat: null,
-            activeMessages: [],
+            activeMessages: [], 
             editId: null,
             form: { email: '', pass: '' },
             msgInput: '',
             providerService: null,
-            // NEW STATE FOR BILLING
-            showBillModal: false, 
-            billAmount: ''
+            // New State for Bill Feature
+            showBillForm: false,
+            billAmount: '',
+            billDesc: ''
         };
 
         // --- Logic ---
@@ -113,7 +102,7 @@
 
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
-            const q = query(collection(db, 'delivery_chats', where('serviceOwnerEmail', '==', ownerEmail)));
+            const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
             
             unsubChats = onSnapshot(q, (snap) => {
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => {
@@ -122,7 +111,9 @@
                     return tB - tA;
                 });
                 
-                if (state.view === 'provider_list') render();
+                if (state.view === 'provider_list') {
+                    render();
+                }
             });
         }
 
@@ -152,6 +143,7 @@
         window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
         window.logout = () => signOut(auth);
 
+        // Admin Actions
         window.saveService = async (e) => {
             e.preventDefault();
             const form = new FormData(e.target);
@@ -184,10 +176,11 @@
             render();
         };
         
+        // Navigation Helper
         window.nav = (v) => { 
             state.view = v; 
             state.editId = null; 
-            state.showBillModal = false; // Close modal on nav
+            state.showBillForm = false; // Reset bill form on nav
             
             if(v !== 'chat' && unsubActiveMsg) {
                 unsubActiveMsg();
@@ -201,74 +194,81 @@
         window.openChat = (id) => {
             state.activeChat = state.chats.find(c => c.id === id);
             state.view = 'chat';
-            state.activeMessages = [];
+            state.activeMessages = []; 
             render();
             subscribeActiveChat(id);
         };
         
         window.chatInput = (v) => state.msgInput = v;
         
+        // --- Bill Logic ---
+        window.toggleBill = () => {
+            state.showBillForm = !state.showBillForm;
+            render();
+            // Focus amount input if opening
+            if(state.showBillForm) setTimeout(() => document.getElementById('billAmount')?.focus(), 50);
+        };
+
+        window.setBillAmount = (v) => state.billAmount = v;
+        window.setBillDesc = (v) => state.billDesc = v;
+
+        window.sendBill = async () => {
+            if(!state.activeChat) return;
+            const amt = parseFloat(state.billAmount);
+            if(!amt || amt <= 0) return alert("Please enter a valid amount");
+            
+            const desc = state.billDesc.trim() || 'Order Total';
+
+            const msg = {
+                type: 'bill', // Special type for bills
+                text: `Bill Request: $${amt.toFixed(2)}`, // Fallback text
+                amount: amt,
+                description: desc,
+                sender: state.user.uid,
+                status: 'pending',
+                timestamp: serverTimestamp()
+            };
+
+            await sendMessage(msg);
+            
+            // Reset and close bill form
+            state.billAmount = '';
+            state.billDesc = '';
+            state.showBillForm = false;
+            render();
+        };
+
         window.reply = async () => {
             const txt = state.msgInput.trim();
             if(!txt || !state.activeChat) return;
             
             const msg = {
+                type: 'text',
                 text: txt,
                 sender: state.user.uid,
                 timestamp: serverTimestamp()
             };
             
             state.msgInput = '';
-            const chatId = state.activeChat.id;
+            await sendMessage(msg);
+        };
 
+        async function sendMessage(msgData) {
+            const chatId = state.activeChat.id;
             try {
-                await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msg);
+                // 1. Add to subcollection
+                await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msgData);
+                
+                // 2. Update parent metadata
                 await updateDoc(doc(db, 'delivery_chats', chatId), {
-                    lastMessage: txt,
+                    lastMessage: msgData.type === 'bill' ? `💵 Bill: $${msgData.amount}` : msgData.text,
                     lastUpdated: serverTimestamp()
                 });
-            } catch(e) { console.error(e); }
-        };
-
-        // --- NEW BILLING LOGIC ---
-        window.toggleBillModal = () => {
-            state.showBillModal = !state.showBillModal;
-            state.billAmount = '';
-            render();
-        };
-
-        window.inputBill = (val) => {
-            state.billAmount = val;
-        };
-
-        window.sendBill = async () => {
-            const amount = parseFloat(state.billAmount);
-            if (!amount || amount <= 0) return alert("Please enter a valid amount");
-
-            const chatId = state.activeChat.id;
-            
-            // Create a specialized Bill Message
-            const billMsg = {
-                text: `Total Bill: ${amount} DH`, // Fallback text
-                amount: amount,
-                type: 'bill', // DISTINGUISHING FIELD
-                sender: state.user.uid,
-                timestamp: serverTimestamp()
-            };
-
-            try {
-                await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), billMsg);
-                await updateDoc(doc(db, 'delivery_chats', chatId), {
-                    lastMessage: `🧾 Bill Sent: ${amount} DH`,
-                    lastUpdated: serverTimestamp()
-                });
-                state.showBillModal = false;
-                render();
             } catch(e) {
                 console.error(e);
-                alert("Error sending bill");
+                alert("Error sending: " + e.message);
             }
-        };
+        }
 
         function scrollChat() {
             setTimeout(() => {
@@ -420,29 +420,28 @@
                         </div>
                     </div>
                     
-                    <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900">
+                    <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900 relative">
                         ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
                             const isMe = m.sender === state.user.uid;
-                            const isBill = m.type === 'bill';
                             
-                            // Different Styling for Bills
-                            if (isBill) {
+                            // Check if message is a Bill
+                            if(m.type === 'bill') {
                                 return `
-                                    <div class="flex justify-end mb-3">
-                                        <div class="w-48 p-4 rounded-2xl bg-green-900/30 border border-green-500/50 text-white rounded-br-none flex flex-col items-center gap-2">
-                                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                <i data-lucide="receipt" class="w-5 h-5 text-green-400"></i>
-                                            </div>
-                                            <div class="text-center">
-                                                <p class="text-xs text-green-300 uppercase tracking-wide">Total Bill</p>
-                                                <p class="text-2xl font-bold">${m.amount} <span class="text-sm font-normal">DH</span></p>
-                                            </div>
+                                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
+                                    <div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-48 shadow-lg">
+                                        <div class="flex items-center gap-2 mb-2 text-purple-400 font-bold text-xs uppercase tracking-wider">
+                                            <i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent
+                                        </div>
+                                        <div class="text-2xl font-bold text-white mb-1">$${m.amount}</div>
+                                        <div class="text-xs text-gray-400">${m.description}</div>
+                                        <div class="mt-3 text-[10px] text-gray-500 uppercase tracking-widest text-center border-t border-gray-700 pt-2">
+                                            Status: Sent
                                         </div>
                                     </div>
-                                `;
+                                </div>`;
                             }
 
-                            // Standard Message
+                            // Standard Text Message
                             return `
                                 <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
                                     <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">
@@ -452,30 +451,34 @@
                         }).join('')}
                     </div>
 
-                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 relative">
-                        <button onclick="toggleBillModal()" class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 text-green-400 transition">
+                    <!-- Bill Form Overlay -->
+                    ${state.showBillForm ? `
+                    <div class="bg-gray-800 border-t border-purple-500 p-4 animate-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-purple-400 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Send Bill</h3>
+                            <button onclick="toggleBill()" class="p-1 hover:bg-gray-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button>
+                        </div>
+                        <div class="flex gap-2 mb-3">
+                            <div class="relative w-1/3">
+                                <span class="absolute left-3 top-2.5 text-gray-400">$</span>
+                                <input id="billAmount" type="number" step="0.01" value="${state.billAmount}" oninput="setBillAmount(this.value)" placeholder="0.00" class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2 pl-6 pr-2 text-white outline-none focus:border-purple-500">
+                            </div>
+                            <input type="text" value="${state.billDesc}" oninput="setBillDesc(this.value)" placeholder="Items (e.g. Pizza, Burger)" class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500">
+                        </div>
+                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg transition">Send Bill to Customer</button>
+                    </div>
+                    ` : ''}
+
+                    <!-- Input Bar -->
+                    ${!state.showBillForm ? `
+                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 items-center">
+                        <button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition" title="Send Bill">
                             <i data-lucide="receipt" class="w-5 h-5"></i>
                         </button>
-
                         <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white">
                         <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
-
-                        ${state.showBillModal ? `
-                            <div class="absolute bottom-20 left-4 right-4 bg-gray-700 border border-gray-600 rounded-2xl p-4 shadow-2xl animate-fade z-20">
-                                <h3 class="font-bold text-white mb-3 flex items-center gap-2">
-                                    <i data-lucide="receipt" class="w-4 h-4 text-green-400"></i> Send Bill
-                                </h3>
-                                <div class="flex items-center bg-gray-800 rounded-xl px-3 border border-gray-600 focus-within:border-green-500 mb-3">
-                                    <span class="text-gray-400 text-sm">DH</span>
-                                    <input type="number" value="${state.billAmount}" placeholder="0.00" autoFocus oninput="inputBill(this.value)" class="w-full bg-transparent p-3 text-white text-lg outline-none font-bold text-right">
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="toggleBillModal()" class="flex-1 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 text-sm font-medium">Cancel</button>
-                                    <button onclick="sendBill()" class="flex-1 py-2 bg-green-600 rounded-lg hover:bg-green-500 text-white text-sm font-bold shadow-lg shadow-green-900/20">Send Bill</button>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>`;
+                    </div>` : ''}
+                    `;
             }
 
             root.innerHTML = content;
