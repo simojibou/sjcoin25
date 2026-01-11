@@ -457,7 +457,7 @@
                                 </h3>
                                 <div class="flex items-center bg-gray-800 rounded-xl px-3 border border-gray-600 focus-within:border-green-500 mb-3">
                                     <span class="text-gray-400 text-sm">DH</span>
-                                    <input type="number" placeholder="0.00" autoFocus onchange="inputBill(this.value)" class="w-full bg-transparent p-3 text-white text-lg outline-none font-bold text-right">
+                                    <input type="number" value="${state.billAmount}" placeholder="0.00" autoFocus oninput="inputBill(this.value)" class="w-full bg-transparent p-3 text-white text-lg outline-none font-bold text-right">
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="toggleBillModal()" class="flex-1 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 text-sm font-medium">Cancel</button>
