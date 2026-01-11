@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Panel</title>
+    <title>Delivery & Affiliate Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -33,12 +33,11 @@
             appId: "1:426335553508:web:248f76772f6f78419ca9f1"
         };
 
-        // --- UPDATED: LIST OF ADMINS AND MANAGERS ---
-        // Add all emails here that should see ALL services
+        // --- ADMIN & MANAGER LIST ---
         const AUTHORIZED_STAFF = [
             'simo.jibou@gmail.com',
-            'manager@gmail.com',  // Example Manager Email
-            'admin2@gmail.com'    // Another Admin
+            'manager@gmail.com',
+            'admin2@gmail.com' 
         ].map(email => email.toLowerCase());
 
         const app = initializeApp(firebaseConfig);
@@ -57,12 +56,17 @@
             form: { email: '', pass: '' },
             msgInput: '',
             providerService: null,
-            // New State for Bill Feature
             showBillForm: false,
             billAmount: '',
             billDesc: '',
             deliveryFee: 5,
-            promoActive: false
+            promoActive: false,
+            // --- NEW STATS STATE ---
+            stats: {
+                totalOrders: 0,
+                affiliates: [], // List of { code: 'Name', count: 10 }
+                totalUsers: 0
+            }
         };
 
         // --- Logic ---
@@ -77,18 +81,53 @@
 
             const email = user.email.toLowerCase();
 
-            // --- UPDATED CHECK: Check if email is in the list ---
             if (AUTHORIZED_STAFF.includes(email)) {
-                state.role = 'admin'; // Both Admins and Managers get 'admin' role logic
+                state.role = 'admin'; 
                 state.view = 'admin_list';
                 subscribeServices();
+                subscribeAdminStats(); // NEW: Listen to stats
             } else {
                 state.role = 'provider'; 
                 subscribeServices();
             }
         });
 
-        let unsubServices, unsubChats, unsubActiveMsg;
+        let unsubServices, unsubChats, unsubActiveMsg, unsubStatsOrders, unsubStatsUsers;
+
+        // --- NEW: Analytics Subscriptions ---
+        function subscribeAdminStats() {
+            // 1. Count Total Orders (Chats)
+            if(unsubStatsOrders) unsubStatsOrders();
+            unsubStatsOrders = onSnapshot(collection(db, 'delivery_chats'), (snap) => {
+                state.stats.totalOrders = snap.size;
+                render();
+            });
+
+            // 2. Affiliate Logic (Count Referred Users)
+            // Assumes a 'users' collection where documents have a 'referredBy' field
+            if(unsubStatsUsers) unsubStatsUsers();
+            unsubStatsUsers = onSnapshot(collection(db, 'users'), (snap) => {
+                state.stats.totalUsers = snap.size;
+                
+                const referralCounts = {};
+                
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    // Check if user was referred by someone (referredBy field)
+                    if(data.referredBy) {
+                        const code = data.referredBy.toUpperCase();
+                        referralCounts[code] = (referralCounts[code] || 0) + 1;
+                    }
+                });
+
+                // Convert to array and sort by highest count
+                state.stats.affiliates = Object.entries(referralCounts)
+                    .map(([code, count]) => ({ code, count }))
+                    .sort((a, b) => b.count - a.count);
+
+                render();
+            });
+        }
 
         function subscribeServices() {
             if(unsubServices) unsubServices();
@@ -190,7 +229,7 @@
         window.nav = (v) => { 
             state.view = v; 
             state.editId = null; 
-            state.showBillForm = false; // Reset bill form on nav
+            state.showBillForm = false; 
             
             if(v !== 'chat' && unsubActiveMsg) {
                 unsubActiveMsg();
@@ -214,32 +253,17 @@
         // --- Bill Logic ---
         window.toggleBill = () => {
             state.showBillForm = !state.showBillForm;
-            
             if (state.showBillForm) {
-                // Check for SJ CODE from the buyer in the message history
-                const hasPromo = state.activeMessages.some(m => 
-                    m.text && 
-                    m.text.toUpperCase().trim() === 'SJ CODE' && 
-                    m.sender !== state.user.uid
-                );
-                
+                const hasPromo = state.activeMessages.some(m => m.text && m.text.toUpperCase().trim() === 'SJ CODE' && m.sender !== state.user.uid);
                 state.promoActive = hasPromo;
-                state.deliveryFee = hasPromo ? 0 : 5; // Default 5 if no promo, 0 if promo
-                
-                // Focus amount input if opening
+                state.deliveryFee = hasPromo ? 0 : 5;
                 setTimeout(() => document.getElementById('billAmount')?.focus(), 50);
             }
             render();
         };
 
-        window.setBillAmount = (v) => {
-            state.billAmount = v;
-            render();
-        };
-        window.setDeliveryFee = (v) => {
-            state.deliveryFee = v;
-            render();
-        };
+        window.setBillAmount = (v) => { state.billAmount = v; render(); };
+        window.setDeliveryFee = (v) => { state.deliveryFee = v; render(); };
         window.setBillDesc = (v) => state.billDesc = v;
 
         window.sendBill = async () => {
@@ -254,8 +278,8 @@
             const desc = state.billDesc.trim() || 'Order Total';
 
             const msg = {
-                type: 'bill', // Special type for bills
-                text: `Bill: $${total.toFixed(2)}`, // Fallback text
+                type: 'bill',
+                text: `Bill: $${total.toFixed(2)}`,
                 amount: amt,
                 deliveryFee: fee,
                 total: total,
@@ -266,8 +290,6 @@
             };
 
             await sendMessage(msg);
-            
-            // Reset and close bill form
             state.billAmount = '';
             state.billDesc = '';
             state.showBillForm = false;
@@ -277,14 +299,7 @@
         window.reply = async () => {
             const txt = state.msgInput.trim();
             if(!txt || !state.activeChat) return;
-            
-            const msg = {
-                type: 'text',
-                text: txt,
-                sender: state.user.uid,
-                timestamp: serverTimestamp()
-            };
-            
+            const msg = { type: 'text', text: txt, sender: state.user.uid, timestamp: serverTimestamp() };
             state.msgInput = '';
             await sendMessage(msg);
         };
@@ -292,10 +307,7 @@
         async function sendMessage(msgData) {
             const chatId = state.activeChat.id;
             try {
-                // 1. Add to subcollection
                 await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msgData);
-                
-                // 2. Update parent metadata
                 await updateDoc(doc(db, 'delivery_chats', chatId), {
                     lastMessage: msgData.type === 'bill' ? `💵 Bill: $${msgData.total.toFixed(2)}` : msgData.text,
                     lastUpdated: serverTimestamp()
@@ -325,8 +337,8 @@
                         <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-900/50">
                             <i data-lucide="lock" class="w-8 h-8 text-white"></i>
                         </div>
-                        <h2 class="text-2xl font-bold mb-1">Delivery Panel</h2>
-                        <p class="text-gray-400 mb-8 text-sm">Staff & Admin Access Only</p>
+                        <h2 class="text-2xl font-bold mb-1">Admin Panel</h2>
+                        <p class="text-gray-400 mb-8 text-sm">Authorized Access Only</p>
 
                         <form onsubmit="loginEmail(event)" class="w-full space-y-4">
                             <input onchange="input('email',this.value)" type="email" placeholder="Email" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none" required>
@@ -339,7 +351,7 @@
                         
                         <div class="mt-8 pt-8 border-t border-gray-700 w-full">
                              <button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 transition">
-                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin/Manager Login
+                                <i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login
                              </button>
                         </div>
                     </div>`;
@@ -356,10 +368,51 @@
             else if (state.view === 'admin_list') {
                 content = `
                     <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
-                        <h2 class="font-bold text-lg">Admin Dashboard</h2>
-                        <button onclick="logout()" class="text-red-400"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                        <h2 class="font-bold text-lg">Dashboard</h2>
+                        <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
                     </div>
+                    
                     <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="bg-blue-600/20 border border-blue-500/30 p-4 rounded-xl flex flex-col justify-center">
+                                <div class="flex items-center gap-2 text-blue-400 mb-1">
+                                    <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                                    <span class="text-xs font-bold uppercase">Total Orders</span>
+                                </div>
+                                <span class="text-2xl font-bold text-white">${state.stats.totalOrders}</span>
+                            </div>
+                            <div class="bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl flex flex-col justify-center">
+                                <div class="flex items-center gap-2 text-purple-400 mb-1">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    <span class="text-xs font-bold uppercase">Total Users</span>
+                                </div>
+                                <span class="text-2xl font-bold text-white">${state.stats.totalUsers}</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Top Affiliates (By Referrals)</h3>
+                            <div class="bg-gray-800 border border-white/5 rounded-xl overflow-hidden">
+                                ${state.stats.affiliates.length === 0 ? 
+                                    `<div class="p-4 text-center text-gray-500 text-sm">No affiliate data yet</div>` :
+                                    state.stats.affiliates.map((aff, index) => `
+                                    <div class="flex items-center justify-between p-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-6 h-6 rounded-full ${index === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'} flex items-center justify-center text-xs font-bold">
+                                                ${index + 1}
+                                            </div>
+                                            <span class="font-bold text-white text-sm">${aff.code}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-green-400 text-sm font-bold">
+                                            <span>${aff.count}</span>
+                                            <i data-lucide="user-plus" class="w-3 h-3"></i>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Manage Services</h3>
                         <div class="grid gap-3">
                             <button onclick="nav('admin_edit')" class="w-full p-4 border-2 border-dashed border-gray-600 rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-400 hover:bg-purple-400/10 transition flex items-center justify-center gap-2">
                                 <i data-lucide="plus" class="w-5 h-5"></i> Add New Service
@@ -405,7 +458,6 @@
                                 <h3 class="text-sm font-bold text-purple-400 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4"></i> Provider Account</h3>
                                 <div><label class="text-xs uppercase font-bold text-gray-500">Account Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
                                 <div><label class="text-xs uppercase font-bold text-gray-500">Account Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white border border-gray-600 focus:border-purple-500 outline-none" required></div>
-                                <p class="text-xs text-gray-400">The delivery driver will use these credentials to log in.</p>
                             </div>
                             <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white border border-gray-600 outline-none"></div>
                             
@@ -427,8 +479,6 @@
                             `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : 
                             state.chats.map(c => {
                                 const timeStr = c.lastUpdated ? new Date(c.lastUpdated.seconds * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Just now';
-                                const preview = c.lastMessage || 'New Order';
-                                
                                 return `
                                 <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up group border border-transparent hover:border-gray-600">
                                     <div class="flex justify-between items-start mb-1">
@@ -439,7 +489,7 @@
                                         <span class="text-[10px] text-gray-400 whitespace-nowrap">${timeStr}</span>
                                     </div>
                                     <p class="text-xs text-gray-300 ml-4 mb-1"><span class="bg-gray-600 text-gray-200 px-1.5 py-0.5 rounded text-[10px] mr-1">${c.city}</span></p>
-                                    <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${preview}</p>
+                                    <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${c.lastMessage || 'New Order'}</p>
                                 </button>`;
                             }).join('')
                         }
@@ -447,7 +497,6 @@
             }
             else if (state.view === 'chat') {
                 const msgs = state.activeMessages || [];
-                // Calculate total for display in form
                 const currentTotal = (parseFloat(state.billAmount) || 0) + (parseFloat(state.deliveryFee) || 0);
 
                 content = `
@@ -462,45 +511,19 @@
                     <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900 relative">
                         ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
                             const isMe = m.sender === state.user.uid;
-                            
-                            // Check if message is a Bill
                             if(m.type === 'bill') {
                                 const feeDisplay = m.deliveryFee === 0 ? 'FREE' : `$${m.deliveryFee.toFixed(2)}`;
-                                const displayTotal = m.total || m.amount; // Fallback for old bills
-
                                 return `
                                 <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
                                     <div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-56 shadow-lg">
-                                        <div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2">
-                                            <i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent
-                                        </div>
-                                        
-                                        <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                            <span>Items:</span>
-                                            <span>$${m.amount.toFixed(2)}</span>
-                                        </div>
-                                        <div class="flex justify-between text-xs text-gray-400 mb-3">
-                                            <span>Delivery:</span>
-                                            <span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${feeDisplay}</span>
-                                        </div>
-                                        
-                                        <div class="flex justify-between items-end border-t border-white/10 pt-2">
-                                            <span class="text-sm text-gray-300">Total:</span>
-                                            <span class="text-xl font-bold text-white">$${displayTotal.toFixed(2)}</span>
-                                        </div>
-                                        
-                                        ${m.description ? `<div class="text-[10px] text-gray-500 mt-2 text-right italic">${m.description}</div>` : ''}
+                                        <div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent</div>
+                                        <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Items:</span><span>$${m.amount.toFixed(2)}</span></div>
+                                        <div class="flex justify-between text-xs text-gray-400 mb-3"><span>Delivery:</span><span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${feeDisplay}</span></div>
+                                        <div class="flex justify-between items-end border-t border-white/10 pt-2"><span class="text-sm text-gray-300">Total:</span><span class="text-xl font-bold text-white">$${(m.total || m.amount).toFixed(2)}</span></div>
                                     </div>
                                 </div>`;
                             }
-
-                            // Standard Text Message
-                            return `
-                                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
-                                    <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">
-                                        ${m.text}
-                                    </div>
-                                </div>`;
+                            return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">${m.text}</div></div>`;
                         }).join('')}
                     </div>
 
@@ -510,49 +533,21 @@
                             <h3 class="font-bold text-purple-400 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Send Bill</h3>
                             <button onclick="toggleBill()" class="p-1 hover:bg-gray-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button>
                         </div>
-                        
-                        ${state.promoActive ? `
-                        <div class="mb-3 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-xs text-green-400 font-medium">
-                            <i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED: Free Delivery!
-                        </div>` : ''}
-
+                        ${state.promoActive ? `<div class="mb-3 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-xs text-green-400 font-medium"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>` : ''}
                         <div class="flex gap-2 mb-2">
-                             <div class="relative w-1/2">
-                                <label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Subtotal</label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-gray-400">$</span>
-                                    <input id="billAmount" type="number" step="0.01" value="${state.billAmount}" oninput="setBillAmount(this.value)" placeholder="0.00" class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2 pl-6 pr-2 text-white outline-none focus:border-purple-500">
-                                </div>
-                            </div>
-                            <div class="relative w-1/2">
-                                <label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Delivery Fee</label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-gray-400">$</span>
-                                    <input type="number" step="0.01" value="${state.deliveryFee}" oninput="setDeliveryFee(this.value)" class="w-full bg-gray-900 border ${state.promoActive ? 'border-green-500/50 text-green-400' : 'border-gray-600 text-white'} rounded-lg py-2 pl-6 pr-2 outline-none focus:border-purple-500">
-                                </div>
-                            </div>
+                             <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Subtotal</label><input id="billAmount" type="number" step="0.01" value="${state.billAmount}" oninput="setBillAmount(this.value)" placeholder="0.00" class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2 pl-2 text-white outline-none focus:border-purple-500"></div>
+                             <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Fee</label><input type="number" step="0.01" value="${state.deliveryFee}" oninput="setDeliveryFee(this.value)" class="w-full bg-gray-900 border ${state.promoActive ? 'border-green-500/50 text-green-400' : 'border-gray-600 text-white'} rounded-lg py-2 pl-2 outline-none focus:border-purple-500"></div>
                         </div>
-                        <div class="mb-3">
-                             <input type="text" value="${state.billDesc}" oninput="setBillDesc(this.value)" placeholder="Items (e.g. Pizza, Burger)" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500 text-sm">
-                        </div>
-                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition flex justify-between px-4">
-                            <span>Send Bill</span>
-                            <span>$${currentTotal.toFixed(2)}</span>
-                        </button>
-                    </div>
-                    ` : ''}
-
-                    ${!state.showBillForm ? `
+                        <div class="mb-3"><input type="text" value="${state.billDesc}" oninput="setBillDesc(this.value)" placeholder="Items description" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500 text-sm"></div>
+                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition flex justify-between px-4"><span>Send Bill</span><span>$${currentTotal.toFixed(2)}</span></button>
+                    </div>` : `
                     <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 items-center">
-                        <button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition" title="Send Bill">
-                            <i data-lucide="receipt" class="w-5 h-5"></i>
-                        </button>
+                        <button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition"><i data-lucide="receipt" class="w-5 h-5"></i></button>
                         <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white">
                         <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
-                    </div>` : ''}
+                    </div>`}
                     `;
             }
-
             root.innerHTML = content;
             lucide.createIcons();
         }
