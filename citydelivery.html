@@ -165,7 +165,8 @@
                         // Handle Bill Messages
                         if(msg.type === 'bill') {
                              div.className = `flex justify-start mb-4 animate-fade`;
-                             const feeDisplay = msg.deliveryFee === 0 ? 'FREE' : `$${msg.deliveryFee.toFixed(2)}`;
+                             const isPromo = msg.deliveryFee === 0;
+                             const feeDisplay = isPromo ? 'FREE' : `$${msg.deliveryFee.toFixed(2)}`;
                              const displayTotal = msg.total || msg.amount;
 
                              div.innerHTML = `
@@ -173,6 +174,13 @@
                                     <div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2">
                                         <i data-lucide="receipt" class="w-4 h-4"></i> Payment Request
                                     </div>
+                                    
+                                    ${isPromo ? `
+                                        <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                                            <i data-lucide="ticket" class="w-3 h-3"></i> SJ CODE APPLIED
+                                        </div>
+                                    ` : ''}
+
                                     <div class="space-y-1 mb-3">
                                         <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                                             <span>Subtotal</span>
@@ -180,7 +188,7 @@
                                         </div>
                                         <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                                             <span>Delivery</span>
-                                            <span class="${msg.deliveryFee === 0 ? 'text-green-500 font-bold' : ''}">${feeDisplay}</span>
+                                            <span class="${isPromo ? 'text-emerald-500 font-bold' : ''}">${feeDisplay}</span>
                                         </div>
                                     </div>
                                     <div class="flex justify-between items-end border-t border-gray-100 dark:border-gray-700 pt-2">
