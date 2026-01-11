@@ -11,7 +11,9 @@
         body { font-family: -apple-system, system-ui, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .animate-up { animation: up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade { animation: fade 0.2s ease-out forwards; }
         @keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center">
@@ -45,11 +47,14 @@
             services: [],
             chats: [],
             activeChat: null,
-            activeMessages: [], // NEW: Stores messages for the active chat
+            activeMessages: [],
             editId: null,
             form: { email: '', pass: '' },
             msgInput: '',
-            providerService: null
+            providerService: null,
+            // NEW STATE FOR BILLING
+            showBillModal: false, 
+            billAmount: ''
         };
 
         // --- Logic ---
@@ -98,20 +103,16 @@
 
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
-            const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            const q = query(collection(db, 'delivery_chats', where('serviceOwnerEmail', '==', ownerEmail)));
             
             unsubChats = onSnapshot(q, (snap) => {
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => {
-                    // Safe timestamp sorting
                     const tA = a.lastUpdated?.seconds || 0;
                     const tB = b.lastUpdated?.seconds || 0;
                     return tB - tA;
                 });
                 
-                // If in list view, re-render to show new last messages
-                if (state.view === 'provider_list') {
-                    render();
-                }
+                if (state.view === 'provider_list') render();
             });
         }
 
@@ -141,7 +142,6 @@
         window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
         window.logout = () => signOut(auth);
 
-        // Admin Actions
         window.saveService = async (e) => {
             e.preventDefault();
             const form = new FormData(e.target);
@@ -174,12 +174,11 @@
             render();
         };
         
-        // Navigation Helper
         window.nav = (v) => { 
             state.view = v; 
             state.editId = null; 
+            state.showBillModal = false; // Close modal on nav
             
-            // Clean up chat listener if leaving chat
             if(v !== 'chat' && unsubActiveMsg) {
                 unsubActiveMsg();
                 unsubActiveMsg = null;
@@ -192,7 +191,7 @@
         window.openChat = (id) => {
             state.activeChat = state.chats.find(c => c.id === id);
             state.view = 'chat';
-            state.activeMessages = []; // Clear previous messages immediately
+            state.activeMessages = [];
             render();
             subscribeActiveChat(id);
         };
@@ -206,26 +205,58 @@
             const msg = {
                 text: txt,
                 sender: state.user.uid,
-                timestamp: serverTimestamp() // Use server timestamp for consistency
+                timestamp: serverTimestamp()
             };
             
             state.msgInput = '';
-            // Optimistic render (optional, but waiting for listener is safer with subcollections)
-            
             const chatId = state.activeChat.id;
 
             try {
-                // 1. Add to subcollection
                 await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msg);
-                
-                // 2. Update parent metadata
                 await updateDoc(doc(db, 'delivery_chats', chatId), {
                     lastMessage: txt,
                     lastUpdated: serverTimestamp()
                 });
+            } catch(e) { console.error(e); }
+        };
+
+        // --- NEW BILLING LOGIC ---
+        window.toggleBillModal = () => {
+            state.showBillModal = !state.showBillModal;
+            state.billAmount = '';
+            render();
+        };
+
+        window.inputBill = (val) => {
+            state.billAmount = val;
+        };
+
+        window.sendBill = async () => {
+            const amount = parseFloat(state.billAmount);
+            if (!amount || amount <= 0) return alert("Please enter a valid amount");
+
+            const chatId = state.activeChat.id;
+            
+            // Create a specialized Bill Message
+            const billMsg = {
+                text: `Total Bill: ${amount} DH`, // Fallback text
+                amount: amount,
+                type: 'bill', // DISTINGUISHING FIELD
+                sender: state.user.uid,
+                timestamp: serverTimestamp()
+            };
+
+            try {
+                await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), billMsg);
+                await updateDoc(doc(db, 'delivery_chats', chatId), {
+                    lastMessage: `🧾 Bill Sent: ${amount} DH`,
+                    lastUpdated: serverTimestamp()
+                });
+                state.showBillModal = false;
+                render();
             } catch(e) {
                 console.error(e);
-                alert("Error sending message: " + e.message);
+                alert("Error sending bill");
             }
         };
 
@@ -349,7 +380,6 @@
                         ${state.chats.length === 0 ? 
                             `<div class="flex flex-col items-center justify-center h-64 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : 
                             state.chats.map(c => {
-                                // FIXED: Use metadata lastMessage instead of array
                                 const timeStr = c.lastUpdated ? new Date(c.lastUpdated.seconds * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Just now';
                                 const preview = c.lastMessage || 'New Order';
                                 
@@ -379,9 +409,30 @@
                             <p class="text-xs text-green-400 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live Order</p>
                         </div>
                     </div>
+                    
                     <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900">
                         ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
                             const isMe = m.sender === state.user.uid;
+                            const isBill = m.type === 'bill';
+                            
+                            // Different Styling for Bills
+                            if (isBill) {
+                                return `
+                                    <div class="flex justify-end mb-3">
+                                        <div class="w-48 p-4 rounded-2xl bg-green-900/30 border border-green-500/50 text-white rounded-br-none flex flex-col items-center gap-2">
+                                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                <i data-lucide="receipt" class="w-5 h-5 text-green-400"></i>
+                                            </div>
+                                            <div class="text-center">
+                                                <p class="text-xs text-green-300 uppercase tracking-wide">Total Bill</p>
+                                                <p class="text-2xl font-bold">${m.amount} <span class="text-sm font-normal">DH</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            // Standard Message
                             return `
                                 <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
                                     <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">
@@ -390,9 +441,30 @@
                                 </div>`;
                         }).join('')}
                     </div>
-                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0">
+
+                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 relative">
+                        <button onclick="toggleBillModal()" class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 text-green-400 transition">
+                            <i data-lucide="receipt" class="w-5 h-5"></i>
+                        </button>
+
                         <input value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" placeholder="Reply..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white">
                         <button onclick="reply()" class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white"><i data-lucide="send" class="w-5 h-5"></i></button>
+
+                        ${state.showBillModal ? `
+                            <div class="absolute bottom-20 left-4 right-4 bg-gray-700 border border-gray-600 rounded-2xl p-4 shadow-2xl animate-fade z-20">
+                                <h3 class="font-bold text-white mb-3 flex items-center gap-2">
+                                    <i data-lucide="receipt" class="w-4 h-4 text-green-400"></i> Send Bill
+                                </h3>
+                                <div class="flex items-center bg-gray-800 rounded-xl px-3 border border-gray-600 focus-within:border-green-500 mb-3">
+                                    <span class="text-gray-400 text-sm">DH</span>
+                                    <input type="number" placeholder="0.00" autoFocus onchange="inputBill(this.value)" class="w-full bg-transparent p-3 text-white text-lg outline-none font-bold text-right">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="toggleBillModal()" class="flex-1 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 text-sm font-medium">Cancel</button>
+                                    <button onclick="sendBill()" class="flex-1 py-2 bg-green-600 rounded-lg hover:bg-green-500 text-white text-sm font-bold shadow-lg shadow-green-900/20">Send Bill</button>
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>`;
             }
 
