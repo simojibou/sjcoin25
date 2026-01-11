@@ -200,12 +200,15 @@
                 });
 
                 // 2. Create or Update Chat Metadata
+                const ownerEmail = state.activeService.ownerEmail || '';
+
                 if (!chatSnapshot.exists()) {
                      batch.set(chatDocRef, {
                         userId: state.user.uid,
                         userEmail: state.user.email || 'anon',
                         serviceId: state.activeService.id,
                         serviceName: state.activeService.name,
+                        serviceOwnerEmail: ownerEmail, // CRITICAL: This was missing
                         city: state.activeService.city,
                         createdAt: serverTimestamp(),
                         lastMessage: txt,
@@ -214,14 +217,15 @@
                 } else {
                     batch.update(chatDocRef, {
                         lastMessage: txt,
-                        lastUpdated: serverTimestamp()
+                        lastUpdated: serverTimestamp(),
+                        serviceOwnerEmail: ownerEmail // Self-heal if missing in old chats
                     });
                 }
 
                 await batch.commit();
             } catch (e) {
                 console.error("Send error:", e);
-                alert("Failed to send message.");
+                alert("Failed to send message: " + e.message);
             }
         }
 
@@ -233,9 +237,9 @@
         function scrollToBottom() {
             const el = document.getElementById('chat-messages');
             if(el) {
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     el.scrollTop = el.scrollHeight;
-                });
+                }, 100);
             }
         }
 
