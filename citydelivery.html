@@ -30,8 +30,7 @@
 <body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
 
     <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
-        <!-- Views are injected here -->
-    </div>
+        </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -176,9 +175,9 @@
                                     </div>
                                     
                                     ${isPromo ? `
-                                        <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+                                    <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
                                             <i data-lucide="ticket" class="w-3 h-3"></i> SJ CODE APPLIED
-                                        </div>
+                                    </div>
                                     ` : ''}
 
                                     <div class="space-y-1 mb-3">
@@ -351,8 +350,9 @@
             // Generate user profile HTML if on root screen (no back button) and user exists
             const showProfile = !showBack && user;
             
+            // --- UPDATED SECTION: Clickable Profile ---
             const leftSection = showProfile ? `
-                <div class="flex items-center gap-3 overflow-hidden">
+                <a href="https://simojibou.github.io/sjcoin25/duserprofile.html" class="flex items-center gap-3 overflow-hidden hover:opacity-75 transition-opacity">
                     ${user.photoURL 
                         ? `<img src="${user.photoURL}" alt="Profile" class="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 object-cover shrink-0">` 
                         : `<div class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><i data-lucide="user" class="w-5 h-5"></i></div>`
@@ -361,7 +361,7 @@
                         <span class="text-[10px] uppercase font-bold text-gray-400 leading-tight">Welcome</span>
                         <span class="font-bold text-sm truncate text-gray-800 dark:text-white leading-tight">${(user.displayName || 'User').split(' ')[0]}</span>
                     </div>
-                </div>
+                </a>
             ` : `
                 <div class="flex items-center gap-3 min-w-0">
                     ${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>` : ''}
@@ -453,8 +453,7 @@
         function renderChatLayout() {
             return `
                 ${header(state.activeService.name, true)}
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-gray-900 scroll-smooth">
-                    <!-- Messages injected by Firestore listener -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900 scroll-smooth">
                     <div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50 pointer-events-none">
                         <i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i>
                         <p class="text-xs">Connecting to ${state.activeService.name}...</p>
