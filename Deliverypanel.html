@@ -43,9 +43,9 @@
             user: null, role: 'loading', view: 'login',
             services: [], chats: [], activeChat: null, activeMessages: [], 
             editId: null, form: { email: '', pass: '' }, msgInput: '',
-            providerService: null, providerEarnings: 0, // NEW: Provider Wallet
+            providerService: null, providerEarnings: 0,
             showBillForm: false, billAmount: '', billDesc: '', deliveryFee: 5, promoActive: false,
-            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 } // NEW: Admin Revenue
+            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 }
         };
 
         // --- Logic ---
@@ -65,10 +65,8 @@
 
         function subscribeAdminStats() {
             if(unsubStatsOrders) unsubStatsOrders();
-            // Listen to ALL chats for Admin Stats
             unsubStatsOrders = onSnapshot(collection(db, 'delivery_chats'), (snap) => {
                 state.stats.totalOrders = snap.size;
-                // Calculate Total Revenue (Sum of all delivered order totals)
                 let rev = 0;
                 snap.forEach(d => {
                     const data = d.data();
@@ -120,7 +118,6 @@
             unsubChats = onSnapshot(q, (snap) => {
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
                 
-                // NEW: Calculate Provider Earnings (Sum of delivered orders)
                 state.providerEarnings = state.chats.reduce((sum, chat) => {
                     if(chat.status === 'delivered' && chat.orderTotal) {
                         return sum + parseFloat(chat.orderTotal);
@@ -188,18 +185,16 @@
             const msg = { type: 'bill', text: `Bill: $${total.toFixed(2)}`, amount: amt, deliveryFee: fee, total: total, description: state.billDesc.trim() || 'Order Total', sender: state.user.uid, status: 'pending', timestamp: serverTimestamp() };
 
             const chatId = state.activeChat.id;
-            // Add message AND update Chat with orderTotal
             await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msg);
             await updateDoc(doc(db, 'delivery_chats', chatId), {
                 lastMessage: `💵 Bill: $${total.toFixed(2)}`,
-                orderTotal: total, // NEW: Save total in chat doc for earnings calc
+                orderTotal: total,
                 lastUpdated: serverTimestamp()
             });
 
             state.billAmount = ''; state.billDesc = ''; state.showBillForm = false; render();
         };
 
-        // NEW: Mark Order as Done (Delivered)
         window.markDone = async () => {
             if(!state.activeChat) return;
             if(!confirm("Are you sure you delivered this order?")) return;
@@ -208,11 +203,7 @@
                 status: 'delivered',
                 completedAt: serverTimestamp()
             });
-
-            // Update local state to reflect change immediately
             state.activeChat.status = 'delivered';
-            
-            // Go back to list
             state.view = 'provider_list';
             render();
         };
@@ -360,9 +351,65 @@
                     <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900 relative">
                         ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
                             const isMe = m.sender === state.user.uid;
+                            
+                            // 1. BILL DISPLAY
                             if(m.type === 'bill') {
                                 return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-56 shadow-lg"><div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent</div><div class="flex justify-between text-xs text-gray-400 mb-1"><span>Items:</span><span>$${m.amount.toFixed(2)}</span></div><div class="flex justify-between text-xs text-gray-400 mb-3"><span>Fee:</span><span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${m.deliveryFee === 0 ? 'FREE' : '$'+m.deliveryFee.toFixed(2)}</span></div><div class="flex justify-between items-end border-t border-white/10 pt-2"><span class="text-sm text-gray-300">Total:</span><span class="text-xl font-bold text-white">$${(m.total||m.amount).toFixed(2)}</span></div></div></div>`;
                             }
+                            
+                            // 2. ORDER DETAILS (NEW)
+                            if(m.type === 'order') {
+                                const items = m.items || [];
+                                return `
+                                <div class="flex justify-start mb-3 animate-up">
+                                    <div class="bg-gray-800 border border-gray-600 rounded-2xl overflow-hidden w-64 shadow-lg">
+                                        <div class="bg-purple-600/20 px-4 py-2 flex justify-between items-center border-b border-purple-500/20">
+                                            <span class="font-bold text-xs uppercase text-purple-300 flex items-center gap-1"><i data-lucide="shopping-cart" class="w-3 h-3"></i> Order</span>
+                                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded font-bold">${items.length} Items</span>
+                                        </div>
+                                        <div class="divide-y divide-gray-700 max-h-60 overflow-y-auto">
+                                            ${items.map(item => `
+                                                <div class="flex items-center gap-3 p-3 hover:bg-white/5">
+                                                    <div class="w-10 h-10 bg-gray-700 rounded-lg overflow-hidden shrink-0 border border-gray-600">
+                                                        ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-500"></i></div>`}
+                                                    </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="text-sm font-bold text-gray-200 truncate">${item.name}</div>
+                                                        <div class="text-xs text-gray-500">Qty: ${item.qty}</div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>`;
+                            }
+
+                            // 3. LOCATION MAP (NEW)
+                            if(m.type === 'location' && m.location) {
+                                return `
+                                <div class="flex justify-start mb-3 animate-up">
+                                    <div class="bg-gray-800 border border-gray-600 rounded-2xl p-2 w-60 shadow-lg">
+                                        <a href="https://www.google.com/maps/search/?api=1&query=${m.location.lat},${m.location.lng}" target="_blank" class="block group">
+                                            <div class="h-28 bg-gray-700 rounded-xl flex items-center justify-center mb-2 text-gray-500 relative overflow-hidden">
+                                                <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg')] bg-cover opacity-10"></div>
+                                                <div class="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition duration-300"></div>
+                                                <div class="z-10 bg-gray-800 p-2 rounded-full shadow-xl border border-gray-600 group-hover:scale-110 transition-transform">
+                                                    <i data-lucide="map-pin" class="w-6 h-6 text-red-500 fill-current"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-between px-2 pb-1">
+                                                <div>
+                                                    <div class="text-xs font-bold text-blue-400 group-hover:text-blue-300 transition">Open Google Maps</div>
+                                                    <div class="text-[10px] text-gray-500 mt-0.5">${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}</div>
+                                                </div>
+                                                <i data-lucide="external-link" class="w-4 h-4 text-gray-500 group-hover:text-white transition"></i>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>`;
+                            }
+
+                            // 4. TEXT MESSAGES
                             return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">${m.text}</div></div>`;
                         }).join('')}
                     </div>
@@ -391,3 +438,11 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
