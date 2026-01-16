@@ -12,6 +12,7 @@
             theme: {
                 extend: {
                     height: { 'screen-dvh': '100dvh' },
+                    padding: { 'safe': 'env(safe-area-inset-bottom)' },
                     animation: {
                         'slide-up': 'slideUp 0.3s ease-out forwards',
                         'fade-in': 'fade 0.2s ease-out forwards',
@@ -30,6 +31,7 @@
             }
         }
     </script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -37,59 +39,23 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .animate-fade { animation: fade 0.3s ease-out forwards; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Prevent Input Zoom on iOS */
         input, textarea { font-size: 16px !important; } 
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
 
+    <!-- App Container -->
     <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
+        <!-- Views rendered here -->
     </div>
 
-    <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end">
-        <div class="w-full bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl h-[85%] flex flex-col animate-slide-up ring-1 ring-white/10">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0">
-                <div>
-                    <h2 class="font-bold text-lg dark:text-white">New Order</h2>
-                    <p class="text-xs text-gray-500" id="item-counter">0/50 Items</p>
-                </div>
-                <button onclick="toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar">
-                <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
-                    <i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i>
-                    <p class="text-sm">Your basket is empty</p>
-                </div>
-            </div>
-
-            <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
-                <div class="flex gap-2">
-                    <input id="new-item-name" type="text" placeholder="Item name (e.g. Pizza)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-                    <input id="new-item-qty" type="number" value="1" min="1" max="99" class="w-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-                </div>
-                <div class="flex gap-2">
-                    <input id="new-item-img" type="text" placeholder="Image URL (Optional)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
-                    <button onclick="addDraftItem()" class="px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center transition-colors">
-                        <i data-lucide="plus" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 pb-safe">
-                <button onclick="submitOrder()" class="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                    <span>Send Order Request</span>
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
+    <!-- MAIN SCRIPT -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Using stable Firebase v10.12.2 to ensure compatibility
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- Configuration ---
         const firebaseConfig = {
@@ -109,12 +75,12 @@
         // --- State Management ---
         const state = {
             user: null,
-            currentView: 'loading', 
+            currentView: 'loading',
             services: [],
-            chats: {}, 
+            chats: {},
             selectedCity: null,
             activeService: null,
-            draftOrder: [], // New: Store local order items
+            draftOrder: [], // Stores items being added
             darkMode: localStorage.getItem('darkMode') === 'true',
             listeners: {
                 services: null,
@@ -125,16 +91,18 @@
 
         if(state.darkMode) document.documentElement.classList.add('dark');
 
-        // --- Main Router ---
+        // --- VIEW ROUTER ---
         function setView(viewName) {
             state.currentView = viewName;
             const appEl = document.getElementById('app');
             
+            // Clean up chat listener if leaving chat
             if (state.listeners.activeChat && viewName !== 'chat') {
                 state.listeners.activeChat();
                 state.listeners.activeChat = null;
             }
 
+            // Render View
             switch(viewName) {
                 case 'loading': appEl.innerHTML = renderLoading(); break;
                 case 'login': appEl.innerHTML = renderLogin(); break;
@@ -145,16 +113,18 @@
                     mountChatLogic(); 
                     break;
             }
-            lucide.createIcons();
+            // Initialize Icons
+            if(window.lucide) window.lucide.createIcons();
         }
 
-        // --- Auth & Global Subscriptions ---
+        // --- AUTH & DATA LISTENERS ---
         onAuthStateChanged(auth, (user) => {
             state.user = user;
             if (user) {
                 if(!state.listeners.services) subscribeServices();
                 if(!state.listeners.chatsList) subscribeChatsList();
-                setView('cities');
+                // Default to cities if logged in
+                if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
             } else {
                 unsubscribeAll();
                 setView('login');
@@ -165,7 +135,7 @@
             state.listeners.services = onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 if (state.currentView === 'cities') setView('cities');
-                else if (state.currentView === 'services') setView('services');
+                if (state.currentView === 'services') setView('services');
             });
         }
 
@@ -188,7 +158,7 @@
             state.chats = {};
         }
 
-        // --- Chat Architecture ---
+        // --- CHAT LOGIC ---
         function mountChatLogic() {
             const chatId = getChatId(state.user.uid, state.activeService.id);
             const container = document.getElementById('chat-messages');
@@ -196,14 +166,16 @@
             const q = query(msgsRef, orderBy('timestamp', 'asc'));
 
             state.listeners.activeChat = onSnapshot(q, (snapshot) => {
+                let shouldScroll = false;
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
+                        shouldScroll = true;
                         const msg = change.doc.data();
                         const isMe = msg.sender === state.user.uid;
                         const div = document.createElement('div');
                         
+                        // 1. BILL MESSAGE
                         if(msg.type === 'bill') {
-                            // ... (Existing Bill Render Logic) ...
                              div.className = `flex justify-start mb-4 animate-fade`;
                              const isPromo = msg.deliveryFee === 0;
                              div.innerHTML = `
@@ -213,138 +185,103 @@
                                     </div>
                                     <div class="flex justify-between items-end">
                                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
-                                        <span class="text-xl font-bold text-gray-900 dark:text-white">$${(msg.total || msg.amount).toFixed(2)}</span>
+                                        <span class="text-xl font-bold text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span>
                                     </div>
-                                </div>
-                             `;
+                                    ${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold">SJ CODE APPLIED</div>' : ''}
+                                </div>`;
                         } 
-                        // --- NEW: ORDER RENDER LOGIC ---
+                        // 2. ORDER MESSAGE (NEW)
                         else if (msg.type === 'order') {
-                            const itemCount = msg.items ? msg.items.length : 0;
+                            const items = msg.items || [];
                             div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
                             div.innerHTML = `
                                 <div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64">
                                     <div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-2 flex justify-between items-center text-white">
                                         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order Request
+                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order
                                         </div>
-                                        <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">${itemCount} items</span>
+                                        <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">${items.length} items</span>
                                     </div>
                                     <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto">
-                                        ${msg.items.map(item => `
+                                        ${items.map(item => `
                                             <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                                 <div class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden">
                                                     ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}
                                                 </div>
                                                 <div class="min-w-0 flex-1">
-                                                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${item.name}</div>
+                                                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${item.name || 'Item'}</div>
                                                     <div class="text-[10px] text-gray-500">Qty: ${item.qty}</div>
                                                 </div>
                                             </div>
                                         `).join('')}
                                     </div>
-                                    <div class="p-2 bg-gray-50 dark:bg-gray-800/50 text-[10px] text-center text-gray-400 italic border-t border-gray-100 dark:border-gray-700">
-                                        Awaiting confirmation
-                                    </div>
-                                </div>
-                            `;
+                                </div>`;
                         }
+                        // 3. TEXT MESSAGE
                         else {
-                            // Standard Text
                             div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-fade`;
                             div.innerHTML = `
                                 <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
                                     isMe 
                                     ? 'bg-blue-600 text-white rounded-br-sm' 
                                     : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
-                                }">
-                                    ${escapeHtml(msg.text)}
-                                </div>
-                            `;
+                                }">${escapeHtml(msg.text)}</div>`;
                         }
                         container.appendChild(div);
-                        // Re-initialize icons for newly added HTML
-                        lucide.createIcons(); 
                     }
                 });
-                scrollToBottom();
+                
+                if(shouldScroll) {
+                    // Re-render icons for new messages
+                    if(window.lucide) window.lucide.createIcons();
+                    scrollToBottom();
+                }
             });
         }
 
-        // --- Modified Send Function ---
-        async function sendMessage(textOverride = null, typeOverride = 'text', extraData = {}) {
-            const input = document.getElementById('chat-input');
-            // If it's a manual text send, get value from input. If it's an order/promo, use override.
-            const txt = textOverride !== null ? textOverride : input.value.trim();
-            
-            // Validation: Text needs content, Orders need items
-            if(typeOverride === 'text' && !txt) return;
-            if(typeOverride === 'order' && (!extraData.items || extraData.items.length === 0)) return;
+        // --- GLOBAL FUNCTIONS (Attached to Window for HTML access) ---
 
-            if(!textOverride && input) {
-                input.value = ''; 
-                input.focus();
+        window.loginGoogle = async () => {
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+            catch(e) { console.error("Login failed", e); alert("Login failed: " + e.message); }
+        };
+
+        window.logout = () => signOut(auth);
+        
+        window.setCity = (c) => { 
+            state.selectedCity = c; 
+            setView('services'); 
+        };
+
+        window.openService = (id) => {
+            state.activeService = state.services.find(s => s.id === id);
+            setView('chat');
+        };
+
+        window.goBack = () => {
+            if(state.currentView === 'chat') setView('services');
+            else if(state.currentView === 'services') setView('cities');
+        };
+
+        window.toggleTheme = () => {
+            state.darkMode = !state.darkMode;
+            localStorage.setItem('darkMode', state.darkMode);
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if(icon) {
+                 icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon');
+                 if(window.lucide) window.lucide.createIcons();
             }
+        };
 
-            if(!state.activeService) return;
-
-            const chatId = getChatId(state.user.uid, state.activeService.id);
-            const chatDocRef = doc(db, 'delivery_chats', chatId);
-            const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
-
-            try {
-                const existingChat = state.chats[state.activeService.id];
-                const batch = writeBatch(db);
-
-                // 1. Prepare Message Data
-                const newMsgRef = doc(messagesColRef);
-                const messagePayload = {
-                    type: typeOverride,
-                    text: txt || '', // Fallback for orders
-                    sender: state.user.uid,
-                    timestamp: serverTimestamp(),
-                    ...extraData // Merges items: [] into the document
-                };
-                
-                batch.set(newMsgRef, messagePayload);
-
-                // 2. Chat Metadata
-                const ownerEmail = state.activeService.ownerEmail || '';
-                const lastMsgPreview = typeOverride === 'order' ? '📦 Sent an Order' : txt;
-
-                if (!existingChat) {
-                      batch.set(chatDocRef, {
-                        userId: state.user.uid,
-                        userEmail: state.user.email || 'anon',
-                        serviceId: state.activeService.id,
-                        serviceName: state.activeService.name,
-                        serviceOwnerEmail: ownerEmail,
-                        city: state.activeService.city,
-                        createdAt: serverTimestamp(),
-                        lastMessage: lastMsgPreview,
-                        lastUpdated: serverTimestamp()
-                    });
-                } else {
-                    batch.update(chatDocRef, {
-                        lastMessage: lastMsgPreview,
-                        lastUpdated: serverTimestamp(),
-                        serviceOwnerEmail: ownerEmail
-                    });
-                }
-
-                await batch.commit();
-            } catch (e) {
-                console.error("Send error:", e);
-                alert("Failed to send: " + e.message);
-            }
-        }
-
-        // --- Order Builder Logic ---
+        // --- ORDER MODAL FUNCTIONS ---
 
         window.toggleOrderModal = (show) => {
             const el = document.getElementById('order-modal-overlay');
+            if(!el) return;
+            
             if(show) {
-                state.draftOrder = []; // Reset on open? Or keep? Let's clear for fresh order.
+                state.draftOrder = []; // Reset order when opening
                 renderDraftList();
                 el.classList.remove('hidden');
             } else {
@@ -361,17 +298,12 @@
             const qty = parseInt(qtyEl.value) || 1;
             const img = imgEl.value.trim();
 
-            if (!name) return alert("Please enter an item name");
+            if (!name) return alert("Please enter item name");
             if (state.draftOrder.length >= 50) return alert("Max 50 items allowed");
 
-            state.draftOrder.push({
-                id: Date.now(), // simple unique id
-                name: name,
-                qty: qty,
-                image: img
-            });
+            state.draftOrder.push({ id: Date.now(), name, qty, image: img });
 
-            // Reset inputs
+            // Clear inputs
             nameEl.value = '';
             imgEl.value = '';
             qtyEl.value = 1;
@@ -385,57 +317,109 @@
             renderDraftList();
         };
 
-        function renderDraftList() {
+        window.renderDraftList = () => {
             const listEl = document.getElementById('order-items-list');
             const counterEl = document.getElementById('item-counter');
-            const emptyState = document.getElementById('empty-state');
+            if(!listEl) return;
 
             counterEl.innerText = `${state.draftOrder.length}/50 Items`;
 
             if (state.draftOrder.length === 0) {
-                listEl.innerHTML = '';
-                listEl.appendChild(emptyState);
-                emptyState.classList.remove('hidden'); // Ensure visible
-                return;
-            }
-
-            // Simple re-render strategy
-            listEl.innerHTML = state.draftOrder.map(item => `
-                <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden">
-                            ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
+                listEl.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60">
+                        <i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i>
+                        <p class="text-sm">Basket is empty</p>
+                    </div>`;
+            } else {
+                listEl.innerHTML = state.draftOrder.map(item => `
+                    <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden">
+                                ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-sm truncate dark:text-white">${item.name}</h4>
+                                <p class="text-xs text-gray-500">Qty: ${item.qty}</p>
+                            </div>
                         </div>
-                        <div class="min-w-0">
-                            <h4 class="font-bold text-sm truncate dark:text-white">${item.name}</h4>
-                            <p class="text-xs text-gray-500">Qty: ${item.qty}</p>
-                        </div>
+                        <button onclick="removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                     </div>
-                    <button onclick="removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `).join('');
-            
-            lucide.createIcons();
-            // Scroll to bottom of list to show new item
+                `).join('');
+            }
+            if(window.lucide) window.lucide.createIcons();
             listEl.scrollTop = listEl.scrollHeight;
-        }
-
-        window.submitOrder = () => {
-            if (state.draftOrder.length === 0) return alert("Add items first!");
-            
-            // Send special type 'order'
-            sendMessage(
-                "Order Request", 
-                'order', 
-                { items: state.draftOrder }
-            );
-
-            toggleOrderModal(false);
         };
 
-        // --- Helpers ---
+        window.submitOrder = () => {
+            if (state.draftOrder.length === 0) return alert("Please add at least one item.");
+            sendMessage("Order Request", 'order', { items: state.draftOrder });
+            window.toggleOrderModal(false);
+        };
+
+        // --- SEND MESSAGE LOGIC ---
+
+        window.triggerSend = () => sendMessage();
+        window.sendPromo = () => sendMessage("SJ CODE");
+        window.handleChatKey = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+        async function sendMessage(textOverride = null, typeOverride = 'text', extraData = {}) {
+            const input = document.getElementById('chat-input');
+            const txt = textOverride !== null ? textOverride : input.value.trim();
+            
+            if(typeOverride === 'text' && !txt) return;
+            if(!state.activeService) return;
+
+            // Clear input if manual typing
+            if(!textOverride && input) { input.value = ''; input.focus(); }
+
+            const chatId = getChatId(state.user.uid, state.activeService.id);
+            const chatDocRef = doc(db, 'delivery_chats', chatId);
+            const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
+            const batch = writeBatch(db);
+
+            try {
+                // 1. Add Message
+                const newMsgRef = doc(messagesColRef);
+                batch.set(newMsgRef, {
+                    type: typeOverride,
+                    text: txt || '',
+                    sender: state.user.uid,
+                    timestamp: serverTimestamp(),
+                    ...extraData 
+                });
+
+                // 2. Update Chat Meta
+                const existingChat = state.chats[state.activeService.id];
+                const metaData = {
+                    lastMessage: typeOverride === 'order' ? '📦 Order Sent' : txt,
+                    lastUpdated: serverTimestamp(),
+                    serviceOwnerEmail: state.activeService.ownerEmail || ''
+                };
+
+                if (!existingChat) {
+                    batch.set(chatDocRef, {
+                        userId: state.user.uid,
+                        userEmail: state.user.email || 'anon',
+                        serviceId: state.activeService.id,
+                        serviceName: state.activeService.name,
+                        city: state.activeService.city,
+                        createdAt: serverTimestamp(),
+                        ...metaData
+                    });
+                } else {
+                    batch.update(chatDocRef, metaData);
+                }
+
+                await batch.commit();
+            } catch (e) {
+                console.error("Send Error:", e);
+                alert("Could not send message. Check console.");
+            }
+        }
+
+        // --- HELPERS ---
         function getChatId(uid, serviceId) { return `${uid}_${serviceId}`; }
         function scrollToBottom() {
             const el = document.getElementById('chat-messages');
@@ -443,32 +427,33 @@
         }
         function escapeHtml(text) {
             const div = document.createElement('div');
-            div.innerText = text;
+            div.innerText = text || '';
             return div.innerHTML;
         }
 
-        // --- UI Interactions ---
-        window.loginGoogle = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); } };
-        window.logout = () => signOut(auth);
-        window.setCity = (c) => { state.selectedCity = c; setView('services'); };
-        window.openService = (id) => { state.activeService = state.services.find(s => s.id === id); setView('chat'); };
-        window.goBack = () => { if(document.getElementById('chat-messages')) setView('services'); else if(document.getElementById('service-list')) setView('cities'); };
-        window.toggleTheme = () => {
-            state.darkMode = !state.darkMode;
-            localStorage.setItem('darkMode', state.darkMode);
-            document.documentElement.classList.toggle('dark');
-            const icon = document.getElementById('theme-icon');
-            if(icon) { icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon'); lucide.createIcons(); }
-        };
-        window.triggerSend = () => sendMessage();
-        window.sendPromo = () => sendMessage("SJ CODE");
-        window.handleChatKey = (e) => { if(e.key === 'Enter') sendMessage(); };
+        // --- RENDERERS ---
 
-        // --- Render Functions ---
+        function renderLoading() {
+            return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`;
+        }
+
+        function renderLogin() {
+            return `
+                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
+                    <div class="w-32 h-32 mb-6 shrink-0 animate-fade">
+                        <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" alt="SJ Delivery Logo" class="w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white tracking-tight">SJ Delivery</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs leading-relaxed">Your favorite local services, delivered instantly to your door.</p>
+                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md dark:text-white group relative overflow-hidden">
+                        <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> <span>Continue with Google</span>
+                    </button>
+                </div>`;
+        }
+
         const header = (title, showBack) => {
             const user = state.user;
-            const showProfile = !showBack && user;
-            const leftSection = showProfile ? `
+            const leftSection = (!showBack && user) ? `
                 <a href="https://simojibou.github.io/sjcoin25/duserprofile.html" class="flex items-center gap-3 overflow-hidden hover:opacity-75 transition-opacity">
                     ${user.photoURL 
                         ? `<img src="${user.photoURL}" alt="Profile" class="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 object-cover shrink-0">` 
@@ -494,22 +479,6 @@
                 </div>
             </div>`;
         };
-
-        function renderLoading() { return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`; }
-
-        function renderLogin() {
-            return `
-                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
-                    <div class="w-32 h-32 mb-6 shrink-0 animate-fade">
-                        <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" alt="SJ Delivery Logo" class="w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500">
-                    </div>
-                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white tracking-tight">SJ Delivery</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs leading-relaxed">Your favorite local services, delivered instantly to your door.</p>
-                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md dark:text-white group relative overflow-hidden">
-                        <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> <span>Continue with Google</span>
-                    </button>
-                </div>`;
-        }
 
         function renderCities() {
             const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
@@ -558,18 +527,77 @@
         }
 
         function renderChatLayout() {
-            // Added the "clipboard/order" button
             return `
                 ${header(state.activeService.name, true)}
+                
+                <!-- Chat Area -->
                 <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900 scroll-smooth">
                     <div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50 pointer-events-none">
                         <i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i>
                         <p class="text-xs">Connecting to ${state.activeService.name}...</p>
                     </div>
                 </div>
-                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+
+                <!-- Input Bar -->
+                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe relative z-10">
                     <button onclick="sendPromo()" class="p-3 bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800/40 transition-colors hidden sm:block" title="Use SJ CODE">
                         <i data-lucide="ticket" class="w-5 h-5"></i>
                     </button>
-                    <button onclick="toggleOrderModal(true)" class="p-3 bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full hover
+                    <!-- ORDER BUTTON -->
+                    <button onclick="toggleOrderModal(true)" class="p-3 bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800/40 transition-colors" title="Create Order">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    </button>
+                    <input id="chat-input" type="text" onkeyup="handleChatKey(event)" placeholder="Type message..." autocomplete="off" class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                    <button onclick="triggerSend()" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-transform shadow-lg shadow-blue-200 dark:shadow-none"><i data-lucide="send-horizontal" class="w-5 h-5"></i></button>
+                </div>
+
+                <!-- ORDER MODAL (Included here to ensure correct scope) -->
+                <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end animate-fade">
+                    <div class="w-full bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl h-[85%] flex flex-col animate-slide-up ring-1 ring-white/10">
+                        <!-- Modal Header -->
+                        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0">
+                            <div>
+                                <h2 class="font-bold text-lg dark:text-white">New Order</h2>
+                                <p class="text-xs text-gray-500" id="item-counter">0/50 Items</p>
+                            </div>
+                            <button onclick="toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <!-- Items List -->
+                        <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar">
+                            <!-- Injected via renderDraftList() -->
+                        </div>
+
+                        <!-- Add Item Form -->
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
+                            <div class="flex gap-2">
+                                <input id="new-item-name" type="text" placeholder="Item name (e.g. Pizza)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                <input id="new-item-qty" type="number" value="1" min="1" max="99" class="w-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                            </div>
+                            <div class="flex gap-2">
+                                <input id="new-item-img" type="text" placeholder="Image URL (Optional)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                <button onclick="addDraftItem()" class="px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center transition-colors">
+                                    <i data-lucide="plus" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 pb-safe">
+                            <button onclick="submitOrder()" class="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <span>Send Order Request</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+
+
 
