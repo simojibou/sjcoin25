@@ -1,244 +1,575 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SJ Delivery</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-
-<script>
-tailwind.config = {
-  darkMode: 'class'
-}
-</script>
-
-<style>
-body { font-family: system-ui, -apple-system; }
-input { font-size: 16px }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SJ Delivery</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    height: { 'screen-dvh': '100dvh' },
+                    animation: {
+                        'slide-up': 'slideUp 0.3s ease-out forwards',
+                        'fade-in': 'fade 0.2s ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        },
+                        fade: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-fade { animation: fade 0.3s ease-out forwards; }
+        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        input, textarea { font-size: 16px !important; } 
+    </style>
 </head>
+<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
 
-<body class="bg-gray-100 dark:bg-black h-screen flex justify-center">
+    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
+    </div>
 
-<div id="app" class="w-full max-w-md bg-white dark:bg-gray-900 flex flex-col"></div>
+    <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end">
+        <div class="w-full bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl h-[85%] flex flex-col animate-slide-up ring-1 ring-white/10">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="font-bold text-lg dark:text-white">New Order</h2>
+                    <p class="text-xs text-gray-500" id="item-counter">0/50 Items</p>
+                </div>
+                <button onclick="toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, collection, writeBatch, serverTimestamp, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+            <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar">
+                <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
+                    <i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i>
+                    <p class="text-sm">Your basket is empty</p>
+                </div>
+            </div>
 
-/* Firebase */
-const firebaseConfig = {
- apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
- authDomain: "sj-one.firebaseapp.com",
- projectId: "sj-one",
- storageBucket: "sj-one.appspot.com",
- messagingSenderId: "426335553508",
- appId: "1:426335553508:web:248f76772f6f78419ca9f1"
-};
+            <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
+                <div class="flex gap-2">
+                    <input id="new-item-name" type="text" placeholder="Item name (e.g. Pizza)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <input id="new-item-qty" type="number" value="1" min="1" max="99" class="w-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                </div>
+                <div class="flex gap-2">
+                    <input id="new-item-img" type="text" placeholder="Image URL (Optional)" class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <button onclick="addDraftItem()" class="px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center transition-colors">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+            <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 pb-safe">
+                <button onclick="submitOrder()" class="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    <span>Send Order Request</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-/* State */
-const state = {
- user: null,
- orderItems: []
-};
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-/* Utils */
-const $ = id => document.getElementById(id);
-const chatId = () => `${state.user.uid}_demoService`;
+        // --- Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
+            authDomain: "sj-one.firebaseapp.com",
+            databaseURL: "https://sj-one-default-rtdb.firebaseio.com",
+            projectId: "sj-one",
+            storageBucket: "sj-one.appspot.com",
+            messagingSenderId: "426335553508",
+            appId: "1:426335553508:web:248f76772f6f78419ca9f1"
+        };
 
-/* Auth */
-onAuthStateChanged(auth, u => {
- state.user = u;
- u ? renderChat() : renderLogin();
-});
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-/* Views */
-function renderLogin() {
- app.innerHTML = `
- <div class="h-full flex items-center justify-center">
-   <button onclick="login()" class="bg-blue-600 text-white px-6 py-3 rounded-xl">
-     Login with Google
-   </button>
- </div>`;
-}
+        // --- State Management ---
+        const state = {
+            user: null,
+            currentView: 'loading', 
+            services: [],
+            chats: {}, 
+            selectedCity: null,
+            activeService: null,
+            draftOrder: [], // New: Store local order items
+            darkMode: localStorage.getItem('darkMode') === 'true',
+            listeners: {
+                services: null,
+                chatsList: null,
+                activeChat: null
+            }
+        };
 
-window.login = async () => {
- await signInWithPopup(auth, new GoogleAuthProvider());
-};
+        if(state.darkMode) document.documentElement.classList.add('dark');
 
-function renderChat() {
- app.innerHTML = `
- <div class="flex-1 overflow-y-auto p-4" id="messages"></div>
+        // --- Main Router ---
+        function setView(viewName) {
+            state.currentView = viewName;
+            const appEl = document.getElementById('app');
+            
+            if (state.listeners.activeChat && viewName !== 'chat') {
+                state.listeners.activeChat();
+                state.listeners.activeChat = null;
+            }
 
- <div class="border-t p-3 flex gap-2">
-   <input id="msg" class="flex-1 bg-gray-100 rounded-full px-4 py-2" placeholder="Message">
-   <button onclick="sendText()" class="bg-blue-600 text-white p-3 rounded-full">
-     <i data-lucide="send"></i>
-   </button>
-   <button onclick="openOrder()" class="bg-emerald-600 text-white p-3 rounded-full">
-     <i data-lucide="shopping-cart"></i>
-   </button>
- </div>
+            switch(viewName) {
+                case 'loading': appEl.innerHTML = renderLoading(); break;
+                case 'login': appEl.innerHTML = renderLogin(); break;
+                case 'cities': appEl.innerHTML = renderCities(); break;
+                case 'services': appEl.innerHTML = renderServices(); break;
+                case 'chat': 
+                    appEl.innerHTML = renderChatLayout(); 
+                    mountChatLogic(); 
+                    break;
+            }
+            lucide.createIcons();
+        }
 
- ${orderModal()}
- `;
- lucide.createIcons();
- subscribeMessages();
-}
+        // --- Auth & Global Subscriptions ---
+        onAuthStateChanged(auth, (user) => {
+            state.user = user;
+            if (user) {
+                if(!state.listeners.services) subscribeServices();
+                if(!state.listeners.chatsList) subscribeChatsList();
+                setView('cities');
+            } else {
+                unsubscribeAll();
+                setView('login');
+            }
+        });
 
-/* Messaging */
-function subscribeMessages() {
- const q = query(collection(db, 'delivery_chats', chatId(), 'messages'), orderBy('timestamp'));
- onSnapshot(q, snap => {
-   const box = $('messages');
-   box.innerHTML = '';
-   snap.forEach(d => renderMessage(d.data(), box));
-   box.scrollTop = box.scrollHeight;
- });
-}
+        function subscribeServices() {
+            state.listeners.services = onSnapshot(collection(db, 'delivery_services'), (snap) => {
+                state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if (state.currentView === 'cities') setView('cities');
+                else if (state.currentView === 'services') setView('services');
+            });
+        }
 
-function renderMessage(msg, box) {
- const div = document.createElement('div');
- div.className = "mb-3";
+        function subscribeChatsList() {
+            const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
+            state.listeners.chatsList = onSnapshot(q, (snap) => {
+                const map = {};
+                snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
+                state.chats = map;
+                if (state.currentView === 'services') setView('services');
+            });
+        }
 
- if(msg.type === 'order') {
-   div.innerHTML = `
-   <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-     <div class="font-bold mb-2 text-emerald-600">Order</div>
-     ${msg.items.map(i => `
-       <div class="flex gap-3 mb-2">
-         <img src="${i.image}" class="w-12 h-12 rounded object-cover">
-         <div class="flex-1">
-           <div class="font-semibold">${i.name}</div>
-           <div class="text-sm text-gray-500">$${i.price}</div>
-         </div>
-       </div>
-     `).join('')}
-     <div class="border-t mt-2 pt-2 font-bold text-right">
-       Total: $${msg.total}
-     </div>
-   </div>`;
- } else {
-   div.innerHTML = `
-   <div class="inline-block bg-blue-600 text-white px-4 py-2 rounded-xl">
-     ${msg.text}
-   </div>`;
- }
+        function unsubscribeAll() {
+            if(state.listeners.services) state.listeners.services();
+            if(state.listeners.chatsList) state.listeners.chatsList();
+            if(state.listeners.activeChat) state.listeners.activeChat();
+            state.listeners = { services: null, chatsList: null, activeChat: null };
+            state.services = [];
+            state.chats = {};
+        }
 
- box.appendChild(div);
-}
+        // --- Chat Architecture ---
+        function mountChatLogic() {
+            const chatId = getChatId(state.user.uid, state.activeService.id);
+            const container = document.getElementById('chat-messages');
+            const msgsRef = collection(db, 'delivery_chats', chatId, 'messages');
+            const q = query(msgsRef, orderBy('timestamp', 'asc'));
 
-/* Send */
-async function sendText() {
- const txt = $('msg').value.trim();
- if(!txt) return;
- $('msg').value = '';
+            state.listeners.activeChat = onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const msg = change.doc.data();
+                        const isMe = msg.sender === state.user.uid;
+                        const div = document.createElement('div');
+                        
+                        if(msg.type === 'bill') {
+                            // ... (Existing Bill Render Logic) ...
+                             div.className = `flex justify-start mb-4 animate-fade`;
+                             const isPromo = msg.deliveryFee === 0;
+                             div.innerHTML = `
+                                <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 shadow-md w-64">
+                                    <div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2">
+                                        <i data-lucide="receipt" class="w-4 h-4"></i> Payment Request
+                                    </div>
+                                    <div class="flex justify-between items-end">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
+                                        <span class="text-xl font-bold text-gray-900 dark:text-white">$${(msg.total || msg.amount).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                             `;
+                        } 
+                        // --- NEW: ORDER RENDER LOGIC ---
+                        else if (msg.type === 'order') {
+                            const itemCount = msg.items ? msg.items.length : 0;
+                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
+                            div.innerHTML = `
+                                <div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64">
+                                    <div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-2 flex justify-between items-center text-white">
+                                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order Request
+                                        </div>
+                                        <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">${itemCount} items</span>
+                                    </div>
+                                    <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto">
+                                        ${msg.items.map(item => `
+                                            <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <div class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden">
+                                                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${item.name}</div>
+                                                    <div class="text-[10px] text-gray-500">Qty: ${item.qty}</div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <div class="p-2 bg-gray-50 dark:bg-gray-800/50 text-[10px] text-center text-gray-400 italic border-t border-gray-100 dark:border-gray-700">
+                                        Awaiting confirmation
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        else {
+                            // Standard Text
+                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-fade`;
+                            div.innerHTML = `
+                                <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
+                                    isMe 
+                                    ? 'bg-blue-600 text-white rounded-br-sm' 
+                                    : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
+                                }">
+                                    ${escapeHtml(msg.text)}
+                                </div>
+                            `;
+                        }
+                        container.appendChild(div);
+                        // Re-initialize icons for newly added HTML
+                        lucide.createIcons(); 
+                    }
+                });
+                scrollToBottom();
+            });
+        }
 
- const batch = writeBatch(db);
- const ref = doc(collection(db, 'delivery_chats', chatId(), 'messages'));
- batch.set(ref, { type:'text', text:txt, timestamp:serverTimestamp() });
- await batch.commit();
-}
+        // --- Modified Send Function ---
+        async function sendMessage(textOverride = null, typeOverride = 'text', extraData = {}) {
+            const input = document.getElementById('chat-input');
+            // If it's a manual text send, get value from input. If it's an order/promo, use override.
+            const txt = textOverride !== null ? textOverride : input.value.trim();
+            
+            // Validation: Text needs content, Orders need items
+            if(typeOverride === 'text' && !txt) return;
+            if(typeOverride === 'order' && (!extraData.items || extraData.items.length === 0)) return;
 
-/* ORDER SYSTEM */
-function openOrder() {
- state.orderItems = [];
- $('orderModal').classList.remove('hidden');
- renderOrderItems();
-}
+            if(!textOverride && input) {
+                input.value = ''; 
+                input.focus();
+            }
 
-function closeOrder() {
- $('orderModal').classList.add('hidden');
-}
+            if(!state.activeService) return;
 
-function addItem() {
- const name = $('itemName').value;
- const price = Number($('itemPrice').value);
- const image = $('itemImage').value || 'https://via.placeholder.com/100';
+            const chatId = getChatId(state.user.uid, state.activeService.id);
+            const chatDocRef = doc(db, 'delivery_chats', chatId);
+            const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
 
- if(!name || !price) return;
+            try {
+                const existingChat = state.chats[state.activeService.id];
+                const batch = writeBatch(db);
 
- state.orderItems.push({ name, price, image });
- $('itemName').value = '';
- $('itemPrice').value = '';
- $('itemImage').value = '';
- renderOrderItems();
-}
+                // 1. Prepare Message Data
+                const newMsgRef = doc(messagesColRef);
+                const messagePayload = {
+                    type: typeOverride,
+                    text: txt || '', // Fallback for orders
+                    sender: state.user.uid,
+                    timestamp: serverTimestamp(),
+                    ...extraData // Merges items: [] into the document
+                };
+                
+                batch.set(newMsgRef, messagePayload);
 
-function removeItem(i) {
- state.orderItems.splice(i,1);
- renderOrderItems();
-}
+                // 2. Chat Metadata
+                const ownerEmail = state.activeService.ownerEmail || '';
+                const lastMsgPreview = typeOverride === 'order' ? '📦 Sent an Order' : txt;
 
-function renderOrderItems() {
- const box = $('orderItems');
- box.innerHTML = state.orderItems.map((i,idx)=>`
- <div class="flex gap-3 items-center mb-2">
-   <img src="${i.image}" class="w-10 h-10 rounded">
-   <div class="flex-1">
-     <div class="font-semibold">${i.name}</div>
-     <div class="text-sm">$${i.price}</div>
-   </div>
-   <button onclick="removeItem(${idx})" class="text-red-500">
-     <i data-lucide="x"></i>
-   </button>
- </div>
- `).join('');
- lucide.createIcons();
-}
+                if (!existingChat) {
+                      batch.set(chatDocRef, {
+                        userId: state.user.uid,
+                        userEmail: state.user.email || 'anon',
+                        serviceId: state.activeService.id,
+                        serviceName: state.activeService.name,
+                        serviceOwnerEmail: ownerEmail,
+                        city: state.activeService.city,
+                        createdAt: serverTimestamp(),
+                        lastMessage: lastMsgPreview,
+                        lastUpdated: serverTimestamp()
+                    });
+                } else {
+                    batch.update(chatDocRef, {
+                        lastMessage: lastMsgPreview,
+                        lastUpdated: serverTimestamp(),
+                        serviceOwnerEmail: ownerEmail
+                    });
+                }
 
-async function sendOrder() {
- if(state.orderItems.length === 0) return;
+                await batch.commit();
+            } catch (e) {
+                console.error("Send error:", e);
+                alert("Failed to send: " + e.message);
+            }
+        }
 
- const total = state.orderItems.reduce((a,b)=>a+b.price,0);
- const batch = writeBatch(db);
- const ref = doc(collection(db, 'delivery_chats', chatId(), 'messages'));
+        // --- Order Builder Logic ---
 
- batch.set(ref, {
-   type: 'order',
-   items: state.orderItems,
-   total,
-   timestamp: serverTimestamp()
- });
+        window.toggleOrderModal = (show) => {
+            const el = document.getElementById('order-modal-overlay');
+            if(show) {
+                state.draftOrder = []; // Reset on open? Or keep? Let's clear for fresh order.
+                renderDraftList();
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        };
 
- await batch.commit();
- closeOrder();
-}
+        window.addDraftItem = () => {
+            const nameEl = document.getElementById('new-item-name');
+            const qtyEl = document.getElementById('new-item-qty');
+            const imgEl = document.getElementById('new-item-img');
 
-/* Modal */
-function orderModal() {
- return `
- <div id="orderModal" class="hidden fixed inset-0 bg-black/40 flex items-end">
-   <div class="bg-white dark:bg-gray-900 w-full rounded-t-3xl p-4 max-h-[90%] overflow-y-auto">
-     <div class="font-bold text-lg mb-3">Create Order</div>
+            const name = nameEl.value.trim();
+            const qty = parseInt(qtyEl.value) || 1;
+            const img = imgEl.value.trim();
 
-     <input id="itemName" placeholder="Item name" class="w-full mb-2 px-4 py-2 bg-gray-100 rounded">
-     <input id="itemPrice" type="number" placeholder="Price" class="w-full mb-2 px-4 py-2 bg-gray-100 rounded">
-     <input id="itemImage" placeholder="Image URL (optional)" class="w-full mb-3 px-4 py-2 bg-gray-100 rounded">
+            if (!name) return alert("Please enter an item name");
+            if (state.draftOrder.length >= 50) return alert("Max 50 items allowed");
 
-     <button onclick="addItem()" class="w-full bg-blue-600 text-white py-2 rounded-xl mb-3">
-       Add Item
-     </button>
+            state.draftOrder.push({
+                id: Date.now(), // simple unique id
+                name: name,
+                qty: qty,
+                image: img
+            });
 
-     <div id="orderItems"></div>
+            // Reset inputs
+            nameEl.value = '';
+            imgEl.value = '';
+            qtyEl.value = 1;
+            nameEl.focus();
 
-     <div class="flex gap-2 mt-4">
-       <button onclick="closeOrder()" class="flex-1 py-2 rounded-xl border">Cancel</button>
-       <button onclick="sendOrder()" class="flex-1 py-2 rounded-xl bg-emerald-600 text-white">
-         Send Order
-       </button>
-     </div>
-   </div>
- </div>`;
-}
-</script>
+            renderDraftList();
+        };
 
-</body>
-</html>
+        window.removeDraftItem = (id) => {
+            state.draftOrder = state.draftOrder.filter(item => item.id !== id);
+            renderDraftList();
+        };
+
+        function renderDraftList() {
+            const listEl = document.getElementById('order-items-list');
+            const counterEl = document.getElementById('item-counter');
+            const emptyState = document.getElementById('empty-state');
+
+            counterEl.innerText = `${state.draftOrder.length}/50 Items`;
+
+            if (state.draftOrder.length === 0) {
+                listEl.innerHTML = '';
+                listEl.appendChild(emptyState);
+                emptyState.classList.remove('hidden'); // Ensure visible
+                return;
+            }
+
+            // Simple re-render strategy
+            listEl.innerHTML = state.draftOrder.map(item => `
+                <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden">
+                            ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="font-bold text-sm truncate dark:text-white">${item.name}</h4>
+                            <p class="text-xs text-gray-500">Qty: ${item.qty}</p>
+                        </div>
+                    </div>
+                    <button onclick="removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+            // Scroll to bottom of list to show new item
+            listEl.scrollTop = listEl.scrollHeight;
+        }
+
+        window.submitOrder = () => {
+            if (state.draftOrder.length === 0) return alert("Add items first!");
+            
+            // Send special type 'order'
+            sendMessage(
+                "Order Request", 
+                'order', 
+                { items: state.draftOrder }
+            );
+
+            toggleOrderModal(false);
+        };
+
+        // --- Helpers ---
+        function getChatId(uid, serviceId) { return `${uid}_${serviceId}`; }
+        function scrollToBottom() {
+            const el = document.getElementById('chat-messages');
+            if(el) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 100);
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        // --- UI Interactions ---
+        window.loginGoogle = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); } };
+        window.logout = () => signOut(auth);
+        window.setCity = (c) => { state.selectedCity = c; setView('services'); };
+        window.openService = (id) => { state.activeService = state.services.find(s => s.id === id); setView('chat'); };
+        window.goBack = () => { if(document.getElementById('chat-messages')) setView('services'); else if(document.getElementById('service-list')) setView('cities'); };
+        window.toggleTheme = () => {
+            state.darkMode = !state.darkMode;
+            localStorage.setItem('darkMode', state.darkMode);
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if(icon) { icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon'); lucide.createIcons(); }
+        };
+        window.triggerSend = () => sendMessage();
+        window.sendPromo = () => sendMessage("SJ CODE");
+        window.handleChatKey = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+        // --- Render Functions ---
+        const header = (title, showBack) => {
+            const user = state.user;
+            const showProfile = !showBack && user;
+            const leftSection = showProfile ? `
+                <a href="https://simojibou.github.io/sjcoin25/duserprofile.html" class="flex items-center gap-3 overflow-hidden hover:opacity-75 transition-opacity">
+                    ${user.photoURL 
+                        ? `<img src="${user.photoURL}" alt="Profile" class="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 object-cover shrink-0">` 
+                        : `<div class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><i data-lucide="user" class="w-5 h-5"></i></div>`
+                    }
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 leading-tight">Welcome</span>
+                        <span class="font-bold text-sm truncate text-gray-800 dark:text-white leading-tight">${(user.displayName || 'User').split(' ')[0]}</span>
+                    </div>
+                </a>
+            ` : `
+                <div class="flex items-center gap-3 min-w-0">
+                    ${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>` : ''}
+                    <h1 class="font-bold text-lg truncate text-gray-800 dark:text-white">${title}</h1>
+                </div>
+            `;
+            return `
+            <div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">
+                ${leftSection}
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>
+                    <button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                </div>
+            </div>`;
+        };
+
+        function renderLoading() { return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`; }
+
+        function renderLogin() {
+            return `
+                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
+                    <div class="w-32 h-32 mb-6 shrink-0 animate-fade">
+                        <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" alt="SJ Delivery Logo" class="w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white tracking-tight">SJ Delivery</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs leading-relaxed">Your favorite local services, delivered instantly to your door.</p>
+                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md dark:text-white group relative overflow-hidden">
+                        <i data-lucide="mail" class="w-5 h-5 text-red-500"></i> <span>Continue with Google</span>
+                    </button>
+                </div>`;
+        }
+
+        function renderCities() {
+            const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
+            return `
+                ${header('Select Location', false)}
+                <div id="city-list" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Available Cities</h2>
+                    ${cities.map(c => `
+                        <button onclick="setCity('${c}')" class="w-full bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 mb-3 flex items-center justify-between group transition-all animate-fade text-left active:scale-[0.98]">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
+                                <span class="font-semibold text-lg text-gray-800 dark:text-gray-100">${c}</span>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors"></i>
+                        </button>
+                    `).join('') || '<div class="text-center text-gray-400 mt-10">No cities configured.</div>'}
+                </div>`;
+        }
+
+        function renderServices() {
+            const list = state.services.filter(s => s.city === state.selectedCity);
+            return `
+                ${header(state.selectedCity, true)}
+                <div id="service-list" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services in ${state.selectedCity}</h2>
+                    ${list.map(s => {
+                        const hasChat = state.chats[s.id];
+                        return `
+                        <button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md">
+                            <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border dark:border-gray-600">
+                                ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 truncate">${s.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${s.type}</span>
+                                    ${hasChat ? '<span class="w-2 h-2 rounded-full bg-green-500"></span>' : ''}
+                                </div>
+                            </div>
+                            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            </div>
+                        </button>
+                    `}).join('') || '<div class="text-center text-gray-400 mt-10">No services found in this city.</div>'}
+                </div>`;
+        }
+
+        function renderChatLayout() {
+            // Added the "clipboard/order" button
+            return `
+                ${header(state.activeService.name, true)}
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900 scroll-smooth">
+                    <div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50 pointer-events-none">
+                        <i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i>
+                        <p class="text-xs">Connecting to ${state.activeService.name}...</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+                    <button onclick="sendPromo()" class="p-3 bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800/40 transition-colors hidden sm:block" title="Use SJ CODE">
+                        <i data-lucide="ticket" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="toggleOrderModal(true)" class="p-3 bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full hover
+
