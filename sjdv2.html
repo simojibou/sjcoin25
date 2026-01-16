@@ -2,60 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SJ Delivery</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery App - Earnings & Status</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { 
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    height: { 'screen-dvh': '100dvh' },
-                    padding: { 'safe': 'env(safe-area-inset-bottom)' },
-                    margin: { 'safe': 'env(safe-area-inset-bottom)' },
-                    animation: {
-                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fade 0.2s ease-out forwards',
-                        'pulse-slow': 'pulse 3s infinite',
-                    },
-                    keyframes: {
-                        slideUp: {
-                            '0%': { transform: 'translateY(100%)' },
-                            '100%': { transform: 'translateY(0)' },
-                        },
-                        fade: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { font-family: -apple-system, system-ui, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .animate-fade { animation: fade 0.3s ease-out forwards; }
-        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* iOS Input Fixes */
-        input, textarea { font-size: 16px !important; } 
-        .ios-btn-fix { -webkit-appearance: none; appearance: none; }
+        .animate-up { animation: up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
+<body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center">
 
-    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
-    </div>
+    <div id="root" class="w-full max-w-md h-full sm:h-[90vh] bg-gray-800 sm:rounded-3xl shadow-2xl relative flex flex-col overflow-hidden ring-1 ring-white/10"></div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Configuration ---
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -66,445 +33,413 @@
             appId: "1:426335553508:web:248f76772f6f78419ca9f1"
         };
 
+        const AUTHORIZED_STAFF = ['simo.jibou@gmail.com', 'manager@gmail.com', 'admin2@gmail.com'].map(e => e.toLowerCase());
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- State ---
         const state = {
-            user: null,
-            currentView: 'loading',
-            services: [],
-            chats: {},
-            selectedCity: null,
-            activeService: null,
-            draftOrder: [],
-            currentDraftImage: null,
-            darkMode: localStorage.getItem('darkMode') === 'true',
-            listeners: { services: null, chatsList: null, activeChat: null }
+            user: null, role: 'loading', view: 'login',
+            services: [], chats: [], activeChat: null, activeMessages: [], 
+            editId: null, form: { email: '', pass: '' }, msgInput: '',
+            providerService: null, providerEarnings: 0,
+            showBillForm: false, billAmount: '', billDesc: '', deliveryFee: 5, promoActive: false,
+            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 }
         };
 
-        if(state.darkMode) document.documentElement.classList.add('dark');
-
-        // --- Router ---
-        function setView(viewName) {
-            state.currentView = viewName;
-            const appEl = document.getElementById('app');
-            
-            if (state.listeners.activeChat && viewName !== 'chat') {
-                state.listeners.activeChat();
-                state.listeners.activeChat = null;
-            }
-
-            switch(viewName) {
-                case 'loading': appEl.innerHTML = renderLoading(); break;
-                case 'login': appEl.innerHTML = renderLogin(); break;
-                case 'cities': appEl.innerHTML = renderCities(); break;
-                case 'services': appEl.innerHTML = renderServices(); break;
-                case 'chat': 
-                    appEl.innerHTML = renderChatLayout(); 
-                    mountChatLogic(); 
-                    break;
-            }
-            if(window.lucide) window.lucide.createIcons();
-        }
-
-        // --- Auth & Data ---
-        onAuthStateChanged(auth, (user) => {
+        // --- Logic ---
+        onAuthStateChanged(auth, async (user) => {
             state.user = user;
-            if (user) {
-                if(!state.listeners.services) subscribeServices();
-                if(!state.listeners.chatsList) subscribeChatsList();
-                if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
+            if(!user) { state.role = 'guest'; state.view = 'login'; render(); return; }
+            if (AUTHORIZED_STAFF.includes(user.email.toLowerCase())) {
+                state.role = 'admin'; state.view = 'admin_list';
+                subscribeServices(); subscribeAdminStats();
             } else {
-                unsubscribeAll();
-                setView('login');
+                state.role = 'provider'; 
+                subscribeServices();
             }
         });
 
-        function subscribeServices() {
-            state.listeners.services = onSnapshot(collection(db, 'delivery_services'), (snap) => {
-                state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (state.currentView === 'cities') setView('cities');
-                if (state.currentView === 'services') setView('services');
-            });
-        }
+        let unsubServices, unsubChats, unsubActiveMsg, unsubStatsOrders, unsubStatsUsers;
 
-        function subscribeChatsList() {
-            const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
-            state.listeners.chatsList = onSnapshot(q, (snap) => {
-                const map = {};
-                snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
-                state.chats = map;
-                if (state.currentView === 'services') setView('services');
-            });
-        }
-
-        function unsubscribeAll() {
-            if(state.listeners.services) state.listeners.services();
-            if(state.listeners.chatsList) state.listeners.chatsList();
-            if(state.listeners.activeChat) state.listeners.activeChat();
-            state.listeners = { services: null, chatsList: null, activeChat: null };
-            state.services = []; state.chats = {};
-        }
-
-        // --- Chat Logic ---
-        function mountChatLogic() {
-            const chatId = getChatId(state.user.uid, state.activeService.id);
-            const container = document.getElementById('chat-messages');
-            const msgsRef = collection(db, 'delivery_chats', chatId, 'messages');
-            const q = query(msgsRef, orderBy('timestamp', 'asc'));
-
-            state.listeners.activeChat = onSnapshot(q, (snapshot) => {
-                let shouldScroll = false;
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        shouldScroll = true;
-                        const msg = change.doc.data();
-                        const isMe = msg.sender === state.user.uid;
-                        const div = document.createElement('div');
-                        
-                        // 1. BILL
-                        if(msg.type === 'bill') {
-                             div.className = `flex justify-start mb-4 animate-fade`;
-                             const isPromo = msg.deliveryFee === 0;
-                             div.innerHTML = `
-                                <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 shadow-md w-64">
-                                    <div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2">
-                                        <i data-lucide="receipt" class="w-4 h-4"></i> Payment Request
-                                    </div>
-                                    <div class="flex justify-between items-end">
-                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
-                                        <span class="text-xl font-bold text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span>
-                                    </div>
-                                    ${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold">SJ CODE APPLIED</div>' : ''}
-                                </div>`;
-                        } 
-                        // 2. ORDER
-                        else if (msg.type === 'order') {
-                            const items = msg.items || [];
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
-                            div.innerHTML = `
-                                <div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64">
-                                    <div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white">
-                                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order
-                                        </div>
-                                        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">${items.length} items</span>
-                                    </div>
-                                    <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto">
-                                        ${items.map(item => `
-                                            <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
-                                                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}
-                                                </div>
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${item.name || 'Item'}</div>
-                                                    <div class="text-[10px] text-gray-500">Qty: ${item.qty}</div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>`;
-                        }
-                        // 3. LOCATION
-                        else if (msg.type === 'location') {
-                            const { lat, lng } = msg.location;
-                            const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
-                            div.innerHTML = `
-                                <a href="${mapUrl}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-56 block hover:opacity-90 transition-opacity">
-                                    <div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2">
-                                        <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                                            <i data-lucide="map-pin" class="w-8 h-8 text-red-500 mb-1"></i>
-                                            <span class="text-[10px] font-mono">Location Shared</span>
-                                        </div>
-                                    </div>
-                                    <div class="px-2 pb-1">
-                                        <div class="text-xs font-bold text-gray-800 dark:text-white flex items-center gap-1">
-                                            <i data-lucide="navigation" class="w-3 h-3 text-blue-500"></i> Open Maps
-                                        </div>
-                                    </div>
-                                </a>`;
-                        }
-                        // 4. TEXT
-                        else {
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-fade`;
-                            div.innerHTML = `
-                                <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
-                                    isMe 
-                                    ? 'bg-blue-600 text-white rounded-br-sm' 
-                                    : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
-                                }">${escapeHtml(msg.text)}</div>`;
-                        }
-                        container.appendChild(div);
+        function subscribeAdminStats() {
+            if(unsubStatsOrders) unsubStatsOrders();
+            unsubStatsOrders = onSnapshot(collection(db, 'delivery_chats'), (snap) => {
+                state.stats.totalOrders = snap.size;
+                let rev = 0;
+                snap.forEach(d => {
+                    const data = d.data();
+                    if(data.status === 'delivered' && data.orderTotal) {
+                        rev += parseFloat(data.orderTotal);
                     }
                 });
-                if(shouldScroll) {
-                    if(window.lucide) window.lucide.createIcons();
-                    scrollToBottom();
-                }
+                state.stats.totalRevenue = rev;
+                render();
             });
-        }
 
-        // --- Image Compression ---
-        const compressImage = (file) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 300;
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+            if(unsubStatsUsers) unsubStatsUsers();
+            unsubStatsUsers = onSnapshot(collection(db, 'users'), (snap) => {
+                state.stats.totalUsers = snap.size;
+                const referralCounts = {};
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if(data.referredBy) {
+                        const code = data.referredBy.toUpperCase();
+                        referralCounts[code] = (referralCounts[code] || 0) + 1;
                     }
-                }
+                });
+                state.stats.affiliates = Object.entries(referralCounts)
+                    .map(([code, count]) => ({ code, count }))
+                    .sort((a, b) => b.count - a.count);
+                render();
             });
-        };
+        }
 
-        // --- GLOBAL ACTIONS ---
+        function subscribeServices() {
+            if(unsubServices) unsubServices();
+            unsubServices = onSnapshot(collection(db, 'delivery_services'), (snap) => {
+                state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if (state.role === 'provider' && state.user) {
+                    const myService = state.services.find(s => s.ownerEmail && s.ownerEmail.toLowerCase() === state.user.email.toLowerCase());
+                    if (myService) {
+                        state.providerService = myService;
+                        if(state.view !== 'chat') state.view = 'provider_list';
+                        subscribeChats(state.user.email.toLowerCase());
+                    } else { state.view = 'no_service'; }
+                }
+                render();
+            });
+        }
 
-        window.loginGoogle = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); } };
+        function subscribeChats(ownerEmail) {
+            if(unsubChats) unsubChats();
+            const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            unsubChats = onSnapshot(q, (snap) => {
+                state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
+                
+                state.providerEarnings = state.chats.reduce((sum, chat) => {
+                    if(chat.status === 'delivered' && chat.orderTotal) {
+                        return sum + parseFloat(chat.orderTotal);
+                    }
+                    return sum;
+                }, 0);
+
+                if (state.view === 'provider_list') render();
+            });
+        }
+
+        function subscribeActiveChat(chatId) {
+            if(unsubActiveMsg) unsubActiveMsg();
+            const q = query(collection(db, 'delivery_chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+            unsubActiveMsg = onSnapshot(q, (snap) => {
+                state.activeMessages = snap.docs.map(d => d.data());
+                render();
+                scrollChat();
+            });
+        }
+
+        // --- Actions ---
+        window.input = (f, v) => state.form[f] = v;
+        window.loginEmail = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
+        window.register = async () => { if(!confirm("Register?")) return; try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
+        window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
         window.logout = () => signOut(auth);
-        window.setCity = (c) => { state.selectedCity = c; setView('services'); };
-        window.openService = (id) => { state.activeService = state.services.find(s => s.id === id); setView('chat'); };
-        window.goBack = () => {
-            if(state.currentView === 'chat') setView('services');
-            else if(state.currentView === 'services') setView('cities');
-        };
-        window.toggleTheme = () => {
-            state.darkMode = !state.darkMode;
-            localStorage.setItem('darkMode', state.darkMode);
-            document.documentElement.classList.toggle('dark');
-            const icon = document.getElementById('theme-icon');
-            if(icon) { icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon'); if(window.lucide) window.lucide.createIcons(); }
-        };
 
-        // --- Order Logic ---
+        window.saveService = async (e) => {
+            e.preventDefault(); const form = new FormData(e.target);
+            const data = { name: form.get('name'), city: form.get('city'), type: form.get('type'), ownerEmail: form.get('ownerEmail').toLowerCase().trim(), assignedPassword: form.get('assignedPassword'), logo: form.get('logo'), lastUpdated: serverTimestamp() };
+            if(state.editId) await updateDoc(doc(db, 'delivery_services', state.editId), data);
+            else { data.createdAt = serverTimestamp(); await addDoc(collection(db, 'delivery_services'), data); }
+            state.editId = null; state.view = 'admin_list'; render();
+        };
+        window.delService = async (id) => { if(confirm("Delete?")) await deleteDoc(doc(db, 'delivery_services', id)); };
+        window.editService = (id) => { state.editId = id; state.view = 'admin_edit'; render(); };
+        window.nav = (v) => { state.view = v; state.editId = null; state.showBillForm = false; if(v !== 'chat' && unsubActiveMsg) { unsubActiveMsg(); unsubActiveMsg = null; state.activeMessages = []; } render(); };
 
-        window.toggleOrderModal = (show) => {
-            const el = document.getElementById('order-modal-overlay');
-            if(show) {
-                state.draftOrder = []; 
-                state.currentDraftImage = null;
-                window.renderDraftList();
-                const camIcon = document.getElementById('cam-icon');
-                if(camIcon) { camIcon.classList.remove('text-green-500'); camIcon.classList.add('text-gray-500'); }
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
+        window.openChat = (id) => { state.activeChat = state.chats.find(c => c.id === id); state.view = 'chat'; state.activeMessages = []; render(); subscribeActiveChat(id); };
+        window.chatInput = (v) => state.msgInput = v;
+        
+        // --- Bill & Status Actions ---
+        window.toggleBill = () => {
+            if(state.activeChat?.status === 'delivered') return alert("Order is already delivered!");
+            state.showBillForm = !state.showBillForm;
+            if (state.showBillForm) {
+                const hasPromo = state.activeMessages.some(m => m.text?.toUpperCase().trim() === 'SJ CODE' && m.sender !== state.user.uid);
+                state.promoActive = hasPromo;
+                state.deliveryFee = hasPromo ? 0 : 5;
+                setTimeout(() => document.getElementById('billAmount')?.focus(), 50);
             }
+            render();
         };
+        window.setBillAmount = (v) => { state.billAmount = v; render(); };
+        window.setDeliveryFee = (v) => { state.deliveryFee = v; render(); };
+        window.setBillDesc = (v) => state.billDesc = v;
 
-        window.handleImageSelect = async (input) => {
-            if (input.files && input.files[0]) {
-                const btn = document.getElementById('cam-btn');
-                const icon = document.getElementById('cam-icon');
-                icon.setAttribute('data-lucide', 'loader-2');
-                icon.classList.add('animate-spin');
-                if(window.lucide) window.lucide.createIcons();
-
-                try {
-                    state.currentDraftImage = await compressImage(input.files[0]);
-                    icon.setAttribute('data-lucide', 'check');
-                    icon.classList.remove('animate-spin', 'text-gray-500');
-                    icon.classList.add('text-green-500');
-                    if(window.lucide) window.lucide.createIcons();
-                } catch (e) {
-                    alert("Image failed");
-                    input.value = '';
-                }
-            }
-        };
-
-        window.addDraftItem = () => {
-            const nameEl = document.getElementById('new-item-name');
-            const qtyEl = document.getElementById('new-item-qty');
-            const name = nameEl.value.trim();
-            const qty = parseInt(qtyEl.value) || 1;
-
-            if (!name) return alert("Enter item name");
-            if (state.draftOrder.length >= 50) return alert("Max 50 items");
-
-            state.draftOrder.push({ id: Date.now(), name, qty, image: state.currentDraftImage });
-            nameEl.value = ''; qtyEl.value = 1; state.currentDraftImage = null;
+        window.sendBill = async () => {
+            if(!state.activeChat) return;
+            const amt = parseFloat(state.billAmount); const fee = parseFloat(state.deliveryFee);
+            if(!amt || amt <= 0) return alert("Invalid amount");
             
-            const fileInput = document.getElementById('new-item-img-file');
-            if(fileInput) fileInput.value = '';
-            const icon = document.getElementById('cam-icon');
-            if(icon) { icon.setAttribute('data-lucide', 'camera'); icon.classList.remove('text-green-500'); icon.classList.add('text-gray-500'); }
+            const total = amt + fee;
+            const msg = { type: 'bill', text: `Bill: $${total.toFixed(2)}`, amount: amt, deliveryFee: fee, total: total, description: state.billDesc.trim() || 'Order Total', sender: state.user.uid, status: 'pending', timestamp: serverTimestamp() };
 
-            nameEl.focus();
-            window.renderDraftList();
-        };
-
-        window.removeDraftItem = (id) => {
-            state.draftOrder = state.draftOrder.filter(item => item.id !== id);
-            window.renderDraftList();
-        };
-
-        window.renderDraftList = () => {
-            const listEl = document.getElementById('order-items-list');
-            const counterEl = document.getElementById('item-counter');
-            if(!listEl) return;
-            counterEl.innerText = `${state.draftOrder.length}/50 Items`;
-            if (state.draftOrder.length === 0) {
-                listEl.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><p class="text-sm">Basket is empty</p></div>`;
-            } else {
-                listEl.innerHTML = state.draftOrder.map(item => `
-                    <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
-                                ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="font-bold text-sm truncate dark:text-white">${item.name}</h4>
-                                <p class="text-xs text-gray-500">Qty: ${item.qty}</p>
-                            </div>
-                        </div>
-                        <button onclick="removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </div>`).join('');
-            }
-            if(window.lucide) window.lucide.createIcons();
-            listEl.scrollTop = listEl.scrollHeight;
-        };
-
-        window.submitOrder = () => {
-            if (state.draftOrder.length === 0) return alert("Add items first");
-            sendMessage("Order Request", 'order', { items: state.draftOrder });
-            window.toggleOrderModal(false);
-        };
-
-        // --- Send & Location ---
-
-        window.triggerSend = () => sendMessage();
-        window.sendPromo = () => sendMessage("SJ CODE");
-        window.handleChatKey = (e) => { if(e.key === 'Enter') sendMessage(); };
-
-        window.sendLocation = () => {
-            if(!navigator.geolocation) return alert("Geo not supported");
-            const locBtn = document.getElementById('loc-btn');
-            if(locBtn) locBtn.classList.add('opacity-50', 'animate-pulse');
-            navigator.geolocation.getCurrentPosition((pos) => {
-                if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
-                sendMessage("Shared Location", 'location', { location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
-            }, (err) => {
-                if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
-                alert("Location error");
+            const chatId = state.activeChat.id;
+            await addDoc(collection(db, 'delivery_chats', chatId, 'messages'), msg);
+            await updateDoc(doc(db, 'delivery_chats', chatId), {
+                lastMessage: `💵 Bill: $${total.toFixed(2)}`,
+                orderTotal: total,
+                lastUpdated: serverTimestamp()
             });
+
+            state.billAmount = ''; state.billDesc = ''; state.showBillForm = false; render();
         };
 
-        async function sendMessage(textOverride = null, typeOverride = 'text', extraData = {}) {
-            const input = document.getElementById('chat-input');
-            const txt = textOverride !== null ? textOverride : input.value.trim();
-            if(typeOverride === 'text' && !txt) return;
-            if(!state.activeService) return;
-            if(!textOverride && input) { input.value = ''; input.focus(); }
-
-            const chatId = getChatId(state.user.uid, state.activeService.id);
-            const chatDocRef = doc(db, 'delivery_chats', chatId);
-            const messagesColRef = collection(db, 'delivery_chats', chatId, 'messages');
-            const batch = writeBatch(db);
-
-            try {
-                const newMsgRef = doc(messagesColRef);
-                batch.set(newMsgRef, { type: typeOverride, text: txt || '', sender: state.user.uid, timestamp: serverTimestamp(), ...extraData });
-                
-                const existingChat = state.chats[state.activeService.id];
-                const metaData = { lastMessage: typeOverride === 'order' ? '📦 Order Sent' : (typeOverride === 'location' ? '📍 Location' : txt), lastUpdated: serverTimestamp(), serviceOwnerEmail: state.activeService.ownerEmail || '' };
-                
-                if (!existingChat) {
-                    batch.set(chatDocRef, { userId: state.user.uid, userEmail: state.user.email || 'anon', serviceId: state.activeService.id, serviceName: state.activeService.name, city: state.activeService.city, createdAt: serverTimestamp(), ...metaData });
-                } else {
-                    batch.update(chatDocRef, metaData);
-                }
-                await batch.commit();
-            } catch (e) { console.error(e); }
-        }
-
-        // --- Helpers ---
-        function getChatId(uid, serviceId) { return `${uid}_${serviceId}`; }
-        function scrollToBottom() { const el = document.getElementById('chat-messages'); if(el) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 100); }
-        function escapeHtml(text) { const div = document.createElement('div'); div.innerText = text || ''; return div.innerHTML; }
-
-        // --- Renderers ---
-
-        function renderLoading() { return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`; }
-
-        function renderLogin() {
-            return `
-                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
-                    <div class="w-32 h-32 mb-6 shrink-0 animate-fade"><img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain drop-shadow-2xl"></div>
-                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white">SJ Delivery</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs">Your favorite local services, delivered instantly.</p>
-                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-sm dark:text-white"><i data-lucide="mail" class="w-5 h-5 text-red-500"></i> Continue with Google</button>
-                </div>`;
-        }
-
-        const header = (title, showBack) => {
-            const user = state.user;
-            const left = (!showBack && user) ? `
-                <a href="https://simojibou.github.io/sjcoin25/duserprofile.html" class="flex items-center gap-3 overflow-hidden opacity-90"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name='+user.displayName}" class="w-9 h-9 rounded-full border dark:border-gray-700"><div class="min-w-0"><div class="text-[10px] uppercase font-bold text-gray-400">Welcome</div><div class="font-bold text-sm truncate dark:text-white">${user.displayName.split(' ')[0]}</div></div></a>
-            ` : `<div class="flex items-center gap-3 min-w-0">${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5 dark:text-white"></i></button>` : ''}<h1 class="font-bold text-lg truncate dark:text-white">${title}</h1></div>`;
-            return `<div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">${left}<div class="flex gap-2 shrink-0"><button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button><button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button></div></div>`;
+        window.markDone = async () => {
+            if(!state.activeChat) return;
+            if(!confirm("Are you sure you delivered this order?")) return;
+            
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), {
+                status: 'delivered',
+                completedAt: serverTimestamp()
+            });
+            state.activeChat.status = 'delivered';
+            state.view = 'provider_list';
+            render();
         };
 
-        function renderCities() {
-            const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
-            return `${header('Select Location', false)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Cities</h2>${cities.map(c => `<button onclick="setCity('${c}')" class="w-full bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98]"><div class="flex items-center gap-3"><div class="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div><span class="font-semibold text-lg dark:text-gray-100">${c}</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i></button>`).join('')}</div>`;
-        }
+        window.reply = async () => {
+            const txt = state.msgInput.trim(); if(!txt || !state.activeChat) return;
+            await addDoc(collection(db, 'delivery_chats', state.activeChat.id, 'messages'), { type: 'text', text: txt, sender: state.user.uid, timestamp: serverTimestamp() });
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), { lastMessage: txt, lastUpdated: serverTimestamp() });
+            state.msgInput = '';
+        };
 
-        function renderServices() {
-            const list = state.services.filter(s => s.city === state.selectedCity);
-            return `${header(state.selectedCity, true)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services</h2>${list.map(s => `<button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade"><div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0 border dark:border-gray-600">${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}</div><div class="flex-1 min-w-0"><h3 class="font-bold text-lg dark:text-gray-100 truncate">${s.name}</h3><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">${s.type}</span>${state.chats[s.id] ? '<span class="w-2 h-2 rounded-full bg-green-500"></span>' : ''}</div></div><div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full"><i data-lucide="message-circle" class="w-5 h-5"></i></div></button>`).join('')}</div>`;
-        }
+        function scrollChat() { setTimeout(() => { const el = document.getElementById('msgs'); if(el) el.scrollTop = el.scrollHeight; }, 50); }
 
-        function renderChatLayout() {
-            return `
-                ${header(state.activeService.name, true)}
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900 scroll-smooth space-y-2"><div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50"><i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i><p class="text-xs">Start ordering...</p></div></div>
-                
-                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2 shrink-0 pb-safe relative z-20">
-                    <button onclick="sendLocation()" id="loc-btn" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
-                    <button onclick="toggleOrderModal(true)" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
-                    
-                    <div class="flex-1 relative">
-                        <input id="chat-input" type="text" onkeyup="handleChatKey(event)" placeholder="Message..." class="w-full bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full pl-5 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ios-btn-fix">
+        // --- Render ---
+        function render() {
+            const root = document.getElementById('root');
+            let content = '';
+
+            if (state.view === 'login') {
+                content = `
+                    <div class="flex flex-col items-center justify-center h-full p-8 animate-up">
+                        <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-900/50"><i data-lucide="lock" class="w-8 h-8 text-white"></i></div>
+                        <h2 class="text-2xl font-bold mb-1">Staff Access</h2>
+                        <p class="text-gray-400 mb-8 text-sm">Log in to manage orders</p>
+                        <form onsubmit="loginEmail(event)" class="w-full space-y-4">
+                            <input onchange="input('email',this.value)" type="email" placeholder="Email" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white outline-none" required>
+                            <input onchange="input('pass',this.value)" type="password" placeholder="Password" class="w-full bg-gray-700 border border-gray-600 rounded-xl p-3 text-white outline-none" required>
+                            <div class="flex gap-2"><button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition">Login</button><button type="button" onclick="register()" class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl">Register</button></div>
+                        </form>
+                        <div class="mt-8 pt-8 border-t border-gray-700 w-full"><button onclick="loginGoogle()" class="w-full bg-white text-gray-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100"><i data-lucide="shield" class="w-5 h-5 text-purple-600"></i> Admin Google Login</button></div>
+                    </div>`;
+            } else if (state.view === 'no_service') {
+                content = `<div class="flex flex-col items-center justify-center h-full p-8 text-center animate-up"><i data-lucide="alert-circle" class="w-12 h-12 text-red-400 mb-4"></i><h2 class="text-xl font-bold">Access Denied</h2><p class="text-gray-400 mt-2 mb-6">No service linked.</p><button onclick="logout()" class="px-6 py-2 bg-gray-700 rounded-full">Logout</button></div>`;
+            } else if (state.view === 'admin_list') {
+                content = `
+                    <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
+                        <h2 class="font-bold text-lg">Dashboard</h2>
+                        <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
                     </div>
-
-                    <button onclick="triggerSend()" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-95 transition-all shrink-0"><i data-lucide="send" class="w-5 h-5 ml-0.5"></i></button>
-                </div>
-
-                <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end animate-fade">
-                    <div class="w-full bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl h-[85%] flex flex-col animate-slide-up ring-1 ring-white/10">
-                        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0">
-                            <div><h2 class="font-bold text-lg dark:text-white">New Order</h2><p class="text-xs text-gray-500" id="item-counter">0/50 Items</p></div>
-                            <button onclick="toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200"><i data-lucide="x" class="w-5 h-5 dark:text-white"></i></button>
-                        </div>
-                        <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar"></div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
-                            <div class="flex gap-2"><input id="new-item-name" type="text" placeholder="Item name..." class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white ios-btn-fix"><input id="new-item-qty" type="number" value="1" class="w-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center dark:text-white ios-btn-fix"></div>
-                            <div class="flex gap-2">
-                                <label id="cam-btn" class="w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"><i id="cam-icon" data-lucide="camera" class="w-5 h-5 text-gray-500"></i><input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)"></label>
-                                <button onclick="addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-xl flex items-center justify-center hover:opacity-90 transition-opacity"><i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add Item</button>
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div class="bg-blue-600/20 border border-blue-500/30 p-4 rounded-xl">
+                                <div class="flex items-center gap-2 text-blue-400 mb-1"><i data-lucide="shopping-bag" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Orders</span></div>
+                                <span class="text-2xl font-bold text-white">${state.stats.totalOrders}</span>
+                            </div>
+                            <div class="bg-green-600/20 border border-green-500/30 p-4 rounded-xl">
+                                <div class="flex items-center gap-2 text-green-400 mb-1"><i data-lucide="dollar-sign" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Revenue</span></div>
+                                <span class="text-2xl font-bold text-white">$${state.stats.totalRevenue.toFixed(2)}</span>
                             </div>
                         </div>
-                        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 pb-safe">
-                            <button onclick="submitOrder()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-2"><span>Send Order Request</span><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                        
+                        <div class="bg-purple-600/20 border border-purple-500/30 p-4 rounded-xl mb-6 flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 text-purple-400 mb-1"><i data-lucide="users" class="w-4 h-4"></i><span class="text-xs font-bold uppercase">Total Users</span></div>
+                                <span class="text-2xl font-bold text-white">${state.stats.totalUsers}</span>
+                            </div>
+                            <i data-lucide="trending-up" class="w-8 h-8 text-purple-500/50"></i>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Top Affiliates</h3>
+                            <div class="bg-gray-800 border border-white/5 rounded-xl overflow-hidden">
+                                ${state.stats.affiliates.length === 0 ? `<div class="p-4 text-center text-gray-500 text-sm">No data</div>` : state.stats.affiliates.map((aff, i) => `
+                                    <div class="flex items-center justify-between p-3 border-b border-white/5 last:border-0 hover:bg-white/5">
+                                        <div class="flex items-center gap-3"><div class="w-6 h-6 rounded-full ${i===0?'bg-yellow-500 text-black':'bg-gray-700'} flex items-center justify-center text-xs font-bold">${i+1}</div><span class="font-bold text-white text-sm">${aff.code}</span></div>
+                                        <div class="flex items-center gap-1 text-green-400 text-sm font-bold"><span>${aff.count}</span><i data-lucide="user-plus" class="w-3 h-3"></i></div>
+                                    </div>`).join('')}
+                            </div>
+                        </div>
+
+                        <h3 class="font-bold text-sm text-gray-400 mb-3 uppercase tracking-wider">Services</h3>
+                        <div class="grid gap-3">
+                            <button onclick="nav('admin_edit')" class="w-full p-4 border-2 border-dashed border-gray-600 rounded-xl text-gray-400 hover:text-purple-400 hover:border-purple-400 hover:bg-purple-400/10 transition flex items-center justify-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> Add New Service</button>
+                            ${state.services.map(s => `
+                                <div class="bg-gray-700/50 p-4 rounded-xl border border-white/5 flex items-center justify-between group">
+                                    <div><h3 class="font-bold">${s.name}</h3><div class="flex items-center gap-2 mt-1"><span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-white">${s.city}</span><span class="text-xs text-gray-400">${s.type}</span></div><p class="text-xs text-gray-500 mt-2">${s.ownerEmail}</p></div>
+                                    <div class="flex gap-2"><button onclick="editService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-blue-400"><i data-lucide="pencil" class="w-4 h-4"></i></button><button onclick="delService('${s.id}')" class="p-2 bg-gray-800 rounded-lg hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            } else if (state.view === 'admin_edit') {
+                const s = state.editId ? state.services.find(i => i.id === state.editId) : {};
+                content = `
+                    <div class="h-16 flex items-center gap-4 px-6 bg-gray-800 border-b border-white/5 shrink-0"><button onclick="nav('admin_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button><h2 class="font-bold text-lg">${state.editId ? 'Edit' : 'New'} Service</h2></div>
+                    <div class="flex-1 overflow-y-auto p-6 hide-scrollbar">
+                        <form onsubmit="saveService(event)" class="space-y-4">
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Name</label><input name="name" value="${s.name||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">City</label><input name="city" value="${s.city||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none" required></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Type</label><select name="type" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none"><option value="food" ${s.type==='food'?'selected':''}>Food</option><option value="grocery" ${s.type==='grocery'?'selected':''}>Grocery</option><option value="delivery" ${s.type==='delivery'?'selected':''}>Delivery</option></select></div>
+                            <div class="p-4 bg-purple-900/20 border border-purple-500/30 rounded-xl space-y-3"><h3 class="text-sm font-bold text-purple-400 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4"></i> Provider Account</h3><div><label class="text-xs uppercase font-bold text-gray-500">Email</label><input name="ownerEmail" type="email" value="${s.ownerEmail||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white outline-none" required></div><div><label class="text-xs uppercase font-bold text-gray-500">Password</label><input name="assignedPassword" value="${s.assignedPassword||''}" class="w-full bg-gray-800 p-3 rounded-lg text-white outline-none" required></div></div>
+                            <div><label class="text-xs uppercase font-bold text-gray-500">Logo URL</label><input name="logo" value="${s.logo||''}" class="w-full bg-gray-700 p-3 rounded-lg text-white outline-none"></div>
+                            <button class="w-full py-4 bg-purple-600 rounded-xl font-bold hover:bg-purple-500 transition shadow-lg shadow-purple-900/50">Save Service</button>
+                        </form>
+                    </div>`;
+            } else if (state.view === 'provider_list') {
+                content = `
+                    <div class="h-16 flex items-center justify-between px-6 bg-gray-800 border-b border-white/5 shrink-0">
+                        <div><h2 class="font-bold text-lg">Orders</h2><p class="text-xs text-purple-400 font-medium">${state.providerService?.city}</p></div>
+                        <button onclick="logout()" class="text-red-400 bg-red-400/10 p-2 rounded-full"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="px-4 mt-4">
+                        <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-4 rounded-xl shadow-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-green-100 font-medium uppercase opacity-80">Total Earnings</p>
+                                <h3 class="text-2xl font-bold text-white">$${state.providerEarnings.toFixed(2)}</h3>
+                            </div>
+                            <div class="bg-white/20 p-2 rounded-lg"><i data-lucide="wallet" class="w-6 h-6 text-white"></i></div>
                         </div>
                     </div>
-                </div>`;
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        ${state.chats.length === 0 ? `<div class="flex flex-col items-center justify-center h-48 text-gray-600"><i data-lucide="coffee" class="w-12 h-12 mb-2 opacity-50"></i><p>No active orders</p></div>` : state.chats.map(c => {
+                            const timeStr = c.lastUpdated ? new Date(c.lastUpdated.seconds * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Just now';
+                            const isDone = c.status === 'delivered';
+                            return `
+                            <button onclick="openChat('${c.id}')" class="w-full text-left bg-gray-700/50 hover:bg-gray-700 p-4 rounded-xl mb-2 transition animate-up group border border-transparent hover:border-gray-600 relative overflow-hidden">
+                                ${isDone ? `<div class="absolute right-0 top-0 bg-green-500 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold">DELIVERED</div>` : ''}
+                                <div class="flex justify-between items-start mb-1">
+                                    <div class="flex items-center gap-2">
+                                         <div class="w-2 h-2 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}"></div>
+                                         <span class="font-bold text-white text-sm truncate">${c.userEmail}</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">${timeStr}</span>
+                                </div>
+                                <p class="text-xs text-gray-300 ml-4 mb-1"><span class="bg-gray-600 text-gray-200 px-1.5 py-0.5 rounded text-[10px] mr-1">${c.city}</span></p>
+                                <p class="text-sm text-gray-400 truncate ml-4 opacity-80">${c.lastMessage || 'New Order'}</p>
+                            </button>`;
+                        }).join('')}
+                    </div>`;
+            } else if (state.view === 'chat') {
+                const msgs = state.activeMessages || [];
+                const isDelivered = state.activeChat.status === 'delivered';
+
+                content = `
+                    <div class="h-16 flex items-center gap-4 px-4 bg-gray-800 border-b border-white/5 shrink-0">
+                        <button onclick="nav('provider_list')" class="p-2 -ml-2 hover:bg-white/5 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <div class="flex-1 min-w-0">
+                            <h2 class="font-bold text-sm truncate">${state.activeChat.userEmail}</h2>
+                            <p class="text-xs ${isDelivered ? 'text-green-400' : 'text-blue-400'} flex items-center gap-1">
+                                ${isDelivered ? '<i data-lucide="check-circle" class="w-3 h-3"></i> Delivered' : '<span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span> Active'}
+                            </p>
+                        </div>
+                        ${!isDelivered ? `<button onclick="markDone()" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-lg shadow-green-900/20"><i data-lucide="check" class="w-3 h-3"></i> Done</button>` : ''}
+                    </div>
+                    
+                    <div id="msgs" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-900 relative">
+                        ${msgs.length === 0 ? `<div class="text-center text-gray-600 mt-10">Loading history...</div>` : msgs.map(m => {
+                            const isMe = m.sender === state.user.uid;
+                            
+                            // 1. BILL DISPLAY
+                            if(m.type === 'bill') {
+                                return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="p-4 rounded-2xl border ${isMe ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-800 border-gray-600'} w-56 shadow-lg"><div class="flex items-center gap-2 mb-3 text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-white/10 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Bill Sent</div><div class="flex justify-between text-xs text-gray-400 mb-1"><span>Items:</span><span>$${m.amount.toFixed(2)}</span></div><div class="flex justify-between text-xs text-gray-400 mb-3"><span>Fee:</span><span class="${m.deliveryFee === 0 ? 'text-green-400 font-bold' : ''}">${m.deliveryFee === 0 ? 'FREE' : '$'+m.deliveryFee.toFixed(2)}</span></div><div class="flex justify-between items-end border-t border-white/10 pt-2"><span class="text-sm text-gray-300">Total:</span><span class="text-xl font-bold text-white">$${(m.total||m.amount).toFixed(2)}</span></div></div></div>`;
+                            }
+                            
+                            // 2. ORDER DETAILS (NEW)
+                            if(m.type === 'order') {
+                                const items = m.items || [];
+                                return `
+                                <div class="flex justify-start mb-3 animate-up">
+                                    <div class="bg-gray-800 border border-gray-600 rounded-2xl overflow-hidden w-64 shadow-lg">
+                                        <div class="bg-purple-600/20 px-4 py-2 flex justify-between items-center border-b border-purple-500/20">
+                                            <span class="font-bold text-xs uppercase text-purple-300 flex items-center gap-1"><i data-lucide="shopping-cart" class="w-3 h-3"></i> Order</span>
+                                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded font-bold">${items.length} Items</span>
+                                        </div>
+                                        <div class="divide-y divide-gray-700 max-h-60 overflow-y-auto">
+                                            ${items.map(item => `
+                                                <div class="flex items-center gap-3 p-3 hover:bg-white/5">
+                                                    <div class="w-10 h-10 bg-gray-700 rounded-lg overflow-hidden shrink-0 border border-gray-600">
+                                                        ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-500"></i></div>`}
+                                                    </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="text-sm font-bold text-gray-200 truncate">${item.name}</div>
+                                                        <div class="text-xs text-gray-500">Qty: ${item.qty}</div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>`;
+                            }
+
+                            // 3. LOCATION MAP (NEW)
+                            if(m.type === 'location' && m.location) {
+                                return `
+                                <div class="flex justify-start mb-3 animate-up">
+                                    <div class="bg-gray-800 border border-gray-600 rounded-2xl p-2 w-60 shadow-lg">
+                                        <a href="https://www.google.com/maps/search/?api=1&query=${m.location.lat},${m.location.lng}" target="_blank" class="block group">
+                                            <div class="h-28 bg-gray-700 rounded-xl flex items-center justify-center mb-2 text-gray-500 relative overflow-hidden">
+                                                <div class="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg')] bg-cover opacity-10"></div>
+                                                <div class="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition duration-300"></div>
+                                                <div class="z-10 bg-gray-800 p-2 rounded-full shadow-xl border border-gray-600 group-hover:scale-110 transition-transform">
+                                                    <i data-lucide="map-pin" class="w-6 h-6 text-red-500 fill-current"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-between px-2 pb-1">
+                                                <div>
+                                                    <div class="text-xs font-bold text-blue-400 group-hover:text-blue-300 transition">Open Google Maps</div>
+                                                    <div class="text-[10px] text-gray-500 mt-0.5">${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}</div>
+                                                </div>
+                                                <i data-lucide="external-link" class="w-4 h-4 text-gray-500 group-hover:text-white transition"></i>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>`;
+                            }
+
+                            // 4. TEXT MESSAGES
+                            return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3"><div class="max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'}">${m.text}</div></div>`;
+                        }).join('')}
+                    </div>
+
+                    ${state.showBillForm ? `
+                    <div class="bg-gray-800 border-t border-purple-500 p-4 animate-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10">
+                        <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-purple-400 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Send Bill</h3><button onclick="toggleBill()" class="p-1 hover:bg-gray-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button></div>
+                        ${state.promoActive ? `<div class="mb-3 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-xs text-green-400 font-medium"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>` : ''}
+                        <div class="flex gap-2 mb-2">
+                             <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Subtotal</label><input id="billAmount" type="number" step="0.01" value="${state.billAmount}" oninput="setBillAmount(this.value)" placeholder="0.00" class="w-full bg-gray-900 border border-gray-600 rounded-lg py-2 pl-2 text-white outline-none focus:border-purple-500"></div>
+                             <div class="relative w-1/2"><label class="text-[10px] uppercase text-gray-500 font-bold ml-1">Fee</label><input type="number" step="0.01" value="${state.deliveryFee}" oninput="setDeliveryFee(this.value)" class="w-full bg-gray-900 border ${state.promoActive ? 'border-green-500/50 text-green-400' : 'border-gray-600 text-white'} rounded-lg py-2 pl-2 outline-none focus:border-purple-500"></div>
+                        </div>
+                        <div class="mb-3"><input type="text" value="${state.billDesc}" oninput="setBillDesc(this.value)" placeholder="Items description" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500 text-sm"></div>
+                        <button onclick="sendBill()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition flex justify-between px-4"><span>Send Bill</span><span>$${((parseFloat(state.billAmount)||0)+(parseFloat(state.deliveryFee)||0)).toFixed(2)}</span></button>
+                    </div>` : `
+                    <div class="p-3 bg-gray-800 border-t border-white/5 flex gap-2 shrink-0 items-center">
+                        ${!isDelivered ? `<button onclick="toggleBill()" class="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-full transition"><i data-lucide="receipt" class="w-5 h-5"></i></button>` : ''}
+                        <input ${isDelivered ? 'disabled placeholder="Order Delivered"' : 'placeholder="Reply..."'} value="${state.msgInput}" oninput="chatInput(this.value)" onkeyup="if(event.key==='Enter') reply()" type="text" class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-4 py-2 focus:border-blue-500 outline-none text-white disabled:opacity-50">
+                        <button onclick="reply()" ${isDelivered ? 'disabled' : ''} class="p-2 bg-blue-600 rounded-full hover:bg-blue-500 text-white disabled:opacity-50"><i data-lucide="send" class="w-5 h-5"></i></button>
+                    </div>`}
+                    `;
+            }
+            root.innerHTML = content;
+            lucide.createIcons();
         }
     </script>
 </body>
 </html>
+
+
 
 
 
