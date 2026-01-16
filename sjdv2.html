@@ -12,9 +12,21 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .animate-up { animation: up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Toast Animation */
+        .toast-enter { transform: translateX(100%); opacity: 0; }
+        .toast-enter-active { transform: translateX(0); opacity: 1; transition: all 0.3s ease-out; }
+        .toast-exit { transform: translateX(0); opacity: 1; }
+        .toast-exit-active { transform: translateX(100%); opacity: 0; transition: all 0.3s ease-in; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center">
+
+    <!-- Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Audio Element -->
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
     <div id="root" class="w-full max-w-md h-full sm:h-[90vh] bg-gray-800 sm:rounded-3xl shadow-2xl relative flex flex-col overflow-hidden ring-1 ring-white/10"></div>
 
@@ -45,8 +57,50 @@
             editId: null, form: { email: '', pass: '' }, msgInput: '',
             providerService: null, providerEarnings: 0,
             showBillForm: false, billAmount: '', billDesc: '', deliveryFee: 5, promoActive: false,
-            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 }
+            stats: { totalOrders: 0, totalRevenue: 0, affiliates: [], totalUsers: 0 },
+            firstLoad: true // To prevent notification spam on refresh
         };
+
+        // --- Notification System ---
+        function playSound() {
+            const audio = document.getElementById('notif-sound');
+            if(audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Audio interaction required"));
+            }
+        }
+
+        function showNotification(title, message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast-enter pointer-events-auto w-72 bg-gray-800 border-l-4 ${type === 'success' ? 'border-green-500' : 'border-blue-500'} rounded-lg shadow-xl p-4 flex items-start gap-3 relative overflow-hidden`;
+            
+            el.innerHTML = `
+                <div class="text-${type === 'success' ? 'green' : 'blue'}-400 mt-0.5">
+                    ${type === 'success' ? '<i data-lucide="check-circle" class="w-5 h-5"></i>' : '<i data-lucide="bell" class="w-5 h-5"></i>'}
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-sm text-white">${title}</h4>
+                    <p class="text-xs text-gray-400 mt-1">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            `;
+
+            container.appendChild(el);
+            lucide.createIcons();
+            
+            // Animation In
+            requestAnimationFrame(() => el.classList.add('toast-enter-active'));
+            requestAnimationFrame(() => el.classList.remove('toast-enter'));
+
+            // Auto Remove
+            setTimeout(() => {
+                el.classList.add('toast-exit-active');
+                setTimeout(() => el.remove(), 300);
+            }, 4000);
+
+            playSound();
+        }
 
         // --- Logic ---
         onAuthStateChanged(auth, async (user) => {
@@ -115,10 +169,30 @@
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
             const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            
             unsubChats = onSnapshot(q, (snap) => {
+                // NOTIFICATION LOGIC
+                if (!state.firstLoad) {
+                    snap.docChanges().forEach((change) => {
+                        const data = change.doc.data();
+                        if (change.type === "added") {
+                            showNotification("New Order!", `From: ${data.userEmail}`, 'success');
+                        }
+                        if (change.type === "modified") {
+                            // Only notify if the last sender wasn't me (the provider)
+                            // We check 'lastSender' which we will start saving now.
+                            // Fallback: If status changed to delivered, don't notify as msg.
+                            if (data.status !== 'delivered' && data.lastSender !== state.user.uid) {
+                                showNotification("New Message", `${data.userEmail}: ${data.lastMessage}`);
+                            }
+                        }
+                    });
+                } else {
+                    state.firstLoad = false;
+                }
+
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
                 
-                // EARNINGS CALCULATION: Sum ONLY the delivery earnings (Delivery Price)
                 state.providerEarnings = state.chats.reduce((sum, chat) => {
                     if(chat.status === 'delivered' && chat.deliveryEarnings) {
                         return sum + parseFloat(chat.deliveryEarnings);
@@ -145,7 +219,7 @@
         window.loginEmail = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
         window.register = async () => { if(!confirm("Register?")) return; try { await createUserWithEmailAndPassword(auth, state.form.email, state.form.pass); } catch(err) { alert(err.message); } };
         window.loginGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()); 
-        window.logout = () => signOut(auth);
+        window.logout = () => { state.firstLoad = true; signOut(auth); };
 
         window.saveService = async (e) => {
             e.preventDefault(); const form = new FormData(e.target);
@@ -191,11 +265,11 @@
             await updateDoc(doc(db, 'delivery_chats', chatId), {
                 lastMessage: `💵 Bill: $${total.toFixed(2)}`,
                 orderTotal: total, 
-                deliveryEarnings: fee, // STORE DELIVERY PRICE SEPARATELY FOR EARNINGS
+                deliveryEarnings: fee,
+                lastSender: state.user.uid, // Track sender for notifications
                 lastUpdated: serverTimestamp()
             });
 
-            // Update local state for immediate UI feedback
             state.activeChat.orderTotal = total;
             state.activeChat.deliveryEarnings = fee;
 
@@ -218,7 +292,14 @@
         window.reply = async () => {
             const txt = state.msgInput.trim(); if(!txt || !state.activeChat) return;
             await addDoc(collection(db, 'delivery_chats', state.activeChat.id, 'messages'), { type: 'text', text: txt, sender: state.user.uid, timestamp: serverTimestamp() });
-            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), { lastMessage: txt, lastUpdated: serverTimestamp() });
+            
+            // Update Chat Metadata + lastSender to avoid self-notifications
+            await updateDoc(doc(db, 'delivery_chats', state.activeChat.id), { 
+                lastMessage: txt, 
+                lastSender: state.user.uid,
+                lastUpdated: serverTimestamp() 
+            });
+            
             state.msgInput = '';
         };
 
@@ -451,6 +532,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
