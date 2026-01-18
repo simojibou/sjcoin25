@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SJ Delivery App</title>
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <title>SJ Delivery Premium</title>
     
-    <!-- Icons & Fonts -->
+    <!-- App Icon -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
     
     <!-- 1. Tailwind CSS -->
@@ -17,18 +19,17 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'] },
                     height: { 'screen-dvh': '100dvh' },
-                    padding: { 'safe': 'env(safe-area-inset-bottom)' },
-                    margin: { 'safe': 'env(safe-area-inset-bottom)' },
+                    spacing: { 'safe-b': 'env(safe-area-inset-bottom)', 'safe-t': 'env(safe-area-inset-top)' },
                     animation: {
-                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fade 0.2s ease-out forwards',
-                        'bounce-slight': 'bounceSlight 0.3s ease-in-out',
+                        'enter': 'enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'leave': 'leave 0.2s ease-in forwards',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
-                        slideUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
-                        fade: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
-                        bounceSlight: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } }
+                        enter: { '0%': { opacity: 0, transform: 'scale(0.95) translateY(10px)' }, '100%': { opacity: 1, transform: 'scale(1) translateY(0)' } },
+                        leave: { '0%': { opacity: 1 }, '100%': { opacity: 0, transform: 'scale(0.95)' } }
                     }
                 }
             }
@@ -38,69 +39,87 @@
     <!-- 2. Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 3. FIREBASE COMPAT (Essential for file:// execution & preventing module errors) -->
+    <!-- 3. FIREBASE COMPAT (Stable & Fast) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Base Reset */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-        }
+        /* Modern Reset */
+        body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; user-select: none; }
+        
+        /* Smooth Scrolling & Hide Scrollbar */
+        .scroll-smooth { -webkit-overflow-scrolling: touch; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input, textarea, select { font-size: 16px !important; }
-        .ios-btn-fix { -webkit-appearance: none; appearance: none; border-radius: 0; }
-        .toast-enter { transform: translateY(-20px); opacity: 0; }
-        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease; }
-        .toast-exit { opacity: 0; transform: translateY(-10px); transition: all 0.2s ease; }
         
-        /* Error Screen (Hidden by default) */
-        #bsod { display: none; }
+        /* Input Fixes */
+        input, textarea { font-size: 16px !important; touch-action: manipulation; }
+        
+        /* Toast Animation */
+        .toast-enter { animation: enter 0.4s forwards; }
+        .toast-exit { animation: leave 0.3s forwards; }
+
+        /* Glass Effect */
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .dark .glass { background: rgba(0, 0, 0, 0.85); }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 h-screen-dvh w-full overflow-hidden flex justify-center">
+<body class="bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 h-screen-dvh w-full overflow-hidden flex justify-center selection:bg-blue-500 selection:text-white">
 
-    <!-- Error Fallback Screen -->
-    <div id="bsod" class="fixed inset-0 z-[9999] bg-black text-white flex flex-col items-center justify-center p-6 text-center">
-        <div class="text-red-500 text-4xl mb-4">⚠️</div>
-        <h2 class="text-xl font-bold mb-2">Something went wrong</h2>
-        <p id="bsod-msg" class="text-xs font-mono bg-gray-900 p-4 rounded mb-6 max-w-full break-words opacity-80"></p>
-        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-black rounded-full font-bold">Reload App</button>
+    <!-- Global Error Recovery Screen -->
+    <div id="recovery-screen" class="fixed inset-0 z-[9999] bg-black text-white hidden flex-col items-center justify-center p-6 text-center">
+        <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4 text-red-500 animate-pulse"><i data-lucide="alert-triangle" class="w-8 h-8"></i></div>
+        <h2 class="text-xl font-bold mb-2">App Paused</h2>
+        <p id="error-detail" class="text-xs text-gray-400 font-mono mb-6 max-w-xs mx-auto bg-gray-900 p-3 rounded-lg break-all"></p>
+        <button onclick="window.location.reload()" class="px-8 py-3 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform">Restart App</button>
     </div>
 
-    <!-- App Container -->
-    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-950 shadow-2xl relative flex flex-col overflow-hidden sm:rounded-none md:rounded-xl md:h-[95dvh] md:my-auto border-x border-gray-200 dark:border-gray-800">
-        <!-- Initial Loader -->
+    <!-- Main App Container -->
+    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-950 shadow-2xl relative flex flex-col overflow-hidden sm:rounded-none md:rounded-3xl md:h-[95dvh] md:my-auto md:border md:border-gray-200 dark:md:border-gray-800 transition-colors duration-300">
+        <!-- Loader -->
         <div class="flex h-full items-center justify-center bg-white dark:bg-black">
             <div class="flex flex-col items-center gap-4">
-                <div class="animate-spin w-10 h-10 border-4 border-blue-600 rounded-full border-t-transparent"></div>
-                <p class="text-sm font-bold text-gray-400 tracking-widest animate-pulse">LOADING SJ</p>
+                <div class="relative">
+                    <div class="w-12 h-12 rounded-full border-4 border-blue-100 dark:border-gray-800"></div>
+                    <div class="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+                </div>
+                <p class="text-xs font-bold text-gray-400 tracking-[0.2em] animate-pulse">INITIALIZING</p>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none"></div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none"></div>
 
     <script>
-        // --- Global Error Trap ---
+        // --- 🛡️ Crash Guard 🛡️ ---
         window.onerror = function(msg, url, line, col, error) {
-            const bsod = document.getElementById('bsod');
-            const txt = document.getElementById('bsod-msg');
-            if(bsod && txt) {
-                bsod.style.display = 'flex';
-                txt.textContent = `${msg}\nLine: ${line}`;
+            console.error("Crash Guard Caught:", error);
+            const screen = document.getElementById('recovery-screen');
+            const detail = document.getElementById('error-detail');
+            if(screen && detail) {
+                // Only show screen for critical module errors or syntax
+                if (msg.includes('Syntax') || msg.includes('Module')) {
+                    screen.classList.replace('hidden', 'flex');
+                    detail.textContent = `${msg} (Line ${line})`;
+                } else {
+                    // For runtime errors, try to just notify
+                    if(window.showToast) window.showToast("Minor Error: " + msg, "error");
+                }
             }
-            return false;
+            return true; // Prevent default browser error alert
         };
 
-        (function() { // Start IIFE
+        (function() { // Isolated Scope
             
-            // --- 1. Firebase Config & Init ---
+            // --- 0. Checks ---
+            if (typeof firebase === 'undefined') {
+                document.getElementById('app').innerHTML = `<div class="flex h-full items-center justify-center text-center p-6"><div class="text-red-500 font-bold">Failed to load Firebase.<br><span class="text-sm font-normal text-gray-400">Please check your internet connection.</span></div></div>`;
+                return;
+            }
+
+            // --- 1. Firebase Setup ---
             const firebaseConfig = {
                 apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
                 authDomain: "sj-one.firebaseapp.com",
@@ -111,13 +130,11 @@
                 appId: "1:426335553508:web:248f76772f6f78419ca9f1"
             };
 
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             const db = firebase.firestore();
 
-            // --- 2. State Management ---
+            // --- 2. State & Store ---
             const state = {
                 user: null,
                 currentView: 'loading',
@@ -134,110 +151,242 @@
 
             if(state.darkMode) document.documentElement.classList.add('dark');
 
-            // --- 3. UI Helpers ---
-            window.showToast = (message, type = 'info') => {
+            // --- 3. High Performance Utilities ---
+            
+            window.showToast = (msg, type = 'info') => {
                 const container = document.getElementById('toast-container');
+                if(!container) return;
                 const el = document.createElement('div');
-                const colors = type === 'error' ? 'bg-red-500 text-white' : (type === 'success' ? 'bg-green-500 text-white' : 'bg-gray-800 text-white');
-                el.className = `${colors} px-4 py-3 rounded-full shadow-lg text-sm font-semibold flex items-center gap-2 toast-enter pointer-events-auto backdrop-blur-md z-[1000]`;
-                el.innerHTML = `<span>${message}</span>`;
+                const bg = type === 'error' ? 'bg-red-500/90' : (type === 'success' ? 'bg-emerald-500/90' : 'bg-gray-800/90');
+                const icon = type === 'error' ? 'alert-circle' : (type === 'success' ? 'check-circle-2' : 'info');
+                
+                el.className = `${bg} backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl shadow-black/5 text-sm font-medium flex items-center gap-3 toast-enter pointer-events-auto min-w-[200px] justify-center`;
+                el.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${msg}</span>`;
+                
                 container.appendChild(el);
-                requestAnimationFrame(() => el.classList.remove('toast-enter', 'toast-enter-active'));
-                setTimeout(() => { el.classList.add('toast-exit'); setTimeout(() => el.remove(), 200); }, 3000);
+                if(window.lucide) window.lucide.createIcons();
+                
+                setTimeout(() => {
+                    el.classList.replace('toast-enter', 'toast-exit');
+                    setTimeout(() => el.remove(), 300);
+                }, 2500);
             };
 
             const refreshIcons = () => { if(window.lucide) window.lucide.createIcons(); };
-            const formatTime = (ts) => ts ? ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            const escapeHtml = (text) => { const div = document.createElement('div'); div.innerText = text || ''; return div.innerHTML; };
+            
+            const formatTime = (ts) => {
+                if (!ts) return ''; 
+                try { return ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } 
+                catch(e) { return ''; }
+            };
+            
+            const escapeHtml = (str) => {
+                if(!str) return '';
+                return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            };
 
-            // --- 4. Templates (Views) ---
+            // --- 4. Beautiful Views (Templates) ---
+            
             const Views = {
-                loading: () => `<div class="flex h-full items-center justify-center bg-white dark:bg-black"><div class="flex flex-col items-center gap-4"><div class="animate-spin w-10 h-10 border-4 border-blue-600 rounded-full border-t-transparent"></div><p class="text-sm font-bold text-gray-400 tracking-widest animate-pulse">LOADING SJ</p></div></div>`,
+                loading: () => ``, // Handled by static HTML initially
                 
                 login: () => `
-                    <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-black relative overflow-hidden">
-                        <div class="w-32 h-32 mb-8 shrink-0 animate-bounce-slight relative z-10">
-                            <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain drop-shadow-2xl">
+                    <div class="flex flex-col h-full relative overflow-hidden bg-white dark:bg-black">
+                        <!-- Background Blobs -->
+                        <div class="absolute top-[-20%] right-[-20%] w-96 h-96 bg-blue-500/20 rounded-full blur-[80px]"></div>
+                        <div class="absolute bottom-[-10%] left-[-10%] w-80 h-80 bg-purple-500/20 rounded-full blur-[80px]"></div>
+                        
+                        <div class="flex-1 flex flex-col items-center justify-center p-8 z-10 animate-enter">
+                            <div class="w-36 h-36 mb-8 relative">
+                                <div class="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse-fast"></div>
+                                <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain relative z-10 drop-shadow-2xl">
+                            </div>
+                            
+                            <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">SJ Delivery</h1>
+                            <p class="text-gray-500 dark:text-gray-400 mb-12 text-center max-w-[250px] leading-relaxed">Your favorite local services, delivered instantly.</p>
+                            
+                            <button id="login-btn" onclick="Actions.loginGoogle()" class="w-full max-w-xs group relative overflow-hidden bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl p-4 font-bold shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:scale-100">
+                                <div class="relative z-10 flex items-center justify-center gap-3">
+                                    <i data-lucide="mail" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
+                                    <span>Continue with Google</span>
+                                </div>
+                            </button>
+                            
+                            <p class="mt-8 text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Secure Login • Firebase</p>
                         </div>
-                        <h1 class="text-4xl font-black mb-3 text-gray-900 dark:text-white tracking-tight">SJ Delivery</h1>
-                        <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs text-lg leading-relaxed">Your city's best services, delivered to your door instantly.</p>
-                        <button id="login-btn" onclick="Actions.loginGoogle()" class="w-full max-w-xs py-4 bg-gray-900 dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] transition-transform rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i data-lucide="mail" class="w-5 h-5"></i> <span>Continue with Google</span>
-                        </button>
                     </div>`,
 
                 header: (title, showBack) => {
                     const user = state.user;
-                    // FIX: Safer display name handling
-                    const displayName = (user && user.displayName) ? user.displayName : (user && user.email ? user.email.split('@')[0] : 'User');
-                    const avatarName = encodeURIComponent(displayName);
-                    const avatar = (user && user.photoURL) ? user.photoURL : `https://ui-avatars.com/api/?name=${avatarName}&background=random`;
+                    let displayName = "Guest";
+                    let avatar = `https://ui-avatars.com/api/?name=G&background=random`;
                     
-                    const left = (!showBack && user) ? `
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 shadow-sm object-cover">
-                            <div class="min-w-0">
-                                <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Welcome</div>
-                                <div class="font-bold text-sm truncate dark:text-white">${escapeHtml(displayName.split(' ')[0])}</div>
+                    if (user) {
+                        displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+                        avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+                    }
+                    
+                    const leftContent = (!showBack && user) ? `
+                        <div class="flex items-center gap-3">
+                            <div class="relative group cursor-pointer">
+                                <div class="absolute inset-0 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                                <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-black relative z-10 object-cover shadow-sm">
+                            </div>
+                            <div class="flex flex-col justify-center">
+                                <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Hello,</span>
+                                <span class="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px]">${escapeHtml(displayName.split(' ')[0])}</span>
                             </div>
                         </div>` : `
-                        <div class="flex items-center gap-3 min-w-0">
-                            ${showBack ? `<button onclick="Actions.goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i data-lucide="arrow-left" class="w-6 h-6 dark:text-white"></i></button>` : ''}
-                            <h1 class="font-bold text-xl truncate dark:text-white tracking-tight">${escapeHtml(title)}</h1>
+                        <div class="flex items-center gap-1">
+                            ${showBack ? `<button onclick="Actions.goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90"><i data-lucide="arrow-left" class="w-6 h-6 dark:text-white"></i></button>` : ''}
+                            <h1 class="font-bold text-xl dark:text-white tracking-tight ml-1">${escapeHtml(title)}</h1>
                         </div>`;
-                    return `<div class="h-16 bg-white/80 dark:bg-black/80 backdrop-blur-md flex items-center justify-between px-4 z-20 shrink-0 border-b border-gray-100 dark:border-gray-800 sticky top-0 w-full">${left}<div class="flex gap-1 shrink-0"><button onclick="Actions.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>${!showBack ? `<button onclick="Actions.logout()" class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}</div></div>`;
+
+                    return `
+                        <div class="h-16 glass sticky top-0 z-50 px-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/50 shrink-0">
+                            ${leftContent}
+                            <div class="flex items-center gap-1">
+                                <button onclick="Actions.toggleTheme()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                    <i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                                </button>
+                                ${!showBack ? `<button onclick="Actions.logout()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}
+                            </div>
+                        </div>`;
                 },
 
                 cities: () => {
                     const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
-                    return `${Views.header('Select Location', false)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Cities</h2>${cities.length ? cities.map(c => `<button onclick="Actions.setCity('${c}')" class="group w-full bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98] transition-all hover:border-blue-500 dark:hover:border-blue-500"><div class="flex items-center gap-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><i data-lucide="map-pin" class="w-6 h-6"></i></div><span class="font-bold text-lg dark:text-gray-100">${c}</span></div><div class="bg-gray-50 dark:bg-gray-800 p-2 rounded-full"><i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"></i></div></button>`).join('') : '<div class="text-center py-10 text-gray-400">Loading locations...</div>'}</div>`;
+                    return `
+                    ${Views.header('Location', false)}
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50">
+                        <div class="mb-6 px-1">
+                            <h2 class="text-2xl font-black dark:text-white mb-1">Where are you?</h2>
+                            <p class="text-sm text-gray-500">Select your city to find services.</p>
+                        </div>
+                        <div class="space-y-3">
+                        ${cities.length ? cities.map(c => `
+                            <button onclick="Actions.setCity('${c}')" class="w-full bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center justify-between group hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-[0.98]">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                                        <i data-lucide="map-pin" class="w-6 h-6"></i>
+                                    </div>
+                                    <span class="font-bold text-lg dark:text-gray-100">${c}</span>
+                                </div>
+                                <div class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors"></i>
+                                </div>
+                            </button>`).join('') : 
+                            `<div class="flex flex-col items-center justify-center py-20 opacity-50">
+                                <i data-lucide="map" class="w-12 h-12 mb-2 text-gray-400"></i>
+                                <span class="text-sm">Loading cities...</span>
+                            </div>`}
+                        </div>
+                    </div>`;
                 },
 
                 services: () => {
                     const list = state.services.filter(s => s.city === state.selectedCity);
-                    return `${Views.header(state.selectedCity, true)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services</h2>${list.map(s => `<button onclick="Actions.openService('${s.id}')" class="group w-full bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md"><div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-100 dark:border-gray-700 relative">${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}${state.chats[s.id] ? '<span class="absolute top-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900"></span>' : ''}</div><div class="flex-1 min-w-0"><h3 class="font-bold text-lg dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 transition-colors">${escapeHtml(s.name)}</h3><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${escapeHtml(s.type)}</span></div></div><div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-colors"><i data-lucide="message-circle" class="w-5 h-5"></i></div></button>`).join('')}</div>`;
+                    return `
+                    ${Views.header(state.selectedCity, true)}
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50">
+                        <div class="mb-4 px-1 flex items-center justify-between">
+                            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Available Services</h2>
+                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-[10px] font-bold px-2 py-1 rounded-full">${list.length}</span>
+                        </div>
+                        <div class="space-y-3">
+                        ${list.map(s => `
+                            <button onclick="Actions.openService('${s.id}')" class="w-full bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-enter hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none group relative overflow-hidden">
+                                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative z-10">
+                                    ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
+                                </div>
+                                <div class="flex-1 min-w-0 z-10">
+                                    <h3 class="font-bold text-lg dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 transition-colors">${escapeHtml(s.name)}</h3>
+                                    <span class="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${escapeHtml(s.type)}</span>
+                                </div>
+                                <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center z-10 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                </div>
+                            </button>`).join('')}
+                        </div>
+                    </div>`;
                 },
 
-                emptyChatPlaceholder: () => `<div class="empty-chat-placeholder flex flex-col items-center justify-center h-full text-gray-400 opacity-60 animate-fade"><div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"><i data-lucide="message-square-dashed" class="w-10 h-10"></i></div><p class="text-sm font-medium">Say Hello!</p><p class="text-xs">Start your order with ${state.activeService.name}</p></div>`,
+                emptyChat: () => `
+                    <div class="empty-chat-placeholder flex flex-col items-center justify-center h-full text-gray-300 dark:text-gray-700 animate-enter select-none">
+                        <div class="w-24 h-24 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 relative">
+                            <div class="absolute inset-0 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-full animate-spin-slow"></div>
+                            <i data-lucide="message-square-dashed" class="w-10 h-10"></i>
+                        </div>
+                        <p class="text-sm font-bold text-gray-400">No messages yet</p>
+                        <p class="text-xs text-gray-400/50 mt-1">Start ordering now</p>
+                    </div>`,
 
                 chatLayout: () => `
                     ${Views.header(state.activeService.name, true)}
-                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50 scroll-smooth pb-4"></div>
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50 scroll-smooth pb-4 space-y-4"></div>
                     
-                    <form onsubmit="Actions.triggerSend(event)" class="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-2 shrink-0 pb-safe relative z-20">
-                        <button type="button" onclick="Actions.sendLocation()" id="loc-btn" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Send Location"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
-                        <button type="button" onclick="Actions.toggleOrderModal(true)" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Create Order"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
-                        <div class="flex-1 relative"><input id="chat-input" type="text" autocomplete="off" placeholder="Message..." class="w-full bg-gray-100 dark:bg-gray-800 dark:text-white rounded-full pl-5 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ios-btn-fix border border-transparent focus:border-blue-500"></div>
-                        <button type="submit" id="send-btn" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-90 transition-all shrink-0"><i data-lucide="send" class="w-5 h-5 ml-0.5"></i></button>
+                    <form onsubmit="Actions.triggerSend(event)" class="p-3 bg-white/90 dark:bg-black/90 backdrop-blur border-t border-gray-100 dark:border-gray-800 flex items-end gap-2 shrink-0 pb-safe-b relative z-20">
+                        <div class="flex gap-2 pb-1">
+                            <button type="button" onclick="Actions.sendLocation()" id="loc-btn" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-90 transition-all"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
+                            <button type="button" onclick="Actions.toggleOrderModal(true)" class="w-10 h-10 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-90 transition-all"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
+                        </div>
+                        
+                        <div class="flex-1 bg-gray-100 dark:bg-gray-800 rounded-3xl px-4 py-3 flex items-center">
+                            <input id="chat-input" type="text" autocomplete="off" placeholder="Type a message..." class="w-full bg-transparent border-none outline-none text-sm dark:text-white placeholder-gray-400">
+                        </div>
+
+                        <button type="submit" id="send-btn" class="w-11 h-11 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-90 transition-all pb-1 disabled:opacity-50 disabled:active:scale-100">
+                            <i data-lucide="send" class="w-5 h-5 ml-0.5"></i>
+                        </button>
                     </form>
 
-                    <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end animate-fade">
-                        <div class="w-full bg-white dark:bg-gray-950 rounded-t-3xl shadow-2xl h-[90%] flex flex-col animate-slide-up ring-1 ring-white/10 overflow-hidden">
-                            <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0 bg-white dark:bg-gray-950">
-                                <div><h2 class="font-bold text-xl dark:text-white">New Order</h2><p class="text-xs text-gray-500 font-medium mt-0.5" id="item-counter">0/50 Items</p></div>
-                                <button onclick="Actions.toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 transition-colors text-gray-600 dark:text-gray-300"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar bg-gray-50 dark:bg-black/50"></div>
-                            <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3 pb-safe">
-                                <div class="flex gap-2"><input id="new-item-name" type="text" placeholder="Item name..." class="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white ios-btn-fix"><input id="new-item-qty" type="number" value="1" min="1" class="w-20 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3.5 text-sm text-center dark:text-white ios-btn-fix font-bold"></div>
-                                <div class="flex gap-2">
-                                    <label id="cam-btn" class="w-14 h-12 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 transition-colors"><i id="cam-icon" data-lucide="camera" class="w-6 h-6 text-gray-400"></i><input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="Actions.handleImageSelect(this)"></label>
-                                    <button onclick="Actions.addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all h-12"><i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add Item</button>
+                    <!-- ORDER MODAL -->
+                    <div id="order-modal-overlay" class="hidden absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end animate-enter">
+                        <div class="w-full bg-white dark:bg-gray-950 rounded-t-[2.5rem] shadow-2xl h-[85%] flex flex-col ring-1 ring-white/10 overflow-hidden">
+                            <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-950 sticky top-0 z-10">
+                                <div>
+                                    <h2 class="font-black text-xl dark:text-white">New Order</h2>
+                                    <p class="text-xs text-gray-500 font-bold tracking-wide mt-1" id="item-counter">0/50 ITEMS</p>
                                 </div>
-                                <button onclick="Actions.submitOrder()" id="submit-order-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2"><span>Send Order Request</span><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                                <button onclick="Actions.toggleOrderModal(false)" class="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center hover:rotate-90 transition-transform text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            
+                            <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar bg-gray-50 dark:bg-black/50"></div>
+                            
+                            <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 space-y-3 pb-safe-b">
+                                <div class="flex gap-3">
+                                    <input id="new-item-name" type="text" placeholder="Item name (e.g., Pizza)" class="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-medium">
+                                    <input id="new-item-qty" type="number" value="1" min="1" class="w-20 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl px-2 py-4 text-sm text-center dark:text-white font-bold">
+                                </div>
+                                <div class="flex gap-3">
+                                    <label id="cam-btn" class="w-16 h-14 flex items-center justify-center bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors active:scale-95">
+                                        <i id="cam-icon" data-lucide="camera" class="w-6 h-6 text-gray-400"></i>
+                                        <input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="Actions.handleImageSelect(this)">
+                                    </label>
+                                    <button onclick="Actions.addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center">
+                                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add to List
+                                    </button>
+                                </div>
+                                <button onclick="Actions.submitOrder()" id="submit-order-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                    <span>Send Order</span><i data-lucide="arrow-right" class="w-5 h-5"></i>
+                                </button>
                             </div>
                         </div>
                     </div>`
             };
 
-            // --- 5. Controller ---
+            // --- 5. Controller (Router) ---
             function setView(viewName) {
-                // Fix: Prevent View Trashing/Looping
-                if (state.currentView === viewName) return;
-                
+                if (state.currentView === viewName && viewName !== 'loading') return;
                 state.currentView = viewName;
                 const appEl = document.getElementById('app');
-                if (state.listeners.activeChat && viewName !== 'chat') { state.listeners.activeChat(); state.listeners.activeChat = null; }
+                
+                if (state.listeners.activeChat && viewName !== 'chat') { 
+                    state.listeners.activeChat(); 
+                    state.listeners.activeChat = null; 
+                }
+
                 switch(viewName) {
                     case 'loading': appEl.innerHTML = Views.loading(); break;
                     case 'login': appEl.innerHTML = Views.login(); break;
@@ -248,19 +397,16 @@
                 refreshIcons();
             }
 
-            // --- 6. Event Listeners ---
+            // --- 6. Event Logic ---
             
-            // Auth Listener
             auth.onAuthStateChanged((user) => {
                 state.user = user;
                 if (user) {
                     if(!state.listeners.services) subscribeServices();
                     if(!state.listeners.chatsList) subscribeChatsList();
-                    // Fix: Check current view before redirecting to avoid loops
                     if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
                 } else {
                     unsubscribeAll();
-                    // Fix: Only redirect if not already on login
                     if(state.currentView !== 'login') setView('login');
                 }
             });
@@ -269,16 +415,12 @@
                 state.listeners.services = db.collection('delivery_services').onSnapshot((snap) => {
                     state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
                     if (state.currentView === 'cities' || state.currentView === 'services') {
-                        // Re-render only if needed, logic inside templates handles data
                          const appEl = document.getElementById('app');
                          if(state.currentView === 'cities') appEl.innerHTML = Views.cities();
                          if(state.currentView === 'services') appEl.innerHTML = Views.services();
                          refreshIcons();
                     }
-                }, (error) => {
-                    console.error("Services Error:", error);
-                    window.showToast("Connection issue: Retrying...", "error");
-                });
+                }, (e) => console.log("Offline mode or sync error"));
             }
 
             function subscribeChatsList() {
@@ -288,8 +430,7 @@
                     snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
                     state.chats = map;
                     if(state.currentView === 'services') {
-                         const appEl = document.getElementById('app');
-                         appEl.innerHTML = Views.services();
+                         document.getElementById('app').innerHTML = Views.services();
                          refreshIcons();
                     }
                 });
@@ -300,7 +441,6 @@
                 if(state.listeners.chatsList) state.listeners.chatsList();
                 if(state.listeners.activeChat) state.listeners.activeChat();
                 state.listeners = { services: null, chatsList: null, activeChat: null };
-                state.services = []; state.chats = {};
             }
 
             function mountChatLogic() {
@@ -312,7 +452,7 @@
                     let shouldScroll = false;
                     
                     if (snapshot.empty) {
-                        container.innerHTML = Views.emptyChatPlaceholder();
+                        container.innerHTML = Views.emptyChat();
                     } else if(container.querySelector('.empty-chat-placeholder')) {
                         container.innerHTML = '';
                     }
@@ -328,69 +468,141 @@
                 });
             }
 
+            // --- 7. Message Bubbles ---
             function createMessageElement(msg) {
                 const isMe = msg.sender === state.user.uid;
                 const time = formatTime(msg.timestamp);
                 const div = document.createElement('div');
-                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in group`;
+                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} animate-enter group`;
                 
-                let contentHTML = '';
-                if(msg.type === 'bill') {
-                    const isPromo = msg.deliveryFee === 0;
-                    contentHTML = `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm w-64"><div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Payment Request</div><div class="flex justify-between items-end"><span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span><span class="text-2xl font-black text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span></div>${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>' : ''}</div>`;
-                } else if (msg.type === 'order') {
-                    const items = msg.items || [];
-                    contentHTML = `<div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64"><div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white"><div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order</div><span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">${items.length} items</span></div><div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto bg-white dark:bg-gray-800">${items.map(item => `<div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"><div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}</div><div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${escapeHtml(item.name || 'Item')}</div><div class="text-[10px] text-gray-500">Qty: ${item.qty}</div></div></div>`).join('')}</div></div>`;
-                } else if (msg.type === 'location') {
-                    contentHTML = `<a href="https://www.google.com/maps/search/?api=1&query=${msg.location.lat},${msg.location.lng}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-60 block hover:opacity-90 transition-opacity"><div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-gray-100 dark:border-gray-600"><div class="text-center"><i data-lucide="map-pin" class="w-8 h-8 text-red-500 mx-auto mb-1 animate-bounce-slight"></i><span class="text-[10px] font-mono text-gray-400">Location Shared</span></div></div><div class="px-2 pb-1 flex justify-between items-center"><span class="text-xs font-bold text-gray-800 dark:text-white">Open in Maps</span><i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i></div></a>`;
-                } else {
-                    contentHTML = `<div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm break-words ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}">${escapeHtml(msg.text)}</div>`;
+                let inner = '';
+                
+                // --- Message Styles ---
+                const bubbleBase = isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-bl-none';
+                const shadow = isMe ? 'shadow-blue-500/20' : 'shadow-sm';
+
+                if(msg.type === 'text') {
+                    inner = `<div class="max-w-[80%] px-5 py-3 rounded-2xl ${bubbleBase} shadow-lg ${shadow} text-sm leading-relaxed break-words">${escapeHtml(msg.text)}</div>`;
+                } 
+                else if (msg.type === 'location') {
+                    inner = `
+                    <a href="https://maps.google.com/?q=${msg.location.lat},${msg.location.lng}" target="_blank" class="block w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md hover:opacity-95 transition-opacity">
+                        <div class="h-28 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
+                            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#60a5fa 1px, transparent 1px); background-size: 10px 10px;"></div>
+                            <div class="w-12 h-12 bg-white dark:bg-black rounded-full flex items-center justify-center shadow-lg text-red-500 animate-bounce"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
+                        </div>
+                        <div class="p-3 flex justify-between items-center">
+                            <div><div class="text-xs font-bold dark:text-white">Shared Location</div><div class="text-[10px] text-gray-400">Tap to open map</div></div>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400"></i>
+                        </div>
+                    </a>`;
+                }
+                else if (msg.type === 'order') {
+                    const count = msg.items ? msg.items.length : 0;
+                    inner = `
+                    <div class="w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md">
+                        <div class="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-700 p-3 flex justify-between items-center text-white">
+                            <div class="flex items-center gap-2 text-xs font-bold tracking-wider"><i data-lucide="shopping-bag" class="w-4 h-4 text-blue-400"></i> ORDER</div>
+                            <span class="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold">${count} Items</span>
+                        </div>
+                        <div class="max-h-56 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/50 p-1">
+                            ${(msg.items || []).map(i => `
+                                <div class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 bg-cover bg-center border border-gray-100 dark:border-gray-700 shrink-0" style="background-image: url('${i.image || ''}')"></div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-bold dark:text-white truncate">${escapeHtml(i.name)}</div>
+                                        <div class="text-[10px] text-gray-500">Qty: ${i.qty}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                }
+                else if (msg.type === 'bill') {
+                    const total = (msg.total || msg.amount || 0).toFixed(2);
+                    inner = `
+                    <div class="w-60 bg-white dark:bg-gray-900 rounded-2xl p-4 border border-blue-100 dark:border-gray-800 shadow-xl shadow-blue-500/5 relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest"><i data-lucide="receipt" class="w-4 h-4"></i> Receipt</div>
+                        <div class="flex justify-between items-end border-t border-dashed border-gray-200 dark:border-gray-700 pt-3">
+                            <span class="text-xs font-medium text-gray-500">Total</span>
+                            <span class="text-2xl font-black text-gray-900 dark:text-white">$${total}</span>
+                        </div>
+                    </div>`;
                 }
 
-                div.innerHTML = `<div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">${contentHTML}<span class="text-[10px] text-gray-400 mt-1 mx-1 opacity-0 group-hover:opacity-100 transition-opacity select-none">${time}</span></div>`;
+                div.innerHTML = `
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-full">
+                        ${inner}
+                        <span class="text-[9px] text-gray-400 mt-1 mx-1 opacity-0 group-hover:opacity-100 transition-opacity select-none font-medium">${time}</span>
+                    </div>`;
                 return div;
             }
 
-            // --- 7. Exposed Actions ---
+            // --- 8. Actions (Public) ---
             window.Actions = {
                 loginGoogle: async () => { 
                     const btn = document.getElementById('login-btn');
-                    if(btn) { btn.disabled = true; btn.innerHTML = `<div class="animate-spin w-5 h-5 border-2 border-gray-500 rounded-full border-t-transparent"></div><span>Signing in...</span>`; }
+                    if(btn) { btn.disabled = true; btn.querySelector('span').innerText = 'Signing in...'; }
                     try { 
                         await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
                         await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
                     } catch(e) { 
-                        window.showToast("Login Failed. Try again.", "error"); 
+                        window.showToast("Login Failed", "error"); 
                         console.error(e); 
-                        if(btn) { btn.disabled = false; btn.innerHTML = `<i data-lucide="mail" class="w-5 h-5"></i> <span>Continue with Google</span>`; refreshIcons(); }
+                        if(btn) { btn.disabled = false; btn.querySelector('span').innerText = 'Continue with Google'; }
                     } 
                 },
-                logout: () => { if(confirm("Are you sure you want to log out?")) auth.signOut(); },
+                logout: () => { if(confirm("Log out?")) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
                 openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
-                goBack: () => { if(state.currentView === 'chat') setView('services'); else if(state.currentView === 'services') setView('cities'); },
-                toggleTheme: () => { state.darkMode = !state.darkMode; localStorage.setItem('darkMode', state.darkMode); document.documentElement.classList.toggle('dark'); refreshIcons(); },
+                goBack: () => { 
+                    if(state.currentView === 'chat') setView('services'); 
+                    else if(state.currentView === 'services') setView('cities'); 
+                },
+                toggleTheme: () => { 
+                    state.darkMode = !state.darkMode; 
+                    localStorage.setItem('darkMode', state.darkMode); 
+                    document.documentElement.classList.toggle('dark'); 
+                    refreshIcons(); 
+                },
                 
-                // Orders
+                // ORDER LOGIC
                 toggleOrderModal: (show) => {
                     const el = document.getElementById('order-modal-overlay');
-                    if(show) { state.draftOrder=[]; state.currentDraftImage=null; Actions.renderDraftList(); document.getElementById('cam-icon').classList.replace('text-green-500','text-gray-400'); el.classList.remove('hidden'); }
-                    else el.classList.add('hidden');
+                    if(show) { 
+                        state.draftOrder=[]; state.currentDraftImage=null; Actions.renderDraftList(); 
+                        const cam = document.getElementById('cam-icon'); if(cam) { cam.setAttribute('data-lucide', 'camera'); cam.className = "w-6 h-6 text-gray-400"; }
+                        el.classList.remove('hidden'); 
+                    } else { 
+                        el.classList.add('hidden'); 
+                    }
+                    refreshIcons();
                 },
                 handleImageSelect: (input) => {
                     if(input.files[0]) {
-                        const icon=document.getElementById('cam-icon'); icon.setAttribute('data-lucide','loader-2'); icon.classList.add('animate-spin'); refreshIcons();
+                        const icon=document.getElementById('cam-icon'); 
+                        icon.setAttribute('data-lucide','loader-2'); icon.classList.add('animate-spin', 'text-blue-500'); refreshIcons();
+                        
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             const img = new Image(); img.src=e.target.result;
                             img.onload = () => {
+                                // Aggressive Compression for Firestore
                                 const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
-                                const scale = 300/img.width; // SMALLER SIZE for Firestore limit safety
-                                cvs.width=Math.min(img.width, 300); cvs.height=img.height*(cvs.width/img.width);
-                                ctx.drawImage(img,0,0,cvs.width,cvs.height);
-                                state.currentDraftImage = cvs.toDataURL('image/jpeg',0.6); // LOWER QUALITY
-                                icon.setAttribute('data-lucide','check'); icon.classList.remove('animate-spin','text-gray-400'); icon.classList.add('text-green-500'); refreshIcons();
-                                window.showToast("Image added", "success");
+                                const MAX_SIZE = 300; 
+                                let w=img.width, h=img.height;
+                                if(w>h) { if(w>MAX_SIZE) { h*=MAX_SIZE/w; w=MAX_SIZE; } } 
+                                else { if(h>MAX_SIZE) { w*=MAX_SIZE/h; h=MAX_SIZE; } }
+                                cvs.width=w; cvs.height=h;
+                                ctx.drawImage(img,0,0,w,h);
+                                state.currentDraftImage = cvs.toDataURL('image/jpeg', 0.5); // Low quality to save space
+                                
+                                icon.setAttribute('data-lucide','check-circle-2'); 
+                                icon.classList.remove('animate-spin', 'text-gray-400', 'text-blue-500'); 
+                                icon.classList.add('text-green-500'); 
+                                refreshIcons();
+                                window.showToast("Image attached", "success");
                             }
                         };
                         reader.readAsDataURL(input.files[0]);
@@ -401,103 +613,128 @@
                     const name=nameEl.value.trim(); const qty=parseInt(qtyEl.value)||1;
                     if(!name) return window.showToast("Enter item name","error");
                     state.draftOrder.push({id:Date.now(), name, qty, image:state.currentDraftImage});
+                    
+                    // Reset
                     nameEl.value=''; qtyEl.value=1; state.currentDraftImage=null;
-                    const icon=document.getElementById('cam-icon'); icon.setAttribute('data-lucide','camera'); icon.classList.remove('text-green-500'); icon.classList.add('text-gray-400');
+                    const icon=document.getElementById('cam-icon'); 
+                    icon.setAttribute('data-lucide','camera'); icon.className="w-6 h-6 text-gray-400";
                     document.getElementById('new-item-img-file').value='';
+                    
                     nameEl.focus(); Actions.renderDraftList(); refreshIcons();
                 },
                 removeDraftItem: (id) => { state.draftOrder=state.draftOrder.filter(i=>i.id!==id); Actions.renderDraftList(); },
                 renderDraftList: () => {
-                    const el=document.getElementById('order-items-list'); document.getElementById('item-counter').innerText=`${state.draftOrder.length}/50 Items`;
-                    if(state.draftOrder.length===0) el.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><p class="text-sm">Basket is empty</p></div>`;
-                    else el.innerHTML = state.draftOrder.map(item => `<div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2 shadow-sm"><div class="flex items-center gap-3 overflow-hidden"><div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}</div><div class="min-w-0"><h4 class="font-bold text-sm truncate dark:text-white">${escapeHtml(item.name)}</h4><p class="text-xs text-gray-500 font-medium">Qty: ${item.qty}</p></div></div><button onclick="Actions.removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+                    const el=document.getElementById('order-items-list'); 
+                    document.getElementById('item-counter').innerText=`${state.draftOrder.length}/50 ITEMS`;
+                    
+                    if(state.draftOrder.length===0) el.innerHTML = `<div class="flex flex-col items-center justify-center py-10 opacity-30"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><span class="text-xs font-bold uppercase">List Empty</span></div>`;
+                    else el.innerHTML = state.draftOrder.map(item => `
+                        <div class="flex items-center justify-between bg-white dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 animate-enter">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg bg-cover bg-center border border-gray-200 dark:border-gray-700" style="background-image: url('${item.image || ''}')"></div>
+                                <div><h4 class="font-bold text-sm dark:text-white">${escapeHtml(item.name)}</h4><p class="text-[10px] text-gray-500 font-bold">Qty: ${item.qty}</p></div>
+                            </div>
+                            <button onclick="Actions.removeDraftItem(${item.id})" class="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>`).join('');
                     refreshIcons(); el.scrollTop=el.scrollHeight;
                 },
                 submitOrder: async () => {
-                    if(state.draftOrder.length===0) return window.showToast("Add items first","error");
+                    if(state.draftOrder.length===0) return window.showToast("Add items first", "error");
                     const btn = document.getElementById('submit-order-btn');
-                    const originalText = btn.innerHTML;
+                    const oldHTML = btn.innerHTML;
                     btn.innerHTML = `<div class="animate-spin w-5 h-5 border-2 border-white rounded-full border-t-transparent"></div>`;
                     
                     try {
                         await Actions.triggerSend(null, 'order', {items:state.draftOrder});
                         Actions.toggleOrderModal(false); 
-                        window.showToast("Order Sent Successfully!","success");
+                        window.showToast("Order Sent!", "success");
                     } catch(e) {
-                         // handled in triggerSend but this keeps UI consistent
+                         // Error handled in triggerSend
                     } finally {
-                        btn.innerHTML = originalText;
+                        btn.innerHTML = oldHTML;
                         refreshIcons();
                     }
                 },
 
-                // Chat
+                // SEND LOGIC
                 triggerSend: async (e, type='text', data={}) => {
                     if(e) e.preventDefault();
                     if(state.isSending) return;
-                    
-                    if(!state.user) {
-                        window.showToast("You are not logged in", "error");
-                        return;
-                    }
+                    if(!state.user) return window.showToast("Login required", "error");
 
-                    const input=document.getElementById('chat-input');
-                    const txt = type==='text' ? (input?input.value.trim():'') : (type==='order'?'Order Request':'Location');
+                    const input = document.getElementById('chat-input');
+                    const txt = type==='text' ? (input ? input.value.trim() : '') : (type==='order'?'New Order':'Shared Location');
+                    
                     if(type==='text' && !txt) return;
                     if(input) input.value='';
                     
                     state.isSending = true;
+                    // Optimistic UI for button
                     const sendBtn = document.getElementById('send-btn');
-                    let originalIcon;
-                    if(sendBtn) { originalIcon = sendBtn.innerHTML; sendBtn.innerHTML = `<div class="animate-spin w-4 h-4 border-2 border-white rounded-full border-t-transparent"></div>`; }
-                    
+                    let oldBtn;
+                    if(sendBtn && type==='text') { oldBtn=sendBtn.innerHTML; sendBtn.innerHTML=`<div class="animate-spin w-4 h-4 border-2 border-white rounded-full border-t-transparent"></div>`; }
+
                     try {
                         const chatId = `${state.user.uid}_${state.activeService.id}`;
                         const batch = db.batch();
                         const msgRef = db.collection('delivery_chats').doc(chatId).collection('messages').doc();
                         
-                        // Safe user checks
-                        const userName = (state.user.displayName || 'User');
-                        const userEmail = (state.user.email || 'No Email');
+                        const userName = state.user.displayName || (state.user.email ? state.user.email.split('@')[0] : 'User');
                         
-                        batch.set(msgRef, { type, text:txt, sender:state.user.uid, timestamp:firebase.firestore.FieldValue.serverTimestamp(), ...data });
+                        batch.set(msgRef, { 
+                            type, text:txt, sender:state.user.uid, 
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+                            ...data 
+                        });
+                        
                         batch.set(db.collection('delivery_chats').doc(chatId), {
-                            userId:state.user.uid, userEmail:userEmail, userName:userName, userPhoto:state.user.photoURL,
-                            serviceId:state.activeService.id, serviceName:state.activeService.name, city:state.activeService.city,
-                            lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), lastUpdated:firebase.firestore.FieldValue.serverTimestamp(),
+                            userId: state.user.uid, userEmail: state.user.email, userName: userName, userPhoto: state.user.photoURL,
+                            serviceId: state.activeService.id, serviceName: state.activeService.name, city: state.activeService.city,
+                            lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), 
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                             serviceOwnerEmail: state.activeService.ownerEmail || ''
                         }, {merge:true});
                         
                         await batch.commit();
                     } catch (e) {
-                        console.error("Firebase Write Error:", e);
-                        window.showToast("Failed to send: " + e.message, "error");
-                        throw e; 
+                        console.error(e);
+                        window.showToast("Failed to send", "error");
+                        throw e; // Propagate error
                     } finally {
                         state.isSending = false;
-                        if(sendBtn) { sendBtn.innerHTML = originalIcon; refreshIcons(); }
+                        if(sendBtn && oldBtn) { sendBtn.innerHTML = oldBtn; refreshIcons(); }
                     }
                 },
                 sendLocation: () => {
-                    if(!navigator.geolocation) return window.showToast("Geo not supported","error");
-                    const btn=document.getElementById('loc-btn'); btn.classList.add('animate-pulse');
-                    navigator.geolocation.getCurrentPosition(pos => {
-                        btn.classList.remove('animate-pulse');
-                        Actions.triggerSend(null, 'location', {location:{lat:pos.coords.latitude, lng:pos.coords.longitude}});
-                    }, err => { btn.classList.remove('animate-pulse'); window.showToast("Location Error","error"); });
+                    if(!navigator.geolocation) return window.showToast("Geo not supported", "error");
+                    const btn = document.getElementById('loc-btn');
+                    btn.classList.add('animate-pulse', 'text-blue-500');
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        pos => {
+                            btn.classList.remove('animate-pulse', 'text-blue-500');
+                            Actions.triggerSend(null, 'location', {location:{lat:pos.coords.latitude, lng:pos.coords.longitude}});
+                        }, 
+                        err => { 
+                            btn.classList.remove('animate-pulse', 'text-blue-500'); 
+                            window.showToast("Location denied", "error"); 
+                        }
+                    );
                 }
             };
             
-            // --- Utils ---
             function scrollToBottom() { 
                 const el = document.getElementById('chat-messages'); 
                 if(el) requestAnimationFrame(() => el.scrollTop = el.scrollHeight); 
             }
 
-        })(); // End IIFE
+        })();
     </script>
 </body>
 </html>
+
+
+
 
 
 
