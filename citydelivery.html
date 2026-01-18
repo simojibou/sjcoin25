@@ -169,13 +169,17 @@
 
                 header: (title, showBack) => {
                     const user = state.user;
-                    const avatar = user ? (user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`) : '';
+                    // FIX: Safer display name handling
+                    const displayName = (user && user.displayName) ? user.displayName : (user && user.email ? user.email.split('@')[0] : 'User');
+                    const avatarName = encodeURIComponent(displayName);
+                    const avatar = (user && user.photoURL) ? user.photoURL : `https://ui-avatars.com/api/?name=${avatarName}&background=random`;
+                    
                     const left = (!showBack && user) ? `
                         <div class="flex items-center gap-3 overflow-hidden">
                             <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 shadow-sm object-cover">
                             <div class="min-w-0">
                                 <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Welcome</div>
-                                <div class="font-bold text-sm truncate dark:text-white">${escapeHtml(user.displayName.split(' ')[0])}</div>
+                                <div class="font-bold text-sm truncate dark:text-white">${escapeHtml(displayName.split(' ')[0])}</div>
                             </div>
                         </div>` : `
                         <div class="flex items-center gap-3 min-w-0">
@@ -401,9 +405,13 @@
                     const batch = db.batch();
                     const msgRef = db.collection('delivery_chats').doc(chatId).collection('messages').doc();
                     
+                    // Safe user checks
+                    const userName = (state.user.displayName || 'User');
+                    const userEmail = (state.user.email || 'No Email');
+                    
                     batch.set(msgRef, { type, text:txt, sender:state.user.uid, timestamp:firebase.firestore.FieldValue.serverTimestamp(), ...data });
                     batch.set(db.collection('delivery_chats').doc(chatId), {
-                        userId:state.user.uid, userEmail:state.user.email, userName:state.user.displayName, userPhoto:state.user.photoURL,
+                        userId:state.user.uid, userEmail:userEmail, userName:userName, userPhoto:state.user.photoURL,
                         serviceId:state.activeService.id, serviceName:state.activeService.name, city:state.activeService.city,
                         lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), lastUpdated:firebase.firestore.FieldValue.serverTimestamp(),
                         serviceOwnerEmail: state.activeService.ownerEmail || ''
@@ -431,6 +439,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
