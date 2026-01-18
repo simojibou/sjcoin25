@@ -38,7 +38,7 @@
     <!-- 2. Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 3. FIREBASE COMPAT (Essential for file:// execution) -->
+    <!-- 3. FIREBASE COMPAT (Essential for file:// execution & preventing module errors) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -161,13 +161,14 @@
                         </div>
                         <h1 class="text-4xl font-black mb-3 text-gray-900 dark:text-white tracking-tight">SJ Delivery</h1>
                         <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs text-lg leading-relaxed">Your city's best services, delivered to your door instantly.</p>
-                        <button onclick="Actions.loginGoogle()" class="w-full max-w-xs py-4 bg-gray-900 dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] transition-transform rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl">
-                            <i data-lucide="mail" class="w-5 h-5"></i> Continue with Google
+                        <button id="login-btn" onclick="Actions.loginGoogle()" class="w-full max-w-xs py-4 bg-gray-900 dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] transition-transform rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="mail" class="w-5 h-5"></i> <span>Continue with Google</span>
                         </button>
                     </div>`,
 
                 header: (title, showBack) => {
                     const user = state.user;
+                    // FIX: Safer display name handling
                     const displayName = (user && user.displayName) ? user.displayName : (user && user.email ? user.email.split('@')[0] : 'User');
                     const avatarName = encodeURIComponent(displayName);
                     const avatar = (user && user.photoURL) ? user.photoURL : `https://ui-avatars.com/api/?name=${avatarName}&background=random`;
@@ -231,6 +232,9 @@
 
             // --- 5. Controller ---
             function setView(viewName) {
+                // Fix: Prevent View Trashing/Looping
+                if (state.currentView === viewName) return;
+                
                 state.currentView = viewName;
                 const appEl = document.getElementById('app');
                 if (state.listeners.activeChat && viewName !== 'chat') { state.listeners.activeChat(); state.listeners.activeChat = null; }
@@ -252,17 +256,25 @@
                 if (user) {
                     if(!state.listeners.services) subscribeServices();
                     if(!state.listeners.chatsList) subscribeChatsList();
+                    // Fix: Check current view before redirecting to avoid loops
                     if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
                 } else {
                     unsubscribeAll();
-                    setView('login');
+                    // Fix: Only redirect if not already on login
+                    if(state.currentView !== 'login') setView('login');
                 }
             });
 
             function subscribeServices() {
                 state.listeners.services = db.collection('delivery_services').onSnapshot((snap) => {
                     state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                    if (state.currentView === 'cities' || state.currentView === 'services') setView(state.currentView);
+                    if (state.currentView === 'cities' || state.currentView === 'services') {
+                        // Re-render only if needed, logic inside templates handles data
+                         const appEl = document.getElementById('app');
+                         if(state.currentView === 'cities') appEl.innerHTML = Views.cities();
+                         if(state.currentView === 'services') appEl.innerHTML = Views.services();
+                         refreshIcons();
+                    }
                 }, (error) => {
                     console.error("Services Error:", error);
                     window.showToast("Connection issue: Retrying...", "error");
@@ -275,7 +287,11 @@
                     const map = {};
                     snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
                     state.chats = map;
-                    if(state.currentView === 'services') setView('services'); 
+                    if(state.currentView === 'services') {
+                         const appEl = document.getElementById('app');
+                         appEl.innerHTML = Views.services();
+                         refreshIcons();
+                    }
                 });
             }
 
@@ -337,7 +353,18 @@
 
             // --- 7. Exposed Actions ---
             window.Actions = {
-                loginGoogle: async () => { try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch(e) { window.showToast("Login Failed", "error"); console.error(e); } },
+                loginGoogle: async () => { 
+                    const btn = document.getElementById('login-btn');
+                    if(btn) { btn.disabled = true; btn.innerHTML = `<div class="animate-spin w-5 h-5 border-2 border-gray-500 rounded-full border-t-transparent"></div><span>Signing in...</span>`; }
+                    try { 
+                        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
+                    } catch(e) { 
+                        window.showToast("Login Failed. Try again.", "error"); 
+                        console.error(e); 
+                        if(btn) { btn.disabled = false; btn.innerHTML = `<i data-lucide="mail" class="w-5 h-5"></i> <span>Continue with Google</span>`; refreshIcons(); }
+                    } 
+                },
                 logout: () => { if(confirm("Are you sure you want to log out?")) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
                 openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
@@ -400,6 +427,7 @@
                          // handled in triggerSend but this keeps UI consistent
                     } finally {
                         btn.innerHTML = originalText;
+                        refreshIcons();
                     }
                 },
 
@@ -419,6 +447,9 @@
                     if(input) input.value='';
                     
                     state.isSending = true;
+                    const sendBtn = document.getElementById('send-btn');
+                    let originalIcon;
+                    if(sendBtn) { originalIcon = sendBtn.innerHTML; sendBtn.innerHTML = `<div class="animate-spin w-4 h-4 border-2 border-white rounded-full border-t-transparent"></div>`; }
                     
                     try {
                         const chatId = `${state.user.uid}_${state.activeService.id}`;
@@ -441,9 +472,10 @@
                     } catch (e) {
                         console.error("Firebase Write Error:", e);
                         window.showToast("Failed to send: " + e.message, "error");
-                        throw e; // re-throw for submitOrder to catch
+                        throw e; 
                     } finally {
                         state.isSending = false;
+                        if(sendBtn) { sendBtn.innerHTML = originalIcon; refreshIcons(); }
                     }
                 },
                 sendLocation: () => {
@@ -466,6 +498,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
