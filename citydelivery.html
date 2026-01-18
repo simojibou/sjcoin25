@@ -38,7 +38,7 @@
     <!-- 2. Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 3. FIREBASE COMPAT (Fixes Black Screen Issue) -->
+    <!-- 3. FIREBASE COMPAT (Essential for file:// execution) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -98,7 +98,7 @@
             return false;
         };
 
-        (function() { // Start IIFE to keep scope clean
+        (function() { // Start IIFE
             
             // --- 1. Firebase Config & Init ---
             const firebaseConfig = {
@@ -111,24 +111,11 @@
                 appId: "1:426335553508:web:248f76772f6f78419ca9f1"
             };
 
-            // Initialize using global namespace (Compat)
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
             }
             const auth = firebase.auth();
             const db = firebase.firestore();
-
-            // Handle redirect result to prevent blank screen issues
-            auth.getRedirectResult().then((result) => {
-                if (result.credential) {
-                    window.showToast("Logged in successfully", "success");
-                }
-            }).catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                window.showToast(`Auth error: ${errorMessage}`, "error");
-                console.error(error);
-            });
 
             // --- 2. State Management ---
             const state = {
@@ -141,7 +128,8 @@
                 draftOrder: [],
                 currentDraftImage: null,
                 darkMode: localStorage.getItem('darkMode') === 'true',
-                listeners: { services: null, chatsList: null, activeChat: null }
+                listeners: { services: null, chatsList: null, activeChat: null },
+                isSending: false
             };
 
             if(state.darkMode) document.documentElement.classList.add('dark');
@@ -151,7 +139,7 @@
                 const container = document.getElementById('toast-container');
                 const el = document.createElement('div');
                 const colors = type === 'error' ? 'bg-red-500 text-white' : (type === 'success' ? 'bg-green-500 text-white' : 'bg-gray-800 text-white');
-                el.className = `${colors} px-4 py-3 rounded-full shadow-lg text-sm font-semibold flex items-center gap-2 toast-enter pointer-events-auto backdrop-blur-md`;
+                el.className = `${colors} px-4 py-3 rounded-full shadow-lg text-sm font-semibold flex items-center gap-2 toast-enter pointer-events-auto backdrop-blur-md z-[1000]`;
                 el.innerHTML = `<span>${message}</span>`;
                 container.appendChild(el);
                 requestAnimationFrame(() => el.classList.remove('toast-enter', 'toast-enter-active'));
@@ -168,7 +156,6 @@
                 
                 login: () => `
                     <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-black relative overflow-hidden">
-                         <div class="absolute top-[-10%] right-[-10%] w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
                         <div class="w-32 h-32 mb-8 shrink-0 animate-bounce-slight relative z-10">
                             <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain drop-shadow-2xl">
                         </div>
@@ -181,7 +168,6 @@
 
                 header: (title, showBack) => {
                     const user = state.user;
-                    // FIX: Safer display name handling
                     const displayName = (user && user.displayName) ? user.displayName : (user && user.email ? user.email.split('@')[0] : 'User');
                     const avatarName = encodeURIComponent(displayName);
                     const avatar = (user && user.photoURL) ? user.photoURL : `https://ui-avatars.com/api/?name=${avatarName}&background=random`;
@@ -198,17 +184,17 @@
                             ${showBack ? `<button onclick="Actions.goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i data-lucide="arrow-left" class="w-6 h-6 dark:text-white"></i></button>` : ''}
                             <h1 class="font-bold text-xl truncate dark:text-white tracking-tight">${escapeHtml(title)}</h1>
                         </div>`;
-                    return `<div class="h-16 bg-white/80 dark:bg-black/80 backdrop-blur-md flex items-center justify-between px-4 z-20 shrink-0 border-b border-gray-100 dark:border-gray-800 sticky top-0 w-full">\( {left}<div class="flex gap-1 shrink-0"><button onclick="Actions.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i id="theme-icon" data-lucide=" \){state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>${!showBack ? `<button onclick="Actions.logout()" class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}</div></div>`;
+                    return `<div class="h-16 bg-white/80 dark:bg-black/80 backdrop-blur-md flex items-center justify-between px-4 z-20 shrink-0 border-b border-gray-100 dark:border-gray-800 sticky top-0 w-full">${left}<div class="flex gap-1 shrink-0"><button onclick="Actions.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button>${!showBack ? `<button onclick="Actions.logout()" class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}</div></div>`;
                 },
 
                 cities: () => {
                     const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
-                    return `\( {Views.header('Select Location', false)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Cities</h2> \){cities.length ? cities.map(c => `<button onclick="Actions.setCity('\( {c}')" class="group w-full bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98] transition-all hover:border-blue-500 dark:hover:border-blue-500"><div class="flex items-center gap-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><i data-lucide="map-pin" class="w-6 h-6"></i></div><span class="font-bold text-lg dark:text-gray-100"> \){c}</span></div><div class="bg-gray-50 dark:bg-gray-800 p-2 rounded-full"><i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"></i></div></button>`).join('') : '<div class="text-center py-10 text-gray-400">Loading locations...</div>'}</div>`;
+                    return `${Views.header('Select Location', false)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Cities</h2>${cities.length ? cities.map(c => `<button onclick="Actions.setCity('${c}')" class="group w-full bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98] transition-all hover:border-blue-500 dark:hover:border-blue-500"><div class="flex items-center gap-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><i data-lucide="map-pin" class="w-6 h-6"></i></div><span class="font-bold text-lg dark:text-gray-100">${c}</span></div><div class="bg-gray-50 dark:bg-gray-800 p-2 rounded-full"><i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"></i></div></button>`).join('') : '<div class="text-center py-10 text-gray-400">Loading locations...</div>'}</div>`;
                 },
 
                 services: () => {
                     const list = state.services.filter(s => s.city === state.selectedCity);
-                    return `\( {Views.header(state.selectedCity, true)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services</h2> \){list.map(s => `<button onclick="Actions.openService('\( {s.id}')" class="group w-full bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md"><div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-100 dark:border-gray-700 relative"> \){s.logo ? `<img src="\( {s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`} \){state.chats[s.id] ? '<span class="absolute top-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900"></span>' : ''}</div><div class="flex-1 min-w-0"><h3 class="font-bold text-lg dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 transition-colors">\( {escapeHtml(s.name)}</h3><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide"> \){escapeHtml(s.type)}</span></div></div><div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-colors"><i data-lucide="message-circle" class="w-5 h-5"></i></div></button>`).join('')}</div>`;
+                    return `${Views.header(state.selectedCity, true)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services</h2>${list.map(s => `<button onclick="Actions.openService('${s.id}')" class="group w-full bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md"><div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-100 dark:border-gray-700 relative">${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}${state.chats[s.id] ? '<span class="absolute top-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900"></span>' : ''}</div><div class="flex-1 min-w-0"><h3 class="font-bold text-lg dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 transition-colors">${escapeHtml(s.name)}</h3><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${escapeHtml(s.type)}</span></div></div><div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-colors"><i data-lucide="message-circle" class="w-5 h-5"></i></div></button>`).join('')}</div>`;
                 },
 
                 emptyChatPlaceholder: () => `<div class="empty-chat-placeholder flex flex-col items-center justify-center h-full text-gray-400 opacity-60 animate-fade"><div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"><i data-lucide="message-square-dashed" class="w-10 h-10"></i></div><p class="text-sm font-medium">Say Hello!</p><p class="text-xs">Start your order with ${state.activeService.name}</p></div>`,
@@ -221,7 +207,7 @@
                         <button type="button" onclick="Actions.sendLocation()" id="loc-btn" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Send Location"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
                         <button type="button" onclick="Actions.toggleOrderModal(true)" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Create Order"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
                         <div class="flex-1 relative"><input id="chat-input" type="text" autocomplete="off" placeholder="Message..." class="w-full bg-gray-100 dark:bg-gray-800 dark:text-white rounded-full pl-5 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ios-btn-fix border border-transparent focus:border-blue-500"></div>
-                        <button type="submit" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-90 transition-all shrink-0"><i data-lucide="send" class="w-5 h-5 ml-0.5"></i></button>
+                        <button type="submit" id="send-btn" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-90 transition-all shrink-0"><i data-lucide="send" class="w-5 h-5 ml-0.5"></i></button>
                     </form>
 
                     <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end animate-fade">
@@ -237,7 +223,7 @@
                                     <label id="cam-btn" class="w-14 h-12 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 transition-colors"><i id="cam-icon" data-lucide="camera" class="w-6 h-6 text-gray-400"></i><input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="Actions.handleImageSelect(this)"></label>
                                     <button onclick="Actions.addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all h-12"><i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add Item</button>
                                 </div>
-                                <button onclick="Actions.submitOrder()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2"><span>Send Order Request</span><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                                <button onclick="Actions.submitOrder()" id="submit-order-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2"><span>Send Order Request</span><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
                             </div>
                         </div>
                     </div>`
@@ -303,7 +289,7 @@
 
             function mountChatLogic() {
                 if (!state.user || !state.activeService) return;
-                const chatId = `\( {state.user.uid}_ \){state.activeService.id}`;
+                const chatId = `${state.user.uid}_${state.activeService.id}`;
                 const container = document.getElementById('chat-messages');
                 
                 state.listeners.activeChat = db.collection('delivery_chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot((snapshot) => {
@@ -338,27 +324,20 @@
                     contentHTML = `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm w-64"><div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2"><i data-lucide="receipt" class="w-4 h-4"></i> Payment Request</div><div class="flex justify-between items-end"><span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span><span class="text-2xl font-black text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span></div>${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>' : ''}</div>`;
                 } else if (msg.type === 'order') {
                     const items = msg.items || [];
-                    contentHTML = `<div class="bg-white dark:bg-gray-800 border \( {isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64"><div class=" \){isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white"><div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order</div><span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">\( {items.length} items</span></div><div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto bg-white dark:bg-gray-800"> \){items.map(item => `<div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"><div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">\( {item.image ? `<img src=" \){item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}</div><div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${escapeHtml(item.name || 'Item')}</div><div class="text-[10px] text-gray-500">Qty: ${item.qty}</div></div></div>`).join('')}</div></div>`;
+                    contentHTML = `<div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64"><div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white"><div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order</div><span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">${items.length} items</span></div><div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto bg-white dark:bg-gray-800">${items.map(item => `<div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"><div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}</div><div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${escapeHtml(item.name || 'Item')}</div><div class="text-[10px] text-gray-500">Qty: ${item.qty}</div></div></div>`).join('')}</div></div>`;
                 } else if (msg.type === 'location') {
-                    contentHTML = `<a href="https://www.google.com/maps/search/?api=1&query=\( {msg.location.lat}, \){msg.location.lng}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-60 block hover:opacity-90 transition-opacity"><div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-gray-100 dark:border-gray-600"><div class="text-center"><i data-lucide="map-pin" class="w-8 h-8 text-red-500 mx-auto mb-1 animate-bounce-slight"></i><span class="text-[10px] font-mono text-gray-400">Location Shared</span></div></div><div class="px-2 pb-1 flex justify-between items-center"><span class="text-xs font-bold text-gray-800 dark:text-white">Open in Maps</span><i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i></div></a>`;
+                    contentHTML = `<a href="https://www.google.com/maps/search/?api=1&query=${msg.location.lat},${msg.location.lng}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-60 block hover:opacity-90 transition-opacity"><div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-gray-100 dark:border-gray-600"><div class="text-center"><i data-lucide="map-pin" class="w-8 h-8 text-red-500 mx-auto mb-1 animate-bounce-slight"></i><span class="text-[10px] font-mono text-gray-400">Location Shared</span></div></div><div class="px-2 pb-1 flex justify-between items-center"><span class="text-xs font-bold text-gray-800 dark:text-white">Open in Maps</span><i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i></div></a>`;
                 } else {
-                    contentHTML = `<div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm break-words \( {isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}"> \){escapeHtml(msg.text)}</div>`;
+                    contentHTML = `<div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm break-words ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'}">${escapeHtml(msg.text)}</div>`;
                 }
 
-                div.innerHTML = `<div class="flex flex-col \( {isMe ? 'items-end' : 'items-start'}"> \){contentHTML}<span class="text-[10px] text-gray-400 mt-1 mx-1 opacity-0 group-hover:opacity-100 transition-opacity select-none">${time}</span></div>`;
+                div.innerHTML = `<div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">${contentHTML}<span class="text-[10px] text-gray-400 mt-1 mx-1 opacity-0 group-hover:opacity-100 transition-opacity select-none">${time}</span></div>`;
                 return div;
             }
 
             // --- 7. Exposed Actions ---
             window.Actions = {
-                loginGoogle: async () => { 
-                    try { 
-                        await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); 
-                    } catch(e) { 
-                        window.showToast("Login Failed", "error"); 
-                        console.error(e); 
-                    } 
-                },
+                loginGoogle: async () => { try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch(e) { window.showToast("Login Failed", "error"); console.error(e); } },
                 logout: () => { if(confirm("Are you sure you want to log out?")) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
                 openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
@@ -379,9 +358,10 @@
                             const img = new Image(); img.src=e.target.result;
                             img.onload = () => {
                                 const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
-                                const scale = 600/img.width; cvs.width=Math.min(img.width, 600); cvs.height=img.height*(cvs.width/img.width);
+                                const scale = 300/img.width; // SMALLER SIZE for Firestore limit safety
+                                cvs.width=Math.min(img.width, 300); cvs.height=img.height*(cvs.width/img.width);
                                 ctx.drawImage(img,0,0,cvs.width,cvs.height);
-                                state.currentDraftImage = cvs.toDataURL('image/jpeg',0.8);
+                                state.currentDraftImage = cvs.toDataURL('image/jpeg',0.6); // LOWER QUALITY
                                 icon.setAttribute('data-lucide','check'); icon.classList.remove('animate-spin','text-gray-400'); icon.classList.add('text-green-500'); refreshIcons();
                                 window.showToast("Image added", "success");
                             }
@@ -403,40 +383,68 @@
                 renderDraftList: () => {
                     const el=document.getElementById('order-items-list'); document.getElementById('item-counter').innerText=`${state.draftOrder.length}/50 Items`;
                     if(state.draftOrder.length===0) el.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><p class="text-sm">Basket is empty</p></div>`;
-                    else el.innerHTML = state.draftOrder.map(item => `<div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2 shadow-sm"><div class="flex items-center gap-3 overflow-hidden"><div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">\( {item.image ? `<img src=" \){item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}</div><div class="min-w-0"><h4 class="font-bold text-sm truncate dark:text-white">${escapeHtml(item.name)}</h4><p class="text-xs text-gray-500 font-medium">Qty: \( {item.qty}</p></div></div><button onclick="Actions.removeDraftItem( \){item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+                    else el.innerHTML = state.draftOrder.map(item => `<div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2 shadow-sm"><div class="flex items-center gap-3 overflow-hidden"><div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}</div><div class="min-w-0"><h4 class="font-bold text-sm truncate dark:text-white">${escapeHtml(item.name)}</h4><p class="text-xs text-gray-500 font-medium">Qty: ${item.qty}</p></div></div><button onclick="Actions.removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
                     refreshIcons(); el.scrollTop=el.scrollHeight;
                 },
-                submitOrder: () => {
+                submitOrder: async () => {
                     if(state.draftOrder.length===0) return window.showToast("Add items first","error");
-                    Actions.triggerSend(null, 'order', {items:state.draftOrder});
-                    Actions.toggleOrderModal(false); window.showToast("Order Sent!","success");
+                    const btn = document.getElementById('submit-order-btn');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<div class="animate-spin w-5 h-5 border-2 border-white rounded-full border-t-transparent"></div>`;
+                    
+                    try {
+                        await Actions.triggerSend(null, 'order', {items:state.draftOrder});
+                        Actions.toggleOrderModal(false); 
+                        window.showToast("Order Sent Successfully!","success");
+                    } catch(e) {
+                         // handled in triggerSend but this keeps UI consistent
+                    } finally {
+                        btn.innerHTML = originalText;
+                    }
                 },
 
                 // Chat
-                triggerSend: (e, type='text', data={}) => {
+                triggerSend: async (e, type='text', data={}) => {
                     if(e) e.preventDefault();
+                    if(state.isSending) return;
+                    
+                    if(!state.user) {
+                        window.showToast("You are not logged in", "error");
+                        return;
+                    }
+
                     const input=document.getElementById('chat-input');
                     const txt = type==='text' ? (input?input.value.trim():'') : (type==='order'?'Order Request':'Location');
                     if(type==='text' && !txt) return;
                     if(input) input.value='';
                     
-                    const chatId = `\( {state.user.uid}_ \){state.activeService.id}`;
-                    const batch = db.batch();
-                    const msgRef = db.collection('delivery_chats').doc(chatId).collection('messages').doc();
+                    state.isSending = true;
                     
-                    // Safe user checks
-                    const userName = (state.user.displayName || 'User');
-                    const userEmail = (state.user.email || 'No Email');
-                    
-                    batch.set(msgRef, { type, text:txt, sender:state.user.uid, timestamp:firebase.firestore.FieldValue.serverTimestamp(), ...data });
-                    batch.set(db.collection('delivery_chats').doc(chatId), {
-                        userId:state.user.uid, userEmail:userEmail, userName:userName, userPhoto:state.user.photoURL,
-                        serviceId:state.activeService.id, serviceName:state.activeService.name, city:state.activeService.city,
-                        lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), lastUpdated:firebase.firestore.FieldValue.serverTimestamp(),
-                        serviceOwnerEmail: state.activeService.ownerEmail || ''
-                    }, {merge:true});
-                    
-                    batch.commit().catch(e => console.error(e));
+                    try {
+                        const chatId = `${state.user.uid}_${state.activeService.id}`;
+                        const batch = db.batch();
+                        const msgRef = db.collection('delivery_chats').doc(chatId).collection('messages').doc();
+                        
+                        // Safe user checks
+                        const userName = (state.user.displayName || 'User');
+                        const userEmail = (state.user.email || 'No Email');
+                        
+                        batch.set(msgRef, { type, text:txt, sender:state.user.uid, timestamp:firebase.firestore.FieldValue.serverTimestamp(), ...data });
+                        batch.set(db.collection('delivery_chats').doc(chatId), {
+                            userId:state.user.uid, userEmail:userEmail, userName:userName, userPhoto:state.user.photoURL,
+                            serviceId:state.activeService.id, serviceName:state.activeService.name, city:state.activeService.city,
+                            lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), lastUpdated:firebase.firestore.FieldValue.serverTimestamp(),
+                            serviceOwnerEmail: state.activeService.ownerEmail || ''
+                        }, {merge:true});
+                        
+                        await batch.commit();
+                    } catch (e) {
+                        console.error("Firebase Write Error:", e);
+                        window.showToast("Failed to send: " + e.message, "error");
+                        throw e; // re-throw for submitOrder to catch
+                    } finally {
+                        state.isSending = false;
+                    }
                 },
                 sendLocation: () => {
                     if(!navigator.geolocation) return window.showToast("Geo not supported","error");
@@ -458,6 +466,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
