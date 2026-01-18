@@ -47,20 +47,12 @@
     <style>
         /* Modern Reset */
         body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; user-select: none; }
-        
-        /* Smooth Scrolling & Hide Scrollbar */
         .scroll-smooth { -webkit-overflow-scrolling: touch; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Input Fixes */
         input, textarea { font-size: 16px !important; touch-action: manipulation; }
-        
-        /* Toast Animation */
         .toast-enter { animation: enter 0.4s forwards; }
         .toast-exit { animation: leave 0.3s forwards; }
-
-        /* Glass Effect */
         .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
         .dark .glass { background: rgba(0, 0, 0, 0.85); }
     </style>
@@ -99,19 +91,17 @@
             const screen = document.getElementById('recovery-screen');
             const detail = document.getElementById('error-detail');
             if(screen && detail) {
-                // Only show screen for critical module errors or syntax
                 if (msg.includes('Syntax') || msg.includes('Module')) {
                     screen.classList.replace('hidden', 'flex');
                     detail.textContent = `${msg} (Line ${line})`;
                 } else {
-                    // For runtime errors, try to just notify
                     if(window.showToast) window.showToast("Minor Error: " + msg, "error");
                 }
             }
-            return true; // Prevent default browser error alert
+            return true; 
         };
 
-        (function() { // Isolated Scope
+        (function() { 
             
             // --- 0. Checks ---
             if (typeof firebase === 'undefined') {
@@ -159,17 +149,11 @@
                 const el = document.createElement('div');
                 const bg = type === 'error' ? 'bg-red-500/90' : (type === 'success' ? 'bg-emerald-500/90' : 'bg-gray-800/90');
                 const icon = type === 'error' ? 'alert-circle' : (type === 'success' ? 'check-circle-2' : 'info');
-                
                 el.className = `${bg} backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl shadow-black/5 text-sm font-medium flex items-center gap-3 toast-enter pointer-events-auto min-w-[200px] justify-center`;
                 el.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${msg}</span>`;
-                
                 container.appendChild(el);
                 if(window.lucide) window.lucide.createIcons();
-                
-                setTimeout(() => {
-                    el.classList.replace('toast-enter', 'toast-exit');
-                    setTimeout(() => el.remove(), 300);
-                }, 2500);
+                setTimeout(() => { el.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => el.remove(), 300); }, 2500);
             };
 
             const refreshIcons = () => { if(window.lucide) window.lucide.createIcons(); };
@@ -185,33 +169,31 @@
                 return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
             };
 
+            // ✅ Safe Value Helper (The Key Fix)
+            const safeVal = (v) => (v === undefined ? null : v);
+
             // --- 4. Beautiful Views (Templates) ---
             
             const Views = {
-                loading: () => ``, // Handled by static HTML initially
+                loading: () => ``,
                 
                 login: () => `
                     <div class="flex flex-col h-full relative overflow-hidden bg-white dark:bg-black">
-                        <!-- Background Blobs -->
                         <div class="absolute top-[-20%] right-[-20%] w-96 h-96 bg-blue-500/20 rounded-full blur-[80px]"></div>
                         <div class="absolute bottom-[-10%] left-[-10%] w-80 h-80 bg-purple-500/20 rounded-full blur-[80px]"></div>
-                        
                         <div class="flex-1 flex flex-col items-center justify-center p-8 z-10 animate-enter">
                             <div class="w-36 h-36 mb-8 relative">
                                 <div class="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse-fast"></div>
                                 <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain relative z-10 drop-shadow-2xl">
                             </div>
-                            
                             <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">SJ Delivery</h1>
                             <p class="text-gray-500 dark:text-gray-400 mb-12 text-center max-w-[250px] leading-relaxed">Your favorite local services, delivered instantly.</p>
-                            
                             <button id="login-btn" onclick="Actions.loginGoogle()" class="w-full max-w-xs group relative overflow-hidden bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl p-4 font-bold shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:scale-100">
                                 <div class="relative z-10 flex items-center justify-center gap-3">
                                     <i data-lucide="mail" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
                                     <span>Continue with Google</span>
                                 </div>
                             </button>
-                            
                             <p class="mt-8 text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Secure Login • Firebase</p>
                         </div>
                     </div>`,
@@ -229,7 +211,6 @@
                     const leftContent = (!showBack && user) ? `
                         <div class="flex items-center gap-3">
                             <div class="relative group cursor-pointer">
-                                <div class="absolute inset-0 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur opacity-0 group-hover:opacity-50 transition-opacity"></div>
                                 <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-black relative z-10 object-cover shadow-sm">
                             </div>
                             <div class="flex flex-col justify-center">
@@ -656,7 +637,7 @@
                     }
                 },
 
-                // SEND LOGIC
+                // SEND LOGIC (The Fix)
                 triggerSend: async (e, type='text', data={}) => {
                     if(e) e.preventDefault();
                     if(state.isSending) return;
@@ -681,24 +662,35 @@
                         
                         const userName = state.user.displayName || (state.user.email ? state.user.email.split('@')[0] : 'User');
                         
-                        batch.set(msgRef, { 
-                            type, text:txt, sender:state.user.uid, 
+                        // Sanitize Data (Fix for Failed to send)
+                        const payload = { 
+                            type, text:txt, sender:safeVal(state.user.uid), 
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
                             ...data 
-                        });
+                        };
+
+                        batch.set(msgRef, payload);
                         
                         batch.set(db.collection('delivery_chats').doc(chatId), {
-                            userId: state.user.uid, userEmail: state.user.email, userName: userName, userPhoto: state.user.photoURL,
-                            serviceId: state.activeService.id, serviceName: state.activeService.name, city: state.activeService.city,
+                            userId: safeVal(state.user.uid), 
+                            userEmail: safeVal(state.user.email), 
+                            userName: safeVal(userName), 
+                            userPhoto: safeVal(state.user.photoURL),
+                            serviceId: safeVal(state.activeService.id), 
+                            serviceName: safeVal(state.activeService.name), 
+                            city: safeVal(state.activeService.city),
                             lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), 
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                            serviceOwnerEmail: state.activeService.ownerEmail || ''
+                            serviceOwnerEmail: safeVal(state.activeService.ownerEmail) || ''
                         }, {merge:true});
                         
                         await batch.commit();
                     } catch (e) {
                         console.error(e);
-                        window.showToast("Failed to send", "error");
+                        let msg = "Failed to send";
+                        if(e.code === 'permission-denied') msg = "Check Database Rules";
+                        else if(e.message.includes('exceeds')) msg = "Image too large";
+                        window.showToast(msg, "error");
                         throw e; // Propagate error
                     } finally {
                         state.isSending = false;
@@ -732,6 +724,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
