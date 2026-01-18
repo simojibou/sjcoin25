@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SJ Delivery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SJ Delivery App</title>
+    
+    <!-- Icons & Fonts -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Config -->
     <script>
         tailwind.config = { 
             darkMode: 'class',
@@ -17,45 +24,56 @@
                     animation: {
                         'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                         'fade-in': 'fade 0.2s ease-out forwards',
-                        'pulse-slow': 'pulse 3s infinite',
+                        'bounce-slight': 'bounceSlight 0.3s ease-in-out',
                     },
                     keyframes: {
-                        slideUp: {
-                            '0%': { transform: 'translateY(100%)' },
-                            '100%': { transform: 'translateY(0)' },
-                        },
-                        fade: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        }
+                        slideUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
+                        fade: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+                        bounceSlight: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } }
                     }
                 }
             }
         }
     </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        /* Base Reset & Typography */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile logic */
+        }
+        
+        /* Utility */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .animate-fade { animation: fade 0.3s ease-out forwards; }
-        @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* iOS Input Fixes */
-        input, textarea { font-size: 16px !important; } 
-        .ios-btn-fix { -webkit-appearance: none; appearance: none; }
+        
+        /* iOS Fixes */
+        input, textarea, select { font-size: 16px !important; } /* Prevents zoom on focus */
+        .ios-btn-fix { -webkit-appearance: none; appearance: none; border-radius: 0; }
+        
+        /* Toast Animation */
+        .toast-enter { transform: translateY(-20px); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease; }
+        .toast-exit { opacity: 0; transform: translateY(-10px); transition: all 0.2s ease; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-100 h-screen-dvh overflow-hidden flex justify-center">
+<body class="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 h-screen-dvh w-full overflow-hidden flex justify-center">
 
-    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-xl relative flex flex-col overflow-hidden">
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-950 shadow-2xl relative flex flex-col overflow-hidden sm:rounded-none md:rounded-xl md:h-[95dvh] md:my-auto border-x border-gray-200 dark:border-gray-800">
+        <!-- Dynamic Content Injected Here -->
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- Configuration ---
+        // --- 1. Firebase Configuration ---
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
             authDomain: "sj-one.firebaseapp.com",
@@ -70,12 +88,12 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- State ---
+        // --- 2. State Management ---
         const state = {
             user: null,
             currentView: 'loading',
             services: [],
-            chats: {},
+            chats: {}, // Map: serviceId -> chatData
             selectedCity: null,
             activeService: null,
             draftOrder: [],
@@ -84,38 +102,75 @@
             listeners: { services: null, chatsList: null, activeChat: null }
         };
 
+        // Initialize Theme
         if(state.darkMode) document.documentElement.classList.add('dark');
 
-        // --- Router ---
+        // --- 3. UI Helpers (Toasts, Icons, Time) ---
+        
+        window.showToast = (message, type = 'info') => {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colors = type === 'error' ? 'bg-red-500 text-white' : (type === 'success' ? 'bg-green-500 text-white' : 'bg-gray-800 text-white');
+            
+            el.className = `${colors} px-4 py-3 rounded-full shadow-lg text-sm font-semibold flex items-center gap-2 toast-enter pointer-events-auto backdrop-blur-md`;
+            el.innerHTML = `<span>${message}</span>`;
+            
+            container.appendChild(el);
+            
+            // Animation handling
+            requestAnimationFrame(() => el.classList.remove('toast-enter', 'toast-enter-active'));
+            setTimeout(() => {
+                el.classList.add('toast-exit');
+                setTimeout(() => el.remove(), 200);
+            }, 3000);
+        };
+
+        const formatTime = (timestamp) => {
+            if (!timestamp) return '';
+            const date = timestamp.toDate();
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
+
+        const refreshIcons = () => {
+            if(window.lucide) window.lucide.createIcons();
+        };
+
+        // --- 4. Router & Views ---
+
         function setView(viewName) {
             state.currentView = viewName;
             const appEl = document.getElementById('app');
             
+            // Cleanup chat listener if leaving chat
             if (state.listeners.activeChat && viewName !== 'chat') {
                 state.listeners.activeChat();
                 state.listeners.activeChat = null;
             }
 
             switch(viewName) {
-                case 'loading': appEl.innerHTML = renderLoading(); break;
-                case 'login': appEl.innerHTML = renderLogin(); break;
-                case 'cities': appEl.innerHTML = renderCities(); break;
-                case 'services': appEl.innerHTML = renderServices(); break;
+                case 'loading': appEl.innerHTML = Views.loading(); break;
+                case 'login': appEl.innerHTML = Views.login(); break;
+                case 'cities': appEl.innerHTML = Views.cities(); break;
+                case 'services': appEl.innerHTML = Views.services(); break;
                 case 'chat': 
-                    appEl.innerHTML = renderChatLayout(); 
+                    appEl.innerHTML = Views.chatLayout(); 
                     mountChatLogic(); 
                     break;
             }
-            if(window.lucide) window.lucide.createIcons();
+            refreshIcons();
         }
 
-        // --- Auth & Data ---
+        // --- 5. Logic: Auth & Data Sync ---
+
         onAuthStateChanged(auth, (user) => {
             state.user = user;
             if (user) {
                 if(!state.listeners.services) subscribeServices();
                 if(!state.listeners.chatsList) subscribeChatsList();
-                if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
+                // Redirect logic
+                if(state.currentView === 'loading' || state.currentView === 'login') {
+                    setView('cities');
+                }
             } else {
                 unsubscribeAll();
                 setView('login');
@@ -125,18 +180,25 @@
         function subscribeServices() {
             state.listeners.services = onSnapshot(collection(db, 'delivery_services'), (snap) => {
                 state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (state.currentView === 'cities') setView('cities');
-                if (state.currentView === 'services') setView('services');
+                if (state.currentView === 'cities' || state.currentView === 'services') {
+                    // Re-render only if currently viewing lists, otherwise let navigation handle it
+                    setView(state.currentView);
+                }
+            }, (error) => {
+                console.error("Services Error:", error);
+                window.showToast("Connection issue: Retrying...", "error");
             });
         }
 
         function subscribeChatsList() {
+            if (!state.user) return;
             const q = query(collection(db, 'delivery_chats'), where('userId', '==', state.user.uid));
             state.listeners.chatsList = onSnapshot(q, (snap) => {
                 const map = {};
                 snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
                 state.chats = map;
-                if (state.currentView === 'services') setView('services');
+                // Update UI indicators if needed
+                if(state.currentView === 'services') setView('services'); 
             });
         }
 
@@ -145,11 +207,15 @@
             if(state.listeners.chatsList) state.listeners.chatsList();
             if(state.listeners.activeChat) state.listeners.activeChat();
             state.listeners = { services: null, chatsList: null, activeChat: null };
-            state.services = []; state.chats = {};
+            state.services = []; 
+            state.chats = {};
         }
 
-        // --- Chat Logic ---
+        // --- 6. Logic: Chat System ---
+
         function mountChatLogic() {
+            if (!state.user || !state.activeService) return;
+
             const chatId = getChatId(state.user.uid, state.activeService.id);
             const container = document.getElementById('chat-messages');
             const msgsRef = collection(db, 'delivery_chats', chatId, 'messages');
@@ -157,255 +223,304 @@
 
             state.listeners.activeChat = onSnapshot(q, (snapshot) => {
                 let shouldScroll = false;
+                
+                // Clear container only on first load if needed, but here we append
+                if (snapshot.empty) {
+                     container.innerHTML = Views.emptyChatPlaceholder();
+                } else if(container.querySelector('.empty-chat-placeholder')) {
+                    container.innerHTML = ''; // Remove placeholder
+                }
+
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         shouldScroll = true;
                         const msg = change.doc.data();
-                        const isMe = msg.sender === state.user.uid;
-                        const div = document.createElement('div');
-                        
-                        // 1. BILL
-                        if(msg.type === 'bill') {
-                             div.className = `flex justify-start mb-4 animate-fade`;
-                             const isPromo = msg.deliveryFee === 0;
-                             div.innerHTML = `
-                                <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 shadow-md w-64">
-                                    <div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2">
-                                        <i data-lucide="receipt" class="w-4 h-4"></i> Payment Request
-                                    </div>
-                                    <div class="flex justify-between items-end">
-                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
-                                        <span class="text-xl font-bold text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span>
-                                    </div>
-                                    ${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold">SJ CODE APPLIED</div>' : ''}
-                                </div>`;
-                        } 
-                        // 2. ORDER
-                        else if (msg.type === 'order') {
-                            const items = msg.items || [];
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
-                            div.innerHTML = `
-                                <div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64">
-                                    <div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white">
-                                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order
-                                        </div>
-                                        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">${items.length} items</span>
-                                    </div>
-                                    <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto">
-                                        ${items.map(item => `
-                                            <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
-                                                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}
-                                                </div>
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${item.name || 'Item'}</div>
-                                                    <div class="text-[10px] text-gray-500">Qty: ${item.qty}</div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>`;
-                        }
-                        // 3. LOCATION
-                        else if (msg.type === 'location') {
-                            const { lat, lng } = msg.location;
-                            const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade`;
-                            div.innerHTML = `
-                                <a href="${mapUrl}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-200 dark:border-blue-900' : 'border-gray-100 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-56 block hover:opacity-90 transition-opacity">
-                                    <div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2">
-                                        <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                                            <i data-lucide="map-pin" class="w-8 h-8 text-red-500 mb-1"></i>
-                                            <span class="text-[10px] font-mono">Location Shared</span>
-                                        </div>
-                                    </div>
-                                    <div class="px-2 pb-1">
-                                        <div class="text-xs font-bold text-gray-800 dark:text-white flex items-center gap-1">
-                                            <i data-lucide="navigation" class="w-3 h-3 text-blue-500"></i> Open Maps
-                                        </div>
-                                    </div>
-                                </a>`;
-                        }
-                        // 4. TEXT
-                        else {
-                            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-fade`;
-                            div.innerHTML = `
-                                <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
-                                    isMe 
-                                    ? 'bg-blue-600 text-white rounded-br-sm' 
-                                    : 'bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
-                                }">${escapeHtml(msg.text)}</div>`;
-                        }
-                        container.appendChild(div);
+                        const msgEl = createMessageElement(msg);
+                        container.appendChild(msgEl);
                     }
                 });
+
                 if(shouldScroll) {
-                    if(window.lucide) window.lucide.createIcons();
+                    refreshIcons();
                     scrollToBottom();
                 }
             });
         }
 
-        // --- Image Compression ---
-        const compressImage = (file) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 300;
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
-                    }
-                }
-            });
-        };
-
-        // --- GLOBAL ACTIONS ---
-
-        window.loginGoogle = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); } };
-        window.logout = () => signOut(auth);
-        window.setCity = (c) => { state.selectedCity = c; setView('services'); };
-        window.openService = (id) => { state.activeService = state.services.find(s => s.id === id); setView('chat'); };
-        window.goBack = () => {
-            if(state.currentView === 'chat') setView('services');
-            else if(state.currentView === 'services') setView('cities');
-        };
-        window.toggleTheme = () => {
-            state.darkMode = !state.darkMode;
-            localStorage.setItem('darkMode', state.darkMode);
-            document.documentElement.classList.toggle('dark');
-            const icon = document.getElementById('theme-icon');
-            if(icon) { icon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon'); if(window.lucide) window.lucide.createIcons(); }
-        };
-
-        // --- Order Logic ---
-
-        window.toggleOrderModal = (show) => {
-            const el = document.getElementById('order-modal-overlay');
-            if(show) {
-                state.draftOrder = []; 
-                state.currentDraftImage = null;
-                window.renderDraftList();
-                const camIcon = document.getElementById('cam-icon');
-                if(camIcon) { camIcon.classList.remove('text-green-500'); camIcon.classList.add('text-gray-500'); }
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
-            }
-        };
-
-        window.handleImageSelect = async (input) => {
-            if (input.files && input.files[0]) {
-                const btn = document.getElementById('cam-btn');
-                const icon = document.getElementById('cam-icon');
-                icon.setAttribute('data-lucide', 'loader-2');
-                icon.classList.add('animate-spin');
-                if(window.lucide) window.lucide.createIcons();
-
-                try {
-                    state.currentDraftImage = await compressImage(input.files[0]);
-                    icon.setAttribute('data-lucide', 'check');
-                    icon.classList.remove('animate-spin', 'text-gray-500');
-                    icon.classList.add('text-green-500');
-                    if(window.lucide) window.lucide.createIcons();
-                } catch (e) {
-                    alert("Image failed");
-                    input.value = '';
-                }
-            }
-        };
-
-        window.addDraftItem = () => {
-            const nameEl = document.getElementById('new-item-name');
-            const qtyEl = document.getElementById('new-item-qty');
-            const name = nameEl.value.trim();
-            const qty = parseInt(qtyEl.value) || 1;
-
-            if (!name) return alert("Enter item name");
-            if (state.draftOrder.length >= 50) return alert("Max 50 items");
-
-            state.draftOrder.push({ id: Date.now(), name, qty, image: state.currentDraftImage });
-            nameEl.value = ''; qtyEl.value = 1; state.currentDraftImage = null;
+        function createMessageElement(msg) {
+            const isMe = msg.sender === state.user.uid;
+            const time = formatTime(msg.timestamp);
+            const div = document.createElement('div');
             
-            const fileInput = document.getElementById('new-item-img-file');
-            if(fileInput) fileInput.value = '';
-            const icon = document.getElementById('cam-icon');
-            if(icon) { icon.setAttribute('data-lucide', 'camera'); icon.classList.remove('text-green-500'); icon.classList.add('text-gray-500'); }
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in group`;
 
-            nameEl.focus();
-            window.renderDraftList();
-        };
+            let contentHTML = '';
 
-        window.removeDraftItem = (id) => {
-            state.draftOrder = state.draftOrder.filter(item => item.id !== id);
-            window.renderDraftList();
-        };
-
-        window.renderDraftList = () => {
-            const listEl = document.getElementById('order-items-list');
-            const counterEl = document.getElementById('item-counter');
-            if(!listEl) return;
-            counterEl.innerText = `${state.draftOrder.length}/50 Items`;
-            if (state.draftOrder.length === 0) {
-                listEl.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><p class="text-sm">Basket is empty</p></div>`;
-            } else {
-                listEl.innerHTML = state.draftOrder.map(item => `
-                    <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
-                                ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
+            // --- Message Types ---
+            if(msg.type === 'bill') {
+                const isPromo = msg.deliveryFee === 0;
+                contentHTML = `
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm w-64">
+                        <div class="flex items-center gap-2 mb-3 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <i data-lucide="receipt" class="w-4 h-4"></i> Payment Request
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span>
+                            <span class="text-2xl font-black text-gray-900 dark:text-white">$${(msg.total || msg.amount || 0).toFixed(2)}</span>
+                        </div>
+                        ${isPromo ? '<div class="mt-2 text-[10px] text-emerald-500 font-bold flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i> SJ CODE APPLIED</div>' : ''}
+                    </div>`;
+            } 
+            else if (msg.type === 'order') {
+                const items = msg.items || [];
+                contentHTML = `
+                    <div class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl overflow-hidden shadow-sm w-64">
+                        <div class="${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-3 flex justify-between items-center text-white">
+                            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Order
                             </div>
-                            <div class="min-w-0">
-                                <h4 class="font-bold text-sm truncate dark:text-white">${item.name}</h4>
-                                <p class="text-xs text-gray-500">Qty: ${item.qty}</p>
+                            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono font-bold">${items.length} items</span>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-48 overflow-y-auto bg-white dark:bg-gray-800">
+                            ${items.map(item => `
+                                <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
+                                        ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>`}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">${escapeHtml(item.name || 'Item')}</div>
+                                        <div class="text-[10px] text-gray-500">Qty: ${item.qty}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+            else if (msg.type === 'location') {
+                const { lat, lng } = msg.location;
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                contentHTML = `
+                    <a href="${mapUrl}" target="_blank" class="bg-white dark:bg-gray-800 border ${isMe ? 'border-blue-100 dark:border-blue-900/50' : 'border-gray-200 dark:border-gray-700'} rounded-2xl p-2 shadow-sm w-60 block hover:opacity-90 transition-opacity">
+                        <div class="relative w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-gray-100 dark:border-gray-600">
+                            <div class="text-center">
+                                <i data-lucide="map-pin" class="w-8 h-8 text-red-500 mx-auto mb-1 animate-bounce-slight"></i>
+                                <span class="text-[10px] font-mono text-gray-400">Location Shared</span>
                             </div>
                         </div>
-                        <button onclick="removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </div>`).join('');
+                        <div class="px-2 pb-1 flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-800 dark:text-white">Open in Maps</span>
+                            <i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i>
+                        </div>
+                    </a>`;
             }
-            if(window.lucide) window.lucide.createIcons();
-            listEl.scrollTop = listEl.scrollHeight;
+            else {
+                // Text Message
+                contentHTML = `
+                    <div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm break-words ${
+                        isMe 
+                        ? 'bg-blue-600 text-white rounded-br-sm' 
+                        : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-sm'
+                    }">${escapeHtml(msg.text)}</div>`;
+            }
+
+            div.innerHTML = `
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                    ${contentHTML}
+                    <span class="text-[10px] text-gray-400 mt-1 mx-1 opacity-0 group-hover:opacity-100 transition-opacity select-none">${time}</span>
+                </div>`;
+            
+            return div;
+        }
+
+        // --- 7. Actions & Event Handlers ---
+
+        window.Actions = {
+            loginGoogle: async () => { 
+                try { 
+                    await signInWithPopup(auth, new GoogleAuthProvider()); 
+                } catch(e) { 
+                    window.showToast("Login Failed. Try again.", "error");
+                    console.error(e); 
+                } 
+            },
+            
+            logout: () => {
+                if(confirm("Are you sure you want to log out?")) signOut(auth);
+            },
+
+            setCity: (c) => { 
+                state.selectedCity = c; 
+                setView('services'); 
+            },
+
+            openService: (id) => { 
+                state.activeService = state.services.find(s => s.id === id); 
+                if(state.activeService) setView('chat'); 
+            },
+
+            goBack: () => {
+                if(state.currentView === 'chat') setView('services');
+                else if(state.currentView === 'services') setView('cities');
+            },
+
+            toggleTheme: () => {
+                state.darkMode = !state.darkMode;
+                localStorage.setItem('darkMode', state.darkMode);
+                document.documentElement.classList.toggle('dark');
+                refreshIcons();
+            },
+
+            // --- Order Modal Actions ---
+            toggleOrderModal: (show) => {
+                const el = document.getElementById('order-modal-overlay');
+                if(show) {
+                    state.draftOrder = []; 
+                    state.currentDraftImage = null;
+                    Actions.renderDraftList();
+                    // Reset inputs
+                    const camIcon = document.getElementById('cam-icon');
+                    if(camIcon) { camIcon.classList.remove('text-green-500'); camIcon.classList.add('text-gray-500'); }
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            },
+
+            handleImageSelect: async (input) => {
+                if (input.files && input.files[0]) {
+                    const icon = document.getElementById('cam-icon');
+                    icon.setAttribute('data-lucide', 'loader-2');
+                    icon.classList.add('animate-spin');
+                    refreshIcons();
+
+                    try {
+                        state.currentDraftImage = await compressImage(input.files[0]);
+                        icon.setAttribute('data-lucide', 'check');
+                        icon.classList.remove('animate-spin', 'text-gray-500');
+                        icon.classList.add('text-green-500');
+                        refreshIcons();
+                        window.showToast("Image added", "success");
+                    } catch (e) {
+                        window.showToast("Image failed to load", "error");
+                        input.value = '';
+                        icon.setAttribute('data-lucide', 'camera');
+                        icon.classList.remove('animate-spin');
+                        refreshIcons();
+                    }
+                }
+            },
+
+            addDraftItem: () => {
+                const nameEl = document.getElementById('new-item-name');
+                const qtyEl = document.getElementById('new-item-qty');
+                const name = nameEl.value.trim();
+                const qty = parseInt(qtyEl.value) || 1;
+
+                if (!name) return window.showToast("Please enter item name", "error");
+                if (state.draftOrder.length >= 50) return window.showToast("Order limit reached", "error");
+
+                state.draftOrder.push({ id: Date.now(), name, qty, image: state.currentDraftImage });
+                
+                // Reset Fields
+                nameEl.value = ''; qtyEl.value = 1; state.currentDraftImage = null;
+                const fileInput = document.getElementById('new-item-img-file');
+                if(fileInput) fileInput.value = '';
+                
+                // Reset Icon
+                const icon = document.getElementById('cam-icon');
+                if(icon) { 
+                    icon.setAttribute('data-lucide', 'camera'); 
+                    icon.classList.remove('text-green-500'); 
+                    icon.classList.add('text-gray-500'); 
+                }
+
+                nameEl.focus();
+                Actions.renderDraftList();
+                refreshIcons();
+            },
+
+            removeDraftItem: (id) => {
+                state.draftOrder = state.draftOrder.filter(item => item.id !== id);
+                Actions.renderDraftList();
+            },
+
+            renderDraftList: () => {
+                const listEl = document.getElementById('order-items-list');
+                const counterEl = document.getElementById('item-counter');
+                if(!listEl) return;
+                
+                counterEl.innerText = `${state.draftOrder.length}/50 Items`;
+                
+                if (state.draftOrder.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-40 text-gray-400 opacity-60">
+                            <i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i>
+                            <p class="text-sm">Basket is empty</p>
+                        </div>`;
+                } else {
+                    listEl.innerHTML = state.draftOrder.map(item => `
+                        <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 animate-fade-in mb-2 shadow-sm">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
+                                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="package" class="w-5 h-5 text-gray-400"></i></div>`}
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-sm truncate dark:text-white">${escapeHtml(item.name)}</h4>
+                                    <p class="text-xs text-gray-500 font-medium">Qty: ${item.qty}</p>
+                                </div>
+                            </div>
+                            <button onclick="Actions.removeDraftItem(${item.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>`).join('');
+                }
+                refreshIcons();
+                listEl.scrollTop = listEl.scrollHeight;
+            },
+
+            submitOrder: () => {
+                if (state.draftOrder.length === 0) return window.showToast("Add items to your order first", "error");
+                sendMessage("Order Request", 'order', { items: state.draftOrder });
+                Actions.toggleOrderModal(false);
+                window.showToast("Order Sent!", "success");
+            },
+
+            // --- Chat Actions ---
+            triggerSend: (e) => {
+                if(e) e.preventDefault(); // Prevent form submit reload
+                sendMessage();
+            },
+
+            sendLocation: () => {
+                if(!navigator.geolocation) return window.showToast("Geolocation not supported", "error");
+                
+                const locBtn = document.getElementById('loc-btn');
+                if(locBtn) locBtn.classList.add('opacity-50', 'animate-pulse');
+                
+                window.showToast("Getting location...", "info");
+
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
+                    sendMessage("Shared Location", 'location', { location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+                }, (err) => {
+                    if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
+                    window.showToast("Could not access location. Check permissions.", "error");
+                }, { enableHighAccuracy: true, timeout: 5000 });
+            }
         };
 
-        window.submitOrder = () => {
-            if (state.draftOrder.length === 0) return alert("Add items first");
-            sendMessage("Order Request", 'order', { items: state.draftOrder });
-            window.toggleOrderModal(false);
-        };
+        // Expose Actions to Global Scope for HTML onclick
+        Object.assign(window, window.Actions);
 
-        // --- Send & Location ---
 
-        window.triggerSend = () => sendMessage();
-        window.sendPromo = () => sendMessage("SJ CODE");
-        window.handleChatKey = (e) => { if(e.key === 'Enter') sendMessage(); };
-
-        window.sendLocation = () => {
-            if(!navigator.geolocation) return alert("Geo not supported");
-            const locBtn = document.getElementById('loc-btn');
-            if(locBtn) locBtn.classList.add('opacity-50', 'animate-pulse');
-            navigator.geolocation.getCurrentPosition((pos) => {
-                if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
-                sendMessage("Shared Location", 'location', { location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
-            }, (err) => {
-                if(locBtn) locBtn.classList.remove('opacity-50', 'animate-pulse');
-                alert("Location error");
-            });
-        };
+        // --- 8. Core Functions (Message, Compress) ---
 
         async function sendMessage(textOverride = null, typeOverride = 'text', extraData = {}) {
             const input = document.getElementById('chat-input');
-            const txt = textOverride !== null ? textOverride : input.value.trim();
+            const txt = textOverride !== null ? textOverride : (input ? input.value.trim() : '');
+            
             if(typeOverride === 'text' && !txt) return;
-            if(!state.activeService) return;
+            if(!state.activeService || !state.user) return;
+
+            // Optimistic UI clear
             if(!textOverride && input) { input.value = ''; input.focus(); }
 
             const chatId = getChatId(state.user.uid, state.activeService.id);
@@ -414,97 +529,277 @@
             const batch = writeBatch(db);
 
             try {
+                // 1. Add Message
                 const newMsgRef = doc(messagesColRef);
-                batch.set(newMsgRef, { type: typeOverride, text: txt || '', sender: state.user.uid, timestamp: serverTimestamp(), ...extraData });
+                batch.set(newMsgRef, { 
+                    type: typeOverride, 
+                    text: txt || '', 
+                    sender: state.user.uid, 
+                    timestamp: serverTimestamp(), 
+                    ...extraData 
+                });
                 
-                const existingChat = state.chats[state.activeService.id];
-                const metaData = { lastMessage: typeOverride === 'order' ? '📦 Order Sent' : (typeOverride === 'location' ? '📍 Location' : txt), lastUpdated: serverTimestamp(), serviceOwnerEmail: state.activeService.ownerEmail || '' };
+                // 2. Update/Create Chat Meta
+                const metaData = { 
+                    lastMessage: typeOverride === 'order' ? '📦 Order Request' : (typeOverride === 'location' ? '📍 Location Shared' : txt), 
+                    lastUpdated: serverTimestamp(), 
+                    serviceOwnerEmail: state.activeService.ownerEmail || '' 
+                };
                 
-                if (!existingChat) {
-                    batch.set(chatDocRef, { userId: state.user.uid, userEmail: state.user.email || 'anon', serviceId: state.activeService.id, serviceName: state.activeService.name, city: state.activeService.city, createdAt: serverTimestamp(), ...metaData });
-                } else {
-                    batch.update(chatDocRef, metaData);
-                }
+                // We use set with merge: true to handle both creation and update safely
+                batch.set(chatDocRef, { 
+                    userId: state.user.uid, 
+                    userEmail: state.user.email || 'anon', 
+                    userName: state.user.displayName || 'User',
+                    userPhoto: state.user.photoURL || '',
+                    serviceId: state.activeService.id, 
+                    serviceName: state.activeService.name, 
+                    city: state.activeService.city, 
+                    createdAt: serverTimestamp(), // Will be ignored on merge if exists usually, but simpler to just set meta
+                    ...metaData 
+                }, { merge: true });
+
                 await batch.commit();
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                window.showToast("Failed to send message", "error");
+            }
         }
 
-        // --- Helpers ---
-        function getChatId(uid, serviceId) { return `${uid}_${serviceId}`; }
-        function scrollToBottom() { const el = document.getElementById('chat-messages'); if(el) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 100); }
-        function escapeHtml(text) { const div = document.createElement('div'); div.innerText = text || ''; return div.innerHTML; }
+        const compressImage = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; // Increased quality slightly
+                        let width = img.width;
+                        let height = img.height;
 
-        // --- Renderers ---
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
 
-        function renderLoading() { return `<div class="flex h-full items-center justify-center bg-white dark:bg-gray-900"><div class="animate-spin w-8 h-8 border-2 border-blue-600 rounded-full border-t-transparent"></div></div>`; }
-
-        function renderLogin() {
-            return `
-                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-gray-900 overflow-y-auto">
-                    <div class="w-32 h-32 mb-6 shrink-0 animate-fade"><img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain drop-shadow-2xl"></div>
-                    <h1 class="text-3xl font-bold mb-3 text-gray-800 dark:text-white">SJ Delivery</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs">Your favorite local services, delivered instantly.</p>
-                    <button onclick="loginGoogle()" class="w-full max-w-xs py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-sm dark:text-white"><i data-lucide="mail" class="w-5 h-5 text-red-500"></i> Continue with Google</button>
-                </div>`;
-        }
-
-        const header = (title, showBack) => {
-            const user = state.user;
-            const left = (!showBack && user) ? `
-                <a href="https://simojibou.github.io/sjcoin25/duserprofile.html" class="flex items-center gap-3 overflow-hidden opacity-90"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name='+user.displayName}" class="w-9 h-9 rounded-full border dark:border-gray-700"><div class="min-w-0"><div class="text-[10px] uppercase font-bold text-gray-400">Welcome</div><div class="font-bold text-sm truncate dark:text-white">${user.displayName.split(' ')[0]}</div></div></a>
-            ` : `<div class="flex items-center gap-3 min-w-0">${showBack ? `<button onclick="goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="arrow-left" class="w-5 h-5 dark:text-white"></i></button>` : ''}<h1 class="font-bold text-lg truncate dark:text-white">${title}</h1></div>`;
-            return `<div class="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shadow-sm z-10 shrink-0 border-b dark:border-gray-700">${left}<div class="flex gap-2 shrink-0"><button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i></button><button onclick="logout()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button></div></div>`;
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    }
+                    img.onerror = reject;
+                }
+                reader.onerror = reject;
+            });
         };
 
-        function renderCities() {
-            const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
-            return `${header('Select Location', false)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Cities</h2>${cities.map(c => `<button onclick="setCity('${c}')" class="w-full bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98]"><div class="flex items-center gap-3"><div class="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400"><i data-lucide="map-pin" class="w-5 h-5"></i></div><span class="font-semibold text-lg dark:text-gray-100">${c}</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i></button>`).join('')}</div>`;
-        }
+        // --- 9. View Templates (Components) ---
 
-        function renderServices() {
-            const list = state.services.filter(s => s.city === state.selectedCity);
-            return `${header(state.selectedCity, true)}<div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900"><h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services</h2>${list.map(s => `<button onclick="openService('${s.id}')" class="w-full bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade"><div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0 border dark:border-gray-600">${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}</div><div class="flex-1 min-w-0"><h3 class="font-bold text-lg dark:text-gray-100 truncate">${s.name}</h3><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">${s.type}</span>${state.chats[s.id] ? '<span class="w-2 h-2 rounded-full bg-green-500"></span>' : ''}</div></div><div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full"><i data-lucide="message-circle" class="w-5 h-5"></i></div></button>`).join('')}</div>`;
-        }
+        const Views = {
+            loading: () => `<div class="flex h-full items-center justify-center bg-white dark:bg-black"><div class="flex flex-col items-center gap-4"><div class="animate-spin w-10 h-10 border-4 border-blue-600 rounded-full border-t-transparent"></div><p class="text-sm font-bold text-gray-400 tracking-widest animate-pulse">LOADING SJ</p></div></div>`,
+            
+            login: () => `
+                <div class="flex flex-col h-full items-center justify-center p-8 text-center animate-fade bg-white dark:bg-black relative overflow-hidden">
+                    <!-- Background Decoration -->
+                    <div class="absolute top-[-10%] right-[-10%] w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+                    <div class="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
+                    
+                    <div class="w-32 h-32 mb-8 shrink-0 animate-bounce-slight relative z-10">
+                        <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain drop-shadow-2xl">
+                    </div>
+                    <h1 class="text-4xl font-black mb-3 text-gray-900 dark:text-white tracking-tight">SJ Delivery</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mb-12 max-w-xs text-lg leading-relaxed">Your city's best services, delivered to your door instantly.</p>
+                    
+                    <button onclick="Actions.loginGoogle()" class="w-full max-w-xs py-4 bg-gray-900 dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] transition-transform rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl">
+                        <i data-lucide="mail" class="w-5 h-5"></i> 
+                        Continue with Google
+                    </button>
+                    <p class="mt-8 text-xs text-gray-400">By continuing, you agree to our Terms of Service.</p>
+                </div>`,
 
-        function renderChatLayout() {
-            return `
-                ${header(state.activeService.name, true)}
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-5 dark:bg-gray-900 scroll-smooth space-y-2"><div class="flex flex-col items-center justify-center mt-10 text-gray-400 opacity-50"><i data-lucide="message-square-dashed" class="w-10 h-10 mb-2"></i><p class="text-xs">Start ordering...</p></div></div>
+            header: (title, showBack) => {
+                const user = state.user;
+                // Avatar logic
+                const avatar = user ? (user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`) : '';
                 
-                <div class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2 shrink-0 pb-safe relative z-20">
-                    <button onclick="sendLocation()" id="loc-btn" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
-                    <button onclick="toggleOrderModal(true)" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"><i data-lucide="clipboard-list" class="w-5 h-5"></i></button>
+                const leftContent = (!showBack && user) ? `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 shadow-sm object-cover">
+                        <div class="min-w-0">
+                            <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Welcome Back</div>
+                            <div class="font-bold text-sm truncate dark:text-white">${escapeHtml(user.displayName.split(' ')[0])}</div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="flex items-center gap-3 min-w-0">
+                        ${showBack ? `<button onclick="Actions.goBack()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><i data-lucide="arrow-left" class="w-6 h-6 dark:text-white"></i></button>` : ''}
+                        <h1 class="font-bold text-xl truncate dark:text-white tracking-tight">${escapeHtml(title)}</h1>
+                    </div>`;
+
+                return `
+                    <div class="h-16 bg-white/80 dark:bg-black/80 backdrop-blur-md flex items-center justify-between px-4 z-20 shrink-0 border-b border-gray-100 dark:border-gray-800 sticky top-0 w-full">
+                        ${leftContent}
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="Actions.toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                <i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
+                            </button>
+                            ${!showBack ? `<button onclick="Actions.logout()" class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}
+                        </div>
+                    </div>`;
+            },
+
+            cities: () => {
+                const cities = [...new Set(state.services.map(s => s.city).filter(c => c))].sort();
+                return `
+                    ${Views.header('Select Location', false)}
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Available Cities</h2>
+                        ${cities.length ? cities.map(c => `
+                            <button onclick="Actions.setCity('${c}')" class="group w-full bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center justify-between animate-fade text-left active:scale-[0.98] transition-all hover:border-blue-500 dark:hover:border-blue-500">
+                                <div class="flex items-center gap-4">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                                        <i data-lucide="map-pin" class="w-6 h-6"></i>
+                                    </div>
+                                    <span class="font-bold text-lg dark:text-gray-100">${c}</span>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded-full">
+                                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"></i>
+                                </div>
+                            </button>`).join('') 
+                        : '<div class="text-center py-10 text-gray-400">No services found.</div>'}
+                    </div>`;
+            },
+
+            services: () => {
+                const list = state.services.filter(s => s.city === state.selectedCity);
+                return `
+                    ${Views.header(state.selectedCity, true)}
+                    <div class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">Services near you</h2>
+                        ${list.map(s => `
+                            <button onclick="Actions.openService('${s.id}')" class="group w-full bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-fade hover:shadow-md">
+                                <div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-100 dark:border-gray-700 relative">
+                                    ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-6 h-6"></i></div>`}
+                                    ${state.chats[s.id] ? '<span class="absolute top-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900"></span>' : ''}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-bold text-lg dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 transition-colors">${escapeHtml(s.name)}</h3>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wide">${escapeHtml(s.type)}</span>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                </div>
+                            </button>`).join('')}
+                    </div>`;
+            },
+
+            emptyChatPlaceholder: () => `
+                <div class="empty-chat-placeholder flex flex-col items-center justify-center h-full text-gray-400 opacity-60 animate-fade">
+                    <div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="message-square-dashed" class="w-10 h-10"></i>
+                    </div>
+                    <p class="text-sm font-medium">Say Hello!</p>
+                    <p class="text-xs">Start your order with ${state.activeService.name}</p>
+                </div>
+            `,
+
+            chatLayout: () => `
+                ${Views.header(state.activeService.name, true)}
+                
+                <!-- Messages Area -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-50 dark:bg-black/50 scroll-smooth pb-4"></div>
+                
+                <!-- Input Area -->
+                <form onsubmit="Actions.triggerSend(event)" class="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-2 shrink-0 pb-safe relative z-20">
+                    <button type="button" onclick="Actions.sendLocation()" id="loc-btn" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Send Location">
+                        <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    </button>
+                    
+                    <button type="button" onclick="Actions.toggleOrderModal(true)" class="w-11 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95" title="Create Order">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    </button>
                     
                     <div class="flex-1 relative">
-                        <input id="chat-input" type="text" onkeyup="handleChatKey(event)" placeholder="Message..." class="w-full bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full pl-5 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ios-btn-fix">
+                        <input id="chat-input" type="text" autocomplete="off" placeholder="Message..." class="w-full bg-gray-100 dark:bg-gray-800 dark:text-white rounded-full pl-5 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ios-btn-fix border border-transparent focus:border-blue-500">
                     </div>
 
-                    <button onclick="triggerSend()" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-95 transition-all shrink-0"><i data-lucide="send" class="w-5 h-5 ml-0.5"></i></button>
-                </div>
+                    <button type="submit" class="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-90 transition-all shrink-0">
+                        <i data-lucide="send" class="w-5 h-5 ml-0.5"></i>
+                    </button>
+                </form>
 
+                <!-- Order Modal -->
                 <div id="order-modal-overlay" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end animate-fade">
-                    <div class="w-full bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl h-[85%] flex flex-col animate-slide-up ring-1 ring-white/10">
-                        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0">
-                            <div><h2 class="font-bold text-lg dark:text-white">New Order</h2><p class="text-xs text-gray-500" id="item-counter">0/50 Items</p></div>
-                            <button onclick="toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200"><i data-lucide="x" class="w-5 h-5 dark:text-white"></i></button>
-                        </div>
-                        <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar"></div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
-                            <div class="flex gap-2"><input id="new-item-name" type="text" placeholder="Item name..." class="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white ios-btn-fix"><input id="new-item-qty" type="number" value="1" class="w-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center dark:text-white ios-btn-fix"></div>
-                            <div class="flex gap-2">
-                                <label id="cam-btn" class="w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"><i id="cam-icon" data-lucide="camera" class="w-5 h-5 text-gray-500"></i><input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)"></label>
-                                <button onclick="addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-xl flex items-center justify-center hover:opacity-90 transition-opacity"><i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add Item</button>
+                    <div class="w-full bg-white dark:bg-gray-950 rounded-t-3xl shadow-2xl h-[90%] flex flex-col animate-slide-up ring-1 ring-white/10 overflow-hidden">
+                        
+                        <!-- Modal Header -->
+                        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shrink-0 bg-white dark:bg-gray-950">
+                            <div>
+                                <h2 class="font-bold text-xl dark:text-white">New Order</h2>
+                                <p class="text-xs text-gray-500 font-medium mt-0.5" id="item-counter">0/50 Items</p>
                             </div>
+                            <button onclick="Actions.toggleOrderModal(false)" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 transition-colors text-gray-600 dark:text-gray-300">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
                         </div>
-                        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 pb-safe">
-                            <button onclick="submitOrder()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-2"><span>Send Order Request</span><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+
+                        <!-- Draft List -->
+                        <div id="order-items-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar bg-gray-50 dark:bg-black/50"></div>
+
+                        <!-- Input Area for New Item -->
+                        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3 pb-safe">
+                            <div class="flex gap-2">
+                                <input id="new-item-name" type="text" placeholder="Item name..." class="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white ios-btn-fix">
+                                <input id="new-item-qty" type="number" value="1" min="1" class="w-20 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3.5 text-sm text-center dark:text-white ios-btn-fix font-bold">
+                            </div>
+                            <div class="flex gap-2">
+                                <label id="cam-btn" class="w-14 h-12 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 transition-colors">
+                                    <i id="cam-icon" data-lucide="camera" class="w-6 h-6 text-gray-400"></i>
+                                    <input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="Actions.handleImageSelect(this)">
+                                </label>
+                                <button onclick="Actions.addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all h-12">
+                                    <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add Item
+                                </button>
+                            </div>
+                            <button onclick="Actions.submitOrder()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2">
+                                <span>Send Order Request</span>
+                                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </button>
                         </div>
                     </div>
-                </div>`;
+                </div>`
+        };
+
+        // --- 10. Utils ---
+        function getChatId(uid, serviceId) { return `${uid}_${serviceId}`; }
+        
+        function scrollToBottom() { 
+            const el = document.getElementById('chat-messages'); 
+            if(el) {
+                // Using requestAnimationFrame ensures layout is calculated first
+                requestAnimationFrame(() => {
+                    el.scrollTop = el.scrollHeight;
+                });
+            } 
         }
+        
+        function escapeHtml(text) { 
+            if(!text) return '';
+            const div = document.createElement('div'); 
+            div.innerText = text; 
+            return div.innerHTML; 
+        }
+
     </script>
 </body>
 </html>
+
+
 
 
 
