@@ -13,17 +13,20 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
+        
+        // 1. إعدادات التهيئة
         await OneSignal.init({
           appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
           safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
-          notifyButton: { enable: false }, // نستخدم زرنا الخاص
+          notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
           
-          // 👇👇 هذا هو الحل لمشكلة 404 (تحديد المسار الصحيح) 👇👇
-          serviceWorkerPath: 'sjcoin25/OneSignalSDKWorker.js',
+          // 👇 التعديل الحاسم: إضافة / في البداية لضمان المسار الصحيح
+          serviceWorkerPath: '/sjcoin25/OneSignalSDKWorker.js',
           serviceWorkerParam: { scope: '/sjcoin25/' }
         });
-        console.log("OneSignal Initialized with Correct Path");
+
+        console.log("✅ OneSignal Init Completed");
       });
     </script>
 
@@ -122,7 +125,13 @@
         window.promptOneSignal = () => {
             if(window.OneSignalDeferred){
                 window.OneSignalDeferred.push(async function(OneSignal) {
-                    await OneSignal.Slidedown.promptPush();
+                    // Force register SW first if missing
+                    try {
+                       await OneSignal.Slidedown.promptPush();
+                    } catch(e) {
+                       console.error("Push prompt error:", e);
+                       window.showToast("Error", "Please clear browser cache and retry.");
+                    }
                 });
             } else {
                 window.showToast("System", "Notification service loading...");
