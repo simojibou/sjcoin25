@@ -10,14 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <script>
+        // هذا الكود سيعمل مرة واحدة لحذف أي Service Worker قديم وعالق
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    // إذا كان العامل مسجلاً في النطاق الرئيسي (الخطأ السابق)، نحذفه
-                    if (registration.scope === 'https://simojibou.github.io/') {
-                        registration.unregister();
-                        console.log("🧹 Cleaned old Service Worker");
-                    }
+                    // نقوم بإلغاء تسجيل القديم لضمان تحميل الجديد
+                    registration.unregister().then(function(boolean) {
+                        console.log('🧹 Old Service Worker Unregistered:', boolean);
+                    });
                 }
             });
         }
@@ -33,13 +33,13 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
           
-          // 👇 الحل النهائي للمسارات على GitHub Pages 👇
-          // هذا يخبره أن الملف موجود داخل مجلد sjcoin25
-          path: '/sjcoin25/', 
-          serviceWorkerPath: 'OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/sjcoin25/' }
+          // 👇 التغيير الجوهري: استخدام النقطة (.) لتعني "نفس المجلد الحالي"
+          // هذا يحل مشكلة اسم المجلد سواء كان sjcoin25 أو غيره
+          serviceWorkerPath: './OneSignalSDKWorker.js', 
+          
+          // لا نحدد scope هنا، نترك المتصفح يحدده تلقائياً بناءً على مكان الملف
         });
-        console.log("✅ OneSignal Loaded Correctly");
+        console.log("✅ OneSignal Initialized (Relative Path)");
       });
     </script>
 
@@ -134,11 +134,18 @@
             }, 4000);
         };
 
-        // --- 🔔 OneSignal Logic ---
+        // --- 🔔 OneSignal Logic (Fixed) ---
         window.promptOneSignal = () => {
             if(window.OneSignalDeferred){
                 window.OneSignalDeferred.push(async function(OneSignal) {
-                    await OneSignal.Slidedown.promptPush();
+                    try {
+                       // محاولة طلب الإذن مباشرة
+                       await OneSignal.Slidedown.promptPush();
+                    } catch(e) {
+                       console.error("Push prompt error:", e);
+                       // إذا فشل، نحاول التسجيل اليدوي
+                       OneSignal.Register.create();
+                    }
                 });
             } else {
                 window.showToast("System", "Notification service loading...");
