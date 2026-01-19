@@ -17,16 +17,20 @@
                 extend: {
                     fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
                     colors: {
-                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }, // Richer Slate
-                        brand: { 500: '#6366f1', 600: '#4f46e5' } // Indigo/Violet
+                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }, 
+                        brand: { 500: '#6366f1', 600: '#4f46e5' } 
                     },
                     animation: {
                         'enter': 'enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                         'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'toast-in': 'toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'toast-out': 'toastOut 0.3s ease-in forwards',
                     },
                     keyframes: {
                         enter: { from: { opacity: 0, transform: 'scale(0.98)' }, to: { opacity: 1, transform: 'scale(1)' } },
-                        slideUp: { from: { opacity: 0, transform: 'translateY(20px)' }, to: { opacity: 1, transform: 'translateY(0)' } }
+                        slideUp: { from: { opacity: 0, transform: 'translateY(20px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+                        toastIn: { from: { opacity: 0, transform: 'translateY(-20px) scale(0.9)' }, to: { opacity: 1, transform: 'translateY(0) scale(1)' } },
+                        toastOut: { from: { opacity: 1, transform: 'scale(1)' }, to: { opacity: 0, transform: 'scale(0.9)' } }
                     }
                 }
             }
@@ -35,27 +39,19 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        /* Custom Scrollbar */
         body { background-color: #020617; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Glassmorphism Utilities */
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); }
-        
-        /* Input Autofill Fix for Dark Mode */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
-        input:-webkit-autofill:active{
-            -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
-            -webkit-text-fill-color: white !important;
-            transition: background-color 5000s ease-in-out 0s;
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #1e293b inset !important; -webkit-text-fill-color: white !important; transition: background-color 5000s ease-in-out 0s;
         }
     </style>
 </head>
 <body class="text-slate-200 h-screen flex items-center justify-center selection:bg-brand-500 selection:text-white">
+
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none"></div>
 
     <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-600/20 rounded-full blur-[100px]"></div>
@@ -85,6 +81,56 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- 🔊 Notification System ---
+        const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3"; 
+        const audio = new Audio(SOUND_URL);
+        
+        // Helper: Play Sound
+        const playDing = () => {
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Audio blocked by browser (interact first)"));
+        };
+
+        // Helper: Show Toast
+        window.showToast = (title, msg) => {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = "bg-slate-800/90 backdrop-blur-md border border-white/10 text-white px-4 py-3 rounded-2xl shadow-xl shadow-black/20 text-sm font-medium flex items-center gap-3 animate-toast-in pointer-events-auto min-w-[250px] cursor-pointer hover:bg-slate-700/90 transition";
+            el.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0"><i data-lucide="bell" class="w-4 h-4"></i></div>
+                <div>
+                    <div class="font-bold text-xs uppercase tracking-wide opacity-70">${title}</div>
+                    <div class="text-sm">${msg}</div>
+                </div>`;
+            
+            el.onclick = () => el.remove();
+            container.appendChild(el);
+            lucide.createIcons();
+            
+            // Auto Remove
+            setTimeout(() => {
+                el.classList.replace('animate-toast-in', 'animate-toast-out');
+                setTimeout(() => el.remove(), 300);
+            }, 4000);
+        };
+
+        // Helper: Trigger Notification (System + Toast + Sound)
+        const notify = (title, body) => {
+            // 1. In-App
+            window.showToast(title, body);
+            // 2. Sound
+            playDing();
+            // 3. System (Browser)
+            if(Notification.permission === "granted" && document.hidden) {
+                new Notification(title, { body, icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" });
+            }
+        };
+
+        const requestPermission = () => {
+            if(Notification.permission === 'default') Notification.requestPermission();
+        };
+
+        // --- State ---
         const state = {
             user: null, role: 'loading', view: 'login',
             services: [], chats: [], activeChat: null, activeMessages: [], 
@@ -105,6 +151,8 @@
                 state.role = 'provider'; 
                 subscribeServices();
             }
+            // Ask permission on login
+            requestPermission();
         });
 
         let unsubServices, unsubChats, unsubActiveMsg, unsubStatsOrders, unsubStatsUsers;
@@ -161,7 +209,29 @@
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
             const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
+            
+            let isFirstLoad = true;
+
             unsubChats = onSnapshot(q, (snap) => {
+                // NOTIFICATION LOGIC FOR NEW ORDERS
+                if(!isFirstLoad) {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const data = change.doc.data();
+                            // Only notify if it's recent (prevent old cache blast)
+                            if(data.lastUpdated && (Date.now() - data.lastUpdated.toMillis()) < 60000) {
+                                notify("New Order!", `From: ${data.userEmail}`);
+                            }
+                        }
+                        if (change.type === 'modified') {
+                            const data = change.doc.data();
+                            // Notify on modification if last message wasn't from me
+                            // Using simple heuristic here since we don't store "lastSender" in root doc yet
+                            // Ideally, we rely on the messages subcollection for message alerts
+                        }
+                    });
+                }
+
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
                 
                 state.providerEarnings = state.chats.reduce((sum, chat) => {
@@ -172,16 +242,39 @@
                 }, 0);
 
                 if (state.view === 'provider_list') render();
+                isFirstLoad = false;
             });
         }
 
         function subscribeActiveChat(chatId) {
             if(unsubActiveMsg) unsubActiveMsg();
             const q = query(collection(db, 'delivery_chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+            
+            let isFirstLoad = true;
+
             unsubActiveMsg = onSnapshot(q, (snap) => {
+                // NOTIFICATION LOGIC FOR MESSAGES
+                if(!isFirstLoad) {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const data = change.doc.data();
+                            // Only notify if sender is NOT me
+                            if (data.sender !== state.user.uid) {
+                                // Don't notify if I'm looking at the screen and chat is open
+                                if(document.hidden) {
+                                     notify(state.activeChat?.userEmail.split('@')[0], data.text);
+                                } else {
+                                     playDing(); // Just sound if active
+                                }
+                            }
+                        }
+                    });
+                }
+
                 state.activeMessages = snap.docs.map(d => d.data());
                 render();
                 scrollChat();
+                isFirstLoad = false;
             });
         }
 
@@ -415,7 +508,10 @@
                             <h2 class="font-bold text-2xl text-white tracking-tight">Orders</h2>
                             <p class="text-sm text-brand-400 font-medium flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${state.providerService?.city}</p>
                         </div>
-                        <button onclick="logout()" class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 hover:text-white border border-slate-700 shadow-lg"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                        <div class="flex gap-2">
+                             <button onclick="requestPermission()" class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-full text-brand-400 hover:text-white border border-slate-700 shadow-lg"><i data-lucide="bell" class="w-5 h-5"></i></button>
+                             <button onclick="logout()" class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 hover:text-white border border-slate-700 shadow-lg"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                        </div>
                     </div>
 
                     <div class="px-5 mb-6">
