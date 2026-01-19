@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -11,6 +11,24 @@
     
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
     
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
+          safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
+          notifyButton: { enable: false }, // سنستخدم زرنا الخاص
+          allowLocalhostAsSecureOrigin: true,
+          // نفس إعدادات المسار الصحيحة
+          path: '/sjcoin25/',
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/sjcoin25/' }
+        });
+        console.log("✅ OneSignal User App Ready");
+      });
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { 
@@ -39,7 +57,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
     <style>
         /* Modern Reset */
@@ -116,76 +133,31 @@
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             const db = firebase.firestore();
-            let messaging = null;
 
-            // --- Initialize Cloud Messaging ---
-            try {
-                if (firebase.messaging.isSupported()) {
-                    messaging = firebase.messaging();
-                } else {
-                    console.warn("Firebase Messaging not supported in this browser");
-                }
-            } catch(e) { console.error("FCM Init Error:", e); }
-
-
-            // --- 🔊 Sound & Notifications ---
-            const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+            // --- 🔊 Sound ---
             const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3"; 
-            
             const playSound = () => {
                 const a = new Audio(SOUND_URL);
                 a.volume = 0.5;
                 a.play().catch(e => console.log("Audio play blocked", e));
             };
 
-            // Enhanced Notification Handler
+            // --- 🔔 OneSignal Notification Logic (Unified) ---
             const enableNotifications = async () => {
-                if (!messaging) return window.showToast("Push not supported here", "error");
-                
-                try {
-                    // 1. Request Browser Permission
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        
-                        // 2. Register Service Worker
-                        if ('serviceWorker' in navigator) {
-                            const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-                            console.log('Service Worker Registered');
-                            
-                            // 3. Get Token (Device ID)
-                            const token = await messaging.getToken({ serviceWorkerRegistration: registration });
-                            if (token) {
-                                console.log('FCM Token:', token);
-                                if(state.user) {
-                                    // Save token to user profile so backend can send push
-                                    db.collection('users').doc(state.user.uid).set({
-                                        fcmToken: token,
-                                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                                    }, { merge: true });
-                                    window.showToast("Notifications Active! 🔔", "success");
-                                }
-                            }
+                if(window.OneSignalDeferred) {
+                    window.OneSignalDeferred.push(async function(OneSignal) {
+                        try {
+                            console.log("🔔 Requesting User Permission...");
+                            await OneSignal.Slidedown.promptPush({ force: true });
+                        } catch(e) {
+                            console.warn("Manual Prompt Failed, trying register:", e);
+                            OneSignal.Register.create();
                         }
-                    } else {
-                        window.showToast("Notifications denied", "error");
-                    }
-                } catch (e) {
-                    console.error("Notify Setup Error:", e);
-                    if(e.code === 'messaging/failed-service-worker-registration') {
-                        window.showToast("Missing 'firebase-messaging-sw.js' file!", "error");
-                    }
+                    });
+                } else {
+                    window.showToast("Notifications loading...", "info");
                 }
             };
-
-            // Handle Foreground Messages (FCM)
-            if(messaging) {
-                messaging.onMessage((payload) => {
-                    console.log('Message received. ', payload);
-                    playSound();
-                    const { title, body } = payload.notification || {};
-                    window.showToast(title + ": " + body, "success");
-                });
-            }
 
             // --- 2. State & Store ---
             const state = {
@@ -227,9 +199,14 @@
                 catch(e) { return ''; }
             };
             
+            // ✅ Fixed Syntax Error Here
             const escapeHtml = (str) => {
                 if(!str) return '';
-                return String(str).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
             };
 
             const safeVal = (v) => (v === undefined ? null : v);
@@ -289,7 +266,7 @@
                         <div class="h-16 glass sticky top-0 z-50 px-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/50 shrink-0">
                             ${leftContent}
                             <div class="flex items-center gap-1">
-                                <button onclick="Actions.enableNotifications()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${Notification.permission === 'granted' ? 'text-blue-500' : 'text-gray-400'}">
+                                <button onclick="Actions.enableNotifications()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-blue-500">
                                     <i data-lucide="bell" class="w-5 h-5"></i>
                                 </button>
                                 <button onclick="Actions.toggleTheme()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -454,13 +431,21 @@
             auth.onAuthStateChanged((user) => {
                 state.user = user;
                 if (user) {
+                    // Link OneSignal User
+                    if(window.OneSignalDeferred) {
+                        window.OneSignalDeferred.push(function(OneSignal) {
+                            OneSignal.login(user.uid);
+                            if(user.email) OneSignal.User.addEmail(user.email);
+                        });
+                    }
+
                     if(!state.listeners.services) subscribeServices();
                     if(!state.listeners.chatsList) subscribeChatsList();
                     if(state.currentView === 'loading' || state.currentView === 'login') {
                         setView('cities');
-                        // Auto request notification on load if desired, or let user click button
                     }
                 } else {
+                    if(window.OneSignalDeferred) window.OneSignalDeferred.push(OneSignal => OneSignal.logout());
                     unsubscribeAll();
                     if(state.currentView !== 'login') setView('login');
                 }
@@ -488,7 +473,7 @@
                     snap.docChanges().forEach(change => {
                         const data = change.doc.data();
                         
-                        // LOCAL SYSTEM NOTIFICATION (Backup if FCM fails or for foreground)
+                        // LOCAL SYSTEM NOTIFICATION (Backup if OneSignal fails or for foreground)
                         if (!isFirstRun && change.type === 'modified') {
                             if (!snap.metadata.hasPendingWrites) { 
                                 const isActiveAndOpen = state.currentView === 'chat' && state.activeService && state.activeService.id === data.serviceId;
@@ -496,10 +481,10 @@
                                 if (!isActiveAndOpen || document.hidden) {
                                     // Try native notification as backup
                                     if(Notification.permission === "granted") {
-                                         new Notification(`New Message: ${data.serviceName}`, { 
-                                             body: data.lastMessage, 
-                                             icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" 
-                                         });
+                                       new Notification(`New Message: ${data.serviceName}`, { 
+                                          body: data.lastMessage, 
+                                          icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" 
+                                       });
                                     }
                                     playSound();
                                 }
@@ -571,8 +556,9 @@
                     inner = `<div class="max-w-[80%] px-5 py-3 rounded-2xl ${bubbleBase} shadow-lg ${shadow} text-sm leading-relaxed break-words">${escapeHtml(msg.text)}</div>`;
                 } 
                 else if (msg.type === 'location') {
+                    // ✅ FIXED MAP URL SYNTAX
                     inner = `
-                    <a href="https://maps.google.com/?q=${msg.location.lat},${msg.location.lng}" target="_blank" class="block w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md hover:opacity-95 transition-opacity">
+                    <a href="https://www.google.com/maps/search/?api=1&query=${msg.location.lat},${msg.location.lng}" target="_blank" class="block w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md hover:opacity-95 transition-opacity">
                         <div class="h-28 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
                             <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#60a5fa 1px, transparent 1px); background-size: 10px 10px;"></div>
                             <div class="w-12 h-12 bg-white dark:bg-black rounded-full flex items-center justify-center shadow-lg text-red-500 animate-bounce"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
@@ -633,7 +619,6 @@
                     try { 
                         await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
                         await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
-                        // Auto-ask for notifications after login
                         setTimeout(Actions.enableNotifications, 2000);
                     } catch(e) { 
                         window.showToast("Login Failed", "error"); 
@@ -641,7 +626,7 @@
                         if(btn) { btn.disabled = false; btn.querySelector('span').innerText = 'Continue with Google'; }
                     } 
                 },
-                enableNotifications, // Expose notification handler
+                enableNotifications,
                 logout: () => { if(confirm("Log out?")) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
                 openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
@@ -745,7 +730,7 @@
                     }
                 },
 
-                // SEND LOGIC (The Fix)
+                // SEND LOGIC
                 triggerSend: async (e, type='text', data={}) => {
                     if(e) e.preventDefault();
                     if(state.isSending) return;
@@ -770,7 +755,7 @@
                         
                         const userName = state.user.displayName || (state.user.email ? state.user.email.split('@')[0] : 'User');
                         
-                        // Sanitize Data (Fix for Failed to send)
+                        // Sanitize Data
                         const payload = { 
                             type, text:txt, sender:safeVal(state.user.uid), 
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
