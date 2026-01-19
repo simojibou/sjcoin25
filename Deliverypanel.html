@@ -3,34 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SJ Delivery - Ultimate Pro</title>
+    <title>SJ Delivery - Final Fix</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                // نجبر المتصفح على تسجيل الملف من المسار المحدد بدقة
+                navigator.serviceWorker.register('/sjcoin25/OneSignalSDKWorker.js', { scope: '/sjcoin25/' })
+                .then(function(registration) {
+                    console.log('✅ ServiceWorker registration successful with scope: ', registration.scope);
+                }, function(err) {
+                    console.error('❌ ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      
-      // دالة التهيئة الآمنة (تمنع ظهور الأخطاء الحمراء)
       OneSignalDeferred.push(async function(OneSignal) {
-        try {
-            await OneSignal.init({
-              appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
-              safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
-              notifyButton: { enable: false },
-              allowLocalhostAsSecureOrigin: true,
-              
-              // 👇 الإعدادات الجبارة للمسار 👇
-              serviceWorkerPath: './OneSignalSDKWorker.js', 
-              serviceWorkerParam: { scope: '/sjcoin25/' },
-              path: '/sjcoin25/' 
-            });
-            console.log("🚀 OneSignal Connected Successfully!");
-        } catch (error) {
-            console.warn("⚠️ OneSignal Initialization waiting...", error);
-        }
+        await OneSignal.init({
+          appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
+          safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
+          notifyButton: { enable: false },
+          allowLocalhostAsSecureOrigin: true,
+          // نترك هذه الإعدادات لتتوافق مع التسجيل اليدوي
+          path: '/sjcoin25/',
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/sjcoin25/' }
+        });
+        console.log("🚀 OneSignal Loaded");
       });
     </script>
 
@@ -131,11 +138,12 @@
                 window.OneSignalDeferred.push(async function(OneSignal) {
                     console.log("🔔 Attempting to subscribe...");
                     try {
-                       // الطريقة المزدوجة لضمان ظهور النافذة
+                       // 1. طلب الإذن
                        await OneSignal.Slidedown.promptPush({ force: true });
                     } catch(e) {
-                       console.log("⚠️ Standard prompt failed, trying alternative...");
-                       OneSignal.Register.create(); // محاولة بديلة
+                       console.log("⚠️ Fallback to register...");
+                       // 2. محاولة التسجيل إذا فشل الطلب
+                       OneSignal.Register.create();
                     }
                 });
             } else {
