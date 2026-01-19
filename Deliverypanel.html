@@ -13,12 +13,10 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    // إذا كان النطاق خاطئاً (بدون sjcoin25)، نحذفه
-                    if (registration.scope === 'https://simojibou.github.io/') {
-                        registration.unregister();
-                        console.log("🧹 Fixed Scope: Old Worker Deleted");
-                    }
+                    // Unregister everything to start fresh
+                    registration.unregister();
                 }
+                console.log("🧹 Service Worker Cache Cleared");
             });
         }
     </script>
@@ -33,11 +31,13 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
           
-          // 👇👇 التعديل الحاسم: وضعنا اسم المجلد يدوياً 👇👇
-          serviceWorkerPath: '/sjcoin25/OneSignalSDKWorker.js',
+          // 👇 THE FIX: strictly point to the folder /sjcoin25/
+          // This fixes the '404' and the 'SecurityError'
+          path: '/sjcoin25/', 
+          serviceWorkerPath: 'OneSignalSDKWorker.js', 
           serviceWorkerParam: { scope: '/sjcoin25/' }
         });
-        console.log("✅ OneSignal Configured for /sjcoin25/");
+        console.log("✅ OneSignal Configured for sjcoin25");
       });
     </script>
 
