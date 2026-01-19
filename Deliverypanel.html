@@ -63,7 +63,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // FCM Import
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD-sneIBO65i9uQIh3n_jw4MI7GQtjZfV8",
@@ -80,18 +82,21 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        
+        // FCM Setup
+        let messaging;
+        try { messaging = getMessaging(app); } catch(e) { console.warn("FCM not supported"); }
 
-        // --- 🔊 Notification System ---
+        // --- 🔊 Notification Logic ---
         const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3"; 
         const audio = new Audio(SOUND_URL);
         
-        // Helper: Play Sound
         const playDing = () => {
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio blocked by browser (interact first)"));
+            audio.play().catch(e => console.log("Audio blocked"));
         };
 
-        // Helper: Show Toast
+        // UI Toast
         window.showToast = (title, msg) => {
             const container = document.getElementById('toast-container');
             const el = document.createElement('div');
@@ -102,33 +107,48 @@
                     <div class="font-bold text-xs uppercase tracking-wide opacity-70">${title}</div>
                     <div class="text-sm">${msg}</div>
                 </div>`;
-            
             el.onclick = () => el.remove();
             container.appendChild(el);
             lucide.createIcons();
-            
-            // Auto Remove
             setTimeout(() => {
                 el.classList.replace('animate-toast-in', 'animate-toast-out');
                 setTimeout(() => el.remove(), 300);
             }, 4000);
         };
 
-        // Helper: Trigger Notification (System + Toast + Sound)
-        const notify = (title, body) => {
-            // 1. In-App
-            window.showToast(title, body);
-            // 2. Sound
-            playDing();
-            // 3. System (Browser)
-            if(Notification.permission === "granted" && document.hidden) {
-                new Notification(title, { body, icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" });
+        // --- FCM Registration ---
+        const initNotifications = async (user) => {
+            if (!messaging) return;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // Register SW
+                    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+                    const token = await getToken(messaging, { serviceWorkerRegistration: reg });
+                    
+                    if (token) {
+                        console.log("FCM Token:", token);
+                        // Save token to Firestore so backend can target this user
+                        await setDoc(doc(db, 'users', user.uid), {
+                            fcmToken: token,
+                            lastLogin: serverTimestamp(),
+                            email: user.email
+                        }, { merge: true });
+                    }
+                }
+            } catch (error) {
+                console.error("FCM Error:", error);
             }
         };
 
-        const requestPermission = () => {
-            if(Notification.permission === 'default') Notification.requestPermission();
-        };
+        // Handle Foreground Messages (from FCM)
+        if (messaging) {
+            onMessage(messaging, (payload) => {
+                console.log('FCM Message:', payload);
+                playDing();
+                window.showToast(payload.notification.title, payload.notification.body);
+            });
+        }
 
         // --- State ---
         const state = {
@@ -144,6 +164,10 @@
         onAuthStateChanged(auth, async (user) => {
             state.user = user;
             if(!user) { state.role = 'guest'; state.view = 'login'; render(); return; }
+            
+            // Init FCM on login
+            initNotifications(user);
+
             if (AUTHORIZED_STAFF.includes(user.email.toLowerCase())) {
                 state.role = 'admin'; state.view = 'admin_list';
                 subscribeServices(); subscribeAdminStats();
@@ -151,8 +175,6 @@
                 state.role = 'provider'; 
                 subscribeServices();
             }
-            // Ask permission on login
-            requestPermission();
         });
 
         let unsubServices, unsubChats, unsubActiveMsg, unsubStatsOrders, unsubStatsUsers;
@@ -206,6 +228,22 @@
             });
         }
 
+        // --- ⚡ Fast Fallback Notification (When Tab is Backgrounded but Open) ---
+        function notify(title, body) {
+            // If FCM sends a notification, the Service Worker handles it.
+            // This function handles REAL-TIME updates when app is open (or minimized).
+            playDing();
+            window.showToast(title, body);
+            
+            // Browser Notification (Fallback if FCM is delayed/not set up backend side)
+            if(Notification.permission === "granted" && document.hidden) {
+                new Notification(title, { 
+                    body, 
+                    icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" 
+                });
+            }
+        }
+
         function subscribeChats(ownerEmail) {
             if(unsubChats) unsubChats();
             const q = query(collection(db, 'delivery_chats'), where('serviceOwnerEmail', '==', ownerEmail));
@@ -213,25 +251,16 @@
             let isFirstLoad = true;
 
             unsubChats = onSnapshot(q, (snap) => {
-                // NOTIFICATION LOGIC FOR NEW ORDERS
                 if(!isFirstLoad) {
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added') {
                             const data = change.doc.data();
-                            // Only notify if it's recent (prevent old cache blast)
                             if(data.lastUpdated && (Date.now() - data.lastUpdated.toMillis()) < 60000) {
                                 notify("New Order!", `From: ${data.userEmail}`);
                             }
                         }
-                        if (change.type === 'modified') {
-                            const data = change.doc.data();
-                            // Notify on modification if last message wasn't from me
-                            // Using simple heuristic here since we don't store "lastSender" in root doc yet
-                            // Ideally, we rely on the messages subcollection for message alerts
-                        }
                     });
                 }
-
                 state.chats = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.lastUpdated?.seconds || 0) - (a.lastUpdated?.seconds || 0));
                 
                 state.providerEarnings = state.chats.reduce((sum, chat) => {
@@ -253,24 +282,20 @@
             let isFirstLoad = true;
 
             unsubActiveMsg = onSnapshot(q, (snap) => {
-                // NOTIFICATION LOGIC FOR MESSAGES
                 if(!isFirstLoad) {
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added') {
                             const data = change.doc.data();
-                            // Only notify if sender is NOT me
                             if (data.sender !== state.user.uid) {
-                                // Don't notify if I'm looking at the screen and chat is open
                                 if(document.hidden) {
                                      notify(state.activeChat?.userEmail.split('@')[0], data.text);
                                 } else {
-                                     playDing(); // Just sound if active
+                                     playDing(); // Just sound if active and visible
                                 }
                             }
                         }
                     });
                 }
-
                 state.activeMessages = snap.docs.map(d => d.data());
                 render();
                 scrollChat();
