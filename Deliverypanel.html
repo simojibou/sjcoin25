@@ -9,24 +9,37 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    // إذا كان العامل مسجلاً في النطاق الرئيسي (الخطأ السابق)، نحذفه
+                    if (registration.scope === 'https://simojibou.github.io/') {
+                        registration.unregister();
+                        console.log("🧹 Cleaned old Service Worker");
+                    }
+                }
+            });
+        }
+    </script>
+
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        
-        // 1. إعدادات التهيئة
         await OneSignal.init({
           appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
           safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
           
-          // 👇 التعديل الحاسم: إضافة / في البداية لضمان المسار الصحيح
-          serviceWorkerPath: '/sjcoin25/OneSignalSDKWorker.js',
+          // 👇 الحل النهائي للمسارات على GitHub Pages 👇
+          // هذا يخبره أن الملف موجود داخل مجلد sjcoin25
+          path: '/sjcoin25/', 
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
           serviceWorkerParam: { scope: '/sjcoin25/' }
         });
-
-        console.log("✅ OneSignal Init Completed");
+        console.log("✅ OneSignal Loaded Correctly");
       });
     </script>
 
@@ -121,17 +134,11 @@
             }, 4000);
         };
 
-        // --- 🔔 OneSignal Logic (Fixed) ---
+        // --- 🔔 OneSignal Logic ---
         window.promptOneSignal = () => {
             if(window.OneSignalDeferred){
                 window.OneSignalDeferred.push(async function(OneSignal) {
-                    // Force register SW first if missing
-                    try {
-                       await OneSignal.Slidedown.promptPush();
-                    } catch(e) {
-                       console.error("Push prompt error:", e);
-                       window.showToast("Error", "Please clear browser cache and retry.");
-                    }
+                    await OneSignal.Slidedown.promptPush();
                 });
             } else {
                 window.showToast("System", "Notification service loading...");
