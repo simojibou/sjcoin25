@@ -39,6 +39,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
     <style>
         /* Modern Reset */
@@ -115,13 +116,21 @@
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             const db = firebase.firestore();
+            let messaging = null;
+
+            // --- Initialize Cloud Messaging ---
+            try {
+                if (firebase.messaging.isSupported()) {
+                    messaging = firebase.messaging();
+                } else {
+                    console.warn("Firebase Messaging not supported in this browser");
+                }
+            } catch(e) { console.error("FCM Init Error:", e); }
+
 
             // --- 🔊 Sound & Notifications ---
-            const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
-            // NOTE: Using a simple Base64 placeholder. For a real "Ding", user should replace with a valid short mp3/wav base64 or URL.
-            // Using a hosted sound for reliability in this demo:
+            const NOTIFICATION_SOUND = "data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
             const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3"; 
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             
             const playSound = () => {
                 const a = new Audio(SOUND_URL);
@@ -129,20 +138,54 @@
                 a.play().catch(e => console.log("Audio play blocked", e));
             };
 
-            const requestNotifyPermission = () => {
-                if ("Notification" in window && Notification.permission === "default") {
-                    Notification.requestPermission();
+            // Enhanced Notification Handler
+            const enableNotifications = async () => {
+                if (!messaging) return window.showToast("Push not supported here", "error");
+                
+                try {
+                    // 1. Request Browser Permission
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        
+                        // 2. Register Service Worker
+                        if ('serviceWorker' in navigator) {
+                            const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+                            console.log('Service Worker Registered');
+                            
+                            // 3. Get Token (Device ID)
+                            const token = await messaging.getToken({ serviceWorkerRegistration: registration });
+                            if (token) {
+                                console.log('FCM Token:', token);
+                                if(state.user) {
+                                    // Save token to user profile so backend can send push
+                                    db.collection('users').doc(state.user.uid).set({
+                                        fcmToken: token,
+                                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                                    }, { merge: true });
+                                    window.showToast("Notifications Active! 🔔", "success");
+                                }
+                            }
+                        }
+                    } else {
+                        window.showToast("Notifications denied", "error");
+                    }
+                } catch (e) {
+                    console.error("Notify Setup Error:", e);
+                    if(e.code === 'messaging/failed-service-worker-registration') {
+                        window.showToast("Missing 'firebase-messaging-sw.js' file!", "error");
+                    }
                 }
             };
 
-            const triggerNotification = (title, body) => {
-                // 1. Play Sound
-                playSound();
-                // 2. System Notification (if backgrounded)
-                if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
-                    new Notification(title, { body, icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" });
-                }
-            };
+            // Handle Foreground Messages (FCM)
+            if(messaging) {
+                messaging.onMessage((payload) => {
+                    console.log('Message received. ', payload);
+                    playSound();
+                    const { title, body } = payload.notification || {};
+                    window.showToast(title + ": " + body, "success");
+                });
+            }
 
             // --- 2. State & Store ---
             const state = {
@@ -186,7 +229,7 @@
             
             const escapeHtml = (str) => {
                 if(!str) return '';
-                return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                return String(str).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);
             };
 
             const safeVal = (v) => (v === undefined ? null : v);
@@ -246,6 +289,9 @@
                         <div class="h-16 glass sticky top-0 z-50 px-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/50 shrink-0">
                             ${leftContent}
                             <div class="flex items-center gap-1">
+                                <button onclick="Actions.enableNotifications()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${Notification.permission === 'granted' ? 'text-blue-500' : 'text-gray-400'}">
+                                    <i data-lucide="bell" class="w-5 h-5"></i>
+                                </button>
                                 <button onclick="Actions.toggleTheme()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
                                 </button>
@@ -296,7 +342,7 @@
                         <div class="space-y-3">
                         ${list.map(s => {
                             const chat = Object.values(state.chats).find(c => c.serviceId === s.id);
-                            const hasNewMsg = chat && chat.lastUpdated && ((Date.now() - chat.lastUpdated.toMillis()) < 3600000); // Simple recent check
+                            const hasNewMsg = chat && chat.lastUpdated && ((Date.now() - chat.lastUpdated.toMillis()) < 3600000); 
                             return `
                             <button onclick="Actions.openService('${s.id}')" class="w-full bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-enter hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none group relative overflow-hidden">
                                 <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -401,8 +447,6 @@
                     case 'chat': appEl.innerHTML = Views.chatLayout(); mountChatLogic(); break;
                 }
                 refreshIcons();
-                // Request permission on view change if logged in
-                if(state.user) requestNotifyPermission();
             }
 
             // --- 6. Event Logic ---
@@ -412,7 +456,10 @@
                 if (user) {
                     if(!state.listeners.services) subscribeServices();
                     if(!state.listeners.chatsList) subscribeChatsList();
-                    if(state.currentView === 'loading' || state.currentView === 'login') setView('cities');
+                    if(state.currentView === 'loading' || state.currentView === 'login') {
+                        setView('cities');
+                        // Auto request notification on load if desired, or let user click button
+                    }
                 } else {
                     unsubscribeAll();
                     if(state.currentView !== 'login') setView('login');
@@ -431,7 +478,6 @@
                 }, (e) => console.log("Offline mode or sync error"));
             }
 
-            // --- 🔥 UPDATED: Global Chat Listener for Notifications ---
             function subscribeChatsList() {
                 if (!state.user) return;
                 let isFirstRun = true;
@@ -442,19 +488,20 @@
                     snap.docChanges().forEach(change => {
                         const data = change.doc.data();
                         
-                        // NOTIFICATION TRIGGER
+                        // LOCAL SYSTEM NOTIFICATION (Backup if FCM fails or for foreground)
                         if (!isFirstRun && change.type === 'modified') {
-                            // Only notify if update is NOT local (sender isn't me, or check hasPendingWrites)
-                            // NOTE: Since 'delivery_chats' summary is updated by us too, we rely on 'lastUpdated'
-                            // Ideally, we'd check who updated it, but for now we assume incoming.
-                            
-                            // Simple heuristic: If we are not sending, and update happened...
                             if (!snap.metadata.hasPendingWrites) { 
-                                // Check if user is currently looking at this chat
                                 const isActiveAndOpen = state.currentView === 'chat' && state.activeService && state.activeService.id === data.serviceId;
                                 
                                 if (!isActiveAndOpen || document.hidden) {
-                                    triggerNotification(`New Message: ${data.serviceName}`, data.lastMessage);
+                                    // Try native notification as backup
+                                    if(Notification.permission === "granted") {
+                                         new Notification(`New Message: ${data.serviceName}`, { 
+                                             body: data.lastMessage, 
+                                             icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" 
+                                         });
+                                    }
+                                    playSound();
                                 }
                             }
                         }
@@ -498,8 +545,6 @@
                             shouldScroll = true;
                             const msg = change.doc.data();
                             container.appendChild(createMessageElement(msg));
-
-                            // --- 🔔 Sound Effect for Active Chat ---
                             if (!isInitialLoad && msg.sender !== state.user.uid) {
                                 playSound();
                             }
@@ -519,8 +564,6 @@
                 div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} animate-enter group`;
                 
                 let inner = '';
-                
-                // --- Message Styles ---
                 const bubbleBase = isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-bl-none';
                 const shadow = isMe ? 'shadow-blue-500/20' : 'shadow-sm';
 
@@ -590,13 +633,15 @@
                     try { 
                         await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
                         await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
-                        requestNotifyPermission(); // Ask for permission after login
+                        // Auto-ask for notifications after login
+                        setTimeout(Actions.enableNotifications, 2000);
                     } catch(e) { 
                         window.showToast("Login Failed", "error"); 
                         console.error(e); 
                         if(btn) { btn.disabled = false; btn.querySelector('span').innerText = 'Continue with Google'; }
                     } 
                 },
+                enableNotifications, // Expose notification handler
                 logout: () => { if(confirm("Log out?")) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
                 openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
