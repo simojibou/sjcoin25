@@ -3,41 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SJ Delivery - Pro Panel</title>
+    <title>SJ Delivery - Ultimate Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    // نحذف أي عامل خدمة لا يعمل على النطاق الصحيح
-                    if (registration.scope.includes("sjcoin25") === false) {
-                        registration.unregister();
-                        console.log("🧹 Cleaned Incorrect Service Worker");
-                    }
-                }
-            });
-        }
-    </script>
-
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
+      
+      // دالة التهيئة الآمنة (تمنع ظهور الأخطاء الحمراء)
       OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
-          safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
-          notifyButton: { enable: false },
-          allowLocalhostAsSecureOrigin: true,
-          
-          // 👇 الإعداد الصحيح 100% لمجلد فرعي
-          serviceWorkerPath: './OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/sjcoin25/' }
-        });
-        console.log("✅ OneSignal Ready");
+        try {
+            await OneSignal.init({
+              appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
+              safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
+              notifyButton: { enable: false },
+              allowLocalhostAsSecureOrigin: true,
+              
+              // 👇 الإعدادات الجبارة للمسار 👇
+              serviceWorkerPath: './OneSignalSDKWorker.js', 
+              serviceWorkerParam: { scope: '/sjcoin25/' },
+              path: '/sjcoin25/' 
+            });
+            console.log("🚀 OneSignal Connected Successfully!");
+        } catch (error) {
+            console.warn("⚠️ OneSignal Initialization waiting...", error);
+        }
       });
     </script>
 
@@ -132,16 +125,17 @@
             }, 4000);
         };
 
-        // --- 🔔 OneSignal Logic (Fixed) ---
+        // --- 🔔 OneSignal Logic (Smart Trigger) ---
         window.promptOneSignal = () => {
             if(window.OneSignalDeferred){
                 window.OneSignalDeferred.push(async function(OneSignal) {
+                    console.log("🔔 Attempting to subscribe...");
                     try {
-                       await OneSignal.Slidedown.promptPush();
+                       // الطريقة المزدوجة لضمان ظهور النافذة
+                       await OneSignal.Slidedown.promptPush({ force: true });
                     } catch(e) {
-                       console.error("Push prompt error:", e);
-                       // Fallback manual register
-                       OneSignal.Register.create();
+                       console.log("⚠️ Standard prompt failed, trying alternative...");
+                       OneSignal.Register.create(); // محاولة بديلة
                     }
                 });
             } else {
