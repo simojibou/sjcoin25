@@ -13,10 +13,12 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    // Unregister everything to start fresh
-                    registration.unregister();
+                    // نحذف أي عامل خدمة لا يعمل على النطاق الصحيح
+                    if (registration.scope.includes("sjcoin25") === false) {
+                        registration.unregister();
+                        console.log("🧹 Cleaned Incorrect Service Worker");
+                    }
                 }
-                console.log("🧹 Service Worker Cache Cleared");
             });
         }
     </script>
@@ -31,13 +33,11 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true,
           
-          // 👇 THE FIX: strictly point to the folder /sjcoin25/
-          // This fixes the '404' and the 'SecurityError'
-          path: '/sjcoin25/', 
-          serviceWorkerPath: 'OneSignalSDKWorker.js', 
+          // 👇 الإعداد الصحيح 100% لمجلد فرعي
+          serviceWorkerPath: './OneSignalSDKWorker.js',
           serviceWorkerParam: { scope: '/sjcoin25/' }
         });
-        console.log("✅ OneSignal Configured for sjcoin25");
+        console.log("✅ OneSignal Ready");
       });
     </script>
 
