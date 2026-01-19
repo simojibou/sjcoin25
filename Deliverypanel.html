@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SJ Delivery - Final Stable</title>
+    <title>SJ Delivery - Final</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                // محاولة تسجيل العامل مع معالجة الأخطاء
-                navigator.serviceWorker.register('/sjcoin25/OneSignalSDKWorker.js', { scope: '/sjcoin25/' })
-                .then(r => console.log('✅ ServiceWorker Registered'))
-                .catch(e => console.warn('⚠️ ServiceWorker Warning (Ignore if OneSignal works):', e));
-            });
-        }
+        // هذا الكود يمسح أي تسجيلات خاطئة سابقة
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+                // إذا لم يكن النطاق هو النطاق الصحيح لمجلدنا، نحذفه
+                if (!registration.scope.includes('/sjcoin25/')) {
+                    registration.unregister();
+                }
+            }
+        });
     </script>
 
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -27,13 +28,26 @@
         await OneSignal.init({
           appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
           safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
-          notifyButton: { enable: false },
+          
+          // 👇 هذا الخيار يجعل الجرس الأحمر الخاص بـ OneSignal يظهر
+          // (مهم جداً للاختبار للتأكد من أنك مشترك فعلاً)
+          notifyButton: { enable: true }, 
+          
           allowLocalhostAsSecureOrigin: true,
+          
+          // إعدادات المسار (لا تغير شيئاً هنا)
           path: '/sjcoin25/',
           serviceWorkerPath: 'OneSignalSDKWorker.js',
           serviceWorkerParam: { scope: '/sjcoin25/' }
         });
-        console.log("🚀 OneSignal Fully Loaded");
+
+        // 👇 هذا الكود يجعل الإشعار يظهر حتى وأنت فاتح الموقع!
+        OneSignal.Notifications.addEventListener('foregroundWillDisplay', function(event) {
+            console.log("🔔 Notification received in foreground!", event);
+            // لا نمنع الإشعار، نتركه يظهر
+        });
+
+        console.log("✅ OneSignal Final Setup Ready");
       });
     </script>
 
@@ -71,6 +85,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); }
+        /* نخفي جرس OneSignal الأصلي ونعتمد على جرسنا */
+        #onesignal-bell-container { z-index: 9999 !important; }
     </style>
 </head>
 <body class="text-slate-200 h-screen flex items-center justify-center selection:bg-brand-500 selection:text-white">
@@ -130,8 +146,10 @@
             if(window.OneSignalDeferred){
                 window.OneSignalDeferred.push(async function(OneSignal) {
                     try {
+                       console.log("🔔 Requesting permission...");
                        await OneSignal.Slidedown.promptPush({ force: true });
                     } catch(e) {
+                       console.warn("Manual Prompt Failed, using Register:", e);
                        OneSignal.Register.create();
                     }
                 });
@@ -164,7 +182,10 @@
         onAuthStateChanged(auth, async (user) => {
             state.user = user;
             if(!user) { state.role = 'guest'; state.view = 'login'; render(); return; }
+            
+            // Link User on Login
             linkOneSignalUser(user.uid, user.email);
+
             if (AUTHORIZED_STAFF.includes(user.email.toLowerCase())) {
                 state.role = 'admin'; state.view = 'admin_list';
                 subscribeServices(); subscribeAdminStats();
