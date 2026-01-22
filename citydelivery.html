@@ -1,37 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+
     <title>SJ Delivery Premium</title>
-    
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
-    
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png"
+        href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png">
+
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
-          safari_web_id: "web.onesignal.auto.18f55e14-9585-4855-a0ee-ea6515e10e22",
-          notifyButton: { enable: false }, // سنستخدم زرنا الخاص
-          allowLocalhostAsSecureOrigin: true,
-          // نفس إعدادات المسار الصحيحة
-          path: '/sjcoin25/',
-          serviceWorkerPath: 'OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: '/sjcoin25/' }
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function (OneSignal) {
+            await OneSignal.init({
+                appId: "717b40db-52bf-45b1-8a6a-600ca9beedc0",
+                notifyButton: { enable: false },
+                serviceWorkerPath: 'OneSignalSDKWorker.js',
+                allowLocalhostAsSecureOrigin: true,
+            });
+
+            // إظهار الإشعار حتى لو التطبيق مفتوح
+            OneSignal.Notifications.addEventListener('foregroundWillDisplay', function (event) {
+                console.log("🔔 Notification received in foreground", event);
+            });
         });
-        console.log("✅ OneSignal User App Ready");
-      });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { 
+        tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -59,60 +65,106 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Modern Reset */
-        body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; user-select: none; }
-        .scroll-smooth { -webkit-overflow-scrolling: touch; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input, textarea { font-size: 16px !important; touch-action: manipulation; }
-        .toast-enter { animation: enter 0.4s forwards; }
-        .toast-exit { animation: leave 0.3s forwards; }
-        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .dark .glass { background: rgba(0, 0, 0, 0.85); }
+        body {
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+            user-select: none;
+        }
+
+        .scroll-smooth {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        input,
+        textarea {
+            font-size: 16px !important;
+            touch-action: manipulation;
+        }
+
+        .toast-enter {
+            animation: enter 0.4s forwards;
+        }
+
+        .toast-exit {
+            animation: leave 0.3s forwards;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .dark .glass {
+            background: rgba(0, 0, 0, 0.85);
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 h-screen-dvh w-full overflow-hidden flex justify-center selection:bg-blue-500 selection:text-white">
 
-    <div id="recovery-screen" class="fixed inset-0 z-[9999] bg-black text-white hidden flex-col items-center justify-center p-6 text-center">
-        <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4 text-red-500 animate-pulse"><i data-lucide="alert-triangle" class="w-8 h-8"></i></div>
+<body
+    class="bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 h-screen-dvh w-full overflow-hidden flex justify-center selection:bg-blue-500 selection:text-white">
+
+    <div id="recovery-screen"
+        class="fixed inset-0 z-[9999] bg-black text-white hidden flex-col items-center justify-center p-6 text-center">
+        <div
+            class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4 text-red-500 animate-pulse">
+            <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+        </div>
         <h2 class="text-xl font-bold mb-2">App Paused</h2>
-        <p id="error-detail" class="text-xs text-gray-400 font-mono mb-6 max-w-xs mx-auto bg-gray-900 p-3 rounded-lg break-all"></p>
-        <button onclick="window.location.reload()" class="px-8 py-3 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform">Restart App</button>
+        <p id="error-detail"
+            class="text-xs text-gray-400 font-mono mb-6 max-w-xs mx-auto bg-gray-900 p-3 rounded-lg break-all"></p>
+        <button onclick="window.location.reload()"
+            class="px-8 py-3 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform">Restart
+            App</button>
     </div>
 
-    <div id="app" class="w-full max-w-md h-full bg-white dark:bg-gray-950 shadow-2xl relative flex flex-col overflow-hidden sm:rounded-none md:rounded-3xl md:h-[95dvh] md:my-auto md:border md:border-gray-200 dark:md:border-gray-800 transition-colors duration-300">
+    <div id="app"
+        class="w-full max-w-md h-full bg-white dark:bg-gray-950 shadow-2xl relative flex flex-col overflow-hidden sm:rounded-none md:rounded-3xl md:h-[95dvh] md:my-auto md:border md:border-gray-200 dark:md:border-gray-800 transition-colors duration-300">
         <div class="flex h-full items-center justify-center bg-white dark:bg-black">
             <div class="flex flex-col items-center gap-4">
                 <div class="relative">
                     <div class="w-12 h-12 rounded-full border-4 border-blue-100 dark:border-gray-800"></div>
-                    <div class="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+                    <div
+                        class="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin">
+                    </div>
                 </div>
                 <p class="text-xs font-bold text-gray-400 tracking-[0.2em] animate-pulse">INITIALIZING</p>
             </div>
         </div>
     </div>
 
-    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none"></div>
+    <div id="toast-container"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%] pointer-events-none">
+    </div>
 
     <script>
         // --- 🛡️ Crash Guard 🛡️ ---
-        window.onerror = function(msg, url, line, col, error) {
+        window.onerror = function (msg, url, line, col, error) {
             console.error("Crash Guard Caught:", error);
             const screen = document.getElementById('recovery-screen');
             const detail = document.getElementById('error-detail');
-            if(screen && detail) {
+            if (screen && detail) {
                 if (msg.includes('Syntax') || msg.includes('Module')) {
                     screen.classList.replace('hidden', 'flex');
                     detail.textContent = `${msg} (Line ${line})`;
                 } else {
-                    if(window.showToast) window.showToast("Minor Error: " + msg, "error");
+                    if (window.showToast) window.showToast("Minor Error: " + msg, "error");
                 }
             }
-            return true; 
+            return true;
         };
 
-        (function() { 
-            
+        (function () {
+
             // --- 0. Checks ---
             if (typeof firebase === 'undefined') {
                 document.getElementById('app').innerHTML = `<div class="flex h-full items-center justify-center text-center p-6"><div class="text-red-500 font-bold">Failed to load Firebase.<br><span class="text-sm font-normal text-gray-400">Please check your internet connection.</span></div></div>`;
@@ -130,32 +182,190 @@
                 appId: "1:426335553508:web:248f76772f6f78419ca9f1"
             };
 
+            // --- 🔑 CLIENT API KEYS ---
+            const ONESIGNAL_APP_ID = "717b40db-52bf-45b1-8a6a-600ca9beedc0";
+            const ONESIGNAL_API_KEY = "os_v2_app_of5ubw2sx5c3dctkmagktpxnya66ns2krrju5yuh7b3g2a2yqrfda43dxlxnlg2vuzfcucojxrfc3irjbrprnhnikualrhev6kzjtoa";
+
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth();
             const db = firebase.firestore();
 
             // --- 🔊 Sound ---
-            const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3"; 
+            const SOUND_URL = "https://cdn.freesound.org/previews/235/235911_2391840-lq.mp3";
             const playSound = () => {
                 const a = new Audio(SOUND_URL);
                 a.volume = 0.5;
                 a.play().catch(e => console.log("Audio play blocked", e));
             };
 
-            // --- 🔔 OneSignal Notification Logic (Unified) ---
+            // --- 🔔 OneSignal Notification Action ---
             const enableNotifications = async () => {
-                if(window.OneSignalDeferred) {
-                    window.OneSignalDeferred.push(async function(OneSignal) {
+                if (window.OneSignalDeferred) {
+                    window.OneSignalDeferred.push(async function (OneSignal) {
                         try {
-                            console.log("🔔 Requesting User Permission...");
+                            console.log("🔔 Asking for permission...");
                             await OneSignal.Slidedown.promptPush({ force: true });
-                        } catch(e) {
+                        } catch (e) {
                             console.warn("Manual Prompt Failed, trying register:", e);
                             OneSignal.Register.create();
                         }
                     });
                 } else {
-                    window.showToast("Notifications loading...", "info");
+                    window.showToast(t('loadingNotifications'), "info");
+                }
+            };
+
+            // --- 📨 SEND PUSH (Client to Provider) ---
+            const sendPush = async (message) => {
+                const options = {
+                    method: 'POST',
+                    headers: { 'accept': 'application/json', 'Authorization': `Basic ${ONESIGNAL_API_KEY}`, 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        app_id: ONESIGNAL_APP_ID,
+                        included_segments: ["Total Subscriptions"], // يرسل للتاجر
+                        contents: { en: message },
+                        headings: { en: t('newRequest') + " 📦" }
+                    })
+                };
+                try { await fetch('https://onesignal.com/api/v1/notifications', options); } catch (e) { }
+            };
+
+            // --- 🌍 Translations ---
+            const translations = {
+                en: {
+                    loginGoogle: "Continue with Google",
+                    secureLogin: "Secure Login • Firebase",
+                    welcomeTitle: "Your favorite local services, delivered instantly.",
+                    hello: "Hello",
+                    guest: "Guest",
+                    findServices: "Find Services",
+                    location: "Location",
+                    whereAreYou: "Where are you?",
+                    selectCity: "Select your city to find services.",
+                    myLists: "My Lists",
+                    notifications: "Notifications",
+                    active: "Active",
+                    history: "History",
+                    noServices: "No services found in this area.",
+                    noChats: "No active orders yet.",
+                    startOrder: "Start a new order to see it here.",
+                    typeMessage: "Type a message...",
+                    sendOrder: "Send Order",
+                    newItem: "Item name (e.g., Pizza)",
+                    addToList: "Add to List",
+                    rateService: "Rate Service",
+                    howWasExperience: "How was your experience with",
+                    submitReview: "Submit Review",
+                    submitting: "Submitting...",
+                    thankYou: "Thank you for your feedback!",
+                    geoNotSupported: "Geo not supported",
+                    locationDenied: "Location denied",
+                    failedToSend: "Failed to send",
+                    bill: "Bill",
+                    total: "Total",
+                    deliveryFee: "Delivery Fee",
+                    orderTotal: "Order Total",
+                    delivered: "Delivered",
+                    pending: "Pending",
+                    tapMap: "Tap to open map",
+                    orderLabel: "ORDER",
+                    items: "Items",
+                    qty: "Qty",
+                    logOut: "Log out?",
+                    loginFailed: "Login Failed",
+                    signingIn: "Signing in...",
+                    newRequest: "New request from",
+                    loadingNotifications: "Notifications loading..."
+                },
+                fr: {
+                    loginGoogle: "Continuer avec Google",
+                    secureLogin: "Connexion sécurisée • Firebase",
+                    welcomeTitle: "Vos services locaux préférés, livrés instantanément.",
+                    hello: "Bonjour",
+                    guest: "Invité",
+                    findServices: "Trouver des services",
+                    location: "Localisation",
+                    whereAreYou: "Où êtes-vous ?",
+                    selectCity: "Sélectionnez votre ville.",
+                    myLists: "Mes Listes",
+                    notifications: "Notifications",
+                    active: "Actif",
+                    history: "Historique",
+                    noServices: "Aucun service trouvé dans cette zone.",
+                    noChats: "Aucune commande active.",
+                    startOrder: "Commencez une nouvelle commande.",
+                    typeMessage: "Écrivez un message...",
+                    sendOrder: "Envoyer la commande",
+                    newItem: "Nom de l'article (ex: Pizza)",
+                    addToList: "Ajouter",
+                    rateService: "Noter le service",
+                    howWasExperience: "Comment était votre expérience avec",
+                    submitReview: "Envoyer l'avis",
+                    submitting: "Envoi...",
+                    thankYou: "Merci pour votre avis !",
+                    geoNotSupported: "Géolocalisation non supportée",
+                    locationDenied: "Localisation refusée",
+                    failedToSend: "Envoi échoué",
+                    bill: "Facture",
+                    total: "Total",
+                    deliveryFee: "Frais de livraison",
+                    orderTotal: "Total de la commande",
+                    delivered: "Livré",
+                    pending: "En attente",
+                    tapMap: "Appuyez pour ouvrir la carte",
+                    orderLabel: "COMMANDE",
+                    items: "Articles",
+                    qty: "Qté",
+                    logOut: "Se déconnecter ?",
+                    loginFailed: "Échec de connexion",
+                    signingIn: "Connexion...",
+                    newRequest: "Nouvelle demande de",
+                    loadingNotifications: "Chargement des notifications..."
+                },
+                ar: {
+                    loginGoogle: "تواصل مع جوجل",
+                    secureLogin: "دخول آمن • Firebase",
+                    welcomeTitle: "خدماتك المحلية المفضلة، تصلك فوراً.",
+                    hello: "مرحباً",
+                    guest: "زائر",
+                    findServices: "بحث عن خدمات",
+                    location: "الموقع",
+                    whereAreYou: "أين أنت؟",
+                    selectCity: "اختر مدينتك للعثور على الخدمات.",
+                    myLists: "قوائمي",
+                    notifications: "الإشعارات",
+                    active: "نشط",
+                    history: "السجل",
+                    noServices: "لا توجد خدمات في هذه المنطقة.",
+                    noChats: "لا توجد طلبات نشطة.",
+                    startOrder: "ابدأ طلباً جديداً ليظهر هنا.",
+                    typeMessage: "اكتب رسالة...",
+                    sendOrder: "إرسال الطلب",
+                    newItem: "اسم الغرض (مثلاً: بيتزا)",
+                    addToList: "إضافة للقائمة",
+                    rateService: "قيم الخدمة",
+                    howWasExperience: "كيف كانت تجربتك مع",
+                    submitReview: "إرسال التقييم",
+                    submitting: "جاري الإرسال...",
+                    thankYou: "شكراً على تقييمك!",
+                    geoNotSupported: "الموقع الجغرافي غير مدعوم",
+                    locationDenied: "تم رفض الوصول للموقع",
+                    failedToSend: "فشل الإرسال",
+                    bill: "فاتورة",
+                    total: "المجموع",
+                    deliveryFee: "رسوم التوصيل",
+                    orderTotal: "إجمالي الطلب",
+                    delivered: "تم التوصيل",
+                    pending: "قيد الانتظار",
+                    tapMap: "اضغط لفتح الخريطة",
+                    orderLabel: "طلب",
+                    items: "عناصر",
+                    qty: "الكمية",
+                    logOut: "تسجيل الخروج؟",
+                    loginFailed: "فشل تسجيل الدخول",
+                    signingIn: "جاري الدخول...",
+                    newRequest: "طلب جديد من",
+                    loadingNotifications: "جاري تحميل الإشعارات..."
                 }
             };
 
@@ -170,52 +380,64 @@
                 draftOrder: [],
                 currentDraftImage: null,
                 darkMode: localStorage.getItem('darkMode') === 'true',
+                language: localStorage.getItem('language') || 'en',
                 listeners: { services: null, chatsList: null, activeChat: null },
-                isSending: false
+                isSending: false,
+                currentRating: 0
             };
 
-            if(state.darkMode) document.documentElement.classList.add('dark');
+            function t(key) { return translations[state.language][key] || key; }
+
+            // Apply Language Direction
+            if (state.language === 'ar') {
+                document.documentElement.dir = 'rtl';
+                document.documentElement.lang = 'ar';
+            } else {
+                document.documentElement.dir = 'ltr';
+                document.documentElement.lang = state.language;
+            }
+
+            if (state.darkMode) document.documentElement.classList.add('dark');
 
             // --- 3. High Performance Utilities ---
-            
+
             window.showToast = (msg, type = 'info') => {
                 const container = document.getElementById('toast-container');
-                if(!container) return;
+                if (!container) return;
                 const el = document.createElement('div');
                 const bg = type === 'error' ? 'bg-red-500/90' : (type === 'success' ? 'bg-emerald-500/90' : 'bg-gray-800/90');
                 const icon = type === 'error' ? 'alert-circle' : (type === 'success' ? 'check-circle-2' : 'info');
                 el.className = `${bg} backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl shadow-black/5 text-sm font-medium flex items-center gap-3 toast-enter pointer-events-auto min-w-[200px] justify-center`;
                 el.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${msg}</span>`;
                 container.appendChild(el);
-                if(window.lucide) window.lucide.createIcons();
+                if (window.lucide) window.lucide.createIcons();
                 setTimeout(() => { el.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => el.remove(), 300); }, 2500);
             };
 
-            const refreshIcons = () => { if(window.lucide) window.lucide.createIcons(); };
-            
+            const refreshIcons = () => { if (window.lucide) window.lucide.createIcons(); };
+
             const formatTime = (ts) => {
-                if (!ts) return ''; 
-                try { return ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } 
-                catch(e) { return ''; }
+                if (!ts) return '';
+                try { return ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+                catch (e) { return ''; }
             };
-            
-            // ✅ Fixed Syntax Error Here
+
             const escapeHtml = (str) => {
-                if(!str) return '';
+                if (!str) return '';
                 return String(str)
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;");
+                    .replace(/&/g, "&")
+                    .replace(/</g, "<")
+                    .replace(/>/g, ">")
+                    .replace(/"/g, "");
             };
 
             const safeVal = (v) => (v === undefined ? null : v);
 
             // --- 4. Beautiful Views (Templates) ---
-            
+
             const Views = {
                 loading: () => ``,
-                
+
                 login: () => `
                     <div class="flex flex-col h-full relative overflow-hidden bg-white dark:bg-black">
                         <div class="absolute top-[-20%] right-[-20%] w-96 h-96 bg-blue-500/20 rounded-full blur-[80px]"></div>
@@ -226,34 +448,34 @@
                                 <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" class="w-full h-full object-contain relative z-10 drop-shadow-2xl">
                             </div>
                             <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">SJ Delivery</h1>
-                            <p class="text-gray-500 dark:text-gray-400 mb-12 text-center max-w-[250px] leading-relaxed">Your favorite local services, delivered instantly.</p>
+                            <p class="text-gray-500 dark:text-gray-400 mb-12 text-center max-w-[250px] leading-relaxed">${t('welcomeTitle')}</p>
                             <button id="login-btn" onclick="Actions.loginGoogle()" class="w-full max-w-xs group relative overflow-hidden bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl p-4 font-bold shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:scale-100">
                                 <div class="relative z-10 flex items-center justify-center gap-3">
                                     <i data-lucide="mail" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
-                                    <span>Continue with Google</span>
+                                    <span>${t('loginGoogle')}</span>
                                 </div>
                             </button>
-                            <p class="mt-8 text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Secure Login • Firebase</p>
+                            <p class="mt-8 text-[10px] text-gray-400 uppercase tracking-widest font-semibold">${t('secureLogin')}</p>
                         </div>
                     </div>`,
 
                 header: (title, showBack) => {
                     const user = state.user;
-                    let displayName = "Guest";
+                    let displayName = t('guest');
                     let avatar = `https://ui-avatars.com/api/?name=G&background=random`;
-                    
+
                     if (user) {
-                        displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+                        displayName = user.displayName || (user.email ? user.email.split('@')[0] : t('guest'));
                         avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
                     }
-                    
+
                     const leftContent = (!showBack && user) ? `
-                        <div class="flex items-center gap-3">
-                            <div class="relative group cursor-pointer">
+                        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='duserprofile.html'">
+                            <div class="relative group">
                                 <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white dark:border-black relative z-10 object-cover shadow-sm">
                             </div>
                             <div class="flex flex-col justify-center">
-                                <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Hello,</span>
+                                <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">${t('hello')},</span>
                                 <span class="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px]">${escapeHtml(displayName.split(' ')[0])}</span>
                             </div>
                         </div>` : `
@@ -266,13 +488,14 @@
                         <div class="h-16 glass sticky top-0 z-50 px-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/50 shrink-0">
                             ${leftContent}
                             <div class="flex items-center gap-1">
-                                <button onclick="Actions.enableNotifications()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-blue-500">
+                                <button onclick="Actions.enableNotifications()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-blue-500 animate-pulse">
                                     <i data-lucide="bell" class="w-5 h-5"></i>
                                 </button>
                                 <button onclick="Actions.toggleTheme()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <i id="theme-icon" data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5 text-gray-600 dark:text-gray-300"></i>
                                 </button>
-                                ${!showBack ? `<button onclick="Actions.logout()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}
+                            ${!showBack ? `<button onclick="Actions.logout()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>` : ''}
+                                ${showBack && state.currentView === 'chat' ? `<button onclick="Actions.toggleRating(true)" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-yellow-500 transition-colors animate-pulse"><i data-lucide="star" class="w-5 h-5"></i></button>` : ''}
                             </div>
                         </div>`;
                 },
@@ -298,7 +521,7 @@
                                 <div class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                                     <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors"></i>
                                 </div>
-                            </button>`).join('') : 
+                            </button>`).join('') :
                             `<div class="flex flex-col items-center justify-center py-20 opacity-50">
                                 <i data-lucide="map" class="w-12 h-12 mb-2 text-gray-400"></i>
                                 <span class="text-sm">Loading cities...</span>
@@ -318,9 +541,9 @@
                         </div>
                         <div class="space-y-3">
                         ${list.map(s => {
-                            const chat = Object.values(state.chats).find(c => c.serviceId === s.id);
-                            const hasNewMsg = chat && chat.lastUpdated && ((Date.now() - chat.lastUpdated.toMillis()) < 3600000); 
-                            return `
+                        const chat = Object.values(state.chats).find(c => c.serviceId === s.id);
+                        const hasNewMsg = chat && chat.lastUpdated && ((Date.now() - chat.lastUpdated.toMillis()) < 3600000);
+                        return `
                             <button onclick="Actions.openService('${s.id}')" class="w-full bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 flex items-center gap-4 text-left transition-all active:scale-[0.98] animate-enter hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none group relative overflow-hidden">
                                 <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative z-10">
@@ -363,11 +586,11 @@
                         </div>
                         
                         <div class="flex-1 bg-gray-100 dark:bg-gray-800 rounded-3xl px-4 py-3 flex items-center">
-                            <input id="chat-input" type="text" autocomplete="off" placeholder="Type a message..." class="w-full bg-transparent border-none outline-none text-sm dark:text-white placeholder-gray-400">
+                            <input id="chat-input" type="text" autocomplete="off" placeholder="${t('typeMessage')}" class="w-full bg-transparent border-none outline-none text-sm dark:text-white placeholder-gray-400">
                         </div>
 
                         <button type="submit" id="send-btn" class="w-11 h-11 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-90 transition-all pb-1 disabled:opacity-50 disabled:active:scale-100">
-                            <i data-lucide="send" class="w-5 h-5 ml-0.5"></i>
+                            <i data-lucide="send" class="w-5 h-5 ml-0.5 rtl-flip"></i>
                         </button>
                     </form>
 
@@ -375,7 +598,7 @@
                         <div class="w-full bg-white dark:bg-gray-950 rounded-t-[2.5rem] shadow-2xl h-[85%] flex flex-col ring-1 ring-white/10 overflow-hidden">
                             <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-950 sticky top-0 z-10">
                                 <div>
-                                    <h2 class="font-black text-xl dark:text-white">New Order</h2>
+                                    <h2 class="font-black text-xl dark:text-white">${t('sendOrder')}</h2>
                                     <p class="text-xs text-gray-500 font-bold tracking-wide mt-1" id="item-counter">0/50 ITEMS</p>
                                 </div>
                                 <button onclick="Actions.toggleOrderModal(false)" class="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center hover:rotate-90 transition-transform text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -385,7 +608,7 @@
                             
                             <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 space-y-3 pb-safe-b">
                                 <div class="flex gap-3">
-                                    <input id="new-item-name" type="text" placeholder="Item name (e.g., Pizza)" class="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-medium">
+                                    <input id="new-item-name" type="text" placeholder="${t('newItem')}" class="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-medium">
                                     <input id="new-item-qty" type="number" value="1" min="1" class="w-20 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-2xl px-2 py-4 text-sm text-center dark:text-white font-bold">
                                 </div>
                                 <div class="flex gap-3">
@@ -394,13 +617,33 @@
                                         <input type="file" id="new-item-img-file" accept="image/*" class="hidden" onchange="Actions.handleImageSelect(this)">
                                     </label>
                                     <button onclick="Actions.addDraftItem()" class="flex-1 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center">
-                                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Add to List
+                                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i> ${t('addToList')}
                                     </button>
                                 </div>
                                 <button onclick="Actions.submitOrder()" id="submit-order-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                                    <span>Send Order</span><i data-lucide="arrow-right" class="w-5 h-5"></i>
+                                    <span>${t('sendOrder')}</span><i data-lucide="arrow-right" class="w-5 h-5 rtl-flip"></i>
                                 </button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- ⭐ RATING MODAL ⭐ -->
+                    <div id="rating-modal" class="hidden fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-enter">
+                        <div class="bg-white dark:bg-gray-900 w-full max-w-sm rounded-[2rem] p-6 text-center shadow-2xl relative border border-gray-100 dark:border-gray-800">
+                             <button onclick="Actions.toggleRating(false)" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                             
+                             <div class="w-16 h-16 bg-yellow-400/20 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-500">
+                                <i data-lucide="star" class="w-8 h-8 fill-current"></i>
+                             </div>
+                             
+                             <h3 class="text-xl font-black dark:text-white mb-2">Rate Service</h3>
+                             <p class="text-sm text-gray-500 mb-6">How was your experience with ${state.activeService.name}?</p>
+                             
+                             <div class="flex justify-center gap-2 mb-8">
+                                ${[1, 2, 3, 4, 5].map(i => `<button onclick="Actions.setRating(${i})" class="star-btn w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-300 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all active:scale-90" data-value="${i}"><i data-lucide="star" class="w-5 h-5 fill-current"></i></button>`).join('')}
+                             </div>
+                             
+                             <button id="submit-rate-btn" onclick="Actions.submitRating()" class="w-full py-4 bg-gray-900 dark:bg-white dark:text-black text-white font-bold rounded-2xl opacity-50 cursor-not-allowed transition-all" disabled>Submit Review</button>
                         </div>
                     </div>`
             };
@@ -410,13 +653,13 @@
                 if (state.currentView === viewName && viewName !== 'loading') return;
                 state.currentView = viewName;
                 const appEl = document.getElementById('app');
-                
-                if (state.listeners.activeChat && viewName !== 'chat') { 
-                    state.listeners.activeChat(); 
-                    state.listeners.activeChat = null; 
+
+                if (state.listeners.activeChat && viewName !== 'chat') {
+                    state.listeners.activeChat();
+                    state.listeners.activeChat = null;
                 }
 
-                switch(viewName) {
+                switch (viewName) {
                     case 'loading': appEl.innerHTML = Views.loading(); break;
                     case 'login': appEl.innerHTML = Views.login(); break;
                     case 'cities': appEl.innerHTML = Views.cities(); break;
@@ -427,38 +670,38 @@
             }
 
             // --- 6. Event Logic ---
-            
+
             auth.onAuthStateChanged((user) => {
                 state.user = user;
                 if (user) {
-                    // Link OneSignal User
-                    if(window.OneSignalDeferred) {
-                        window.OneSignalDeferred.push(function(OneSignal) {
+                    // OneSignal Identity Logic
+                    if (window.OneSignalDeferred) {
+                        window.OneSignalDeferred.push(function (OneSignal) {
                             OneSignal.login(user.uid);
-                            if(user.email) OneSignal.User.addEmail(user.email);
+                            if (user.email) OneSignal.User.addEmail(user.email);
                         });
                     }
 
-                    if(!state.listeners.services) subscribeServices();
-                    if(!state.listeners.chatsList) subscribeChatsList();
-                    if(state.currentView === 'loading' || state.currentView === 'login') {
+                    if (!state.listeners.services) subscribeServices();
+                    if (!state.listeners.chatsList) subscribeChatsList();
+                    if (state.currentView === 'loading' || state.currentView === 'login') {
                         setView('cities');
                     }
                 } else {
-                    if(window.OneSignalDeferred) window.OneSignalDeferred.push(OneSignal => OneSignal.logout());
+                    if (window.OneSignalDeferred) window.OneSignalDeferred.push(OneSignal => OneSignal.logout());
                     unsubscribeAll();
-                    if(state.currentView !== 'login') setView('login');
+                    if (state.currentView !== 'login') setView('login');
                 }
             });
 
             function subscribeServices() {
                 state.listeners.services = db.collection('delivery_services').onSnapshot((snap) => {
-                    state.services = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    state.services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     if (state.currentView === 'cities' || state.currentView === 'services') {
-                         const appEl = document.getElementById('app');
-                         if(state.currentView === 'cities') appEl.innerHTML = Views.cities();
-                         if(state.currentView === 'services') appEl.innerHTML = Views.services();
-                         refreshIcons();
+                        const appEl = document.getElementById('app');
+                        if (state.currentView === 'cities') appEl.innerHTML = Views.cities();
+                        if (state.currentView === 'services') appEl.innerHTML = Views.services();
+                        refreshIcons();
                     }
                 }, (e) => console.log("Offline mode or sync error"));
             }
@@ -469,22 +712,22 @@
 
                 state.listeners.chatsList = db.collection('delivery_chats').where('userId', '==', state.user.uid).onSnapshot((snap) => {
                     const map = {};
-                    
+
                     snap.docChanges().forEach(change => {
                         const data = change.doc.data();
-                        
-                        // LOCAL SYSTEM NOTIFICATION (Backup if OneSignal fails or for foreground)
+
+                        // SYSTEM NOTIFICATION (For when app is open)
                         if (!isFirstRun && change.type === 'modified') {
-                            if (!snap.metadata.hasPendingWrites) { 
+                            if (!snap.metadata.hasPendingWrites) {
                                 const isActiveAndOpen = state.currentView === 'chat' && state.activeService && state.activeService.id === data.serviceId;
-                                
+
                                 if (!isActiveAndOpen || document.hidden) {
                                     // Try native notification as backup
-                                    if(Notification.permission === "granted") {
-                                       new Notification(`New Message: ${data.serviceName}`, { 
-                                          body: data.lastMessage, 
-                                          icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png" 
-                                       });
+                                    if (Notification.permission === "granted") {
+                                        new Notification(`Update: ${data.serviceName}`, {
+                                            body: data.lastMessage,
+                                            icon: "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/shared-0-sheet4.png"
+                                        });
                                     }
                                     playSound();
                                 }
@@ -492,21 +735,21 @@
                         }
                     });
 
-                    snap.forEach(d => map[d.data().serviceId] = {id: d.id, ...d.data()});
+                    snap.forEach(d => map[d.data().serviceId] = { id: d.id, ...d.data() });
                     state.chats = map;
-                    
-                    if(state.currentView === 'services') {
-                         document.getElementById('app').innerHTML = Views.services();
-                         refreshIcons();
+
+                    if (state.currentView === 'services') {
+                        document.getElementById('app').innerHTML = Views.services();
+                        refreshIcons();
                     }
                     isFirstRun = false;
                 });
             }
 
             function unsubscribeAll() {
-                if(state.listeners.services) state.listeners.services();
-                if(state.listeners.chatsList) state.listeners.chatsList();
-                if(state.listeners.activeChat) state.listeners.activeChat();
+                if (state.listeners.services) state.listeners.services();
+                if (state.listeners.chatsList) state.listeners.chatsList();
+                if (state.listeners.activeChat) state.listeners.activeChat();
                 state.listeners = { services: null, chatsList: null, activeChat: null };
             }
 
@@ -518,10 +761,10 @@
 
                 state.listeners.activeChat = db.collection('delivery_chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot((snapshot) => {
                     let shouldScroll = false;
-                    
+
                     if (snapshot.empty) {
                         container.innerHTML = Views.emptyChat();
-                    } else if(container.querySelector('.empty-chat-placeholder')) {
+                    } else if (container.querySelector('.empty-chat-placeholder')) {
                         container.innerHTML = '';
                     }
 
@@ -536,7 +779,7 @@
                         }
                     });
 
-                    if(shouldScroll) { refreshIcons(); scrollToBottom(); }
+                    if (shouldScroll) { refreshIcons(); scrollToBottom(); }
                     isInitialLoad = false;
                 });
             }
@@ -547,16 +790,17 @@
                 const time = formatTime(msg.timestamp);
                 const div = document.createElement('div');
                 div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} animate-enter group`;
-                
+
                 let inner = '';
                 const bubbleBase = isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-bl-none';
                 const shadow = isMe ? 'shadow-blue-500/20' : 'shadow-sm';
 
-                if(msg.type === 'text') {
-                    inner = `<div class="max-w-[80%] px-5 py-3 rounded-2xl ${bubbleBase} shadow-lg ${shadow} text-sm leading-relaxed break-words">${escapeHtml(msg.text)}</div>`;
-                } 
+                if (msg.type === 'text') {
+                    // ✅ FIXED LAYOUT HERE
+                    inner = `<div class="w-fit max-w-[75vw] px-5 py-3 rounded-2xl ${bubbleBase} shadow-lg ${shadow} text-sm leading-relaxed break-words">${escapeHtml(msg.text)}</div>`;
+                }
                 else if (msg.type === 'location') {
-                    // ✅ FIXED MAP URL SYNTAX
+                    // FIXED MAP URL
                     inner = `
                     <a href="https://www.google.com/maps/search/?api=1&query=${msg.location.lat},${msg.location.lng}" target="_blank" class="block w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md hover:opacity-95 transition-opacity">
                         <div class="h-28 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
@@ -564,7 +808,7 @@
                             <div class="w-12 h-12 bg-white dark:bg-black rounded-full flex items-center justify-center shadow-lg text-red-500 animate-bounce"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
                         </div>
                         <div class="p-3 flex justify-between items-center">
-                            <div><div class="text-xs font-bold dark:text-white">Shared Location</div><div class="text-[10px] text-gray-400">Tap to open map</div></div>
+                            <div><div class="text-xs font-bold dark:text-white">${t('location')}</div><div class="text-[10px] text-gray-400">${t('tapMap')}</div></div>
                             <i data-lucide="external-link" class="w-4 h-4 text-gray-400"></i>
                         </div>
                     </a>`;
@@ -574,8 +818,8 @@
                     inner = `
                     <div class="w-64 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-md">
                         <div class="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-700 p-3 flex justify-between items-center text-white">
-                            <div class="flex items-center gap-2 text-xs font-bold tracking-wider"><i data-lucide="shopping-bag" class="w-4 h-4 text-blue-400"></i> ORDER</div>
-                            <span class="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold">${count} Items</span>
+                            <div class="flex items-center gap-2 text-xs font-bold tracking-wider"><i data-lucide="shopping-bag" class="w-4 h-4 text-blue-400"></i> ${t('orderLabel')}</div>
+                            <span class="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold">${count} ${t('items')}</span>
                         </div>
                         <div class="max-h-56 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/50 p-1">
                             ${(msg.items || []).map(i => `
@@ -583,7 +827,7 @@
                                     <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 bg-cover bg-center border border-gray-100 dark:border-gray-700 shrink-0" style="background-image: url('${i.image || ''}')"></div>
                                     <div class="min-w-0">
                                         <div class="text-xs font-bold dark:text-white truncate">${escapeHtml(i.name)}</div>
-                                        <div class="text-[10px] text-gray-500">Qty: ${i.qty}</div>
+                                        <div class="text-[10px] text-gray-500">${t('qty')}: ${i.qty}</div>
                                     </div>
                                 </div>
                             `).join('')}
@@ -595,10 +839,10 @@
                     inner = `
                     <div class="w-60 bg-white dark:bg-gray-900 rounded-2xl p-4 border border-blue-100 dark:border-gray-800 shadow-xl shadow-blue-500/5 relative overflow-hidden">
                         <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
-                        <div class="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest"><i data-lucide="receipt" class="w-4 h-4"></i> Receipt</div>
+                        <div class="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest"><i data-lucide="receipt" class="w-4 h-4"></i> ${t('bill')}</div>
                         <div class="flex justify-between items-end border-t border-dashed border-gray-200 dark:border-gray-700 pt-3">
-                            <span class="text-xs font-medium text-gray-500">Total</span>
-                            <span class="text-2xl font-black text-gray-900 dark:text-white">$${total}</span>
+                            <span class="text-xs font-medium text-gray-500">${t('total')}</span>
+                            <span class="text-2xl font-black text-gray-900 dark:text-white">${total} DH</span>
                         </div>
                     </div>`;
                 }
@@ -613,68 +857,68 @@
 
             // --- 8. Actions (Public) ---
             window.Actions = {
-                loginGoogle: async () => { 
+                loginGoogle: async () => {
                     const btn = document.getElementById('login-btn');
-                    if(btn) { btn.disabled = true; btn.querySelector('span').innerText = 'Signing in...'; }
-                    try { 
+                    if (btn) { btn.disabled = true; btn.querySelector('span').innerText = t('signingIn'); }
+                    try {
                         await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-                        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
+                        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
                         setTimeout(Actions.enableNotifications, 2000);
-                    } catch(e) { 
-                        window.showToast("Login Failed", "error"); 
-                        console.error(e); 
-                        if(btn) { btn.disabled = false; btn.querySelector('span').innerText = 'Continue with Google'; }
-                    } 
+                    } catch (e) {
+                        window.showToast(t('loginFailed'), "error");
+                        console.error(e);
+                        if (btn) { btn.disabled = false; btn.querySelector('span').innerText = t('loginGoogle'); }
+                    }
                 },
                 enableNotifications,
-                logout: () => { if(confirm("Log out?")) auth.signOut(); },
+                logout: () => { if (confirm(t('logOut'))) auth.signOut(); },
                 setCity: (c) => { state.selectedCity = c; setView('services'); },
-                openService: (id) => { state.activeService = state.services.find(s => s.id === id); if(state.activeService) setView('chat'); },
-                goBack: () => { 
-                    if(state.currentView === 'chat') setView('services'); 
-                    else if(state.currentView === 'services') setView('cities'); 
+                openService: (id) => { state.activeService = state.services.find(s => s.id === id); if (state.activeService) setView('chat'); },
+                goBack: () => {
+                    if (state.currentView === 'chat') setView('services');
+                    else if (state.currentView === 'services') setView('cities');
                 },
-                toggleTheme: () => { 
-                    state.darkMode = !state.darkMode; 
-                    localStorage.setItem('darkMode', state.darkMode); 
-                    document.documentElement.classList.toggle('dark'); 
-                    refreshIcons(); 
+                toggleTheme: () => {
+                    state.darkMode = !state.darkMode;
+                    localStorage.setItem('darkMode', state.darkMode);
+                    document.documentElement.classList.toggle('dark');
+                    refreshIcons();
                 },
-                
+
                 // ORDER LOGIC
                 toggleOrderModal: (show) => {
                     const el = document.getElementById('order-modal-overlay');
-                    if(show) { 
-                        state.draftOrder=[]; state.currentDraftImage=null; Actions.renderDraftList(); 
-                        const cam = document.getElementById('cam-icon'); if(cam) { cam.setAttribute('data-lucide', 'camera'); cam.className = "w-6 h-6 text-gray-400"; }
-                        el.classList.remove('hidden'); 
-                    } else { 
-                        el.classList.add('hidden'); 
+                    if (show) {
+                        state.draftOrder = []; state.currentDraftImage = null; Actions.renderDraftList();
+                        const cam = document.getElementById('cam-icon'); if (cam) { cam.setAttribute('data-lucide', 'camera'); cam.className = "w-6 h-6 text-gray-400"; }
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
                     }
                     refreshIcons();
                 },
                 handleImageSelect: (input) => {
-                    if(input.files[0]) {
-                        const icon=document.getElementById('cam-icon'); 
-                        icon.setAttribute('data-lucide','loader-2'); icon.classList.add('animate-spin', 'text-blue-500'); refreshIcons();
-                        
+                    if (input.files[0]) {
+                        const icon = document.getElementById('cam-icon');
+                        icon.setAttribute('data-lucide', 'loader-2'); icon.classList.add('animate-spin', 'text-blue-500'); refreshIcons();
+
                         const reader = new FileReader();
                         reader.onload = (e) => {
-                            const img = new Image(); img.src=e.target.result;
+                            const img = new Image(); img.src = e.target.result;
                             img.onload = () => {
                                 // Aggressive Compression for Firestore
-                                const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
-                                const MAX_SIZE = 300; 
-                                let w=img.width, h=img.height;
-                                if(w>h) { if(w>MAX_SIZE) { h*=MAX_SIZE/w; w=MAX_SIZE; } } 
-                                else { if(h>MAX_SIZE) { w*=MAX_SIZE/h; h=MAX_SIZE; } }
-                                cvs.width=w; cvs.height=h;
-                                ctx.drawImage(img,0,0,w,h);
+                                const cvs = document.createElement('canvas'); const ctx = cvs.getContext('2d');
+                                const MAX_SIZE = 300;
+                                let w = img.width, h = img.height;
+                                if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                                else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                                cvs.width = w; cvs.height = h;
+                                ctx.drawImage(img, 0, 0, w, h);
                                 state.currentDraftImage = cvs.toDataURL('image/jpeg', 0.5); // Low quality to save space
-                                
-                                icon.setAttribute('data-lucide','check-circle-2'); 
-                                icon.classList.remove('animate-spin', 'text-gray-400', 'text-blue-500'); 
-                                icon.classList.add('text-green-500'); 
+
+                                icon.setAttribute('data-lucide', 'check-circle-2');
+                                icon.classList.remove('animate-spin', 'text-gray-400', 'text-blue-500');
+                                icon.classList.add('text-green-500');
                                 refreshIcons();
                                 window.showToast("Image attached", "success");
                             }
@@ -683,25 +927,25 @@
                     }
                 },
                 addDraftItem: () => {
-                    const nameEl=document.getElementById('new-item-name'); const qtyEl=document.getElementById('new-item-qty');
-                    const name=nameEl.value.trim(); const qty=parseInt(qtyEl.value)||1;
-                    if(!name) return window.showToast("Enter item name","error");
-                    state.draftOrder.push({id:Date.now(), name, qty, image:state.currentDraftImage});
-                    
+                    const nameEl = document.getElementById('new-item-name'); const qtyEl = document.getElementById('new-item-qty');
+                    const name = nameEl.value.trim(); const qty = parseInt(qtyEl.value) || 1;
+                    if (!name) return window.showToast(t('newItem'), "error");
+                    state.draftOrder.push({ id: Date.now(), name, qty, image: state.currentDraftImage });
+
                     // Reset
-                    nameEl.value=''; qtyEl.value=1; state.currentDraftImage=null;
-                    const icon=document.getElementById('cam-icon'); 
-                    icon.setAttribute('data-lucide','camera'); icon.className="w-6 h-6 text-gray-400";
-                    document.getElementById('new-item-img-file').value='';
-                    
+                    nameEl.value = ''; qtyEl.value = 1; state.currentDraftImage = null;
+                    const icon = document.getElementById('cam-icon');
+                    icon.setAttribute('data-lucide', 'camera'); icon.className = "w-6 h-6 text-gray-400";
+                    document.getElementById('new-item-img-file').value = '';
+
                     nameEl.focus(); Actions.renderDraftList(); refreshIcons();
                 },
-                removeDraftItem: (id) => { state.draftOrder=state.draftOrder.filter(i=>i.id!==id); Actions.renderDraftList(); },
+                removeDraftItem: (id) => { state.draftOrder = state.draftOrder.filter(i => i.id !== id); Actions.renderDraftList(); },
                 renderDraftList: () => {
-                    const el=document.getElementById('order-items-list'); 
-                    document.getElementById('item-counter').innerText=`${state.draftOrder.length}/50 ITEMS`;
-                    
-                    if(state.draftOrder.length===0) el.innerHTML = `<div class="flex flex-col items-center justify-center py-10 opacity-30"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><span class="text-xs font-bold uppercase">List Empty</span></div>`;
+                    const el = document.getElementById('order-items-list');
+                    document.getElementById('item-counter').innerText = `${state.draftOrder.length}/50 ITEMS`;
+
+                    if (state.draftOrder.length === 0) el.innerHTML = `<div class="flex flex-col items-center justify-center py-10 opacity-30"><i data-lucide="shopping-basket" class="w-12 h-12 mb-2"></i><span class="text-xs font-bold uppercase">List Empty</span></div>`;
                     else el.innerHTML = state.draftOrder.map(item => `
                         <div class="flex items-center justify-between bg-white dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 animate-enter">
                             <div class="flex items-center gap-3">
@@ -710,20 +954,20 @@
                             </div>
                             <button onclick="Actions.removeDraftItem(${item.id})" class="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>`).join('');
-                    refreshIcons(); el.scrollTop=el.scrollHeight;
+                    refreshIcons(); el.scrollTop = el.scrollHeight;
                 },
                 submitOrder: async () => {
-                    if(state.draftOrder.length===0) return window.showToast("Add items first", "error");
+                    if (state.draftOrder.length === 0) return window.showToast(t('addToList'), "error");
                     const btn = document.getElementById('submit-order-btn');
                     const oldHTML = btn.innerHTML;
                     btn.innerHTML = `<div class="animate-spin w-5 h-5 border-2 border-white rounded-full border-t-transparent"></div>`;
-                    
+
                     try {
-                        await Actions.triggerSend(null, 'order', {items:state.draftOrder});
-                        Actions.toggleOrderModal(false); 
+                        await Actions.triggerSend(null, 'order', { items: state.draftOrder });
+                        Actions.toggleOrderModal(false);
                         window.showToast("Order Sent!", "success");
-                    } catch(e) {
-                         // Error handled in triggerSend
+                    } catch (e) {
+                        // Error handled in triggerSend
                     } finally {
                         btn.innerHTML = oldHTML;
                         refreshIcons();
@@ -731,89 +975,142 @@
                 },
 
                 // SEND LOGIC
-                triggerSend: async (e, type='text', data={}) => {
-                    if(e) e.preventDefault();
-                    if(state.isSending) return;
-                    if(!state.user) return window.showToast("Login required", "error");
+                triggerSend: async (e, type = 'text', data = {}) => {
+                    if (e) e.preventDefault();
+                    if (state.isSending) return;
+                    if (!state.user) return window.showToast("Login required", "error");
 
                     const input = document.getElementById('chat-input');
-                    const txt = type==='text' ? (input ? input.value.trim() : '') : (type==='order'?'New Order':'Shared Location');
-                    
-                    if(type==='text' && !txt) return;
-                    if(input) input.value='';
-                    
+                    const txt = type === 'text' ? (input ? input.value.trim() : '') : (type === 'order' ? 'New Order' : 'Shared Location');
+
+                    if (type === 'text' && !txt) return;
+                    if (input) input.value = '';
+
                     state.isSending = true;
                     // Optimistic UI for button
                     const sendBtn = document.getElementById('send-btn');
                     let oldBtn;
-                    if(sendBtn && type==='text') { oldBtn=sendBtn.innerHTML; sendBtn.innerHTML=`<div class="animate-spin w-4 h-4 border-2 border-white rounded-full border-t-transparent"></div>`; }
+                    if (sendBtn && type === 'text') { oldBtn = sendBtn.innerHTML; sendBtn.innerHTML = `<div class="animate-spin w-4 h-4 border-2 border-white rounded-full border-t-transparent"></div>`; }
 
                     try {
                         const chatId = `${state.user.uid}_${state.activeService.id}`;
                         const batch = db.batch();
                         const msgRef = db.collection('delivery_chats').doc(chatId).collection('messages').doc();
-                        
+
                         const userName = state.user.displayName || (state.user.email ? state.user.email.split('@')[0] : 'User');
-                        
+
                         // Sanitize Data
-                        const payload = { 
-                            type, text:txt, sender:safeVal(state.user.uid), 
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
-                            ...data 
+                        const payload = {
+                            type, text: txt, sender: safeVal(state.user.uid),
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            ...data
                         };
 
                         batch.set(msgRef, payload);
-                        
+
                         batch.set(db.collection('delivery_chats').doc(chatId), {
-                            userId: safeVal(state.user.uid), 
-                            userEmail: safeVal(state.user.email), 
-                            userName: safeVal(userName), 
+                            userId: safeVal(state.user.uid),
+                            userEmail: safeVal(state.user.email),
+                            userName: safeVal(userName),
                             userPhoto: safeVal(state.user.photoURL),
-                            serviceId: safeVal(state.activeService.id), 
-                            serviceName: safeVal(state.activeService.name), 
+                            serviceId: safeVal(state.activeService.id),
+                            serviceName: safeVal(state.activeService.name),
                             city: safeVal(state.activeService.city),
-                            lastMessage: type==='order'?'📦 Order':(type==='location'?'📍 Location':txt), 
+                            lastMessage: type === 'order' ? '📦 Order' : (type === 'location' ? '📍 Location' : txt),
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                             serviceOwnerEmail: safeVal(state.activeService.ownerEmail) || ''
-                        }, {merge:true});
-                        
+                        }, { merge: true });
+
                         await batch.commit();
+
+                        // Send Push to Provider
+                        await sendPush(`New request from ${userName}`);
+
                     } catch (e) {
                         console.error(e);
                         let msg = "Failed to send";
-                        if(e.code === 'permission-denied') msg = "Check Database Rules";
-                        else if(e.message.includes('exceeds')) msg = "Image too large";
+                        if (e.code === 'permission-denied') msg = "Check Database Rules";
+                        else if (e.message.includes('exceeds')) msg = "Image too large";
                         window.showToast(msg, "error");
                         throw e; // Propagate error
                     } finally {
                         state.isSending = false;
-                        if(sendBtn && oldBtn) { sendBtn.innerHTML = oldBtn; refreshIcons(); }
+                        if (sendBtn && oldBtn) { sendBtn.innerHTML = oldBtn; refreshIcons(); }
                     }
                 },
                 sendLocation: () => {
-                    if(!navigator.geolocation) return window.showToast("Geo not supported", "error");
+                    if (!navigator.geolocation) return window.showToast("Geo not supported", "error");
                     const btn = document.getElementById('loc-btn');
                     btn.classList.add('animate-pulse', 'text-blue-500');
-                    
+
                     navigator.geolocation.getCurrentPosition(
                         pos => {
                             btn.classList.remove('animate-pulse', 'text-blue-500');
-                            Actions.triggerSend(null, 'location', {location:{lat:pos.coords.latitude, lng:pos.coords.longitude}});
-                        }, 
-                        err => { 
-                            btn.classList.remove('animate-pulse', 'text-blue-500'); 
-                            window.showToast("Location denied", "error"); 
+                            Actions.triggerSend(null, 'location', { location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+                        },
+                        err => {
+                            btn.classList.remove('animate-pulse', 'text-blue-500');
+                            window.showToast("Location denied", "error");
                         }
                     );
+                },
+
+                // ⭐ RATING ACTIONS ⭐
+                toggleRating: (show) => {
+                    const el = document.getElementById('rating-modal');
+                    if (show) { state.currentRating = 0; Actions.updateStars(); el.classList.remove('hidden'); }
+                    else el.classList.add('hidden');
+                },
+                setRating: (n) => {
+                    state.currentRating = n;
+                    Actions.updateStars();
+                    const btn = document.getElementById('submit-rate-btn');
+                    btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                },
+                updateStars: () => {
+                    document.querySelectorAll('.star-btn').forEach(btn => {
+                        const val = parseInt(btn.dataset.value);
+                        const icon = btn.querySelector('svg');
+                        if (val <= state.currentRating) {
+                            btn.classList.add('text-yellow-400', 'bg-yellow-400/10');
+                            btn.classList.remove('text-gray-300', 'bg-gray-100', 'dark:bg-gray-800');
+                            if (icon) icon.setAttribute('fill', 'currentColor'); // Fill star
+                        } else {
+                            btn.classList.remove('text-yellow-400', 'bg-yellow-400/10');
+                            btn.classList.add('text-gray-300', 'bg-gray-100', 'dark:bg-gray-800');
+                            if (icon) icon.setAttribute('fill', 'none'); // Empty star
+                        }
+                    });
+                },
+                submitRating: async () => {
+                    if (!state.currentRating) return;
+                    const btn = document.getElementById('submit-rate-btn');
+                    btn.innerText = "Submitting..."; btn.disabled = true;
+
+                    try {
+                        const sRef = db.collection('delivery_services').doc(state.activeService.id);
+                        await sRef.update({
+                            ratingTotal: firebase.firestore.FieldValue.increment(state.currentRating),
+                            ratingCount: firebase.firestore.FieldValue.increment(1)
+                        });
+                        window.showToast("Thank you for your feedback!", "success");
+                        Actions.toggleRating(false);
+                    } catch (e) {
+                        console.error(e);
+                        window.showToast("Failed to submit", "error");
+                    } finally {
+                        btn.innerText = "Submit Review"; btn.disabled = false;
+                    }
                 }
             };
-            
-            function scrollToBottom() { 
-                const el = document.getElementById('chat-messages'); 
-                if(el) requestAnimationFrame(() => el.scrollTop = el.scrollHeight); 
+
+            function scrollToBottom() {
+                const el = document.getElementById('chat-messages');
+                if (el) requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
             }
 
         })();
     </script>
 </body>
+
 </html>
