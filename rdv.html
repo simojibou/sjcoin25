@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ Extractor V5 - Final</title>
+    <title>SJ Extractor V6 - Enhanced</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
@@ -28,8 +29,8 @@
     <div class="max-w-2xl w-full space-y-6">
         
         <div class="text-center border-b border-gray-800 pb-4">
-            <h1 class="text-2xl font-bold text-white">SJ Logo Extractor V5</h1>
-            <p class="text-gray-400 text-sm">Aggressive cleaning for 100% removal</p>
+            <h1 class="text-2xl font-bold text-white">SJ Logo Extractor V6</h1>
+            <p class="text-gray-400 text-sm">More powerful with blur for 100% background removal</p>
         </div>
 
         <!-- 1. Upload -->
@@ -55,6 +56,15 @@
                 </div>
                 <input type="range" id="threshold" min="0" max="100" value="40" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
                 <p class="text-[10px] text-gray-500 mt-1">Move Right ⮕ removes more background. Move Left ⬅ brings it back.</p>
+            </div>
+
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span>Blur Level (for Smoother Removal)</span>
+                    <span id="blurVal" class="text-cyan-400">1</span>
+                </div>
+                <input type="range" id="blur" min="0" max="5" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+                <p class="text-[10px] text-gray-500 mt-1">Higher blur helps remove noise for cleaner 100% background removal.</p>
             </div>
 
             <div>
@@ -104,8 +114,10 @@
         const modeTrans = document.getElementById('modeTrans');
         const modeBlack = document.getElementById('modeBlack');
         const threshInput = document.getElementById('threshold');
+        const blurInput = document.getElementById('blur');
         const boostInput = document.getElementById('boost');
         const threshVal = document.getElementById('threshVal');
+        const blurVal = document.getElementById('blurVal');
         const boostVal = document.getElementById('boostVal');
         const recordBtn = document.getElementById('recordBtn');
         const downloads = document.getElementById('downloads');
@@ -146,6 +158,7 @@
 
         // Sliders
         threshInput.addEventListener('input', (e) => threshVal.innerText = e.target.value);
+        blurInput.addEventListener('input', (e) => blurVal.innerText = e.target.value);
         boostInput.addEventListener('input', (e) => boostVal.innerText = e.target.value + 'x');
 
         // Video Load
@@ -170,7 +183,14 @@
                 return;
             }
 
+            const blurLevel = parseInt(blurInput.value);
+            if (blurLevel > 0) {
+                ctx.filter = `blur(${blurLevel}px)`;
+            } else {
+                ctx.filter = 'none';
+            }
             ctx.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+            ctx.filter = 'none';
             
             const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = frame.data;
@@ -182,8 +202,8 @@
                 const g = data[i+1];
                 const b = data[i+2];
 
-                // Calculate Brightness
-                const brightness = (r + g + b) / 3;
+                // Calculate Brightness (using max for more aggressive bright detection)
+                const brightness = Math.max(r, g, b);  // Changed to max for more powerful removal
 
                 if (brightness < threshold) {
                     // Background
@@ -256,6 +276,7 @@
     </script>
 </body>
 </html>
+
 
 
 
