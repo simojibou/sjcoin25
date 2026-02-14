@@ -3,440 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ Logo - Video to Transparent GIF</title>
+    <title>SJ Professional Background Remover</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Import gif.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
         .checkerboard {
+            background-color: #eee;
             background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
                               linear-gradient(-45deg, #ccc 25%, transparent 25%), 
                               linear-gradient(45deg, transparent 75%, #ccc 75%), 
                               linear-gradient(-45deg, transparent 75%, #ccc 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            background-color: #fff;
         }
-        /* Custom scrollbar for cleaner look */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555; 
+        canvas {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <!-- Header -->
-    <header class="bg-indigo-900 text-white p-6 shadow-md">
-        <div class="max-w-5xl mx-auto flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">SJ Video Background Remover</h1>
-                <p class="text-indigo-200 text-sm mt-1">Convert MP4 to Transparent GIF with Glow Preservation</p>
-            </div>
-            <!-- Status Badge -->
-            <div id="statusBadge" class="hidden px-3 py-1 bg-indigo-700 rounded-full text-xs font-semibold animate-pulse">
-                Processing...
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-grow max-w-5xl mx-auto w-full p-6 space-y-8">
+    <div class="max-w-4xl mx-auto p-6">
         
-        <!-- Step 1: Upload -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center transition-all hover:border-indigo-300 border-dashed border-2 cursor-pointer" id="dropZone">
-            <input type="file" id="videoInput" accept="video/mp4,video/webm,video/ogg" class="hidden">
-            <div class="space-y-2 py-8" onclick="document.getElementById('videoInput').click()">
-                <div class="text-indigo-500 text-5xl mb-4">📂</div>
-                <h3 class="text-lg font-medium">Click to Upload Video</h3>
-                <p class="text-gray-500 text-sm">or drag and drop MP4 file here</p>
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8 border-b border-slate-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-cyan-400">SJ Logo Tool <span class="text-xs bg-cyan-900 text-cyan-300 px-2 py-1 rounded ml-2">PRO</span></h1>
+                <p class="text-slate-400 text-sm mt-1">Remove black background & preserve glow</p>
             </div>
         </div>
 
-        <!-- Editor Interface (Hidden initially) -->
-        <div id="editorArea" class="hidden space-y-8">
+        <!-- Main Workspace -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-6">
-                     <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                        <h3 class="font-semibold text-gray-700 mb-4 flex items-center">
-                            <span>🎚️ Settings</span>
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label class="flex justify-between text-sm font-medium text-gray-600 mb-1">
-                                    <span>Black Threshold</span>
-                                    <span id="thresholdVal" class="text-indigo-600">10</span>
-                                </label>
-                                <input type="range" id="threshold" min="0" max="100" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                                <p class="text-xs text-gray-400 mt-1">Higher removes more dark colors (cleaner blacks).</p>
-                            </div>
+            <!-- Left Panel: Controls -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Upload -->
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">1. Input Video</label>
+                    <input type="file" id="videoInput" accept="video/*" class="block w-full text-sm text-slate-400
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-cyan-600 file:text-white
+                        hover:file:bg-cyan-700 cursor-pointer
+                    "/>
+                </div>
 
-                            <div>
-                                <label class="flex justify-between text-sm font-medium text-gray-600 mb-1">
-                                    <span>Glow Intensity (Alpha Boost)</span>
-                                    <span id="alphaBoostVal" class="text-indigo-600">1.2</span>
-                                </label>
-                                <input type="range" id="alphaBoost" min="0.5" max="3" step="0.1" value="1.2" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                                <p class="text-xs text-gray-400 mt-1">Boosts visibility of the semi-transparent glow.</p>
-                            </div>
-
-                             <div>
-                                <label class="flex justify-between text-sm font-medium text-gray-600 mb-1">
-                                    <span>GIF Quality</span>
-                                    <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">High (10)</span>
-                                </label>
-                                <div class="flex items-center gap-2 text-sm text-gray-500">
-                                    <span>FPS:</span>
-                                    <select id="fpsSelect" class="bg-gray-100 border-none rounded p-1 text-gray-700 font-semibold focus:ring-0">
-                                        <option value="10">10 (Fast)</option>
-                                        <option value="15" selected>15 (Balanced)</option>
-                                        <option value="24">24 (Smooth)</option>
-                                        <option value="30">30 (High CPU)</option>
-                                    </select>
-                                </div>
-                            </div>
+                <!-- Settings -->
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 space-y-4">
+                    <h3 class="font-bold text-slate-200">2. Fine Tune</h3>
+                    
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Black Removal Sensitivity</span>
+                            <span id="threshVal" class="text-cyan-400">15</span>
                         </div>
+                        <input type="range" id="threshold" min="0" max="60" value="15" class="w-full accent-cyan-500">
+                        <p class="text-[10px] text-slate-500">Higher = removes more dark gray, but might eat into logo edges.</p>
                     </div>
 
-                    <button id="generateBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2">
-                        <span>Record & Generate GIF</span>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Glow Brightness (Opacity)</span>
+                            <span id="alphaVal" class="text-cyan-400">1.5</span>
+                        </div>
+                        <input type="range" id="alphaBoost" min="0.5" max="3.0" step="0.1" value="1.5" class="w-full accent-cyan-500">
+                        <p class="text-[10px] text-slate-500">Boost this if the logo looks too faint.</p>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Resolution Scale</span>
+                            <span id="scaleVal" class="text-cyan-400">50%</span>
+                        </div>
+                        <input type="range" id="scale" min="0.2" max="1.0" step="0.1" value="0.5" class="w-full accent-cyan-500">
+                        <p class="text-[10px] text-slate-500">Lower resolution = Faster processing & smaller file size.</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="space-y-3">
+                    <button id="recordBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="w-3 h-3 bg-white rounded-full animate-pulse"></span>
+                        Start Recording
                     </button>
-                    
-                    <div id="progressContainer" class="hidden">
-                         <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
-                            <span id="progressText">Processing...</span>
-                            <span id="progressPercent">0%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                    </div>
-
+                    <p class="text-xs text-center text-slate-500">Click Start, let video play, then click Stop.</p>
                 </div>
 
-                <!-- Previews -->
-                <div class="space-y-4">
-                    <h3 class="font-semibold text-gray-700">Preview</h3>
-                    
-                    <!-- Canvas Container -->
-                    <div class="relative w-full aspect-square bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center checkerboard border border-gray-300">
-                        <!-- The processed output canvas -->
-                        <canvas id="outputCanvas" class="max-w-full max-h-full object-contain z-10"></canvas>
-                        <!-- Comparison label -->
-                        <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-20">Live Preview</div>
-                    </div>
-
-                    <!-- Hidden Video Element for processing -->
-                    <video id="sourceVideo" class="hidden" muted playsinline loop></video>
-                </div>
             </div>
 
-            <!-- Result Area -->
-            <div id="resultArea" class="hidden border-t pt-8 animate-fade-in-up">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">🎉 Your GIF is Ready!</h3>
-                <div class="flex flex-col items-center gap-4">
-                    <img id="resultGif" class="max-w-xs md:max-w-md rounded-lg shadow-xl checkerboard border-4 border-white" alt="Generated GIF">
-                    <a id="downloadBtn" download="sj-logo-transparent.gif" class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full shadow-lg flex items-center gap-2 transform transition hover:-translate-y-1">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Download GIF
-                    </a>
+            <!-- Right Panel: Preview -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-200">Live Preview</h3>
+                    <span id="status" class="text-xs font-mono text-cyan-400 hidden">Recording...</span>
                 </div>
+                
+                <!-- Canvas Container -->
+                <div class="relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700 flex flex-col items-center justify-center min-h-[300px]">
+                    <!-- Background Checkerboard -->
+                    <div class="absolute inset-0 checkerboard opacity-20 pointer-events-none"></div>
+                    
+                    <!-- The Main Canvas -->
+                    <canvas id="outputCanvas" class="relative z-10"></canvas>
+
+                    <!-- Overlay for 'No Video' -->
+                    <div id="placeholder" class="absolute inset-0 flex items-center justify-center text-slate-600 z-0">
+                        <span>No video loaded</span>
+                    </div>
+                </div>
+
+                <!-- Hidden Video Source -->
+                <video id="sourceVideo" class="hidden" muted playsinline></video>
+
+                <!-- Results Area -->
+                <div id="results" class="hidden bg-slate-800 p-4 rounded border border-slate-600 mt-4 animate-fade-in">
+                    <h3 class="text-lg font-bold text-white mb-3">✅ Processing Complete</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center p-3 bg-slate-900 rounded">
+                            <h4 class="text-sm font-semibold text-cyan-400 mb-2">Format 1: WebM</h4>
+                            <p class="text-xs text-slate-400 mb-2">High Quality, Full Transparency.<br>Best for Android/Web Apps.</p>
+                            <a id="downloadWebm" class="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition cursor-pointer">Download WebM</a>
+                        </div>
+                        <div class="text-center p-3 bg-slate-900 rounded">
+                            <h4 class="text-sm font-semibold text-pink-400 mb-2">Format 2: GIF</h4>
+                            <p class="text-xs text-slate-400 mb-2">Standard format.<br>Glow may look slightly grainy.</p>
+                            <a id="downloadGif" class="text-xs text-slate-500">Processing GIF...</a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-    </main>
-
-    <footer class="bg-gray-100 border-t mt-12 py-6 text-center text-gray-500 text-sm">
-        <p>Processed locally in your browser. No video data is sent to any server.</p>
-    </footer>
+    </div>
 
     <script>
-        // --- Elements ---
-        const dropZone = document.getElementById('dropZone');
+        // --- Configuration & State ---
         const videoInput = document.getElementById('videoInput');
-        const editorArea = document.getElementById('editorArea');
         const sourceVideo = document.getElementById('sourceVideo');
-        const outputCanvas = document.getElementById('outputCanvas');
-        const ctx = outputCanvas.getContext('2d', { willReadFrequently: true });
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         // Controls
         const thresholdInput = document.getElementById('threshold');
-        const thresholdVal = document.getElementById('thresholdVal');
         const alphaBoostInput = document.getElementById('alphaBoost');
-        const alphaBoostVal = document.getElementById('alphaBoostVal');
-        const generateBtn = document.getElementById('generateBtn');
-        const fpsSelect = document.getElementById('fpsSelect');
+        const scaleInput = document.getElementById('scale');
+        const recordBtn = document.getElementById('recordBtn');
         
-        // Progress
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const progressText = document.getElementById('progressText');
-        const statusBadge = document.getElementById('statusBadge');
-        
-        // Result
-        const resultArea = document.getElementById('resultArea');
-        const resultGif = document.getElementById('resultGif');
-        const downloadBtn = document.getElementById('downloadBtn');
+        // UI Text
+        const threshVal = document.getElementById('threshVal');
+        const alphaVal = document.getElementById('alphaVal');
+        const scaleVal = document.getElementById('scaleVal');
+        const statusLabel = document.getElementById('status');
+        const placeholder = document.getElementById('placeholder');
+        const resultsArea = document.getElementById('results');
+        const downloadWebm = document.getElementById('downloadWebm');
+        const downloadGif = document.getElementById('downloadGif');
 
-        // State
-        let isProcessing = false;
-        let animationFrameId;
-        let gifWorkerBlobURL = null;
+        let isPlaying = false;
+        let isRecording = false;
+        let mediaRecorder;
+        let recordedChunks = [];
+        let gif;
+        let scale = 0.5;
 
-        // --- Setup GIF Worker (CORS Workaround) ---
-        // We fetch the worker code and create a local blob URL so it works in iframes/sandboxes
-        async function setupGifWorker() {
-            try {
-                const response = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
-                const workerCode = await response.text();
-                const blob = new Blob([workerCode], { type: 'application/javascript' });
-                gifWorkerBlobURL = URL.createObjectURL(blob);
-            } catch (e) {
-                console.error("Failed to load GIF worker", e);
-                // Fallback: try to just assume it's available if fetch fails (rare)
-                gifWorkerBlobURL = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
-            }
-        }
-        setupGifWorker();
+        // --- GIF Worker Fix ---
+        // Load GIF worker from blob to avoid CORS issues
+        let gifWorkerURL;
+        fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
+            .then(resp => resp.text())
+            .then(code => {
+                const blob = new Blob([code], { type: 'application/javascript' });
+                gifWorkerURL = URL.createObjectURL(blob);
+            });
 
         // --- Event Listeners ---
-        
-        // Drag & Drop
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
-        });
-        
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-            if (e.dataTransfer.files.length) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
 
         videoInput.addEventListener('change', (e) => {
-            if (e.target.files.length) handleFile(e.target.files[0]);
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            sourceVideo.src = url;
+            placeholder.classList.add('hidden');
+            resultsArea.classList.add('hidden');
+        });
+
+        sourceVideo.addEventListener('loadedmetadata', () => {
+            resizeCanvas();
+            sourceVideo.play(); // Start preview loop
+            isPlaying = true;
+            processLoop();
+        });
+
+        sourceVideo.addEventListener('ended', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                sourceVideo.currentTime = 0;
+                sourceVideo.play();
+            }
         });
 
         // Sliders
-        thresholdInput.addEventListener('input', (e) => thresholdVal.innerText = e.target.value);
+        thresholdInput.addEventListener('input', (e) => threshVal.innerText = e.target.value);
         alphaBoostInput.addEventListener('input', (e) => alphaBoostVal.innerText = e.target.value);
+        scaleInput.addEventListener('input', (e) => {
+            scaleVal.innerText = Math.round(e.target.value * 100) + '%';
+            scale = parseFloat(e.target.value);
+            resizeCanvas();
+        });
 
-        // --- Core Functions ---
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) startRecording();
+            else stopRecording();
+        });
 
-        function handleFile(file) {
-            if (!file.type.startsWith('video/')) {
-                alert('Please upload a video file (MP4, WEBM).');
+        // --- Core Logic ---
+
+        function resizeCanvas() {
+            if (!sourceVideo.videoWidth) return;
+            canvas.width = sourceVideo.videoWidth * scale;
+            canvas.height = sourceVideo.videoHeight * scale;
+        }
+
+        function processLoop() {
+            if (sourceVideo.paused && !isRecording) {
+                // If paused and not recording, wait (unless scrubbing?)
+                // Actually keep loop running for slider updates
+            }
+            
+            if (sourceVideo.readyState >= 2) {
+                // 1. Draw original video frame scaled
+                ctx.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+                
+                // 2. Get Pixels
+                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = frame.data;
+                const len = data.length;
+                
+                const threshold = parseInt(thresholdInput.value);
+                const boost = parseFloat(alphaBoostInput.value);
+
+                // 3. PIXEL SHADER: Black to Transparent
+                for (let i = 0; i < len; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+
+                    // Calculate "Max Brightness" (Luma)
+                    // This assumes the background is black and the logo is colored/white
+                    let maxVal = Math.max(r, g, b);
+
+                    if (maxVal < threshold) {
+                        // It's pure background -> Transparent
+                        data[i+3] = 0;
+                    } else {
+                        // It's part of the logo
+                        // Set Alpha based on brightness
+                        // This creates the "fade" effect for the glow
+                        let alpha = maxVal * boost;
+                        if (alpha > 255) alpha = 255;
+                        
+                        data[i+3] = alpha; 
+                        
+                        // Optional: Normalize color to prevent "dark halo"
+                        // If we make it transparent, we should make the RGB color fully bright
+                        // so the semi-transparent pixels rely on Alpha, not Dark RGB, to dim.
+                        // However, for simple glow, keeping original RGB is usually safer visually.
+                    }
+                }
+
+                // 4. Put modified pixels back
+                ctx.putImageData(frame, 0, 0);
+
+                // 5. If Recording, add to GIF
+                if (isRecording && gif) {
+                    gif.addFrame(ctx, {copy: true, delay: 20}); // Approx 50fps capture
+                }
+            }
+
+            requestAnimationFrame(processLoop);
+        }
+
+        // --- Recording Logic ---
+
+        function startRecording() {
+            if (!sourceVideo.videoWidth) {
+                alert("Please upload a video first");
                 return;
             }
 
-            const url = URL.createObjectURL(file);
-            sourceVideo.src = url;
-            
-            sourceVideo.onloadedmetadata = () => {
-                // Resize logic: scale down if huge to save performance
-                let w = sourceVideo.videoWidth;
-                let h = sourceVideo.videoHeight;
-                const MAX_WIDTH = 480; // Reasonable for GIF
-                
-                if (w > MAX_WIDTH) {
-                    const ratio = MAX_WIDTH / w;
-                    w = MAX_WIDTH;
-                    h = Math.round(sourceVideo.videoHeight * ratio);
-                }
-
-                outputCanvas.width = w;
-                outputCanvas.height = h;
-
-                // UI updates
-                editorArea.classList.remove('hidden');
-                dropZone.classList.add('hidden');
-                
-                sourceVideo.play();
-                drawFrame();
-            };
-        }
-
-        function processFrame() {
-            // Draw original frame
-            ctx.drawImage(sourceVideo, 0, 0, outputCanvas.width, outputCanvas.height);
-            
-            // Get pixel data
-            const frame = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
-            const l = frame.data.length;
-            const data = frame.data;
-            
-            const threshold = parseInt(thresholdInput.value);
-            const boost = parseFloat(alphaBoostInput.value);
-
-            // MAGIC ALGORITHM: Luma to Alpha
-            for (let i = 0; i < l; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-                
-                // Calculate brightness (Luma)
-                // Using standard weights for human perception, or simple max for "glow"
-                // For a glowing logo, simple Max(r,g,b) is often best to preserve color intensity
-                
-                let brightness = Math.max(r, g, b);
-
-                // Apply threshold: if brightness is very low, it's background
-                if (brightness < threshold) {
-                    data[i + 3] = 0; // Transparent
-                } else {
-                    // It's part of the logo/glow. 
-                    // To make the background transparent but keep the glow:
-                    // We set Alpha based on brightness.
-                    // Darker pixels (outer glow) become more transparent.
-                    // Brighter pixels (core logo) become opaque.
-                    
-                    let newAlpha = brightness * boost;
-                    if (newAlpha > 255) newAlpha = 255;
-                    
-                    data[i + 3] = newAlpha;
-                }
-            }
-            
-            ctx.putImageData(frame, 0, 0);
-        }
-
-        function drawFrame() {
-            if (sourceVideo.paused || sourceVideo.ended) {
-                // Keep loop running to update if sliders change even when paused
-                if (!isProcessing) requestAnimationFrame(drawFrame); 
-                else return; // If processing, let the processing loop handle it
-            }
-            
-            if (!isProcessing) {
-                processFrame();
-                requestAnimationFrame(drawFrame);
-            }
-        }
-
-        // --- GIF Generation ---
-
-        generateBtn.addEventListener('click', async () => {
-            if (isProcessing) return;
-            isProcessing = true;
+            isRecording = true;
+            recordedChunks = [];
             
             // UI Update
-            generateBtn.disabled = true;
-            generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            progressContainer.classList.remove('hidden');
-            resultArea.classList.add('hidden');
-            statusBadge.classList.remove('hidden');
+            recordBtn.innerHTML = '<span class="w-3 h-3 bg-white rounded-sm"></span> Stop Recording';
+            recordBtn.classList.replace('bg-red-600', 'bg-slate-600');
+            statusLabel.classList.remove('hidden');
+            resultsArea.classList.add('hidden');
+            downloadGif.innerText = "Processing GIF...";
+            downloadGif.classList.remove('bg-pink-600', 'hover:bg-pink-500', 'text-white', 'cursor-pointer');
+            downloadGif.classList.add('text-slate-500');
+
+            // 1. Setup WebM Recorder
+            const stream = canvas.captureStream(30); // 30 FPS stream
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'video/webm; codecs=vp9' // Supports Alpha
+            });
             
-            // Setup GIF
-            const fps = parseInt(fpsSelect.value);
-            const gif = new GIF({
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) recordedChunks.push(event.data);
+            };
+            mediaRecorder.start();
+
+            // 2. Setup GIF Recorder
+            gif = new GIF({
                 workers: 2,
                 quality: 10,
-                width: outputCanvas.width,
-                height: outputCanvas.height,
-                workerScript: gifWorkerBlobURL,
-                transparent: 0x000000 // Help library identify transparent color
+                width: canvas.width,
+                height: canvas.height,
+                workerScript: gifWorkerURL,
+                transparent: 0x000000 // Tell GIF 0,0,0 is transparent
             });
 
-            // Prepare Video for Recording
-            sourceVideo.pause();
+            // 3. Reset Video to start
             sourceVideo.currentTime = 0;
-            
-            const duration = sourceVideo.duration;
-            const totalFrames = Math.floor(duration * fps);
-            const interval = 1 / fps;
-            
-            let currentFrame = 0;
+            sourceVideo.play();
+        }
 
-            const recordLoop = () => {
-                if (currentFrame >= totalFrames) {
-                    // Finish
-                    progressText.innerText = "Rendering GIF...";
-                    gif.render();
-                    return;
-                }
+        function stopRecording() {
+            if (!isRecording) return;
+            isRecording = false;
 
-                // Seek video
-                sourceVideo.currentTime = currentFrame * interval;
+            // UI Update
+            recordBtn.innerHTML = '<span class="w-3 h-3 bg-white rounded-full animate-pulse"></span> Start Recording';
+            recordBtn.classList.replace('bg-slate-600', 'bg-red-600');
+            statusLabel.classList.add('hidden');
+
+            // 1. Stop WebM
+            mediaRecorder.stop();
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                downloadWebm.href = url;
+                downloadWebm.download = "sj_logo_transparent.webm";
                 
-                // Wait for seek (using 'seeked' event is safer but slower, simple timeout works for local usually)
-                // Let's use a small one-off event listener for robustness
-                const onSeeked = () => {
-                    processFrame(); // Process the frame (remove background)
-                    gif.addFrame(ctx, {copy: true, delay: 1000 / fps});
-                    
-                    // Update UI
-                    currentFrame++;
-                    const percent = Math.round((currentFrame / totalFrames) * 100);
-                    progressBar.style.width = `${percent}%`;
-                    progressPercent.innerText = `${percent}%`;
-
-                    // Next frame
-                    recordLoop(); 
-                };
-
-                // Trigger seek
-                // Need to handle if seek doesn't actually need to change time (start)
-                if (Math.abs(sourceVideo.currentTime - (currentFrame * interval)) < 0.01 && currentFrame > 0) {
-                     // Already there? just fire (rare)
-                     onSeeked();
-                } else {
-                     sourceVideo.oneTimeSeekHandler = onSeeked;
-                }
+                resultsArea.classList.remove('hidden');
             };
+
+            // 2. Finish GIF
+            statusLabel.innerText = "Rendering GIF...";
+            statusLabel.classList.remove('hidden');
             
-            // Hook into video seek event
-            sourceVideo.addEventListener('seeked', function handler() {
-                if (sourceVideo.oneTimeSeekHandler) {
-                    sourceVideo.oneTimeSeekHandler();
-                    sourceVideo.oneTimeSeekHandler = null;
-                }
-            });
-
-            // GIF Events
             gif.on('finished', (blob) => {
-                const gifUrl = URL.createObjectURL(blob);
-                resultGif.src = gifUrl;
-                downloadBtn.href = gifUrl;
+                const url = URL.createObjectURL(blob);
+                downloadGif.href = url;
+                downloadGif.download = "sj_logo_transparent.gif";
                 
-                // Reset UI
-                isProcessing = false;
-                generateBtn.disabled = false;
-                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                statusBadge.classList.add('hidden');
-                resultArea.classList.remove('hidden');
-                progressText.innerText = "Complete!";
+                // Style the button
+                downloadGif.innerText = "Download GIF";
+                downloadGif.classList.remove('text-slate-500');
+                downloadGif.classList.add('inline-block', 'px-4', 'py-2', 'bg-pink-600', 'hover:bg-pink-500', 'text-white', 'text-xs', 'font-bold', 'rounded', 'transition', 'cursor-pointer');
                 
-                // Scroll to result
-                resultArea.scrollIntoView({ behavior: 'smooth' });
-                
-                // Restart preview
-                sourceVideo.play();
-                drawFrame();
+                statusLabel.classList.add('hidden');
             });
-
-            // Start recording
-            recordLoop();
-        });
+            
+            gif.render();
+        }
 
     </script>
 </body>
 </html>
+
+
+
 
