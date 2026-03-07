@@ -8,6 +8,8 @@
   <link rel="icon" href="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" type="image/png">
   <meta name="theme-color" content="#000000">
   
+  <meta http-equiv="refresh" content="10;url=https://sj-one.web.app">
+  
   <style>
     * {
       margin: 0;
@@ -87,6 +89,13 @@
       line-height: 1.6;
     }
 
+    .cta-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
     .cta-btn {
       display: inline-block;
       background: linear-gradient(90deg, #0044ff, #8800ff);
@@ -119,6 +128,23 @@
     .cta-btn:hover {
       transform: translateY(-5px) scale(1.05);
       box-shadow: 0 15px 40px rgba(136, 0, 255, 0.6);
+    }
+
+    .countdown-text {
+      color: #888;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      animation: pulseText 1s infinite alternate;
+    }
+
+    .countdown-text span {
+      font-weight: bold;
+      color: #0080ff;
+    }
+
+    @keyframes pulseText {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
     }
 
     .features-grid {
@@ -192,7 +218,10 @@
       Discover the ultimate marketplace. Buy top-tier products, sell your own items seamlessly, and connect directly with sellers via WhatsApp. Experience the future of shopping today.
     </p>
 
-    <a href="https://sj-one.web.app" class="cta-btn">Enter Web App</a>
+    <div class="cta-container">
+      <a href="https://sj-one.web.app" class="cta-btn">Enter Web App</a>
+      <p class="countdown-text">Automatically redirecting in <span id="timer">10</span> seconds...</p>
+    </div>
 
     <div class="features-grid">
       <div class="feature-card">
@@ -213,6 +242,23 @@
       &copy; <script>document.write(new Date().getFullYear())</script> SJ STORE. All rights reserved.
     </footer>
   </div>
+
+  <script>
+    // Auto-redirect logic
+    let timeLeft = 10;
+    const targetUrl = "https://sj-one.web.app";
+    const timerElement = document.getElementById('timer');
+
+    const countdownInterval = setInterval(() => {
+      timeLeft--;
+      timerElement.textContent = timeLeft;
+
+      if (timeLeft <= 0) {
+        clearInterval(countdownInterval);
+        window.location.href = targetUrl; // Redirects the user
+      }
+    }, 1000); // 1000ms = 1 second
+  </script>
 
 </body>
 </html>
