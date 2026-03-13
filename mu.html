@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock User Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#ec4899',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a polished look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-primary text-white p-2 rounded-lg shadow-md">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 leading-tight">Mock Users</h1>
+                    <p class="text-xs text-gray-500 font-medium">Data Generator & Viewer</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-center">
+                <div class="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+                    <input type="number" id="user-count" value="100" min="1" max="50000" class="bg-transparent border-none focus:ring-0 text-center w-24 font-semibold text-gray-700 outline-none p-2" placeholder="Count">
+                    <span class="text-sm text-gray-500 pr-3 font-medium">users</span>
+                </div>
+                <button onclick="handleGenerate()" class="bg-primary hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fas fa-bolt"></i> Generate
+                </button>
+                <button onclick="downloadJSON()" id="download-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-download"></i> JSON
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Status Bar -->
+        <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-sm text-gray-600">
+                <span id="total-stats" class="font-semibold text-gray-900">0</span> users generated.
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="prevPage()" id="prev-btn" class="p-2 rounded-md hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:hover:bg-transparent transition-colors" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="page-info" class="text-sm font-medium text-gray-700 min-w-[5rem] text-center">Page 0 of 0</span>
+                <button onclick="nextPage()" id="next-btn" class="p-2 rounded-md hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:hover:bg-transparent transition-colors" disabled>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Users Grid -->
+        <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Empty State -->
+            <div class="col-span-full py-20 flex flex-col items-center justify-center text-gray-400">
+                <i class="fas fa-user-astronaut text-6xl mb-4 opacity-50"></i>
+                <p class="text-lg font-medium">No users generated yet.</p>
+                <p class="text-sm">Enter a number and click generate above.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+            Mock User Generator &bull; Powered by JavaScript & TailwindCSS
+        </div>
+    </footer>
+
+    <script>
+        // Data Sources
+        const FEMALE_NAMES = [
+            "Emma","Olivia","Ava","Sophia","Isabella","Mia","Amelia","Harper","Evelyn","Abigail",
+            "Emily","Ella","Elizabeth","Camila","Luna","Sofia","Avery","Mila","Aria","Scarlett",
+            "Layla","Zoe","Nora","Lily","Hannah","Chloe","Victoria","Grace","Natalie","Lucy",
+            "Anna","Sarah","Leah","Ariana","Bella","Clara","Julia","Madison","Alexa","Ruby",
+            "Aurora","Naomi","Elena","Alice","Eva","Claire","Skylar","Violet","Nova","Willow"
+        ];
+
+        const MALE_NAMES = [
+            "Liam","Noah","Oliver","Elijah","William","James","Benjamin","Lucas","Henry","Alexander",
+            "Mason","Michael","Ethan","Daniel","Jacob","Logan","Jackson","Levi","Sebastian","Mateo",
+            "Jack","Owen","Theodore","Aiden","Samuel","Joseph","John","David","Wyatt","Matthew",
+            "Luke","Asher","Carter","Julian","Grayson","Leo","Jayden","Gabriel","Isaac","Lincoln",
+            "Anthony","Hudson","Dylan","Ezra","Thomas","Charles","Christopher","Jaxon","Maverick","Josiah"
+        ];
+
+        const LAST_NAMES = [
+            "Johnson","Smith","Brown","Taylor","Anderson","Thomas","Jackson","White","Harris",
+            "Martin","Thompson","Garcia","Martinez","Robinson","Clark","Lewis","Lee","Walker",
+            "Hall","Allen","Young","King","Wright","Scott","Green","Baker","Adams","Nelson",
+            "Perez","Roberts","Turner","Phillips","Campbell","Parker","Evans","Edwards","Collins"
+        ];
+
+        const BIOS = [
+            "Love photography 📸", "Travel addict ✈️", "Coffee & coding ☕", "Music lover 🎧",
+            "Dream big 🌍", "Digital creator", "Nature lover 🌿", "Explorer",
+            "Live. Laugh. Create.", "Building my future", "Adventure seeker", "Positive vibes only",
+            "Smile more", "Creative mind", "Travel. Eat. Repeat.", "Living my best life",
+            "Believe in yourself", "Late night thinker", "Design lover", "Future creator",
+            "Tech enthusiast 💻", "Bookworm 📚", "Fitness junkie 💪", "Foodie 🍕",
+            "Always learning 🧠", "Cat person 🐱", "Dog person 🐶", "Gamer 🎮"
+        ];
+
+        // State
+        let allUsers = [];
+        let currentPage = 1;
+        const usersPerPage = 24;
+
+        // Utilities
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function generateUsername(first, last) {
+            const f = first.toLowerCase();
+            const l = last.toLowerCase();
+            const styles = [
+                `${f}${l}${getRandomInt(10, 9999)}`,
+                `${f}.${l}`,
+                `${f}_${l}`,
+                `${f}${getRandomInt(1, 999)}`,
+                `${f}.${l}${getRandomInt(1, 99)}`
+            ];
+            return getRandomItem(styles);
+        }
+
+        function generateUser() {
+            const gender = Math.random() > 0.5 ? "girl" : "boy";
+            const first = gender === "girl" ? getRandomItem(FEMALE_NAMES) : getRandomItem(MALE_NAMES);
+            const last = getRandomItem(LAST_NAMES);
+            const avatarId = getRandomInt(1, 99);
+            const uuid = crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).substr(2, 9);
+
+            return {
+                id: uuid,
+                name: `${first} ${last}`,
+                username: generateUsername(first, last),
+                bio: getRandomItem(BIOS),
+                gender: gender,
+                image: `https://randomuser.me/api/portraits/${gender === 'girl' ? 'women' : 'men'}/${avatarId}.jpg`,
+                created_at: new Date().toISOString()
+            };
+        }
+
+        // Actions
+        function handleGenerate() {
+            const countInput = document.getElementById('user-count').value;
+            const count = parseInt(countInput, 10) || 100;
+            
+            // Limit to prevent browser crash
+            const safeCount = Math.min(Math.max(1, count), 100000);
+            document.getElementById('user-count').value = safeCount;
+
+            // Generate Data
+            allUsers = [];
+            for (let i = 0; i < safeCount; i++) {
+                allUsers.push(generateUser());
+            }
+
+            // Update UI State
+            currentPage = 1;
+            document.getElementById('download-btn').disabled = false;
+            document.getElementById('total-stats').textContent = allUsers.length.toLocaleString();
+            
+            updatePagination();
+            renderUsers();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(allUsers.length / usersPerPage);
+            
+            document.getElementById('page-info').textContent = totalPages === 0 ? 'Page 0 of 0' : `Page ${currentPage} of ${totalPages}`;
+            
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages || totalPages === 0;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+                renderUsers();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(allUsers.length / usersPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+                renderUsers();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function renderUsers() {
+            const grid = document.getElementById('users-grid');
+            grid.innerHTML = '';
+
+            if (allUsers.length === 0) return;
+
+            const startIndex = (currentPage - 1) * usersPerPage;
+            const endIndex = Math.min(startIndex + usersPerPage, allUsers.length);
+            const usersToShow = allUsers.slice(startIndex, endIndex);
+
+            usersToShow.forEach((user, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 flex flex-col items-center text-center fade-in group';
+                card.style.animationDelay = `${index * 15}ms`;
+
+                // Badge styling based on gender
+                const badgeColor = user.gender === 'girl' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700';
+                const icon = user.gender === 'girl' ? 'fa-venus' : 'fa-mars';
+
+                card.innerHTML = `
+                    <div class="relative mb-4">
+                        <img src="${user.image}" alt="${user.name}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-sm group-hover:border-primary/20 transition-colors duration-300" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                        <div class="absolute -bottom-2 -right-2 ${badgeColor} w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                            <i class="fas ${icon} text-xs"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 leading-tight">${user.name}</h3>
+                    <p class="text-primary font-medium text-sm mb-3">@${user.username}</p>
+                    <p class="text-gray-600 text-sm italic line-clamp-2 px-2 flex-grow">"${user.bio}"</p>
+                    <div class="w-full mt-5 pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+                        <span class="truncate pr-2" title="${user.id}">ID: ${user.id.substring(0,8)}...</span>
+                        <span>${new Date(user.created_at).toLocaleDateString()}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function downloadJSON() {
+            if (allUsers.length === 0) return;
+            
+            const dataStr = JSON.stringify(allUsers, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mock_users_${allUsers.length}.json`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            // Optional: Auto-generate on load
+            // handleGenerate();
+        });
+    </script>
+</body>
+</html>
+
+
