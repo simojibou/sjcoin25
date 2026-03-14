@@ -265,4 +265,279 @@
     }
 
   ]
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": [
+        "Hi", "Hello", "Hey", "Good morning", "Good evening", 
+        "Greetings", "Is anyone there", "Hello doctor", "Hi bot", "Can you help me"
+      ],
+      "responses": [
+        "Hello! I'm SJ AI medical assistant. How can I help you?",
+        "Hi there! Tell me your symptoms.",
+        "Greetings! What health issue are you experiencing?",
+        "Hello! I'm here to provide health guidance."
+      ]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": [
+        "Bye", "Goodbye", "See you later", "Talk to you soon", "Exit", "Close chat"
+      ],
+      "responses": [
+        "Goodbye! Stay healthy.",
+        "Take care!",
+        "See you later.",
+        "Come back if you need medical help."
+      ]
+    },
+    {
+      "tag": "thanks",
+      "patterns": [
+        "Thanks", "Thank you", "Appreciate it", "Thanks a lot"
+      ],
+      "responses": [
+        "You're welcome!",
+        "Happy to help.",
+        "Anytime!",
+        "Glad I could assist."
+      ]
+    },
+    {
+      "tag": "bot_info",
+      "patterns": [
+        "Who are you", "What is your name", "Are you a doctor", "What can you do"
+      ],
+      "responses": [
+        "I'm SJ AI, a medical assistant chatbot that provides health information.",
+        "I'm an AI assistant trained to help with medical questions.",
+        "I can provide information about symptoms and common illnesses, but I do not replace a real doctor."
+      ]
+    },
+    {
+      "tag": "fever",
+      "patterns": [
+        "I have fever", "My temperature is high", "Feeling hot and cold", 
+        "High body temperature", "Why do I have fever", "Temperature 39", 
+        "Fever with chills", "Fever and headache"
+      ],
+      "responses": [
+        "Fever usually indicates the body is fighting an infection.",
+        "Stay hydrated and rest. Monitor your temperature.",
+        "If your fever is very high, accompanied by a stiff neck, or lasts more than 3 days, consult a doctor immediately."
+      ]
+    },
+    {
+      "tag": "headache",
+      "patterns": [
+        "I have headache", "My head hurts", "Pain in head", "Migraine symptoms", 
+        "Severe headache", "Pressure in my head"
+      ],
+      "responses": [
+        "Headaches can be caused by stress, dehydration, lack of sleep, or illness.",
+        "Try resting in a dark, quiet room and drinking water.",
+        "If headaches are sudden and severe, or frequent, please consult a doctor."
+      ]
+    },
+    {
+      "tag": "cough",
+      "patterns": [
+        "I am coughing", "Why am I coughing", "Dry cough", "Cough with mucus", 
+        "Persistent cough", "How to stop coughing"
+      ],
+      "responses": [
+        "A cough may be caused by an infection, allergies, or throat irritation.",
+        "Drink warm fluids, use a humidifier, and rest your throat.",
+        "If your cough lasts more than 2 weeks or produces blood, seek medical advice."
+      ]
+    },
+    {
+      "tag": "sore_throat",
+      "patterns": [
+        "My throat hurts", "Pain when swallowing", "Sore throat remedies", 
+        "Throat pain", "Why is my throat sore"
+      ],
+      "responses": [
+        "A sore throat is commonly caused by viral infections like the common cold.",
+        "Warm salt water gargles and throat lozenges can help relieve pain.",
+        "Drink plenty of warm fluids and get some rest."
+      ]
+    },
+    {
+      "tag": "runny_nose",
+      "patterns": [
+        "My nose is running", "Runny nose", "Nose dripping", "Why is my nose running", "Stuffy nose"
+      ],
+      "responses": [
+        "A runny or stuffy nose is usually caused by a cold, allergies, or sinus issues.",
+        "Steam inhalation and staying hydrated may help relieve symptoms.",
+        "Rest and give your body time to fight off any potential cold virus."
+      ]
+    },
+    {
+      "tag": "sneezing",
+      "patterns": [
+        "I keep sneezing", "Frequent sneezing", "Why do I sneeze a lot", "Sneezing allergy"
+      ],
+      "responses": [
+        "Sneezing is often caused by allergies, dust, or respiratory infections.",
+        "Try to identify and avoid allergens like pollen, pet dander, or dust.",
+        "Over-the-counter antihistamines may help if allergies are the cause."
+      ]
+    },
+    {
+      "tag": "ear_pain",
+      "patterns": [
+        "My ear hurts", "Ear pain", "Sharp ear pain", "Pain in ear", "Ear infection"
+      ],
+      "responses": [
+        "Ear pain can be caused by infections, fluid buildup, or wax impaction.",
+        "A warm compress against the ear may help relieve mild pain.",
+        "Consult a doctor if the pain is severe, lasts more than a day, or is accompanied by a fever."
+      ]
+    },
+    {
+      "tag": "breathing_problem",
+      "patterns": [
+        "I cannot breathe", "Breathing difficulty", "Shortness of breath", 
+        "Hard to breathe", "Trouble breathing"
+      ],
+      "responses": [
+        "Breathing problems can be a sign of a serious medical emergency.",
+        "If you are experiencing severe shortness of breath, seek emergency medical help immediately.",
+        "Please contact a healthcare professional or go to the nearest emergency room."
+      ]
+    },
+    {
+      "tag": "stomach_ache",
+      "patterns": [
+        "My stomach hurts", "I feel nauseous", "Stomach ache", "Vomiting", 
+        "Upset stomach", "Diarrhea", "Cramps in stomach"
+      ],
+      "responses": [
+        "Stomach pain can be caused by indigestion, food poisoning, a stomach bug, or stress.",
+        "Stay hydrated by taking small sips of water or clear broths. Avoid solid, spicy, or greasy food for a few hours.",
+        "If the pain is severe, you are unable to keep fluids down for 24 hours, or you see blood, seek immediate medical attention."
+      ]
+    },
+    {
+      "tag": "fatigue",
+      "patterns": [
+        "I feel very tired", "Always exhausted", "Lack of energy", "Feeling weak", 
+        "Why am I so tired", "Lethargic"
+      ],
+      "responses": [
+        "Fatigue can result from lack of sleep, poor diet, stress, or underlying conditions like anemia or thyroid issues.",
+        "Ensure you are getting 7-9 hours of sleep, eating a balanced diet, and staying hydrated.",
+        "If severe fatigue persists for weeks despite lifestyle changes, consider consulting a doctor."
+      ]
+    },
+    {
+      "tag": "skin_rash",
+      "patterns": [
+        "I have a rash", "My skin is itchy", "Red spots on skin", "Skin allergy", 
+        "Hives", "Itchy bumps"
+      ],
+      "responses": [
+        "Rashes can be triggered by allergies, infections, heat, or contact with irritants.",
+        "Avoid scratching to prevent infection. A cool compress or over-the-counter hydrocortisone cream may help soothe the itch.",
+        "If the rash spreads rapidly, is very painful, or comes with a fever, see a healthcare provider."
+      ]
+    },
+    {
+      "tag": "muscle_pain",
+      "patterns": [
+        "My body aches", "Muscle pain", "Joint pain", "Back hurts", "Sore muscles", "Body stiffness"
+      ],
+      "responses": [
+        "Muscle and joint pain are often caused by tension, overuse, minor injuries, or viral infections like the flu.",
+        "Rest the affected area, apply ice for acute injuries, and consider gentle stretching.",
+        "If the pain is severe, accompanied by swelling, or doesn't improve after a few days, consult a physician."
+      ]
+    },
+    {
+      "tag": "mental_health",
+      "patterns": [
+        "I feel depressed", "Having anxiety", "I am very stressed", "Panic attack", 
+        "Feeling sad all the time", "Mental health help"
+      ],
+      "responses": [
+        "It's very important to take mental health seriously. You are not alone.",
+        "Practice deep breathing, meditation, or light exercise to help manage immediate stress and anxiety.",
+        "Consider talking to a therapist or counselor. If you are in crisis, please reach out to a local mental health helpline immediately."
+      ]
+    },
+    {
+      "tag": "sleep_issues",
+      "patterns": [
+        "I can't sleep", "Insomnia", "Waking up in the middle of the night", 
+        "Trouble falling asleep", "How to sleep better"
+      ],
+      "responses": [
+        "Try to maintain a consistent sleep schedule and limit screen time for at least an hour before bed.",
+        "Avoid caffeine, heavy meals, and vigorous exercise late in the evening.",
+        "Creating a dark, quiet, and cool sleep environment can help. If problems persist, consult a doctor."
+      ]
+    },
+    {
+      "tag": "minor_burns",
+      "patterns": [
+        "I burned my hand", "Minor burn treatment", "Spilled hot water on myself", "Cooking burn"
+      ],
+      "responses": [
+        "For minor burns, immediately run cool (not ice cold) water over the area for 10-15 minutes.",
+        "Do not apply ice, butter, or oil to the burn. Cover it loosely with a sterile, non-stick bandage.",
+        "If the burn is large, on your face, or starts blistering heavily, seek medical attention."
+      ]
+    },
+    {
+      "tag": "covid_symptoms",
+      "patterns": [
+        "COVID symptoms", "Do I have coronavirus", "Loss of smell and fever", 
+        "COVID cough", "Coronavirus signs"
+      ],
+      "responses": [
+        "Common COVID-19 symptoms include fever, dry cough, fatigue, and loss of taste or smell.",
+        "Consider taking a rapid test and isolating if symptoms appear.",
+        "Contact healthcare services if symptoms worsen, especially if you have trouble breathing."
+      ]
+    },
+    {
+      "tag": "healthy_lifestyle",
+      "patterns": [
+        "How to stay healthy", "Health tips", "Healthy lifestyle advice", 
+        "How to boost immunity", "Diet and nutrition tips"
+      ],
+      "responses": [
+        "Eat a balanced diet rich in fruits, vegetables, and whole grains. Exercise regularly.",
+        "Get 7-9 hours of sleep per night and drink plenty of water throughout the day.",
+        "Avoid smoking, limit alcohol intake, and find healthy ways to manage stress."
+      ]
+    },
+    {
+      "tag": "medicine_question",
+      "patterns": [
+        "What medicine should I take", "Medicine for headache", "Best medicine for cold", 
+        "Can I take paracetamol", "Ibuprofen dosage"
+      ],
+      "responses": [
+        "Over-the-counter medicines like paracetamol or ibuprofen may help mild symptoms like pain or fever.",
+        "Always read the label and follow dosage instructions carefully.",
+        "I am an AI, so I cannot prescribe medication. Consult a pharmacist or doctor before taking new medication."
+      ]
+    },
+    {
+      "tag": "emergency",
+      "patterns": [
+        "Severe chest pain", "Someone collapsed", "Heavy bleeding", 
+        "Heart attack symptoms", "Stroke symptoms", "Emergency help"
+      ],
+      "responses": [
+        "WARNING: This sounds like a medical emergency.",
+        "Please call your local emergency services (like 911 or your country's equivalent) immediately.",
+        "Do not wait. Seek urgent medical help right away."
+      ]
+    }
+  ]
 }
