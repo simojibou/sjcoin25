@@ -1,0 +1,268 @@
+{
+  "intents": [
+
+    {
+      "tag": "greeting",
+      "patterns": [
+        "Hi",
+        "Hello",
+        "Hey",
+        "Good morning",
+        "Good evening",
+        "Greetings",
+        "Is anyone there",
+        "Hello doctor",
+        "Hi bot",
+        "Can you help me"
+      ],
+      "responses": [
+        "Hello! I'm SJ AI medical assistant. How can I help you?",
+        "Hi there! Tell me your symptoms.",
+        "Greetings! What health issue are you experiencing?",
+        "Hello! I'm here to provide health guidance."
+      ]
+    },
+
+    {
+      "tag": "goodbye",
+      "patterns": [
+        "Bye",
+        "Goodbye",
+        "See you later",
+        "Talk to you soon",
+        "Exit",
+        "Close chat"
+      ],
+      "responses": [
+        "Goodbye! Stay healthy.",
+        "Take care!",
+        "See you later.",
+        "Come back if you need medical help."
+      ]
+    },
+
+    {
+      "tag": "thanks",
+      "patterns": [
+        "Thanks",
+        "Thank you",
+        "Appreciate it",
+        "Thanks a lot"
+      ],
+      "responses": [
+        "You're welcome!",
+        "Happy to help.",
+        "Anytime!",
+        "Glad I could assist."
+      ]
+    },
+
+    {
+      "tag": "bot_info",
+      "patterns": [
+        "Who are you",
+        "What is your name",
+        "Are you a doctor",
+        "What can you do"
+      ],
+      "responses": [
+        "I'm SJ AI, a medical assistant chatbot that provides health information.",
+        "I'm an AI assistant trained to help with medical questions.",
+        "I can provide information about symptoms and common illnesses."
+      ]
+    },
+
+    {
+      "tag": "fever",
+      "patterns": [
+        "I have fever",
+        "My temperature is high",
+        "Feeling hot and cold",
+        "High body temperature",
+        "Why do I have fever",
+        "Temperature 39",
+        "Fever with chills",
+        "Fever and headache"
+      ],
+      "responses": [
+        "Fever usually indicates the body is fighting an infection.",
+        "Stay hydrated and rest. Monitor your temperature.",
+        "If fever is very high or lasts more than 3 days consult a doctor."
+      ]
+    },
+
+    {
+      "tag": "headache",
+      "patterns": [
+        "I have headache",
+        "My head hurts",
+        "Pain in head",
+        "Migraine symptoms",
+        "Severe headache",
+        "Pressure in my head"
+      ],
+      "responses": [
+        "Headaches can be caused by stress, dehydration, or illness.",
+        "Try resting and drinking water.",
+        "If headaches are severe or frequent consult a doctor."
+      ]
+    },
+
+    {
+      "tag": "cough",
+      "patterns": [
+        "I am coughing",
+        "Why am I coughing",
+        "Dry cough",
+        "Cough with mucus",
+        "Persistent cough",
+        "How to stop coughing"
+      ],
+      "responses": [
+        "Cough may be caused by infection, allergies, or throat irritation.",
+        "Drink warm fluids and rest your throat.",
+        "If cough lasts more than 2 weeks seek medical advice."
+      ]
+    },
+
+    {
+      "tag": "sore_throat",
+      "patterns": [
+        "My throat hurts",
+        "Pain when swallowing",
+        "Sore throat remedies",
+        "Throat pain",
+        "Why is my throat sore"
+      ],
+      "responses": [
+        "Sore throat is commonly caused by viral infections.",
+        "Warm salt water gargles can help relieve pain.",
+        "Drink warm fluids and rest."
+      ]
+    },
+
+    {
+      "tag": "runny_nose",
+      "patterns": [
+        "My nose is running",
+        "Runny nose",
+        "Nose dripping",
+        "Why is my nose running"
+      ],
+      "responses": [
+        "Runny nose is usually caused by cold or allergies.",
+        "Steam inhalation may help relieve symptoms.",
+        "Rest and drink fluids."
+      ]
+    },
+
+    {
+      "tag": "sneezing",
+      "patterns": [
+        "I keep sneezing",
+        "Frequent sneezing",
+        "Why do I sneeze a lot",
+        "Sneezing allergy"
+      ],
+      "responses": [
+        "Sneezing is often caused by allergies or infections.",
+        "Avoid dust and allergens.",
+        "Antihistamines may help if allergies are the cause."
+      ]
+    },
+
+    {
+      "tag": "ear_pain",
+      "patterns": [
+        "My ear hurts",
+        "Ear pain",
+        "Sharp ear pain",
+        "Pain in ear"
+      ],
+      "responses": [
+        "Ear pain can be caused by infection or wax buildup.",
+        "Warm compress may help relieve pain.",
+        "Consult a doctor if pain is severe."
+      ]
+    },
+
+    {
+      "tag": "breathing_problem",
+      "patterns": [
+        "I cannot breathe",
+        "Breathing difficulty",
+        "Shortness of breath",
+        "Hard to breathe",
+        "Trouble breathing"
+      ],
+      "responses": [
+        "Breathing problems can be serious.",
+        "If severe seek emergency medical help immediately.",
+        "Please contact a healthcare professional."
+      ]
+    },
+
+    {
+      "tag": "covid_symptoms",
+      "patterns": [
+        "COVID symptoms",
+        "Do I have coronavirus",
+        "Loss of smell and fever",
+        "COVID cough",
+        "Coronavirus signs"
+      ],
+      "responses": [
+        "Common COVID symptoms include fever, cough, fatigue, and loss of smell.",
+        "Consider testing and isolating if symptoms appear.",
+        "Contact healthcare services if symptoms worsen."
+      ]
+    },
+
+    {
+      "tag": "healthy_lifestyle",
+      "patterns": [
+        "How to stay healthy",
+        "Health tips",
+        "Healthy lifestyle advice",
+        "How to boost immunity"
+      ],
+      "responses": [
+        "Eat a balanced diet and exercise regularly.",
+        "Get enough sleep and drink plenty of water.",
+        "Avoid smoking and reduce stress."
+      ]
+    },
+
+    {
+      "tag": "medicine_question",
+      "patterns": [
+        "What medicine should I take",
+        "Medicine for headache",
+        "Best medicine for cold",
+        "Can I take paracetamol"
+      ],
+      "responses": [
+        "Over-the-counter medicines like paracetamol may help mild symptoms.",
+        "Always follow dosage instructions.",
+        "Consult a doctor before taking medication."
+      ]
+    },
+
+    {
+      "tag": "emergency",
+      "patterns": [
+        "Severe chest pain",
+        "Someone collapsed",
+        "Heavy bleeding",
+        "Heart attack symptoms",
+        "Emergency help"
+      ],
+      "responses": [
+        "This may be a medical emergency.",
+        "Please call emergency services immediately.",
+        "Seek urgent medical help."
+      ]
+    }
+
+  ]
+}
