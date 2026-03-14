@@ -540,4 +540,102 @@
       ]
     }
   ]
+{
+  "agent_name": "SJ_AI_Advanced",
+  "version": "2.0",
+  "intents": [
+    {
+      "tag": "symptom_triage_start",
+      "patterns": [
+        "I feel sick",
+        "I need a diagnosis",
+        "Can you check my symptoms?",
+        "I'm not feeling well"
+      ],
+      "responses": [
+        "I can help you understand your symptoms better. To start, what is your primary symptom?",
+        "I'm sorry to hear you're not feeling well. What is the main issue bothering you today?"
+      ],
+      "context_set": "gathering_symptoms",
+      "required_entities": [],
+      "action": "none"
+    },
+    {
+      "tag": "provide_symptom_duration",
+      "patterns": [
+        "It's been hurting for [duration]",
+        "For the last [duration]",
+        "Since [day]"
+      ],
+      "responses": [
+        "Thank you. Experiencing this for that long helps narrow it down. Are you experiencing any other symptoms alongside it?"
+      ],
+      "context_filter": "gathering_symptoms",
+      "context_set": "analyzing_symptoms",
+      "required_entities": ["sys.duration", "sys.date"],
+      "action": "log_symptom_duration"
+    },
+    {
+      "tag": "book_appointment",
+      "patterns": [
+        "I want to see a doctor",
+        "Schedule an appointment",
+        "Book a consultation",
+        "I need a doctor's visit on [date]"
+      ],
+      "responses": [
+        "I can help schedule that for you. What specialty or type of doctor do you need to see?",
+        "Let's get you booked. Do you prefer a morning or afternoon slot?"
+      ],
+      "context_set": "booking_flow",
+      "required_entities": [],
+      "action": "check_calendar_availability"
+    },
+    {
+      "tag": "medication_info",
+      "patterns": [
+        "What are the side effects of [medicine]",
+        "How much [medicine] should I take?",
+        "Is it safe to mix [medicine] and [medicine]?"
+      ],
+      "responses": [
+        "Let me pull up the clinical information for that medication.",
+        "Here is what the medical database says about that drug: "
+      ],
+      "context_filter": "",
+      "context_set": "",
+      "required_entities": ["medical.drug_name"],
+      "action": "query_drug_database"
+    },
+    {
+      "tag": "emergency_escalation",
+      "patterns": [
+        "I can't breathe",
+        "My chest is in severe pain",
+        "I think I'm having a heart attack",
+        "My arm is numb and I can't speak"
+      ],
+      "responses": [
+        "🚨 WARNING: Your symptoms indicate a potential medical emergency. Please call 911 or your local emergency number immediately. Do not wait."
+      ],
+      "context_filter": "",
+      "context_set": "emergency_triggered",
+      "required_entities": [],
+      "action": "trigger_human_handoff_and_alert"
+    },
+    {
+      "tag": "lab_results_inquiry",
+      "patterns": [
+        "Are my blood test results back?",
+        "Check my lab results",
+        "Did my MRI report come in?"
+      ],
+      "responses": [
+        "I can check your patient portal for recent lab results. Please provide your secure Patient ID or Date of Birth to verify your identity."
+      ],
+      "context_set": "verifying_patient_identity",
+      "required_entities": [],
+      "action": "prompt_authentication"
+    }
+  ]
 }
