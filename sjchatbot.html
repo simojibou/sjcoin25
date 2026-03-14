@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SJ AI Medical Chatbot</title>
+
+<style>
+
+body{
+font-family:Arial,Helvetica,sans-serif;
+background:#0f172a;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+
+.chat-container{
+width:380px;
+height:520px;
+background:#111827;
+border-radius:12px;
+display:flex;
+flex-direction:column;
+overflow:hidden;
+box-shadow:0 10px 30px rgba(0,0,0,0.4);
+}
+
+.chat-header{
+background:#2563eb;
+padding:15px;
+font-weight:bold;
+text-align:center;
+}
+
+.chat-box{
+flex:1;
+padding:15px;
+overflow-y:auto;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.message{
+padding:10px 14px;
+border-radius:10px;
+max-width:80%;
+}
+
+.user{
+background:#2563eb;
+align-self:flex-end;
+}
+
+.bot{
+background:#374151;
+align-self:flex-start;
+}
+
+.input-area{
+display:flex;
+border-top:1px solid #333;
+}
+
+input{
+flex:1;
+padding:12px;
+border:none;
+outline:none;
+background:#1f2937;
+color:white;
+}
+
+button{
+background:#2563eb;
+border:none;
+color:white;
+padding:0 20px;
+cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+<div class="chat-header">
+SJ AI Medical Assistant
+</div>
+
+<div id="chatBox" class="chat-box"></div>
+
+<div class="input-area">
+<input id="userInput" placeholder="Ask about symptoms...">
+<button onclick="sendMessage()">Send</button>
+</div>
+
+</div>
+
+<script>
+
+let intents=[];
+
+async function loadAI(){
+const res=await fetch("https://simojibou.github.io/sjcoin25/sjai.json");
+const data=await res.json();
+intents=data.intents;
+}
+
+function addMessage(text,cls){
+const msg=document.createElement("div");
+msg.className="message "+cls;
+msg.innerText=text;
+document.getElementById("chatBox").appendChild(msg);
+document.getElementById("chatBox").scrollTop=999999;
+}
+
+function sendMessage(){
+
+const input=document.getElementById("userInput");
+const text=input.value.toLowerCase();
+
+if(!text) return;
+
+addMessage(text,"user");
+
+input.value="";
+
+const reply=findResponse(text);
+
+setTimeout(()=>{
+addMessage(reply,"bot");
+},400);
+
+}
+
+function findResponse(message){
+
+for(let intent of intents){
+
+for(let pattern of intent.patterns){
+
+if(message.includes(pattern.toLowerCase())){
+
+const responses=intent.responses;
+
+return responses[Math.floor(Math.random()*responses.length)];
+
+}
+
+}
+
+}
+
+return "I'm not sure I understand. Could you describe your symptoms?";
+
+}
+
+loadAI();
+
+</script>
+
+</body>
+</html>
