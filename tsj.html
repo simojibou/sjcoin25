@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grandmaster Bullet Chess</title>
+    <style>
+        :root {
+            /* AAA Minimalist Palette: Slate Gray & Soft White */
+            --bg-base: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --board-light: #e2e8f0;
+            --board-dark: #64748b;
+            --accent-glow: 0 0 30px rgba(248, 250, 252, 0.4);
+            --accent-glow-active: 0 0 40px rgba(56, 189, 248, 0.5);
+            --accent-border: #38bdf8;
+            --crown-gold: #fbbf24;
+            --crown-silver: #94a3b8;
+            --crown-bronze: #b45309;
+            
+            --board-size: 480px;
+            --sq-size: calc(var(--board-size) / 8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .layout-container {
+            display: flex;
+            gap: 60px;
+            align-items: stretch;
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        /* --- CHESS AREA --- */
+        .chess-section {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .timer {
+            background: var(--surface);
+            width: 100%;
+            max-width: var(--board-size);
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 4rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            letter-spacing: -2px;
+            color: var(--text-secondary);
+            border: 2px solid transparent;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        .timer.active {
+            color: var(--text-primary);
+            border-color: var(--accent-border);
+            box-shadow: var(--accent-glow-active);
+            transform: scale(1.02);
+        }
+
+        .board-container {
+            width: var(--board-size);
+            height: var(--board-size);
+            background: var(--surface);
+            border: 8px solid var(--surface);
+            border-radius: 8px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            position: relative;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .square {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .square.light { background-color: var(--board-light); }
+        .square.dark { background-color: var(--board-dark); }
+        
+        .square.highlight {
+            position: relative;
+        }
+        .square.highlight::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background: rgba(56, 189, 248, 0.5);
+            border-radius: 50%;
+        }
+
+        /* --- PIECES --- */
+        .piece {
+            position: absolute;
+            width: var(--sq-size);
+            height: var(--sq-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 50px;
+            cursor: pointer;
+            z-index: 10;
+            /* Smooth Gliding Animation */
+            transition: top 0.25s cubic-bezier(0.25, 1, 0.5, 1), 
+                        left 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+                        transform 0.1s ease;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        .piece.selected {
+            transform: scale(1.15) translateY(-5px);
+            z-index: 20;
+            text-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+            filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
+        }
+
+        /* --- LEADERBOARD --- */
+        .leaderboard-section {
+            width: 380px;
+            background: var(--surface);
+            border-radius: 24px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(248, 250, 252, 0.05);
+        }
+
+        .lb-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            text-align: center;
+            border-bottom: 1px solid var(--surface-hover);
+            padding-bottom: 16px;
+        }
+
+        .lb-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .lb-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .lb-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .lb-rank {
+            font-size: 1.5rem;
+            width: 40px;
+            display: flex;
+            justify-content: center;
+            margin-right: 16px;
+        }
+
+        .lb-info {
+            flex: 1;
+        }
+
+        .lb-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .lb-elo {
+            font-size: 0.85rem;
+            color: var(--accent-border);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* Crown Colors */
+        .rank-1 { color: var(--crown-gold); filter: drop-shadow(0 0 8px var(--crown-gold)); }
+        .rank-2 { color: var(--crown-silver); }
+        .rank-3 { color: var(--crown-bronze); }
+
+        .game-over-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            border-radius: 8px;
+        }
+        .game-over-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .game-over-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .game-over-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="layout-container">
+        <div class="chess-section">
+            <div id="timer-b" class="timer">1:00.00</div>
+            
+            <div class="board-container">
+                <div id="board-grid" class="board-grid"></div>
+                <div id="pieces-layer"></div>
+                
+                <div id="game-over-screen" class="game-over-overlay">
+                    <div id="go-title" class="game-over-title">Checkmate</div>
+                    <div id="go-subtitle" class="game-over-subtitle">White Wins</div>
+                </div>
+            </div>
+
+            <div id="timer-w" class="timer active">1:00.00</div>
+        </div>
+
+        <div class="leaderboard-section">
+            <div class="lb-header">Grandmasters</div>
+            <div id="lb-list" class="lb-list">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * INITIALIZATION & STATE
+         */
+        const GAME_TIME_MS = 60000; // 1 minute bullet
+        let state = {
+            turn: 'w',
+            time: { w: GAME_TIME_MS, b: GAME_TIME_MS },
+            lastTick: null,
+            active: false,
+            selectedPiece: null,
+            gameOver: false,
+            pieces: []
+        };
+
+        // Standard initial position mapped to unicode
+        const initialSetup = [
+            ['♜','♞','♝','♛','♚','♝','♞','♜'], // Black officers (Row 0)
+            ['♟','♟','♟','♟','♟','♟','♟','♟'], // Black pawns (Row 1)
+            [ '','','','','','','','' ],         // Empty
+            [ '','','','','','','','' ],         // Empty
+            [ '','','','','','','','' ],         // Empty
+            [ '','','','','','','','' ],         // Empty
+            ['♙','♙','♙','♙','♙','♙','♙','♙'], // White pawns (Row 6)
+            ['♖','♘','♗','♕','♔','♗','♘','♖']  // White officers (Row 7)
+        ];
+
+        const boardGrid = document.getElementById('board-grid');
+        const piecesLayer = document.getElementById('pieces-layer');
+        const timerW = document.getElementById('timer-w');
+        const timerB = document.getElementById('timer-b');
+
+        /**
+         * BOARD RENDER & LOGIC
+         */
+        function initBoard() {
+            // Draw checkered squares
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const sq = document.createElement('div');
+                    sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    sq.dataset.r = r;
+                    sq.dataset.c = c;
+                    
+                    // Click square to move
+                    sq.addEventListener('click', () => handleSquareClick(r, c));
+                    boardGrid.appendChild(sq);
+
+                    // Initialize piece objects
+                    const pChar = initialSetup[r][c];
+                    if (pChar !== '') {
+                        const color = r < 2 ? 'b' : 'w';
+                        const isKing = (pChar === '♔' || pChar === '♚');
+                        
+                        const pEl = document.createElement('div');
+                        pEl.className = `piece ${color}`;
+                        pEl.innerHTML = pChar;
+                        
+                        const pieceObj = { el: pEl, r, c, color, type: pChar, isKing };
+                        state.pieces.push(pieceObj);
+                        piecesLayer.appendChild(pEl);
+
+                        // Attach visual interaction events
+                        pEl.addEventListener('mousedown', (e) => handlePieceClick(e, pieceObj));
+                    }
+                }
+            }
+            updatePiecesVisuals();
+        }
+
+        // Applies CSS based on logical coordinates for the smooth glide effect
+        function updatePiecesVisuals() {
+            state.pieces.forEach(p => {
+                p.el.style.top = `calc(var(--sq-size) * ${p.r})`;
+                p.el.style.left = `calc(var(--sq-size) * ${p.c})`;
+            });
+        }
+
+        function handlePieceClick(e, pieceObj) {
+            e.stopPropagation(); // Prevent square click
+            if (state.gameOver) return;
+
+            // If clicking an enemy piece while we have one selected, it's a capture move
+            if (state.selectedPiece && state.selectedPiece.color !== pieceObj.color) {
+                handleSquareClick(pieceObj.r, pieceObj.c);
+                return;
+            }
+
+            // Only select own pieces on own turn
+            if (pieceObj.color !== state.turn) return;
+
+            // Deselect old
+            if (state.selectedPiece) state.selectedPiece.el.classList.remove('selected');
+            
+            // Select new
+            if (state.selectedPiece === pieceObj) {
+                state.selectedPiece = null; // Toggle off
+            } else {
+                state.selectedPiece = pieceObj;
+                pieceObj.el.classList.add('selected');
+            }
+        }
+
+        function handleSquareClick(targetR, targetC) {
+            if (state.gameOver || !state.selectedPiece) return;
+
+            // Simple "any move goes" sandbox logic for smooth UI/UX demo
+            // Checks for captures
+            const targetPieceIndex = state.pieces.findIndex(p => p.r === targetR && p.c === targetC);
+            let capturedKingColor = null;
+
+            if (targetPieceIndex !== -1) {
+                const targetPiece = state.pieces[targetPieceIndex];
+                if (targetPiece.color === state.turn) return; // Can't capture own piece
+                
+                if (targetPiece.isKing) capturedKingColor = targetPiece.color;
+                
+                // Remove captured piece from DOM and array
+                targetPiece.el.remove();
+                state.pieces.splice(targetPieceIndex, 1);
+            }
+
+            // Update logical position
+            state.selectedPiece.r = targetR;
+            state.selectedPiece.c = targetC;
+            
+            // Clean up selection
+            state.selectedPiece.el.classList.remove('selected');
+            state.selectedPiece = null;
+            
+            // Animate
+            updatePiecesVisuals();
+
+            // Start clock on first move
+            if (!state.active) {
+                state.active = true;
+                state.lastTick = performance.now();
+                requestAnimationFrame(timerLoop);
+            }
+
+            // Check Win Condition (King Captured)
+            if (capturedKingColor) {
+                const winnerName = capturedKingColor === 'b' ? 'White' : 'Black';
+                endGame('Checkmate', winnerName);
+                return;
+            }
+
+            // Toggle Turn
+            state.turn = state.turn === 'w' ? 'b' : 'w';
+            timerW.classList.toggle('active', state.turn === 'w');
+            timerB.classList.toggle('active', state.turn === 'b');
+        }
+
+        /**
+         * TIMER SYSTEM
+         */
+        function formatTime(ms) {
+            if (ms <= 0) return "0:00.00";
+            const mins = Math.floor(ms / 60000);
+            const secs = Math.floor((ms % 60000) / 1000);
+            const millis = Math.floor((ms % 1000) / 10);
+            return `${mins}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(2, '0')}`;
+        }
+
+        function timerLoop(timestamp) {
+            if (!state.active || state.gameOver) return;
+
+            const delta = timestamp - state.lastTick;
+            state.lastTick = timestamp;
+
+            state.time[state.turn] -= delta;
+
+            if (state.time[state.turn] <= 0) {
+                state.time[state.turn] = 0;
+                updateTimersDOM();
+                const winnerName = state.turn === 'w' ? 'Black' : 'White';
+                endGame('Timeout', winnerName);
+                return;
+            }
+
+            updateTimersDOM();
+            requestAnimationFrame(timerLoop);
+        }
+
+        function updateTimersDOM() {
+            timerW.textContent = formatTime(state.time.w);
+            timerB.textContent = formatTime(state.time.b);
+        }
+
+        /**
+         * GAME OVER & PARENT COMMUNICATION
+         */
+        function endGame(reason, winnerColorStr) {
+            state.gameOver = true;
+            state.active = false;
+            timerW.classList.remove('active');
+            timerB.classList.remove('active');
+
+            // Show UI
+            const overlay = document.getElementById('game-over-screen');
+            document.getElementById('go-title').textContent = reason;
+            document.getElementById('go-subtitle').textContent = `${winnerColorStr} Wins`;
+            overlay.classList.add('show');
+
+            // Requirement 4: PostMessage
+            const timeRemaining = state.turn === 'w' ? state.time.w : state.time.b;
+            window.parent.postMessage({
+                type: 'SJ_GAME_OVER',
+                winner: winnerColorStr,
+                timeRemaining: Math.max(0, timeRemaining),
+                gameName: 'SJ_BulletChess'
+            }, '*');
+        }
+
+        /**
+         * LEADERBOARD SYSTEM
+         */
+        function initLeaderboard() {
+            // Read from global window object or mock if running standalone
+            const defaultData = [
+                { name: 'Magnus C.', elo: 3324, streak: 12 },
+                { name: 'Hikaru N.', elo: 3280, streak: 8 },
+                { name: 'Alireza F.', elo: 3195, streak: 5 },
+                { name: 'Daniel N.', elo: 3110, streak: 3 },
+                { name: 'Garry K.', elo: 3050, streak: 2 }
+            ];
+            
+            const lbData = window.SJ_LEADERBOARD || defaultData;
+            const lbContainer = document.getElementById('lb-list');
+
+            const crowns = ['👑', '🥈', '🥉'];
+
+            lbData.forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = 'lb-item';
+                
+                const rankIndicator = index < 3 
+                    ? `<span class="rank-${index+1}">${crowns[index]}</span>` 
+                    : `<span style="color: var(--text-secondary); font-size: 1rem;">#${index+1}</span>`;
+
+                item.innerHTML = `
+                    <div class="lb-rank">${rankIndicator}</div>
+                    <div class="lb-info">
+                        <div class="lb-name">${player.name}</div>
+                        <div class="lb-elo">ELO ${player.elo || 'N/A'} ${player.streak ? `• ${player.streak}🔥` : ''}</div>
+                    </div>
+                `;
+                lbContainer.appendChild(item);
+            });
+        }
+
+        // Bootstrap App
+        window.addEventListener('DOMContentLoaded', () => {
+            initBoard();
+            initLeaderboard();
+        });
+    </script>
+</body>
+</html>
