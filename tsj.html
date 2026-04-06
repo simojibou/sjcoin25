@@ -3,236 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grandmaster Bullet Chess</title>
+    <title>Grandmaster 3D Bullet Chess</title>
     <style>
         :root {
-            /* AAA Minimalist Palette: Slate Gray & Soft White */
             --bg-base: #0f172a;
-            --surface: #1e293b;
-            --surface-hover: #334155;
+            --surface: rgba(30, 41, 59, 0.85);
+            --surface-hover: rgba(51, 65, 85, 0.95);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
-            --board-light: #e2e8f0;
-            --board-dark: #64748b;
-            --accent-glow: 0 0 30px rgba(248, 250, 252, 0.4);
-            --accent-glow-active: 0 0 40px rgba(56, 189, 248, 0.5);
+            --accent-glow: 0 0 30px rgba(248, 250, 252, 0.3);
+            --accent-glow-active: 0 0 50px rgba(56, 189, 248, 0.6);
             --accent-border: #38bdf8;
             --crown-gold: #fbbf24;
             --crown-silver: #94a3b8;
             --crown-bronze: #b45309;
-            
-            --board-size: 480px;
-            --sq-size: calc(var(--board-size) / 8);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
         }
 
         body {
             background-color: var(--bg-base);
             color: var(--text-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
 
-        .layout-container {
-            display: flex;
-            gap: 60px;
-            align-items: stretch;
-            max-width: 1200px;
-            width: 100%;
-            padding: 40px;
-        }
-
-        /* --- CHESS AREA --- */
-        .chess-section {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            align-items: center;
-            flex: 1;
-        }
-
-        .timer {
-            background: var(--surface);
-            width: 100%;
-            max-width: var(--board-size);
-            padding: 16px 32px;
-            border-radius: 16px;
-            font-size: 4rem;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-            text-align: center;
-            letter-spacing: -2px;
-            color: var(--text-secondary);
-            border: 2px solid transparent;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-        }
-
-        .timer.active {
-            color: var(--text-primary);
-            border-color: var(--accent-border);
-            box-shadow: var(--accent-glow-active);
-            transform: scale(1.02);
-        }
-
-        .board-container {
-            width: var(--board-size);
-            height: var(--board-size);
-            background: var(--surface);
-            border: 8px solid var(--surface);
-            border-radius: 8px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-            position: relative;
-        }
-
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            grid-template-rows: repeat(8, 1fr);
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            border-radius: 4px;
-            overflow: hidden;
+            z-index: 1;
         }
 
-        .square {
+        /* UI Overlays */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .square.light { background-color: var(--board-light); }
-        .square.dark { background-color: var(--board-dark); }
-        
-        .square.highlight {
-            position: relative;
-        }
-        .square.highlight::after {
-            content: '';
-            position: absolute;
-            width: 30%;
-            height: 30%;
-            background: rgba(56, 189, 248, 0.5);
-            border-radius: 50%;
-        }
-
-        /* --- PIECES --- */
-        .piece {
-            position: absolute;
-            width: var(--sq-size);
-            height: var(--sq-size);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 50px;
-            cursor: pointer;
             z-index: 10;
-            /* Smooth Gliding Animation */
-            transition: top 0.25s cubic-bezier(0.25, 1, 0.5, 1), 
-                        left 0.25s cubic-bezier(0.25, 1, 0.5, 1),
-                        transform 0.1s ease;
-            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            pointer-events: none; /* Let clicks pass to 3D canvas */
         }
 
-        .piece.selected {
-            transform: scale(1.15) translateY(-5px);
-            z-index: 20;
-            text-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
-            filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
-        }
-
-        /* --- LEADERBOARD --- */
-        .leaderboard-section {
-            width: 380px;
-            background: var(--surface);
-            border-radius: 24px;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(248, 250, 252, 0.05);
-        }
-
-        .lb-header {
-            font-size: 1.5rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-primary);
-            margin-bottom: 24px;
-            text-align: center;
-            border-bottom: 1px solid var(--surface-hover);
-            padding-bottom: 16px;
-        }
-
-        .lb-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .lb-item {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.4);
-            border-radius: 12px;
-            transition: background 0.2s ease;
-        }
-
-        .lb-item:hover {
-            background: var(--surface-hover);
-        }
-
-        .lb-rank {
-            font-size: 1.5rem;
-            width: 40px;
-            display: flex;
-            justify-content: center;
-            margin-right: 16px;
-        }
-
-        .lb-info {
-            flex: 1;
-        }
-
-        .lb-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-
-        .lb-elo {
-            font-size: 0.85rem;
-            color: var(--accent-border);
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        /* Crown Colors */
-        .rank-1 { color: var(--crown-gold); filter: drop-shadow(0 0 8px var(--crown-gold)); }
-        .rank-2 { color: var(--crown-silver); }
-        .rank-3 { color: var(--crown-bronze); }
-
+        /* Game Over Screen */
         .game-over-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -241,306 +70,504 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
-            border-radius: 8px;
         }
+
         .game-over-overlay.show {
             opacity: 1;
             pointer-events: all;
         }
+
         .game-over-title {
-            font-size: 3rem;
+            font-size: 4rem;
             font-weight: 800;
             margin-bottom: 10px;
-            text-align: center;
+            text-shadow: var(--accent-glow-active);
+            color: white;
+            letter-spacing: -2px;
         }
+
         .game-over-subtitle {
-            font-size: 1.2rem;
+            font-size: 1.5rem;
+            color: var(--accent-border);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-weight: 600;
+        }
+        
+        .controls-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             color: var(--text-secondary);
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
     </style>
+    <!-- Include Three.js for AAA 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div class="layout-container">
-        <div class="chess-section">
-            <div id="timer-b" class="timer">1:00.00</div>
-            
-            <div class="board-container">
-                <div id="board-grid" class="board-grid"></div>
-                <div id="pieces-layer"></div>
-                
-                <div id="game-over-screen" class="game-over-overlay">
-                    <div id="go-title" class="game-over-title">Checkmate</div>
-                    <div id="go-subtitle" class="game-over-subtitle">White Wins</div>
-                </div>
-            </div>
+    <div id="canvas-container"></div>
 
-            <div id="timer-w" class="timer active">1:00.00</div>
-        </div>
+    <div id="ui-layer">
+    </div>
 
-        <div class="leaderboard-section">
-            <div class="lb-header">Grandmasters</div>
-            <div id="lb-list" class="lb-list">
-                </div>
-        </div>
+    <div id="game-over-screen" class="game-over-overlay">
+        <div id="go-title" class="game-over-title">CHECKMATE</div>
+        <div id="go-subtitle" class="game-over-subtitle">White Wins</div>
+    </div>
+
+    <div class="controls-hint">
+        Left Click: Move Piece &nbsp; | &nbsp; Click & Drag: Rotate Camera
     </div>
 
     <script>
         /**
-         * INITIALIZATION & STATE
+         * GLOBAL STATE & LOGIC CONFIG
          */
-        const GAME_TIME_MS = 60000; // 1 minute bullet
-        let state = {
+        const state = {
             turn: 'w',
-            time: { w: GAME_TIME_MS, b: GAME_TIME_MS },
-            lastTick: null,
-            active: false,
-            selectedPiece: null,
             gameOver: false,
-            pieces: []
+            selectedPiece: null
         };
 
-        // Standard initial position mapped to unicode
         const initialSetup = [
-            ['♜','♞','♝','♛','♚','♝','♞','♜'], // Black officers (Row 0)
-            ['♟','♟','♟','♟','♟','♟','♟','♟'], // Black pawns (Row 1)
-            [ '','','','','','','','' ],         // Empty
-            [ '','','','','','','','' ],         // Empty
-            [ '','','','','','','','' ],         // Empty
-            [ '','','','','','','','' ],         // Empty
-            ['♙','♙','♙','♙','♙','♙','♙','♙'], // White pawns (Row 6)
-            ['♖','♘','♗','♕','♔','♗','♘','♖']  // White officers (Row 7)
+            ['♜','♞','♝','♛','♚','♝','♞','♜'],
+            ['♟','♟','♟','♟','♟','♟','♟','♟'],
+            [ '','','','','','','','' ],
+            [ '','','','','','','','' ],
+            [ '','','','','','','','' ],
+            [ '','','','','','','','' ],
+            ['♙','♙','♙','♙','♙','♙','♙','♙'],
+            ['♖','♘','♗','♕','♔','♗','♘','♖']
         ];
 
-        const boardGrid = document.getElementById('board-grid');
-        const piecesLayer = document.getElementById('pieces-layer');
-        const timerW = document.getElementById('timer-w');
-        const timerB = document.getElementById('timer-b');
+        let scene, camera, renderer, raycaster, mouse;
+        const pieces = [];
+        const boardSquares = [];
+        const activeTweens = [];
+        
+        let selectionIndicator;
+        
+        // Camera Orbit Controls State
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraSpherical = { radius: 10, theta: Math.PI / 4, phi: Math.PI / 3 };
 
         /**
-         * BOARD RENDER & LOGIC
+         * INITIALIZATION
          */
-        function initBoard() {
-            // Draw checkered squares
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const sq = document.createElement('div');
-                    sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    sq.dataset.r = r;
-                    sq.dataset.c = c;
-                    
-                    // Click square to move
-                    sq.addEventListener('click', () => handleSquareClick(r, c));
-                    boardGrid.appendChild(sq);
+        window.onload = function () {
+            initThreeJS();
+            initBoardAndPieces();
+            initInteraction();
+            animate();
+        };
 
-                    // Initialize piece objects
-                    const pChar = initialSetup[r][c];
-                    if (pChar !== '') {
-                        const color = r < 2 ? 'b' : 'w';
-                        const isKing = (pChar === '♔' || pChar === '♚');
-                        
-                        const pEl = document.createElement('div');
-                        pEl.className = `piece ${color}`;
-                        pEl.innerHTML = pChar;
-                        
-                        const pieceObj = { el: pEl, r, c, color, type: pChar, isKing };
-                        state.pieces.push(pieceObj);
-                        piecesLayer.appendChild(pEl);
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
 
-                        // Attach visual interaction events
-                        pEl.addEventListener('mousedown', (e) => handlePieceClick(e, pieceObj));
-                    }
-                }
-            }
-            updatePiecesVisuals();
-        }
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#0f172a');
+            scene.fog = new THREE.FogExp2('#0f172a', 0.03);
 
-        // Applies CSS based on logical coordinates for the smooth glide effect
-        function updatePiecesVisuals() {
-            state.pieces.forEach(p => {
-                p.el.style.top = `calc(var(--sq-size) * ${p.r})`;
-                p.el.style.left = `calc(var(--sq-size) * ${p.c})`;
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            updateCameraPosition();
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lighting (AAA Minimalist setup)
+            const ambientLight = new THREE.AmbientLight('#ffffff', 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight('#e2e8f0', 0.8);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            const d = 6;
+            directionalLight.shadow.camera.left = -d;
+            directionalLight.shadow.camera.right = d;
+            directionalLight.shadow.camera.top = d;
+            directionalLight.shadow.camera.bottom = -d;
+            scene.add(directionalLight);
+
+            const blueFill = new THREE.PointLight('#38bdf8', 0.4, 20);
+            blueFill.position.set(-5, 5, -5);
+            scene.add(blueFill);
+
+            // Raycaster
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
         }
 
-        function handlePieceClick(e, pieceObj) {
-            e.stopPropagation(); // Prevent square click
-            if (state.gameOver) return;
+        /**
+         * PROCEDURAL GENERATION (Board & Pieces)
+         */
+        function initBoardAndPieces() {
+            // Create Board Base
+            const baseGeo = new THREE.BoxGeometry(8.4, 0.4, 8.4);
+            const baseMat = new THREE.MeshStandardMaterial({ 
+                color: '#1e293b', 
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const boardBase = new THREE.Mesh(baseGeo, baseMat);
+            boardBase.position.y = -0.25;
+            boardBase.receiveShadow = true;
+            scene.add(boardBase);
 
-            // If clicking an enemy piece while we have one selected, it's a capture move
-            if (state.selectedPiece && state.selectedPiece.color !== pieceObj.color) {
-                handleSquareClick(pieceObj.r, pieceObj.c);
-                return;
+            // Board Squares
+            const lightSquareMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.4, metalness: 0.1 });
+            const darkSquareMat = new THREE.MeshStandardMaterial({ color: '#64748b', roughness: 0.6, metalness: 0.1 });
+            const squareGeo = new THREE.BoxGeometry(1, 0.1, 1);
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const isLight = (r + c) % 2 === 0;
+                    const square = new THREE.Mesh(squareGeo, isLight ? lightSquareMat : darkSquareMat);
+                    
+                    square.position.set(c - 3.5, 0, r - 3.5);
+                    square.receiveShadow = true;
+                    
+                    // Attach logic data
+                    square.userData = { isSquare: true, r, c };
+                    boardSquares.push(square);
+                    scene.add(square);
+
+                    // Create pieces based on layout
+                    const pChar = initialSetup[r][c];
+                    if (pChar !== '') {
+                        createPiece(pChar, r, c);
+                    }
+                }
             }
 
-            // Only select own pieces on own turn
-            if (pieceObj.color !== state.turn) return;
+            // Selection Indicator (Glowing Torus)
+            const torusGeo = new THREE.TorusGeometry(0.4, 0.03, 16, 32);
+            const torusMat = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.8 });
+            selectionIndicator = new THREE.Mesh(torusGeo, torusMat);
+            selectionIndicator.rotation.x = -Math.PI / 2;
+            selectionIndicator.position.y = 0.06;
+            selectionIndicator.visible = false;
+            scene.add(selectionIndicator);
+        }
 
-            // Deselect old
-            if (state.selectedPiece) state.selectedPiece.el.classList.remove('selected');
+        function createPiece(type, r, c) {
+            const color = r < 2 ? 'b' : 'w';
+            const isKing = (type === '♔' || type === '♚');
+
+            // Generate texture dynamically from unicode char for minimalist look
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
             
-            // Select new
-            if (state.selectedPiece === pieceObj) {
-                state.selectedPiece = null; // Toggle off
+            ctx.fillStyle = color === 'w' ? '#f8fafc' : '#1e293b';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            ctx.font = '160px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = color === 'w' ? '#0f172a' : '#f8fafc';
+            ctx.fillText(type, 128, 140); // Offset slightly for baseline
+            
+            // Add a subtle rim border on the texture
+            ctx.strokeStyle = color === 'w' ? '#cbd5e1' : '#475569';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(128, 128, 123, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            
+            // Materials
+            const topMat = new THREE.MeshStandardMaterial({ 
+                map: texture, 
+                roughness: 0.2, 
+                metalness: 0.1 
+            });
+            const sideMat = new THREE.MeshStandardMaterial({ 
+                color: color === 'w' ? '#f8fafc' : '#1e293b', 
+                roughness: 0.5, 
+                metalness: 0.3 
+            });
+
+            // Geometry: A coin/token shape
+            const geo = new THREE.CylinderGeometry(0.35, 0.38, 0.15, 32);
+            const pieceMesh = new THREE.Mesh(geo, [sideMat, topMat, sideMat]);
+            
+            pieceMesh.position.set(c - 3.5, 0.125, r - 3.5);
+            pieceMesh.castShadow = true;
+            pieceMesh.receiveShadow = true;
+
+            // Align texture correctly based on start side
+            pieceMesh.rotation.y = color === 'b' ? Math.PI : 0; 
+
+            pieceMesh.userData = { isPiece: true, r, c, color, type, isKing, active: true };
+            pieces.push(pieceMesh);
+            scene.add(pieceMesh);
+        }
+
+        /**
+         * INTERACTION & CONTROLS
+         */
+        function initInteraction() {
+            const container = document.getElementById('canvas-container');
+            let isClicking = false;
+            let startMouse = { x: 0, y: 0 };
+
+            container.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                isClicking = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+                startMouse = { x: e.clientX, y: e.clientY };
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+                    
+                    // If moved more than 5px, it's a drag, not a click
+                    if (Math.abs(e.clientX - startMouse.x) > 5 || Math.abs(e.clientY - startMouse.y) > 5) {
+                        isClicking = false;
+                    }
+
+                    // Rotate camera
+                    cameraSpherical.theta -= deltaX * 0.005;
+                    cameraSpherical.phi -= deltaY * 0.005;
+                    
+                    // Clamp vertical rotation so we don't go under board or directly top-down
+                    cameraSpherical.phi = Math.max(0.2, Math.min(Math.PI / 2 - 0.1, cameraSpherical.phi));
+                    
+                    updateCameraPosition();
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            container.addEventListener('mouseup', (e) => {
+                isDragging = false;
+                if (isClicking) {
+                    handleCanvasClick(e);
+                }
+            });
+        }
+
+        function updateCameraPosition() {
+            camera.position.x = cameraSpherical.radius * Math.sin(cameraSpherical.phi) * Math.sin(cameraSpherical.theta);
+            camera.position.y = cameraSpherical.radius * Math.cos(cameraSpherical.phi);
+            camera.position.z = cameraSpherical.radius * Math.sin(cameraSpherical.phi) * Math.cos(cameraSpherical.theta);
+            camera.lookAt(0, 0, 0);
+        }
+
+        function handleCanvasClick(event) {
+            if (state.gameOver) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Intersect both pieces and squares
+            const activePieceMeshes = pieces.filter(p => p.userData.active);
+            const intersects = raycaster.intersectObjects([...activePieceMeshes, ...boardSquares]);
+
+            if (intersects.length > 0) {
+                const hitObj = intersects[0].object;
+
+                if (hitObj.userData.isPiece) {
+                    handlePieceClick(hitObj);
+                } else if (hitObj.userData.isSquare) {
+                    handleSquareClick(hitObj.userData.r, hitObj.userData.c);
+                }
             } else {
-                state.selectedPiece = pieceObj;
-                pieceObj.el.classList.add('selected');
+                deselectPiece();
             }
         }
 
-        function handleSquareClick(targetR, targetC) {
-            if (state.gameOver || !state.selectedPiece) return;
+        function handlePieceClick(pieceMesh) {
+            const data = pieceMesh.userData;
 
-            // Simple "any move goes" sandbox logic for smooth UI/UX demo
-            // Checks for captures
-            const targetPieceIndex = state.pieces.findIndex(p => p.r === targetR && p.c === targetC);
+            // If selected enemy piece while we have one selected -> Capture move
+            if (state.selectedPiece && data.color !== state.turn) {
+                handleSquareClick(data.r, data.c);
+                return;
+            }
+
+            // Select own piece
+            if (data.color === state.turn) {
+                if (state.selectedPiece === pieceMesh) {
+                    deselectPiece();
+                } else {
+                    state.selectedPiece = pieceMesh;
+                    selectionIndicator.position.set(pieceMesh.position.x, 0.06, pieceMesh.position.z);
+                    selectionIndicator.visible = true;
+                }
+            }
+        }
+
+        function deselectPiece() {
+            state.selectedPiece = null;
+            selectionIndicator.visible = false;
+        }
+
+        function handleSquareClick(targetR, targetC) {
+            if (!state.selectedPiece) return;
+
+            const selectedData = state.selectedPiece.userData;
             let capturedKingColor = null;
 
+            // Check for capture
+            const targetPieceIndex = pieces.findIndex(p => p.userData.active && p.userData.r === targetR && p.userData.c === targetC);
             if (targetPieceIndex !== -1) {
-                const targetPiece = state.pieces[targetPieceIndex];
-                if (targetPiece.color === state.turn) return; // Can't capture own piece
+                const targetPiece = pieces[targetPieceIndex];
+                if (targetPiece.userData.color === state.turn) return; // Cannot capture own
                 
-                if (targetPiece.isKing) capturedKingColor = targetPiece.color;
+                if (targetPiece.userData.isKing) capturedKingColor = targetPiece.userData.color;
                 
-                // Remove captured piece from DOM and array
-                targetPiece.el.remove();
-                state.pieces.splice(targetPieceIndex, 1);
+                // Animate captured piece out (shrink & remove)
+                targetPiece.userData.active = false;
+                addTween(targetPiece.scale, { x: 0, y: 0, z: 0 }, 200, () => {
+                    scene.remove(targetPiece);
+                });
             }
 
             // Update logical position
-            state.selectedPiece.r = targetR;
-            state.selectedPiece.c = targetC;
-            
-            // Clean up selection
-            state.selectedPiece.el.classList.remove('selected');
-            state.selectedPiece = null;
-            
-            // Animate
-            updatePiecesVisuals();
+            selectedData.r = targetR;
+            selectedData.c = targetC;
 
-            // Start clock on first move
-            if (!state.active) {
-                state.active = true;
-                state.lastTick = performance.now();
-                requestAnimationFrame(timerLoop);
-            }
+            // Animate moving piece (Parabolic Arc)
+            const startPos = state.selectedPiece.position.clone();
+            const endX = targetC - 3.5;
+            const endZ = targetR - 3.5;
+            const duration = 300;
 
-            // Check Win Condition (King Captured)
+            const movingPiece = state.selectedPiece;
+            deselectPiece();
+
+            addTween({ p: 0 }, { p: 1 }, duration, null, (obj) => {
+                const progress = obj.p;
+                movingPiece.position.x = startPos.x + (endX - startPos.x) * progress;
+                movingPiece.position.z = startPos.z + (endZ - startPos.z) * progress;
+                // Add jump height (parabola)
+                movingPiece.position.y = 0.125 + Math.sin(progress * Math.PI) * 1.5;
+            });
+
+            // Check Win Condition
             if (capturedKingColor) {
                 const winnerName = capturedKingColor === 'b' ? 'White' : 'Black';
-                endGame('Checkmate', winnerName);
+                setTimeout(() => endGame('Checkmate', winnerName), duration);
                 return;
             }
 
             // Toggle Turn
             state.turn = state.turn === 'w' ? 'b' : 'w';
-            timerW.classList.toggle('active', state.turn === 'w');
-            timerB.classList.toggle('active', state.turn === 'b');
         }
 
         /**
-         * TIMER SYSTEM
+         * ANIMATION ENGINE (Custom Tweening)
          */
-        function formatTime(ms) {
-            if (ms <= 0) return "0:00.00";
-            const mins = Math.floor(ms / 60000);
-            const secs = Math.floor((ms % 60000) / 1000);
-            const millis = Math.floor((ms % 1000) / 10);
-            return `${mins}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(2, '0')}`;
+        function addTween(targetObj, endProps, duration, onComplete, onUpdate) {
+            const startProps = {};
+            for (let key in endProps) startProps[key] = targetObj[key];
+            
+            activeTweens.push({
+                target: targetObj,
+                start: startProps,
+                end: endProps,
+                duration: duration,
+                startTime: performance.now(),
+                onComplete: onComplete,
+                onUpdate: onUpdate
+            });
         }
 
-        function timerLoop(timestamp) {
-            if (!state.active || state.gameOver) return;
-
-            const delta = timestamp - state.lastTick;
-            state.lastTick = timestamp;
-
-            state.time[state.turn] -= delta;
-
-            if (state.time[state.turn] <= 0) {
-                state.time[state.turn] = 0;
-                updateTimersDOM();
-                const winnerName = state.turn === 'w' ? 'Black' : 'White';
-                endGame('Timeout', winnerName);
-                return;
+        function updateTweens(time) {
+            for (let i = activeTweens.length - 1; i >= 0; i--) {
+                const t = activeTweens[i];
+                let progress = (time - t.startTime) / t.duration;
+                
+                if (progress >= 1) {
+                    progress = 1;
+                    for (let key in t.end) t.target[key] = t.end[key];
+                    if (t.onUpdate) t.onUpdate(t.target);
+                    if (t.onComplete) t.onComplete();
+                    activeTweens.splice(i, 1);
+                } else {
+                    // Ease out cubic
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    for (let key in t.end) {
+                        t.target[key] = t.start[key] + (t.end[key] - t.start[key]) * ease;
+                    }
+                    if (t.onUpdate) t.onUpdate(t.target);
+                }
             }
-
-            updateTimersDOM();
-            requestAnimationFrame(timerLoop);
-        }
-
-        function updateTimersDOM() {
-            timerW.textContent = formatTime(state.time.w);
-            timerB.textContent = formatTime(state.time.b);
         }
 
         /**
-         * GAME OVER & PARENT COMMUNICATION
+         * GAME OVER & POSTMESSAGE
          */
         function endGame(reason, winnerColorStr) {
+            if (state.gameOver) return;
             state.gameOver = true;
-            state.active = false;
-            timerW.classList.remove('active');
-            timerB.classList.remove('active');
 
-            // Show UI
+            // Show Overlay
             const overlay = document.getElementById('game-over-screen');
             document.getElementById('go-title').textContent = reason;
-            document.getElementById('go-subtitle').textContent = `${winnerColorStr} Wins`;
+            document.getElementById('go-subtitle').textContent = `${winnerColorStr} WINS`;
             overlay.classList.add('show');
 
-            // Requirement 4: PostMessage
-            const timeRemaining = state.turn === 'w' ? state.time.w : state.time.b;
+            // Trigger Requirement 4
             window.parent.postMessage({
                 type: 'SJ_GAME_OVER',
                 winner: winnerColorStr,
-                timeRemaining: Math.max(0, timeRemaining),
+                timeRemaining: 0, // Fallback since timers are removed
                 gameName: 'SJ_BulletChess'
             }, '*');
         }
 
         /**
-         * LEADERBOARD SYSTEM
+         * RENDER LOOP
          */
-        function initLeaderboard() {
-            // Read from global window object or mock if running standalone
-            const defaultData = [
-                { name: 'Magnus C.', elo: 3324, streak: 12 },
-                { name: 'Hikaru N.', elo: 3280, streak: 8 },
-                { name: 'Alireza F.', elo: 3195, streak: 5 },
-                { name: 'Daniel N.', elo: 3110, streak: 3 },
-                { name: 'Garry K.', elo: 3050, streak: 2 }
-            ];
-            
-            const lbData = window.SJ_LEADERBOARD || defaultData;
-            const lbContainer = document.getElementById('lb-list');
+        function animate(timestamp = performance.now()) {
+            requestAnimationFrame(animate);
 
-            const crowns = ['👑', '🥈', '🥉'];
+            // Update custom tween engine (smooth piece gliding)
+            updateTweens(timestamp);
 
-            lbData.forEach((player, index) => {
-                const item = document.createElement('div');
-                item.className = 'lb-item';
-                
-                const rankIndicator = index < 3 
-                    ? `<span class="rank-${index+1}">${crowns[index]}</span>` 
-                    : `<span style="color: var(--text-secondary); font-size: 1rem;">#${index+1}</span>`;
+            // Pulse effect for selection indicator
+            if (selectionIndicator.visible) {
+                selectionIndicator.scale.setScalar(1 + Math.sin(timestamp * 0.005) * 0.1);
+            }
 
-                item.innerHTML = `
-                    <div class="lb-rank">${rankIndicator}</div>
-                    <div class="lb-info">
-                        <div class="lb-name">${player.name}</div>
-                        <div class="lb-elo">ELO ${player.elo || 'N/A'} ${player.streak ? `• ${player.streak}🔥` : ''}</div>
-                    </div>
-                `;
-                lbContainer.appendChild(item);
-            });
+            renderer.render(scene, camera);
         }
-
-        // Bootstrap App
-        window.addEventListener('DOMContentLoaded', () => {
-            initBoard();
-            initLeaderboard();
-        });
     </script>
 </body>
 </html>
