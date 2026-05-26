@@ -6,12 +6,7 @@
     <title>ترقية وتصحيح عقد SJ COIN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- TonConnect UI -->
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css">
-
-    <!-- TonWeb — نحمّلها آخراً ونتحقق من جهوزيتها قبل الاستخدام -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js"></script>
 
     <style>
@@ -25,227 +20,84 @@
 <body class="min-h-screen flex flex-col justify-between p-4">
 
 <div class="max-w-xl mx-auto w-full bg-[#12141c] border border-gray-800 rounded-2xl p-6 mt-10 shadow-xl">
-
-    <!-- Header -->
     <div class="flex flex-col items-center text-center gap-3 mb-6">
-        <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG"
-             class="w-16 h-16 rounded-full border border-yellow-500/30 shadow-lg shadow-yellow-500/10" alt="SJ">
         <h1 class="text-xl font-black">ترقية وتصحيح عقد SJ COIN</h1>
-        <p class="text-xs text-gray-400">تحويل العقد لـ Off-chain لتفعيل ظهور الأزرار والشعار</p>
     </div>
 
-    <!-- TonConnect Button -->
     <div class="flex justify-center mb-6">
         <div id="ton-connect-btn"></div>
     </div>
 
     <div class="space-y-4">
-
-        <!-- Master Address -->
         <div>
-            <label class="block text-xs text-gray-400 mb-1">عنوان عقد العملة (Jetton Master Address)</label>
-            <input type="text" id="master-address" readonly
-                   value="EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe"
-                   class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-gray-300 focus:outline-none">
+            <label class="block text-xs text-gray-400 mb-1">عنوان عقد العملة</label>
+            <input type="text" id="master-address" readonly value="EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe" class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-gray-300 focus:outline-none">
         </div>
 
-        <!-- JSON URL -->
         <div>
-            <label class="block text-xs text-gray-400 mb-1">رابط الـ JSON المباشر (Raw URL)</label>
-            <input type="text" id="json-url"
-                   value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json"
-                   class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-yellow-500 focus:outline-none focus:border-yellow-500/50">
+            <label class="block text-xs text-gray-400 mb-1">رابط الـ JSON</label>
+            <input type="text" id="json-url" value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json" class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-yellow-500 focus:outline-none">
         </div>
 
-        <!-- Console -->
         <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-[10px] font-mono space-y-1">
-            <span class="text-xs font-bold text-gray-300 block mb-2">🖥️ Compiler Console</span>
-            <div>TonWeb: <span id="log-tonweb" class="log-err">جاري التحميل...</span></div>
-            <div>BOC Payload: <span id="log-payload" class="log-inf">في الانتظار...</span></div>
-            <div>الحالة: <span id="log-status" class="log-inf">بانتظار المكتبات...</span></div>
+            <span class="text-xs font-bold text-gray-300 block mb-2">🖥️ Console</span>
+            <div>الحالة: <span id="log-status" class="log-inf">بانتظار الربط...</span></div>
         </div>
 
-        <!-- Info -->
-        <div class="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl text-xs text-yellow-500 leading-relaxed">
-            ℹ️ <strong>ملاحظة تقنية:</strong> ستُرسَل معاملة من محفظة المسؤول لتعديل عقد الماستر
-            كي يقرأ ملف JSON الخارجي بدلاً من النصوص المباشرة — مما يُفعّل الأزرار والشعار
-            في تليجرام وبقية محافظ TON.
-        </div>
-
-        <!-- Submit Button -->
         <button id="btn-submit" onclick="updateToOffchain()" disabled
-                class="w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2
-                       bg-gray-700 text-gray-400 cursor-not-allowed">
-            <i data-lucide="shield-alert" class="w-4 h-4"></i>
-            <span id="btn-text">يرجى ربط محفظة المسؤول أولاً</span>
+                class="w-full py-4 rounded-xl font-bold text-sm bg-gray-700 text-gray-400 cursor-not-allowed">
+            <span id="btn-text">يرجى ربط المحفظة أولاً</span>
         </button>
     </div>
 </div>
 
-<footer class="text-center text-[10px] text-gray-600 mt-10">
-    أداة ترقية عقود SJ COIN على شبكة TON
-</footer>
-
 <script>
-lucide.createIcons();
+    const MASTER_ADDRESS = "EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe";
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: "https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json", buttonRootId: 'ton-connect-btn' });
 
-/* ─── الثوابت ─── */
-const MASTER_ADDRESS = "EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe";
-const MANIFEST_URL   = "https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json";
-
-/* ─── TonConnect ─── */
-const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: MANIFEST_URL,
-    buttonRootId: 'ton-connect-btn'
-});
-
-let walletConnected = false;
-
-tonConnectUI.onStatusChange(wallet => {
-    walletConnected = !!wallet;
-    const btn     = document.getElementById("btn-submit");
-    const btnText = document.getElementById("btn-text");
-
-    if (walletConnected) {
-        btn.disabled  = false;
-        btn.className = "w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 " +
-                        "bg-yellow-500 hover:bg-yellow-600 text-gray-950 cursor-pointer shadow-lg shadow-yellow-500/10 active:scale-95";
-        btnText.innerText = "ترقية العقد إلى Off-chain الآن ✅";
-    } else {
-        btn.disabled  = true;
-        btn.className = "w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 " +
-                        "bg-gray-700 text-gray-400 cursor-not-allowed";
-        btnText.innerText = "يرجى ربط محفظة المسؤول أولاً";
-    }
-    buildAndPreview();
-});
-
-/* ─── بناء الـ BOC ─── */
-/*
- * الإصلاح الرئيسي:
- *   1. حذف TonWeb.utils.stringToBytes التي لا وجود لها في 0.0.66
- *   2. استخدام TextEncoder المدمج في المتصفح بدلاً منها
- *   3. Array.from() لضمان التوافق مع writeBytes
- *   4. التحقق من جاهزية TonWeb قبل الاستخدام
- */
-async function buildChangeContentBoc(url) {
-    if (typeof TonWeb === "undefined" || typeof TonWeb.boc === "undefined") {
-        throw new Error("TonWeb لم يكتمل تحميله بعد — أعد المحاولة بعد ثانية.");
+    async function buildChangeContentBoc(url) {
+        const cell = new TonWeb.boc.Cell();
+        cell.bits.writeUint(0x57aa0a5a, 32); 
+        cell.bits.writeUint(0, 64); 
+        
+        const contentCell = new TonWeb.boc.Cell();
+        contentCell.bits.writeUint(0x01, 8);
+        const urlBytes = new TextEncoder().encode(url);
+        contentCell.bits.writeBytes(Array.from(urlBytes));
+        
+        cell.refs.push(contentCell);
+        const boc = await cell.toBoc();
+        return TonWeb.utils.bytesToBase64(boc);
     }
 
-    /* الخلية الأم: opcode + queryId */
-    const rootCell = new TonWeb.boc.Cell();
-    rootCell.bits.writeUint(0x57aa0a5a, 32);   // change_content opcode
-    rootCell.bits.writeUint(0, 64);             // query_id = 0
+    tonConnectUI.onStatusChange(async (wallet) => {
+        const btn = document.getElementById("btn-submit");
+        const status = document.getElementById("log-status");
+        if (wallet) {
+            btn.disabled = false;
+            btn.className = "w-full py-4 rounded-xl font-bold text-sm bg-yellow-500 text-black";
+            document.getElementById("btn-text").innerText = "إرسال الترقية الآن";
+            status.innerText = "جاهز للإرسال";
+        } else {
+            btn.disabled = true;
+            btn.className = "w-full py-4 rounded-xl font-bold text-sm bg-gray-700 text-gray-400";
+            document.getElementById("btn-text").innerText = "يرجى ربط المحفظة";
+        }
+    });
 
-    /* الخلية الفرعية: 0x01 (off-chain) + URL bytes */
-    const contentCell = new TonWeb.boc.Cell();
-    contentCell.bits.writeUint(0x01, 8);        // off-chain prefix
-
-    /* ✅ الإصلاح: TextEncoder بدلاً من stringToBytes */
-    const urlBytes = Array.from(new TextEncoder().encode(url));
-    contentCell.bits.writeBytes(urlBytes);
-
-    /* ربط الخلية الفرعية بالأم */
-    rootCell.refs.push(contentCell);
-
-    /* تصدير BOC */
-    const bocBytes = await rootCell.toBoc(false);
-    return TonWeb.utils.bytesToBase64(bocBytes);
-}
-
-/* ─── معاينة حية ─── */
-async function buildAndPreview() {
-    const url = document.getElementById("json-url").value.trim();
-    const logTonweb  = document.getElementById("log-tonweb");
-    const logPayload = document.getElementById("log-payload");
-    const logStatus  = document.getElementById("log-status");
-
-    /* فحص TonWeb */
-    if (typeof TonWeb === "undefined") {
-        logTonweb.textContent  = "❌ لم يُحمَّل";
-        logTonweb.className    = "log-err";
-        logStatus.textContent  = "أعد تحميل الصفحة أو تحقق من اتصال الإنترنت";
-        logStatus.className    = "log-err";
-        return;
+    async function updateToOffchain() {
+        const url = document.getElementById("json-url").value;
+        try {
+            const payload = await buildChangeContentBoc(url);
+            await tonConnectUI.sendTransaction({
+                validUntil: Math.floor(Date.now() / 1000) + 600,
+                messages: [{ address: MASTER_ADDRESS, amount: "50000000", payload: payload }]
+            });
+            alert("تم إرسال المعاملة بنجاح!");
+        } catch (e) {
+            alert("خطأ: " + e.message);
+        }
     }
-    logTonweb.textContent = "✅ محمّل (" + (TonWeb.version || "0.0.66") + ")";
-    logTonweb.className   = "log-ok";
-
-    if (!url) {
-        logStatus.textContent = "أدخل رابط JSON أولاً";
-        logStatus.className   = "log-err";
-        return;
-    }
-
-    try {
-        const boc = await buildChangeContentBoc(url);
-        logPayload.textContent = boc.substring(0, 60) + "...";
-        logPayload.className   = "log-ok";
-        logStatus.textContent  = "✅ جاهز للتوقيع والإرسال";
-        logStatus.className    = "log-ok";
-    } catch (err) {
-        logPayload.textContent = "خطأ";
-        logPayload.className   = "log-err";
-        logStatus.textContent  = "❌ " + err.message;
-        logStatus.className    = "log-err";
-    }
-}
-
-/* ─── إرسال المعاملة ─── */
-async function updateToOffchain() {
-    if (!walletConnected) {
-        alert("ربط المحفظة أولاً.");
-        return;
-    }
-
-    const url = document.getElementById("json-url").value.trim();
-    if (!url) {
-        alert("يرجى إدخال رابط JSON صالح.");
-        return;
-    }
-
-    let payloadBase64;
-    try {
-        payloadBase64 = await buildChangeContentBoc(url);
-    } catch (err) {
-        alert("خطأ في بناء الـ BOC:\n" + err.message);
-        return;
-    }
-
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 300,
-        messages: [
-            {
-                address: MASTER_ADDRESS,
-                amount:  "50000000",      // 0.05 TON رسوم الغاز
-                payload: payloadBase64
-            }
-        ]
-    };
-
-    const btnText = document.getElementById("btn-text");
-    btnText.innerText = "⏳ جاري الإرسال...";
-
-    try {
-        await tonConnectUI.sendTransaction(transaction);
-        alert("🎉 مبروك! تم إرسال وتوقيع المعاملة بنجاح.\n\nانتظر 3–5 دقائق ثم افتح Tonviewer وانقر Refresh Metadata لرؤية الأيقونة والأزرار.");
-    } catch (err) {
-        console.error("TON tx error:", err);
-        alert("حدث خطأ أو تم إلغاء المعاملة من المحفظة.\n\nتأكد من:\n• اتصالك بمحفظة المسؤول الصحيحة\n• وجود رصيد كافٍ (0.05 TON على الأقل)");
-    } finally {
-        btnText.innerText = walletConnected ? "ترقية العقد إلى Off-chain الآن ✅" : "يرجى ربط محفظة المسؤول أولاً";
-    }
-}
-
-/* ─── تحديث تلقائي عند تعديل الرابط ─── */
-document.getElementById("json-url").addEventListener("input", buildAndPreview);
-
-/* ─── انتظار اكتمال تحميل الصفحة ─── */
-window.addEventListener("load", () => {
-    /* نعطي TonWeb 500ms إضافية للتأكد من جاهوزيته */
-    setTimeout(buildAndPreview, 500);
-});
 </script>
 </body>
 </html>
