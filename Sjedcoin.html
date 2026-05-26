@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SJ COIN Metadata Upgrade (FIXED)</title>
+<title>SJ COIN Metadata Upgrade (FIXED v2)</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -11,76 +11,45 @@
 <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.css"/>
 
 <style>
-body{
-  font-family:'Cairo',sans-serif;
-  background:#0c0d12;
-  color:white;
-}
-.log-ok{color:#4ade80;}
-.log-err{color:#f87171;}
-.log-inf{color:#60a5fa;}
+body{ font-family:'Cairo',sans-serif; background:#0c0d12; color:white; }
+.log-ok{ color:#4ade80; }
+.log-err{ color:#f87171; }
+.log-inf{ color:#60a5fa; }
 </style>
 </head>
 
 <body class="min-h-screen flex items-center justify-center p-4">
 
 <div class="w-full max-w-xl bg-[#12141c] border border-gray-800 rounded-2xl p-6">
+    <h1 class="text-xl font-bold text-center mb-4">SJ COIN Metadata Upgrade (FIXED v2)</h1>
+    <div id="ton-connect-btn" class="flex justify-center mb-5"></div>
 
-<h1 class="text-xl font-bold text-center mb-4">
-SJ COIN Metadata Upgrade (FIXED v2)
-</h1>
+    <label class="text-xs text-gray-400 block mb-1">JSON Metadata URL</label>
+    <input id="url" class="w-full p-3 bg-black border border-gray-700 rounded-xl text-yellow-400 text-xs" value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json">
 
-<div id="ton-connect-btn" class="flex justify-center mb-5"></div>
+    <div class="mt-4 bg-black p-3 rounded-xl border border-gray-800 text-xs space-y-1">
+        <div>Status: <span id="status" class="log-inf">Waiting...</span></div>
+        <div>Payload: <span id="payload" class="log-inf">---</span></div>
+    </div>
 
-<label class="text-xs text-gray-400 block mb-1">JSON Metadata URL</label>
-<input id="url"
-class="w-full p-3 bg-black border border-gray-700 rounded-xl text-yellow-400 text-xs"
-value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json">
-
-<div class="mt-4 bg-black p-3 rounded-xl border border-gray-800 text-xs space-y-1">
-<div>Status: <span id="status" class="log-inf">Waiting...</span></div>
-<div>Payload: <span id="payload" class="log-inf">---</span></div>
-</div>
-
-<button id="btn"
-disabled
-onclick="sendTx()"
-class="w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400 font-bold">
-Connect Wallet First
-</button>
-
+    <button id="btn" disabled onclick="sendTx()" class="w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400 font-bold">
+        Connect Wallet First
+    </button>
 </div>
 
 <script type="module">
+import { beginCell, toNano, Address } from "https://esm.sh/@ton/core";
 
-import {
-  beginCell,
-  toNano,
-  Address
-} from "https://esm.sh/@ton/core";
-
-lucide.createIcons();
-
-/* ───────────────────────────── */
-/* MASTER ADDRESS */
-const MASTER = Address.parse(
-"0:f54c846b09e09d3b4e21e15d782edd8bf8366a489f31e558e1abe254dbcda60d"
-);
-
-/* ───────────────────────────── */
+const MASTER = Address.parse("EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2");
 
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
   manifestUrl: "https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json",
   buttonRootId: "ton-connect-btn"
 });
 
-let connected = false;
-
 tonConnectUI.onStatusChange(wallet => {
-  connected = !!wallet;
   const btn = document.getElementById("btn");
-
-  if (connected) {
+  if (wallet) {
     btn.disabled = false;
     btn.className = "w-full mt-4 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-bold";
     btn.innerText = "Update Metadata";
@@ -91,73 +60,50 @@ tonConnectUI.onStatusChange(wallet => {
   }
 });
 
-/* ───────────────────────────── */
-/* FIXED PAYLOAD BUILDER */
 function buildPayload(url){
   const content = beginCell()
-    .storeUint(0, 8)              // off-chain flag
-    .storeStringTail(url)         // metadata URL
+    .storeUint(0, 8) 
+    .storeStringTail(url)
     .endCell();
 
   const body = beginCell()
-    .storeUint(0x7e8764ef, 32)    // change_content opcode
-    .storeRef(content)            // ← Fixed: storeRef instead of storeUint(0,64)
+    .storeUint(0x7e8764ef, 32)
+    .storeRef(content)
     .endCell();
 
-  const boc = body.toBoc();
-
-  let binary = "";
-  for (let i = 0; i < boc.length; i++) {
-    binary += String.fromCharCode(boc[i]);
-  }
-
-  return btoa(binary);
+  return body.toBoc().toString("base64");
 }
-
-/* ───────────────────────────── */
 
 async function sendTx(){
   const url = document.getElementById("url").value.trim();
-  if (!url) {
-    alert("Please enter metadata URL");
-    return;
-  }
-
   const payload = buildPayload(url);
-
-  document.getElementById("payload").innerText = payload.slice(0, 55) + "...";
+  
+  document.getElementById("payload").innerText = payload.slice(0, 30) + "...";
   document.getElementById("status").innerText = "Sending...";
-  document.getElementById("status").className = "log-inf";
 
   const tx = {
     validUntil: Math.floor(Date.now()/1000) + 600,
-    messages: [
-      {
+    messages: [{
         address: MASTER.toString(),
-        amount: toNano("0.1").toString(),     // Increased to 0.1 TON
+        amount: toNano("0.1").toString(),
         payload: payload
-      }
-    ]
+    }]
   };
 
   try {
     await tonConnectUI.sendTransaction(tx);
-    document.getElementById("status").innerText = "✅ Transaction Sent Successfully!";
+    document.getElementById("status").innerText = "✅ Transaction Sent!";
     document.getElementById("status").className = "log-ok";
-    alert("✅ Transaction sent successfully! Check your wallet.");
   } catch (e) {
-    document.getElementById("status").innerText = "❌ Failed";
+    document.getElementById("status").innerText = "❌ Failed: " + e.message;
     document.getElementById("status").className = "log-err";
-    alert("❌ " + e.message);
   }
 }
-
 window.sendTx = sendTx;
-
 </script>
-
 </body>
 </html>
+
 
 
 
