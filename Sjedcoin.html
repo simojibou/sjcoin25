@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SJ COIN FIX FINAL</title>
+<title>SJ COIN Metadata Upgrade (FIXED)</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-
 <script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.css"/>
 
@@ -28,12 +27,12 @@ body{
 <div class="w-full max-w-xl bg-[#12141c] border border-gray-800 rounded-2xl p-6">
 
 <h1 class="text-xl font-bold text-center mb-4">
-SJ COIN Metadata Upgrade (FIXED)
+SJ COIN Metadata Upgrade (FIXED v2)
 </h1>
 
 <div id="ton-connect-btn" class="flex justify-center mb-5"></div>
 
-<label class="text-xs text-gray-400">JSON Metadata URL</label>
+<label class="text-xs text-gray-400 block mb-1">JSON Metadata URL</label>
 <input id="url"
 class="w-full p-3 bg-black border border-gray-700 rounded-xl text-yellow-400 text-xs"
 value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json">
@@ -63,9 +62,7 @@ import {
 lucide.createIcons();
 
 /* ───────────────────────────── */
-/* FIXED MASTER ADDRESS (YOUR NEW ONE) */
-/* ───────────────────────────── */
-
+/* MASTER ADDRESS */
 const MASTER = Address.parse(
 "0:f54c846b09e09d3b4e21e15d782edd8bf8366a489f31e558e1abe254dbcda60d"
 );
@@ -79,32 +76,24 @@ const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
 
 let connected = false;
 
-/* ───────────────────────────── */
-
 tonConnectUI.onStatusChange(wallet => {
-
   connected = !!wallet;
-
   const btn = document.getElementById("btn");
 
   if (connected) {
     btn.disabled = false;
-    btn.className = "w-full mt-4 py-3 rounded-xl bg-yellow-500 text-black font-bold";
+    btn.className = "w-full mt-4 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-bold";
     btn.innerText = "Update Metadata";
   } else {
     btn.disabled = true;
-    btn.className = "w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400";
+    btn.className = "w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400 font-bold";
     btn.innerText = "Connect Wallet First";
   }
-
 });
 
 /* ───────────────────────────── */
-/* BUILD PAYLOAD (FIXED JETTON STANDARD) */
-/* ───────────────────────────── */
-
+/* FIXED PAYLOAD BUILDER */
 function buildPayload(url){
-
   const content = beginCell()
     .storeUint(0, 8)              // off-chain flag
     .storeStringTail(url)         // metadata URL
@@ -112,8 +101,7 @@ function buildPayload(url){
 
   const body = beginCell()
     .storeUint(0x7e8764ef, 32)    // change_content opcode
-    .storeUint(0, 64)
-    .storeRef(content)
+    .storeRef(content)            // ← Fixed: storeRef instead of storeUint(0,64)
     .endCell();
 
   const boc = body.toBoc();
@@ -129,22 +117,24 @@ function buildPayload(url){
 /* ───────────────────────────── */
 
 async function sendTx(){
-
   const url = document.getElementById("url").value.trim();
+  if (!url) {
+    alert("Please enter metadata URL");
+    return;
+  }
 
   const payload = buildPayload(url);
 
-  document.getElementById("payload").innerText =
-    payload.slice(0, 60) + "...";
-
-  document.getElementById("status").innerText = "Ready";
+  document.getElementById("payload").innerText = payload.slice(0, 55) + "...";
+  document.getElementById("status").innerText = "Sending...";
+  document.getElementById("status").className = "log-inf";
 
   const tx = {
     validUntil: Math.floor(Date.now()/1000) + 600,
     messages: [
       {
         address: MASTER.toString(),
-        amount: toNano("0.05").toString(),
+        amount: toNano("0.1").toString(),     // Increased to 0.1 TON
         payload: payload
       }
     ]
@@ -152,11 +142,14 @@ async function sendTx(){
 
   try {
     await tonConnectUI.sendTransaction(tx);
-    alert("✅ Transaction sent successfully!");
+    document.getElementById("status").innerText = "✅ Transaction Sent Successfully!";
+    document.getElementById("status").className = "log-ok";
+    alert("✅ Transaction sent successfully! Check your wallet.");
   } catch (e) {
+    document.getElementById("status").innerText = "❌ Failed";
+    document.getElementById("status").className = "log-err";
     alert("❌ " + e.message);
   }
-
 }
 
 window.sendTx = sendTx;
