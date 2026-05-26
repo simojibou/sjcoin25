@@ -9,7 +9,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css">
-    <!-- Ethers/TonWeb elements if needed, but we will use direct TonConnect sendTransaction which is safer -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         body {
@@ -71,8 +70,9 @@
         // Admin wallet verification
         const adminWalletRequired = "UQACzRKZn07xqQK0zM5nLhEqS5L68pXvU-NfH4H8Y9_vU9ZaW";
 
+        // Updated with your official GitHub Manifest URL
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://sj-one.web.app/tonconnect-manifest.json',
+            manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
         });
 
@@ -109,18 +109,6 @@
                 return;
             }
 
-            // --- TON BLOCKCHAIN METADATA LAYOUT (TEP-64) ---
-            // To update metadata to off-chain, we need to send a change_content transaction.
-            // Op-code for change_content on standard Jetton Minters is usually 4 or 0x57aa0a5a
-            // We build the body payload to write off-chain content prefix (0x01) followed by the URL string.
-            
-            // For simple, secure integration on frontend without heavy SDK:
-            // We use standard cell layout for change_content:
-            // Op code: 0x57aa0a5a (change_content)
-            // Query ID: 0 (64-bit)
-            // Layout Prefix: 0x01 (Off-chain representation)
-            // String tail: link to our raw json
-            
             // To convert link string into hex for TON Cell:
             const linkHex = Array.from(new TextEncoder().encode(jsonUrl))
                 .map(b => b.toString(16).padStart(2, '0'))
@@ -130,8 +118,6 @@
             // Opcode: 57aa0a5a + QueryID: 0000000000000000 + Prefix: 01 + Hex URL
             const cellHex = "57aa0a5a" + "0000000000000000" + "01" + linkHex;
 
-            // Simple Boc construction or raw transaction payload parameters
-            // Standard Jettons use 'change_content' signature. We send this directly to the Master Contract.
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [
@@ -143,7 +129,6 @@
                 ]
             };
 
-            // Inform the user how to process
             alert("سيتم إرسال طلب الترقية للمحفظة لتأكيد عملية التحويل إلى Off-chain. يرجى تأكيد العملية.");
 
             try {
@@ -157,5 +142,7 @@
     </script>
 </body>
 </html>
+
+
 
 
