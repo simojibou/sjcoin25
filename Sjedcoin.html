@@ -5,11 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ترقية وتصحيح عقد SJ COIN</title>
+    <!-- تضمين مكتبة Tailwind للتنسيق العصري للموقع -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة الأيقونات Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- مكتبة الاتصال بمحافظ TON الرسمية -->
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css">
-    <!-- Import official TonWeb SDK -->
+    <!-- مكتبة TON Web الرسمية والمحدثة لمعالجة خلايا البلوكشين -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js" id="tonweb-script"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
@@ -23,19 +26,19 @@
 <body class="min-h-screen flex flex-col justify-between p-4">
 
     <div class="max-w-xl mx-auto w-full bg-[#12141c] border border-gray-800 rounded-2xl p-6 mt-10 shadow-xl">
-        <!-- Logo -->
+        <!-- شعار وعنوان لوحة التحكم -->
         <div class="flex flex-col items-center text-center gap-3 mb-6">
-            <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-16 h-16 rounded-full border border-yellow-500/30 shadow-lg shadow-yellow-500/10" alt="SJ Logo">
+            <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-16 h-16 rounded-full border border-yellow-500/30 shadow-lg shadow-yellow-500/10" alt="شعار إس جي">
             <h1 class="text-xl font-black">ترقية وتصحيح عقد SJ COIN</h1>
             <p class="text-xs text-gray-400">تحويل العقد لـ Off-chain لتفعيل ظهور الأزرار والشعار بنجاح</p>
         </div>
 
-        <!-- Wallet connection -->
+        <!-- زر الاتصال بمحفظة تليجرام أو Tonkeeper -->
         <div class="flex justify-center mb-6">
             <div id="ton-connect-btn"></div>
         </div>
 
-        <!-- Form fields -->
+        <!-- حقول إدخال البيانات والتحقق -->
         <div class="space-y-4">
             <div>
                 <label class="block text-xs text-gray-400 mb-1">عنوان عقد عملتك (Jetton Master Address)</label>
@@ -49,17 +52,18 @@
                        class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-yellow-500 focus:outline-none focus:border-yellow-500/50">
             </div>
 
-            <!-- Developer Live Compiler Stats -->
+            <!-- سجل مراقبة المحاكاة البرمجية (Console Log) -->
             <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-[10px] font-mono text-gray-400">
-                <span class="text-xs font-bold text-gray-300 block mb-1">مترجم بايتات العقد (Live TON Compiler)</span>
-                <div class="truncate">كود البث (Payload BOC Base64): <span id="compile-payload" class="text-blue-400">جاري الحساب...</span></div>
+                <span class="text-xs font-bold text-gray-300 block mb-1">لوحة فحص الأخطاء والمحاكاة (Compiler Console)</span>
+                <div class="truncate">كود البث (Payload BOC Base64): <span id="compile-payload" class="text-blue-400">جاري المعالجة...</span></div>
+                <div class="mt-1 text-red-400" id="compile-error">حالة المحرك: بانتظار التحميل...</div>
             </div>
 
             <div class="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl text-xs text-yellow-500 leading-relaxed">
                 ℹ️ <strong>ملاحظة تقنية:</strong> هذه العملية ستقوم بإرسال معاملة من محفظة المسؤول لتعديل عقد العملة الماستر ليقرأ ملف الـ JSON الخارجي بدلاً من تخزين النصوص بشكل مباشر، مما يُفعّل أزرار الميني آب والمواقع الرسمية في محفظة تليجرام وبقية محافظ الـ TON.
             </div>
 
-            <!-- Action Button -->
+            <!-- زر الإجراء الرئيسي للترقية -->
             <button id="btn-submit" onclick="updateToOffchain()" disabled
                     class="w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 bg-gray-700 text-gray-400 cursor-not-allowed">
                 <i data-lucide="shield-alert" class="w-4 h-4"></i>
@@ -75,9 +79,10 @@
     <script>
         lucide.createIcons();
 
-        // Admin Wallet Validation Address
+        // عنوان محفظة المسؤول الإدارية للتحقق
         const adminWalletRequired = "UQACzRKZn07xqQK0zM5nLhEqS5L68pXvU-NfH4H8Y9_vU9ZaW";
 
+        // إعداد اتصال المحفظة باستخدام الـ Manifest الخاص بك على جيت هاب
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -103,37 +108,37 @@
             updateLivePayload();
         });
 
-        // TON TEP-64 Standard off-chain metadata BOC compiler using TonWeb correctly
+        // مترجم الخلايا لمعيار TEP-64 على شبكة TON باستخدام TonWeb بشكل سليم
         async function buildChangeContentBoc(url) {
             try {
-                if (typeof TonWeb === 'undefined') {
-                    console.warn("Waiting for TonWeb script to load...");
-                    return "";
+                if (typeof TonWeb === 'undefined' || typeof TonWeb.boc === 'undefined') {
+                    throw new Error("مكتبة TonWeb لم تكتمل تحميلها من الـ CDN بعد.");
                 }
+                
                 const tonweb = new TonWeb();
                 
-                // Root Cell (Change Content Payload)
+                // إنشاء الخلية الأم للرسالة (Root Cell)
                 const cell = new TonWeb.boc.Cell();
-                cell.bits.writeUint(0x57aa0a5a, 32); // Opcode for change_content
-                cell.bits.writeUint(0, 64);          // query_id
+                cell.bits.writeUint(0x57aa0a5a, 32); // رمز العملية لتغيير المحتوى (Opcode)
+                cell.bits.writeUint(0, 64);          // معرف المعاملة (Query ID)
                 
-                // Nested Cell representing Off-chain layout
+                // إنشاء الخلية الفرعية التي تحتوي على الرابط الخارجي (Nested Cell)
                 const contentCell = new TonWeb.boc.Cell();
-                contentCell.bits.writeUint(1, 8);      // 0x01 prefix indicating Off-chain
+                contentCell.bits.writeUint(1, 8);    // بادئة الـ Off-chain وتعادل 0x01
                 
-                // Safe string to bytes compilation
-                const encoder = new TextEncoder();
-                const urlBytes = encoder.encode(url);
-                contentCell.bits.writeBytes(urlBytes);   // metadata JSON URL
+                // تحويل النص البرمجي للرابط إلى بايتات رقمية متوافقة مع البلوكشين
+                const urlBytes = TonWeb.utils.stringToBytes(url);
+                contentCell.bits.writeBytes(urlBytes);
                 
-                // Push reference to root cell
+                // ربط الخلية الفرعية بالخلية الأم
                 cell.refs.push(contentCell);
                 
-                // Compile and encode to base64 BOC format
-                const bocBytes = await cell.toBoc();
+                // تصدير الخلايا إلى بايتات الـ BOC الرسمية
+                const bocBytes = await cell.toBoc(false);
                 return TonWeb.utils.bytesToBase64(bocBytes);
             } catch (err) {
-                console.error("Compilation error: ", err);
+                console.error("خطأ أثناء ترجمة الخلايا:", err);
+                document.getElementById("compile-error").innerText = "خطأ المترجم: " + err.message;
                 return "";
             }
         }
@@ -141,19 +146,27 @@
         async function updateLivePayload() {
             const urlInput = document.getElementById("json-url").value.trim();
             const payloadBase64 = await buildChangeContentBoc(urlInput);
-            document.getElementById("compile-payload").innerText = payloadBase64 || "جاري تحميل محرك التوليد...";
+            
+            if (payloadBase64) {
+                document.getElementById("compile-payload").innerText = payloadBase64;
+                document.getElementById("compile-error").innerText = "حالة المحرك: جاهز تماماً لتوقيع المعاملة ✅";
+                document.getElementById("compile-error").className = "mt-1 text-green-400";
+            } else {
+                document.getElementById("compile-payload").innerText = "خطأ في التوليد";
+                document.getElementById("compile-error").className = "mt-1 text-red-400";
+            }
         }
 
-        // Add Input Listener
+        // تفعيل تحديث البيانات تلقائياً بمجرد تعديل الرابط
         document.getElementById("json-url").addEventListener("input", updateLivePayload);
         
-        // Wait for Script and DOM to load safely
+        // التحقق الآمن والمستمر من اكتمال تحميل المكاتب البرمجية الخارجية
         document.getElementById("tonweb-script").addEventListener("load", () => {
             updateLivePayload();
         });
 
         window.onload = function() {
-            setTimeout(updateLivePayload, 500);
+            setTimeout(updateLivePayload, 800);
         };
 
         async function updateToOffchain() {
@@ -163,33 +176,33 @@
             const jsonUrl = document.getElementById("json-url").value.trim();
 
             if (!jsonUrl) {
-                alert("يرجى إدخال رابط JSON صالح.");
+                alert("يرجى إدخال رابط JSON صالح للبدء.");
                 return;
             }
 
-            // Real-time compliance compile trigger
+            // توليد بايتات المعاملة الصحيحة والمبنية حديثاً
             const payloadBase64 = await buildChangeContentBoc(jsonUrl);
 
             if (!payloadBase64) {
-                alert("يرجى الانتظار لحين اكتمال توليد الكود المشفر أو أعد كتابة الرابط.");
+                alert("يرجى الانتظار حتى يكتمل توليد كود البث بنجاح.");
                 return;
             }
 
             const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 300, // 5 minutes validity
+                validUntil: Math.floor(Date.now() / 1000) + 300, // صلاحية المعاملة 5 دقائق
                 messages: [
                     {
-                        address: masterAddress, // Jetton Master Contract
-                        amount: "50000000",     // 0.05 TON for Gas Fee
-                        payload: payloadBase64  // Securely Compiled BOC Payload
+                        address: masterAddress, // عنوان عقد العملة الماستر المستهدف
+                        amount: "50000000",     // 0.05 TON كرسوم غاز للشبكة للتعديل
+                        payload: payloadBase64  // كود التعديل الصحيح والمشفر
                     }
                 ]
             };
 
-            alert("سيتم إرسال طلب الترقية للمحفظة لتأكيد عملية التحويل إلى Off-chain. يرجى تأكيد العملية.");
+            alert("سيتم إرسال طلب الترقية للمحفظة الآن لتأكيد عملية التحويل إلى Off-chain. يرجى المتابعة وتأكيد المعاملة.");
 
             try {
-                // Request transaction from connected Admin Wallet
+                // استدعاء واجهة المحفظة المرتبطة للتوقيع
                 await tonConnectUI.sendTransaction(transaction);
                 alert("🎉 مبروك! تم إرسال المعاملة وتوقيعها بنجاح عبر محفظتك المعتمدة. يرجى الانتظار 3 دقائق وعمل Refresh Metadata على Tonviewer لرؤية الأيقونة والأزرار المحدثة!");
             } catch (e) {
@@ -202,6 +215,7 @@
 </html>
 
 ```
+
 
 
 
