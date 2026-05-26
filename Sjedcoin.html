@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعديل بيانات SJ COIN إلى Off-chain</title>
+    <title>ترقية وتصحيح عقد SJ COIN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css">
-    <!-- Import official TonWeb for guaranteed error-free cell compilation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js"></script>
+    <!-- Import official TonWeb SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js" id="tonweb-script"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         body {
@@ -27,7 +27,7 @@
         <div class="flex flex-col items-center text-center gap-3 mb-6">
             <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" class="w-16 h-16 rounded-full border border-yellow-500/30 shadow-lg shadow-yellow-500/10" alt="SJ Logo">
             <h1 class="text-xl font-black">ترقية وتصحيح عقد SJ COIN</h1>
-            <p class="text-xs text-gray-400">قم بتحويل العقد إلى Off-chain لقراءة الأزرار والشعار من الـ JSON بنجاح</p>
+            <p class="text-xs text-gray-400">تحويل العقد لـ Off-chain لتفعيل ظهور الأزرار والشعار بنجاح</p>
         </div>
 
         <!-- Wallet connection -->
@@ -56,7 +56,7 @@
             </div>
 
             <div class="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl text-xs text-yellow-500 leading-relaxed">
-                ℹ️ <strong>ملاحظة تقنية:</strong> هذه العملية ستقوم بإرسال معاملة من محفظة المسؤول لإخبار العقد الذكي بقراءة ملف الـ JSON الخارجي بدلاً من تخزين النصوص داخله، مما يتيح تفعيل أزرار الميني آب تلقائياً داخل محفظة تليجرام.
+                ℹ️ <strong>ملاحظة تقنية:</strong> هذه العملية ستقوم بإرسال معاملة من محفظة المسؤول لتعديل عقد العملة الماستر ليقرأ ملف الـ JSON الخارجي بدلاً من تخزين النصوص بشكل مباشر، مما يُفعّل أزرار الميني آب والمواقع الرسمية في محفظة تليجرام وبقية محافظ الـ TON.
             </div>
 
             <!-- Action Button -->
@@ -75,7 +75,7 @@
     <script>
         lucide.createIcons();
 
-        // Target admin wallet
+        // Admin Wallet Validation Address
         const adminWalletRequired = "UQACzRKZn07xqQK0zM5nLhEqS5L68pXvU-NfH4H8Y9_vU9ZaW";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -103,9 +103,13 @@
             updateLivePayload();
         });
 
-        // TON TEP-64 Standard off-chain metadata BOC compiler using TonWeb
+        // TON TEP-64 Standard off-chain metadata BOC compiler using TonWeb correctly
         async function buildChangeContentBoc(url) {
             try {
+                if (typeof TonWeb === 'undefined') {
+                    console.warn("Waiting for TonWeb script to load...");
+                    return "";
+                }
                 const tonweb = new TonWeb();
                 
                 // Root Cell (Change Content Payload)
@@ -115,8 +119,12 @@
                 
                 // Nested Cell representing Off-chain layout
                 const contentCell = new TonWeb.boc.Cell();
-                contentCell.bits.writeUint8(1);      // 0x01 prefix indicating Off-chain
-                contentCell.bits.writeString(url);   // metadata JSON URL
+                contentCell.bits.writeUint(1, 8);      // 0x01 prefix indicating Off-chain
+                
+                // Safe string to bytes compilation
+                const encoder = new TextEncoder();
+                const urlBytes = encoder.encode(url);
+                contentCell.bits.writeBytes(urlBytes);   // metadata JSON URL
                 
                 // Push reference to root cell
                 cell.refs.push(contentCell);
@@ -133,12 +141,20 @@
         async function updateLivePayload() {
             const urlInput = document.getElementById("json-url").value.trim();
             const payloadBase64 = await buildChangeContentBoc(urlInput);
-            document.getElementById("compile-payload").innerText = payloadBase64 || "خطأ في التوليد";
+            document.getElementById("compile-payload").innerText = payloadBase64 || "جاري تحميل محرك التوليد...";
         }
 
-        // Auto compile when link is typed
+        // Add Input Listener
         document.getElementById("json-url").addEventListener("input", updateLivePayload);
-        updateLivePayload();
+        
+        // Wait for Script and DOM to load safely
+        document.getElementById("tonweb-script").addEventListener("load", () => {
+            updateLivePayload();
+        });
+
+        window.onload = function() {
+            setTimeout(updateLivePayload, 500);
+        };
 
         async function updateToOffchain() {
             if (!isConnected) return;
@@ -151,11 +167,11 @@
                 return;
             }
 
-            // Correct compile trigger
+            // Real-time compliance compile trigger
             const payloadBase64 = await buildChangeContentBoc(jsonUrl);
 
             if (!payloadBase64) {
-                alert("فشل توليد كود البيانات المشفرة.");
+                alert("يرجى الانتظار لحين اكتمال توليد الكود المشفر أو أعد كتابة الرابط.");
                 return;
             }
 
@@ -165,7 +181,7 @@
                     {
                         address: masterAddress, // Jetton Master Contract
                         amount: "50000000",     // 0.05 TON for Gas Fee
-                        payload: payloadBase64  // FIXED: No longer hardcoded placeholder!
+                        payload: payloadBase64  // Securely Compiled BOC Payload
                     }
                 ]
             };
@@ -186,6 +202,7 @@
 </html>
 
 ```
+
 
 
 
