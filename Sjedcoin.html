@@ -1,104 +1,414 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ترقية وتصحيح عقد SJ COIN</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #0c0d12; color: #ffffff; }
-        .log-ok  { color: #4ade80; }
-        .log-err { color: #f87171; }
-        .log-inf { color: #60a5fa; }
-    </style>
+<title>SJ COIN Upgrade</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- TonConnect -->
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<link rel="stylesheet"
+href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css"/>
+
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+
+body{
+    font-family:'Cairo',sans-serif;
+    background:#0c0d12;
+    color:white;
+}
+
+.log-ok{
+    color:#4ade80;
+}
+
+.log-err{
+    color:#f87171;
+}
+
+.log-inf{
+    color:#60a5fa;
+}
+
+</style>
 </head>
+
 <body class="min-h-screen flex flex-col justify-between p-4">
 
 <div class="max-w-xl mx-auto w-full bg-[#12141c] border border-gray-800 rounded-2xl p-6 mt-10 shadow-xl">
+
+    <!-- HEADER -->
     <div class="flex flex-col items-center text-center gap-3 mb-6">
-        <h1 class="text-xl font-black">ترقية وتصحيح عقد SJ COIN</h1>
+
+        <img
+        src="https://raw.githubusercontent.com/simojibou/logo/main/logo.PNG"
+        class="w-16 h-16 rounded-full border border-yellow-500/30 shadow-lg shadow-yellow-500/10"/>
+
+        <h1 class="text-xl font-black">
+            ترقية وتصحيح عقد SJ COIN
+        </h1>
+
+        <p class="text-xs text-gray-400">
+            تحديث Metadata إلى Off-chain
+        </p>
+
     </div>
 
+    <!-- TON CONNECT -->
     <div class="flex justify-center mb-6">
         <div id="ton-connect-btn"></div>
     </div>
 
     <div class="space-y-4">
+
+        <!-- MASTER -->
         <div>
-            <label class="block text-xs text-gray-400 mb-1">عنوان عقد العملة</label>
-            <input type="text" id="master-address" readonly value="EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe" class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-gray-300 focus:outline-none">
+
+            <label class="block text-xs text-gray-400 mb-1">
+                Jetton Master Address
+            </label>
+
+            <input
+            id="master-address"
+            readonly
+            value="UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz"
+            class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-gray-300"/>
+
         </div>
 
+        <!-- JSON -->
         <div>
-            <label class="block text-xs text-gray-400 mb-1">رابط الـ JSON</label>
-            <input type="text" id="json-url" value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json" class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-yellow-500 focus:outline-none">
+
+            <label class="block text-xs text-gray-400 mb-1">
+                JSON Metadata URL
+            </label>
+
+            <input
+            id="json-url"
+            value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json"
+            class="w-full bg-gray-950 border border-gray-800 p-3 rounded-xl text-xs font-mono text-yellow-500"/>
+
         </div>
 
+        <!-- CONSOLE -->
         <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-[10px] font-mono space-y-1">
-            <span class="text-xs font-bold text-gray-300 block mb-2">🖥️ Console</span>
-            <div>الحالة: <span id="log-status" class="log-inf">بانتظار الربط...</span></div>
+
+            <span class="text-xs font-bold text-gray-300 block mb-2">
+                🖥️ Console
+            </span>
+
+            <div>
+                Status:
+                <span id="log-status" class="log-inf">
+                    Waiting...
+                </span>
+            </div>
+
+            <div>
+                Payload:
+                <span id="log-payload" class="log-inf">
+                    ---
+                </span>
+            </div>
+
         </div>
 
-        <button id="btn-submit" onclick="updateToOffchain()" disabled
-                class="w-full py-4 rounded-xl font-bold text-sm bg-gray-700 text-gray-400 cursor-not-allowed">
-            <span id="btn-text">يرجى ربط المحفظة أولاً</span>
+        <!-- INFO -->
+        <div class="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl text-xs text-yellow-500 leading-relaxed">
+
+            ℹ️ سيتم إرسال معاملة لتحديث الـ metadata الخاصة بـ SJ COIN
+            إلى Off-chain JSON metadata.
+
+        </div>
+
+        <!-- BUTTON -->
+        <button
+        id="btn-submit"
+        onclick="updateToOffchain()"
+        disabled
+        class="w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 bg-gray-700 text-gray-400 cursor-not-allowed">
+
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+
+            <span id="btn-text">
+                ربط المحفظة أولاً
+            </span>
+
         </button>
+
     </div>
+
 </div>
 
-<script>
-    const MASTER_ADDRESS = "EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe";
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: "https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json", buttonRootId: 'ton-connect-btn' });
+<footer class="text-center text-[10px] text-gray-600 mt-10">
+    SJ COIN • TON NETWORK
+</footer>
 
-    async function buildChangeContentBoc(url) {
-        const cell = new TonWeb.boc.Cell();
-        cell.bits.writeUint(0x57aa0a5a, 32); 
-        cell.bits.writeUint(0, 64); 
-        
-        const contentCell = new TonWeb.boc.Cell();
-        contentCell.bits.writeUint(0x01, 8);
-        const urlBytes = new TextEncoder().encode(url);
-        contentCell.bits.writeBytes(Array.from(urlBytes));
-        
-        cell.refs.push(contentCell);
-        const boc = await cell.toBoc();
-        return TonWeb.utils.bytesToBase64(boc);
+<!-- MAIN SCRIPT -->
+<script type="module">
+
+import {
+    beginCell,
+    toNano
+} from "https://esm.sh/@ton/core";
+
+/* ───────────────────────── */
+
+lucide.createIcons();
+
+/* ───────────────────────── */
+
+const MASTER_ADDRESS =
+"UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+
+const MANIFEST_URL =
+"https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json";
+
+/* ───────────────────────── */
+/* TON CONNECT */
+/* ───────────────────────── */
+
+const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    manifestUrl: MANIFEST_URL,
+    buttonRootId: "ton-connect-btn"
+});
+
+let walletConnected = false;
+
+/* ───────────────────────── */
+
+tonConnectUI.onStatusChange(wallet => {
+
+    walletConnected = !!wallet;
+
+    const btn =
+    document.getElementById("btn-submit");
+
+    const btnText =
+    document.getElementById("btn-text");
+
+    if(walletConnected){
+
+        btn.disabled = false;
+
+        btn.className =
+        "w-full py-4 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black cursor-pointer";
+
+        btnText.innerText =
+        "ترقية العقد الآن ✅";
+
+    }else{
+
+        btn.disabled = true;
+
+        btn.className =
+        "w-full py-4 rounded-xl font-bold text-sm bg-gray-700 text-gray-400 cursor-not-allowed";
+
+        btnText.innerText =
+        "ربط المحفظة أولاً";
     }
 
-    tonConnectUI.onStatusChange(async (wallet) => {
-        const btn = document.getElementById("btn-submit");
-        const status = document.getElementById("log-status");
-        if (wallet) {
-            btn.disabled = false;
-            btn.className = "w-full py-4 rounded-xl font-bold text-sm bg-yellow-500 text-black";
-            document.getElementById("btn-text").innerText = "إرسال الترقية الآن";
-            status.innerText = "جاهز للإرسال";
-        } else {
-            btn.disabled = true;
-            btn.className = "w-full py-4 rounded-xl font-bold text-sm bg-gray-700 text-gray-400";
-            document.getElementById("btn-text").innerText = "يرجى ربط المحفظة";
-        }
-    });
+});
 
-    async function updateToOffchain() {
-        const url = document.getElementById("json-url").value;
-        try {
-            const payload = await buildChangeContentBoc(url);
-            await tonConnectUI.sendTransaction({
-                validUntil: Math.floor(Date.now() / 1000) + 600,
-                messages: [{ address: MASTER_ADDRESS, amount: "50000000", payload: payload }]
-            });
-            alert("تم إرسال المعاملة بنجاح!");
-        } catch (e) {
-            alert("خطأ: " + e.message);
-        }
+/* ───────────────────────── */
+/* BUILD PAYLOAD */
+/* ───────────────────────── */
+
+async function buildPayload(url){
+
+    /*
+      OFFCHAIN CELL
+    */
+
+    const contentCell = beginCell()
+        .storeUint(1,8)
+        .storeBuffer(
+            new TextEncoder().encode(url)
+        )
+        .endCell();
+
+    /*
+      CHANGE_CONTENT BODY
+    */
+
+    const body = beginCell()
+
+        .storeUint(0x1,32)
+
+        .storeUint(0,64)
+
+        .storeRef(contentCell)
+
+        .endCell();
+
+    /*
+      BASE64 BOC
+    */
+
+    const boc =
+    body.toBoc();
+
+    return btoa(
+        String.fromCharCode(...boc)
+    );
+}
+
+/* ───────────────────────── */
+/* PREVIEW */
+/* ───────────────────────── */
+
+async function buildPreview(){
+
+    const url =
+    document.getElementById("json-url")
+    .value
+    .trim();
+
+    const status =
+    document.getElementById("log-status");
+
+    const payload =
+    document.getElementById("log-payload");
+
+    try{
+
+        const boc =
+        await buildPayload(url);
+
+        payload.textContent =
+        boc.substring(0,80) + "...";
+
+        payload.className =
+        "log-ok";
+
+        status.textContent =
+        "✅ Payload Ready";
+
+        status.className =
+        "log-ok";
+
+    }catch(err){
+
+        payload.textContent =
+        "ERROR";
+
+        payload.className =
+        "log-err";
+
+        status.textContent =
+        err.message;
+
+        status.className =
+        "log-err";
     }
+}
+
+/* ───────────────────────── */
+/* SEND TX */
+/* ───────────────────────── */
+
+window.updateToOffchain =
+async function(){
+
+    if(!walletConnected){
+
+        alert("ربط المحفظة أولاً");
+
+        return;
+    }
+
+    const url =
+    document.getElementById("json-url")
+    .value
+    .trim();
+
+    if(!url){
+
+        alert("أدخل رابط JSON");
+
+        return;
+    }
+
+    try{
+
+        const payloadBase64 =
+        await buildPayload(url);
+
+        const tx = {
+
+            validUntil:
+            Math.floor(Date.now()/1000)+600,
+
+            messages:[
+                {
+                    address:
+                    MASTER_ADDRESS,
+
+                    amount:
+                    toNano("0.05").toString(),
+
+                    payload:
+                    payloadBase64
+                }
+            ]
+        };
+
+        document.getElementById("btn-text")
+        .innerText =
+        "⏳ جاري الإرسال...";
+
+        await tonConnectUI.sendTransaction(tx);
+
+        alert(
+`✅ تم إرسال المعاملة بنجاح
+
+انتظر بضع دقائق ثم قم بعمل Refresh Metadata
+داخل Tonviewer أو المحافظ.`
+);
+
+    }catch(err){
+
+        console.error(err);
+
+        alert(
+"❌ " + err.message
+        );
+
+    }finally{
+
+        document.getElementById("btn-text")
+        .innerText =
+        walletConnected
+        ? "ترقية العقد الآن ✅"
+        : "ربط المحفظة أولاً";
+    }
+}
+
+/* ───────────────────────── */
+
+document
+.getElementById("json-url")
+.addEventListener(
+    "input",
+    buildPreview
+);
+
+window.addEventListener(
+    "load",
+    buildPreview
+);
+
+/* ───────────────────────── */
+
 </script>
+
 </body>
 </html>
 
