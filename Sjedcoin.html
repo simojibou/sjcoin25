@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SJ COIN Upgrade FIX</title>
+<title>SJ COIN FIX FINAL</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -23,25 +23,22 @@ body{
 </style>
 </head>
 
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-<div class="w-full max-w-xl bg-[#12141c] border border-gray-800 rounded-2xl p-6 mt-10">
+<div class="w-full max-w-xl bg-[#12141c] border border-gray-800 rounded-2xl p-6">
 
 <h1 class="text-xl font-bold text-center mb-4">
-SJ COIN Metadata Fix
+SJ COIN Metadata Upgrade (FIXED)
 </h1>
 
 <div id="ton-connect-btn" class="flex justify-center mb-5"></div>
 
-<label class="text-xs text-gray-400">Jetton Master</label>
-<input id="master" class="w-full p-3 bg-black border rounded-xl text-xs text-gray-300"
-value="UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz" readonly>
-
-<label class="text-xs text-gray-400 mt-3">JSON URL</label>
-<input id="url" class="w-full p-3 bg-black border rounded-xl text-yellow-400 text-xs"
+<label class="text-xs text-gray-400">JSON Metadata URL</label>
+<input id="url"
+class="w-full p-3 bg-black border border-gray-700 rounded-xl text-yellow-400 text-xs"
 value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json">
 
-<div class="mt-4 text-xs space-y-1 bg-black p-3 rounded-xl border border-gray-800">
+<div class="mt-4 bg-black p-3 rounded-xl border border-gray-800 text-xs space-y-1">
 <div>Status: <span id="status" class="log-inf">Waiting...</span></div>
 <div>Payload: <span id="payload" class="log-inf">---</span></div>
 </div>
@@ -49,94 +46,117 @@ value="https://raw.githubusercontent.com/simojibou/sjcoin25/main/sjcoin.json">
 <button id="btn"
 disabled
 onclick="sendTx()"
-class="w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400">
+class="w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400 font-bold">
 Connect Wallet First
 </button>
 
 </div>
 
 <script type="module">
-import { beginCell, toNano } from "https://esm.sh/@ton/core";
+
+import {
+  beginCell,
+  toNano,
+  Address
+} from "https://esm.sh/@ton/core";
 
 lucide.createIcons();
 
-const MASTER = "UQD1TlRrCeCd004h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDQfz";
+/* ───────────────────────────── */
+/* FIXED MASTER ADDRESS (YOUR NEW ONE) */
+/* ───────────────────────────── */
+
+const MASTER = Address.parse(
+"0:f54c846b09e09d3b4e21e15d782edd8bf8366a489f31e558e1abe254dbcda60d"
+);
+
+/* ───────────────────────────── */
 
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: "https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json",
-    buttonRootId: "ton-connect-btn"
+  manifestUrl: "https://raw.githubusercontent.com/simojibou/sjcoin25/main/tonconnect-manifest.json",
+  buttonRootId: "ton-connect-btn"
 });
 
 let connected = false;
 
-tonConnectUI.onStatusChange(w => {
-    connected = !!w;
+/* ───────────────────────────── */
 
-    const btn = document.getElementById("btn");
+tonConnectUI.onStatusChange(wallet => {
 
-    if(connected){
-        btn.disabled = false;
-        btn.className = "w-full mt-4 py-3 rounded-xl bg-yellow-500 text-black font-bold";
-        btn.innerText = "Update Metadata";
-    } else {
-        btn.disabled = true;
-        btn.className = "w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400";
-        btn.innerText = "Connect Wallet First";
-    }
+  connected = !!wallet;
+
+  const btn = document.getElementById("btn");
+
+  if (connected) {
+    btn.disabled = false;
+    btn.className = "w-full mt-4 py-3 rounded-xl bg-yellow-500 text-black font-bold";
+    btn.innerText = "Update Metadata";
+  } else {
+    btn.disabled = true;
+    btn.className = "w-full mt-4 py-3 rounded-xl bg-gray-700 text-gray-400";
+    btn.innerText = "Connect Wallet First";
+  }
+
 });
 
-/* FIXED CELL BUILDER */
+/* ───────────────────────────── */
+/* BUILD PAYLOAD (FIXED JETTON STANDARD) */
+/* ───────────────────────────── */
+
 function buildPayload(url){
 
-    // OFFCHAIN CONTENT CELL
-    const content = beginCell()
-        .storeUint(0, 8)
-        .storeStringTail(url)
-        .endCell();
+  const content = beginCell()
+    .storeUint(0, 8)              // off-chain flag
+    .storeStringTail(url)         // metadata URL
+    .endCell();
 
-    // Jetton change_content opcode
-    const body = beginCell()
-        .storeUint(0x7e8764ef, 32) // change_content
-        .storeUint(0, 64)
-        .storeRef(content)
-        .endCell();
+  const body = beginCell()
+    .storeUint(0x7e8764ef, 32)    // change_content opcode
+    .storeUint(0, 64)
+    .storeRef(content)
+    .endCell();
 
-    const boc = body.toBoc();
+  const boc = body.toBoc();
 
-    let binary = "";
-    for(let i=0;i<boc.length;i++){
-        binary += String.fromCharCode(boc[i]);
-    }
+  let binary = "";
+  for (let i = 0; i < boc.length; i++) {
+    binary += String.fromCharCode(boc[i]);
+  }
 
-    return btoa(binary);
+  return btoa(binary);
 }
+
+/* ───────────────────────────── */
 
 async function sendTx(){
 
-    const url = document.getElementById("url").value;
+  const url = document.getElementById("url").value.trim();
 
-    const payload = buildPayload(url);
+  const payload = buildPayload(url);
 
-    document.getElementById("payload").innerText = payload.slice(0,60)+"...";
-    document.getElementById("status").innerText = "Ready";
+  document.getElementById("payload").innerText =
+    payload.slice(0, 60) + "...";
 
-    const tx = {
-        validUntil: Math.floor(Date.now()/1000)+600,
-        messages: [
-            {
-                address: MASTER,
-                amount: toNano("0.05").toString(),
-                payload: payload
-            }
-        ]
-    };
+  document.getElementById("status").innerText = "Ready";
 
-    try{
-        await tonConnectUI.sendTransaction(tx);
-        alert("✅ Transaction sent!");
-    }catch(e){
-        alert("❌ " + e.message);
-    }
+  const tx = {
+    validUntil: Math.floor(Date.now()/1000) + 600,
+    messages: [
+      {
+        address: MASTER.toString(),
+        amount: toNano("0.05").toString(),
+        payload: payload
+      }
+    ]
+  };
+
+  try {
+    await tonConnectUI.sendTransaction(tx);
+    alert("✅ Transaction sent successfully!");
+  } catch (e) {
+    alert("❌ " + e.message);
+  }
+
 }
 
 window.sendTx = sendTx;
@@ -145,8 +165,6 @@ window.sendTx = sendTx;
 
 </body>
 </html>
-
-
 
 
 
