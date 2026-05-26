@@ -9,6 +9,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css">
+    <!-- Import official TonWeb for guaranteed error-free cell compilation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tonweb/0.0.66/tonweb.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         body {
@@ -50,7 +52,6 @@
             <!-- Developer Live Compiler Stats -->
             <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-[10px] font-mono text-gray-400">
                 <span class="text-xs font-bold text-gray-300 block mb-1">مترجم بايتات العقد (Live TON Compiler)</span>
-                <div>الحجم المقدر: <span id="compile-size" class="text-green-400">--</span> بايت</div>
                 <div class="truncate">كود البث (Payload BOC Base64): <span id="compile-payload" class="text-blue-400">جاري الحساب...</span></div>
             </div>
 
@@ -102,76 +103,37 @@
             updateLivePayload();
         });
 
-        // TON TEP-64 Standard off-chain metadata BOC compiler
-        function buildChangeContentBoc(url) {
-            const encoder = new TextEncoder();
-            const urlBytes = encoder.encode(url);
-            
-            // Cell 1: Metadata Cell -> Contains prefix (0x01) followed by URL bytes
-            const cell1Bytes = new Uint8Array(1 + urlBytes.length);
-            cell1Bytes[0] = 0x01; // Off-chain prefix
-            cell1Bytes.set(urlBytes, 1);
-            
-            const cell1RefsDesc = 0; // Ordinary cell, 0 refs
-            const cell1BitsDesc = cell1Bytes.length * 2; // Byte-aligned
-            const cell1Size = 2 + cell1Bytes.length; // Descriptors + Data
-            
-            // Cell 0: Root cell -> Message Body: Opcode (0x57aa0a5a) + QueryID (64-bit 0)
-            const cell0Bytes = new Uint8Array([
-                0x57, 0xaa, 0x0a, 0x5a, // opcode for change_content
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // query_id (uint64, 0)
-            ]);
-            const cell0RefsDesc = 1; // Ordinary cell, 1 reference (pointing to Cell 1)
-            const cell0BitsDesc = cell0Bytes.length * 2; // Byte-aligned
-            const cell0Size = 2 + cell0Bytes.length + 1; // Descriptors + Data + 1 byte for ref index
-            
-            const totalCellsSize = cell0Size + cell1Size;
-            
-            // Build the standard TON BOC (Bag of Cells) Header without CRC to guarantee simplicity
-            const header = [
-                0xb5, 0xee, 0x9c, 0x72, // Magic Header Prefix
-                0x01,                   // flags byte (has_idx=0, has_crc32=0, size of offsets = 1)
-                0x01,                   // size of offset (1 byte)
-                0x02,                   // total cells in BOC (2 cells)
-                0x01,                   // root cells in BOC (1 root)
-                0x00,                   // absent cells (0)
-                totalCellsSize,         // total serialized size
-                0x00                    // root index
-            ];
-            
-            const bocBytes = new Uint8Array(header.length + totalCellsSize);
-            bocBytes.set(header, 0);
-            
-            let offset = header.length;
-            
-            // Serialize Cell 0
-            bocBytes[offset++] = cell0RefsDesc;
-            bocBytes[offset++] = cell0BitsDesc;
-            bocBytes.set(cell0Bytes, offset);
-            offset += cell0Bytes.length;
-            bocBytes[offset++] = 0x01; // Reference pointer to cell 1 (index 1)
-            
-            // Serialize Cell 1
-            bocBytes[offset++] = cell1RefsDesc;
-            bocBytes[offset++] = cell1BitsDesc;
-            bocBytes.set(cell1Bytes, offset);
-            
-            // Convert binary buffer to standard Base64 string safely
-            let binary = "";
-            for (let i = 0; i < bocBytes.length; i++) {
-                binary += String.fromCharCode(bocBytes[i]);
+        // TON TEP-64 Standard off-chain metadata BOC compiler using TonWeb
+        async function buildChangeContentBoc(url) {
+            try {
+                const tonweb = new TonWeb();
+                
+                // Root Cell (Change Content Payload)
+                const cell = new TonWeb.boc.Cell();
+                cell.bits.writeUint(0x57aa0a5a, 32); // Opcode for change_content
+                cell.bits.writeUint(0, 64);          // query_id
+                
+                // Nested Cell representing Off-chain layout
+                const contentCell = new TonWeb.boc.Cell();
+                contentCell.bits.writeUint8(1);      // 0x01 prefix indicating Off-chain
+                contentCell.bits.writeString(url);   // metadata JSON URL
+                
+                // Push reference to root cell
+                cell.refs.push(contentCell);
+                
+                // Compile and encode to base64 BOC format
+                const bocBytes = await cell.toBoc();
+                return TonWeb.utils.bytesToBase64(bocBytes);
+            } catch (err) {
+                console.error("Compilation error: ", err);
+                return "";
             }
-            return {
-                base64: btoa(binary),
-                size: bocBytes.length
-            };
         }
 
-        function updateLivePayload() {
+        async function updateLivePayload() {
             const urlInput = document.getElementById("json-url").value.trim();
-            const compiled = buildChangeContentBoc(urlInput);
-            document.getElementById("compile-size").innerText = compiled.size;
-            document.getElementById("compile-payload").innerText = compiled.base64;
+            const payloadBase64 = await buildChangeContentBoc(urlInput);
+            document.getElementById("compile-payload").innerText = payloadBase64 || "خطأ في التوليد";
         }
 
         // Auto compile when link is typed
@@ -189,8 +151,13 @@
                 return;
             }
 
-            // Generate correct real-time compliance payload
-            const compiled = buildChangeContentBoc(jsonUrl);
+            // Correct compile trigger
+            const payloadBase64 = await buildChangeContentBoc(jsonUrl);
+
+            if (!payloadBase64) {
+                alert("فشل توليد كود البيانات المشفرة.");
+                return;
+            }
 
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 300, // 5 minutes validity
@@ -198,10 +165,12 @@
                     {
                         address: masterAddress, // Jetton Master Contract
                         amount: "50000000",     // 0.05 TON for Gas Fee
-                        payload: compiled.base64 // Real compliance Payload
+                        payload: payloadBase64  // FIXED: No longer hardcoded placeholder!
                     }
                 ]
             };
+
+            alert("سيتم إرسال طلب الترقية للمحفظة لتأكيد عملية التحويل إلى Off-chain. يرجى تأكيد العملية.");
 
             try {
                 // Request transaction from connected Admin Wallet
@@ -217,6 +186,7 @@
 </html>
 
 ```
+
 
 
 
