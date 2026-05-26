@@ -1,29 +1,61 @@
 <div align="center">
-<img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" width="120" height="120" style="border-radius: 50%;" alt="SJ COIN Logo"/>
-# SJ COIN ($SJ)
-### Official Token of the SJ Telegram Mini App Ecosystem 🚀
-Platform
-Telegram
-Mini App
-Website
-</div>
-## 📝 Overview
-**SJ COIN ($SJ)** is a high-utility community jetton built on the **TON (The Open Network) Blockchain**. It serves as the native currency and rewards engine for the **SJ Telegram Mini App ecosystem** designed by **SIMOJIBOU**.
-Players earn **$SJ** by actively engaging in competitive mini-games, completing daily social quests, and participating in collaborative community tasks. The token is fully compatible with major TON wallets, including **Tonkeeper**, **MyTonWallet**, and **Telegram TON Space**.
-## 💎 Jetton Smart Contract & Specifications
+  <img src="https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG" width="150" height="150" style="border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="SJ COIN Logo"/>
 
-| Parameter | Value / Address |
+  <h1>SJ COIN ($SJ)</h1>
+  <p><strong>The Official Utility Token of the SJ Telegram Mini App Ecosystem 🚀</strong></p>
+
+  <p>
+    <a href="https://t.me/sjcoin25bot"><img src="https://img.shields.io/badge/Play-Mini_App-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram Mini App"></a>
+    <a href="https://t.me/SJCoinOfficial"><img src="https://img.shields.io/badge/Join-Community-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Official Channel"></a>
+    <a href="https://sj-one.web.app"><img src="https://img.shields.io/badge/Visit-Website-5A67D8?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Website"></a>
+    <a href="https://ton.org"><img src="https://img.shields.io/badge/Blockchain-TON-0098EA?style=for-the-badge&logo=ton&logoColor=white" alt="TON Network"></a>
+  </p>
+</div>
+
+---
+
+## 📝 Overview
+
+**SJ COIN ($SJ)** is a high-utility community jetton engineered on the **TON (The Open Network) Blockchain**. It functions as the core native currency and rewards engine powering the **SJ Telegram Mini App ecosystem**, created by **SIMOJIBOU**.
+
+Built to drive engagement, players earn **$SJ** by competing in interactive mini-games, conquering daily social quests, and participating in collaborative community milestones. The token is fully integrated and natively compatible with all major TON wallets, including **Tonkeeper**, **MyTonWallet**, and the built-in **Telegram TON Space**.
+
+---
+
+## 💎 Tokenomics & Smart Contract
+
+| Parameter | Specification / Address |
 | :--- | :--- |
 | **Token Name** | SJ COIN |
-| **Token Symbol** | SJ |
-| **Decimals** | 9 |
-| **Total Supply** | 100,000,000,000,000,000 SJ |
+| **Token Symbol** | `$SJ` |
+| **Decimals** | `9` |
+| **Total Supply** | `100,000,000,000,000,000 SJ` |
 | **Blockchain** | TON (The Open Network) |
-| **Jetton Master Contract** | EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe |
-| **Admin Wallet** | UQACzRKZn07xqQK0zM5nLhEqS5L68pXvU-NfH4H8Y9_vU9ZaW |
+| **Jetton Master Contract** | `EQD1TIRrCeCdO04h4V14Lt2L-DZUrnFwHhAcoZp0o9yFmSBe` |
+| **Admin Wallet** | `UQACzRKZn07xqQK0zM5nLhEqS5L68pXvU-NfH4H8Y9_vU9ZaW` |
 
-## 🛠️ Official Jetton Metadata (TEP-64)
-To display interactive buy buttons, game links, and verified details inside **Telegram Wallet** and **Tonkeeper**, use the standardized metadata below inside sjcoin.json:
+> **Note:** Always verify the Jetton Master Contract address before executing any swaps or transfers to avoid interacting with counterfeit tokens.
+
+---
+
+## 🚀 Ecosystem Features
+
+### 1. The Telegram Mini Game
+* **Instant Access:** Launch the game directly via [@sjcoin25bot](https://t.me/sjcoin25bot).
+* **Play-to-Earn Mechanics:** Accumulate free `$SJ` tokens through active gameplay, daily quests, and referring friends to the ecosystem.
+
+### 2. Live Presale & Token Swaps
+* **Direct Exchange:** Community members and early adopters can seamlessly exchange **$TON** for **$SJ** at the current market rate using our decentralized [Web Presale Portal](https://sj-one.web.app).
+
+---
+
+## 🛠️ Developer Integration
+
+### Official Jetton Metadata (TEP-64)
+To render interactive buy buttons, game links, and verified project details inside **Telegram Wallet** and **Tonkeeper**, utilize the standardized metadata structure below. 
+
+*Save this as `sjcoin.json` on your server:*
+
 ```json
 {
   "name": "SJ COIN",
@@ -46,50 +78,3 @@ To display interactive buy buttons, game links, and verified details inside **Te
     }
   ]
 }
-```
-## 🎮 Telegram Mini App Integration
-The SJ Ecosystem utilizes the @tonconnect/ui library to allow users to link their decentralized wallets and sign transaction events securely inside Telegram.
-### Quick Setup for Developers
- 1. **Install TON Connect UI SDK:**
-   ```bash
-   npm install @tonconnect/ui
-   
-   ```
- 2. **Configure App Manifest (tonconnect-manifest.json):**
-   Place this file on your web host root directory (e.g., https://sj-one.web.app/tonconnect-manifest.json):
-   ```json
-   {
-     "url": "[https://sj-one.web.app](https://sj-one.web.app)",
-     "name": "SJ COIN Mini App",
-     "iconUrl": "[https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG](https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG)"
-   }
-   
-   ```
- 3. **Initialize Connection in Code:**
-   ```javascript
-   import { TonConnectUI } from '@tonconnect/ui';
-   
-   const tonConnectUI = new TonConnectUI({
-       manifestUrl: '[https://sj-one.web.app/tonconnect-manifest.json](https://sj-one.web.app/tonconnect-manifest.json)',
-       buttonRootId: 'ton-connect-button'
-   });
-   
-   ```
-## 🚀 How Users Earn and Buy $SJ
-### 1. The Telegram Mini Game
- * Access the bot: @sjcoin25bot
- * Play to earn free $SJ tokens through active play, quests, and referring friends.
-### 2. Live Presale / Token Swaps
-Interested community members can exchange **$TON** directly for **$SJ** at the current exchange rate using our Web Presale Portal at sj-one.web.app.
-## 🤝 Contributing
-We welcome contributions from the community to help make **SJ COIN** the leading Web3 game token on TON!
- 1. Fork the Project Repository.
- 2. Create your Feature Branch (git checkout -b feature/AmazingFeature).
- 3. Commit your Changes (git commit -m 'Add some AmazingFeature').
- 4. Push to the Branch (git push origin feature/AmazingFeature).
- 5. Open a Pull Request.
-## 📜 License
-This project is licensed under the **MIT License** - see the LICENSE file for details.
-<div align="center">
-<p>Created with ❤️ by <b>SIMOJIBOU</b>. Join the future of Telegram Gaming on TON.</p>
-</div>
