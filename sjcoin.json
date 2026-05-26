@@ -1,0 +1,12 @@
+{
+  "name": "SJ COIN",
+  "symbol": "SJ",
+  "decimals": 9,
+  "description": "SJ COIN by SIMOJIBOU - Official token of the SJ Telegram Mini App. Earn SJ by playing and completing tasks. Join the community and grow with us!",
+  "image": "https://raw.githubusercontent.com/simojibou/logo/refs/heads/main/logo.PNG",
+  "social": {
+    "telegram": "https://t.me/SJCoinOfficial",
+    "website": "https://sj-one.web.app",
+    "mini_app": "https://t.me/sjcoin25bot"
+  }
+}
