@@ -4,67 +4,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SJ COIN - منصة الشراء المباشر</title>
+    <title>SJ COIN | التداول الرسمي</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- استيراد مكتبة TON Connect -->
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <style>
+        body { background-color: #050505; color: white; margin: 0; font-family: sans-serif; }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .widget-container { width: 100%; max-width: 450px; background: #111827; border-radius: 24px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); border: 1px solid #374151; }
+    </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex flex-col items-center justify-center">
+<body>
 
-    <div class="max-w-md w-full bg-gray-900 p-8 rounded-3xl shadow-2xl border border-gray-800 text-center">
-        <h1 class="text-3xl font-bold mb-2 text-yellow-500">SJ COIN</h1>
-        <p class="text-gray-400 mb-8">امتلك العملة مباشرة من محفظتك</p>
-
-        <!-- زر الاتصال بالمحفظة -->
-        <div id="ton-connect-button" class="flex justify-center mb-6"></div>
-
-        <div class="bg-gray-800 p-4 rounded-xl mb-6">
-            <p class="text-sm text-gray-400">سعر الصرف الحالي</p>
-            <p class="text-2xl font-bold">1 TON = SJ COIN</p>
+    <div class="hero">
+        <h1 class="text-4xl font-bold mb-8 italic">SJ<span class="text-yellow-500">COIN</span></h1>
+        
+        <!-- هذا الجزء هو واجهة التبديل الرسمية التي ستظهر العملية باحترافية في المحفظة -->
+        <div class="widget-container">
+            <div id="stonfi-widget"></div>
         </div>
 
-        <button onclick="buyToken()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 rounded-xl transition shadow-lg shadow-yellow-500/20">
-            تنفيذ عملية الشراء
-        </button>
+        <p class="mt-8 text-gray-400 text-sm">العقد: EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2</p>
     </div>
 
+    <!-- كود دمج منصة STON.fi -->
+    <script async src="https://pr.ston.fi/widget.js"></script>
     <script>
-        // إعداد TON Connect باستخدام ملف الـ manifest الخاص بك
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://raw.githubusercontent.com/simojibou/sjcoin25/refs/heads/main/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect-button'
-        });
-
-        async function buyToken() {
-            const wallet = tonConnectUI.wallet;
-            
-            if (!wallet) {
-                alert("يرجى ربط محفظتك أولاً بالضغط على زر Connect Wallet أعلاه!");
-                return;
-            }
-
-            // إعداد المعاملة (إرسال TON إلى عقد العملة)
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 360,
-                messages: [
-                    {
-                        address: 'EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2', // عنوان عقدك
-                        amount: '100000000' // قيمة المعاملة بالـ Nanoton (مثلاً 0.1 TON)
-                    }
-                ]
-            };
-
-            try {
-                const result = await tonConnectUI.sendTransaction(transaction);
-                alert("تم إرسال المعاملة بنجاح، شكراً لثقتك بـ SJ COIN!");
-            } catch (e) {
-                console.error(e);
-                alert("تم إلغاء المعاملة أو حدث خطأ.");
-            }
-        }
+        window.stonfiWidgetConfig = {
+            "partner": "EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2",
+            "theme": "dark",
+            "backgroundColor": "#111827",
+            "accentColor": "#eab308",
+            "defaultToAddress": "EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2",
+            "defaultToTokenAddress": "EQD1TIRrCeCdO04h4V14Lt2L-DZqSJ8x5Vjhq-JU282mDVo2"
+        };
     </script>
 </body>
 </html>
 
 ```
+
 
