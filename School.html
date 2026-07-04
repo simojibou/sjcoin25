@@ -1,0 +1,1074 @@
+
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lincoln Student Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Webkit scrollbar styles */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        /* CSS 3D Card Flip styles for the Digital ID */
+        .card-perspective {
+            perspective: 1200px;
+        }
+        .card-inner {
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Interactive active indicators and smooth layout fades */
+        .fade-in {
+            animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Safe margins for devices with notches */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+
+        /* Visual Barcode pattern generation via CSS */
+        .barcode {
+            background-image: linear-gradient(to right, 
+                #000 0%, #000 2%, #fff 2%, #fff 4%, 
+                #000 4%, #000 5%, #fff 5%, #fff 8%, 
+                #000 8%, #000 12%, #fff 12%, #fff 14%,
+                #000 14%, #000 15%, #fff 15%, #fff 18%,
+                #000 18%, #000 22%, #fff 22%, #fff 23%,
+                #000 23%, #000 26%, #fff 26%, #fff 28%,
+                #000 28%, #000 32%, #fff 32%, #fff 35%,
+                #000 35%, #000 36%, #fff 36%, #fff 39%,
+                #000 39%, #000 42%, #fff 42%, #fff 45%,
+                #000 45%, #000 48%, #fff 48%, #fff 50%,
+                #000 50%, #000 54%, #fff 54%, #fff 56%,
+                #000 56%, #000 58%, #fff 58%, #fff 62%,
+                #000 62%, #000 64%, #fff 64%, #fff 65%,
+                #000 65%, #000 68%, #fff 68%, #fff 72%,
+                #000 72%, #000 75%, #fff 75%, #fff 76%,
+                #000 76%, #000 80%, #fff 80%, #fff 82%,
+                #000 82%, #000 85%, #fff 85%, #fff 88%,
+                #000 88%, #000 90%, #fff 90%, #fff 92%,
+                #000 92%, #000 96%, #fff 96%, #fff 98%,
+                #000 98%, #000 100%
+            );
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+    <!-- App Shell Wrapper -->
+    <div class="flex min-h-screen relative overflow-hidden">
+
+        <!-- DESKTOP PERSISTENT LEFT SIDEBAR -->
+        <aside class="hidden lg:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 p-6 z-30 justify-between">
+            <div class="space-y-8">
+                <!-- Portal Brand / Logo -->
+                <div class="flex items-center space-x-3 px-2">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100 logo-badge">
+                        <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-lg tracking-tight text-slate-950">Lincoln High</h1>
+                        <p class="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Student Hub</p>
+                    </div>
+                </div>
+
+                <!-- Main Navigation links -->
+                <nav class="space-y-1.5" id="desktop-nav">
+                    <!-- Dynamic Navigation injection -->
+                </nav>
+            </div>
+
+            <!-- User Context / Quick profile info -->
+            <div class="border-t border-slate-100 pt-5 space-y-4">
+                <div class="flex items-center space-x-3 px-2">
+                    <img id="side-user-avatar" class="w-11 h-11 rounded-xl object-cover shadow-sm border border-slate-100" alt="Avatar">
+                    <div class="min-w-0 flex-1">
+                        <p id="side-user-name" class="font-bold text-slate-900 truncate text-sm"></p>
+                        <p id="side-user-grade" class="text-xs text-slate-500 font-medium"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="switchTab('profile')" class="flex-1 py-2 px-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all flex items-center justify-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5"></i> Settings
+                    </button>
+                    <button onclick="triggerToast('Logged Out Successfully!')" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Sign Out">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN LAYOUT WRAPPER (Includes responsive offsets) -->
+        <div class="flex-1 lg:pl-72 flex flex-col min-h-screen">
+
+            <!-- MOBILE / TABLET HEADER -->
+            <header class="lg:hidden flex justify-between items-center bg-white px-6 py-4 border-b border-slate-200/80 sticky top-0 z-40 backdrop-blur-md bg-white/95">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md logo-badge">
+                        <i data-lucide="graduation-cap" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-base tracking-tight text-slate-950">Lincoln High</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openNotificationDrawer()" class="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative transition-colors">
+                        <i data-lucide="bell" class="w-5.5 h-5.5"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                    </button>
+                    <img id="mobile-user-avatar" class="w-9 h-9 rounded-xl object-cover border border-slate-200" alt="Profile" onclick="switchTab('profile')">
+                </div>
+            </header>
+
+            <!-- PRIMARY SCROLLABLE VIEW -->
+            <main class="flex-1 p-4 sm:p-6 md:p-8 pb-28 lg:pb-12 max-w-7xl w-full mx-auto">
+                <div id="active-viewport" class="space-y-8">
+                    <!-- Dynamic component templates load here -->
+                </div>
+            </main>
+
+            <!-- MOBILE FOOTER NAVIGATION BAR -->
+            <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-50 px-3 py-2 pb-safe">
+                <div class="flex justify-around items-center max-w-md mx-auto" id="mobile-nav">
+                    <!-- Dynamic Mobile Navigation items injection -->
+                </div>
+            </nav>
+
+        </div>
+    </div>
+
+    <!-- GLOBAL COMPONENT MODAL: Create Assignment -->
+    <div id="add-assignment-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <span class="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="file-plus" class="w-5 h-5"></i></span>
+                    Add Assignment
+                </h3>
+                <button onclick="closeModal('add-assignment-modal')" class="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form id="assignment-form" onsubmit="handleCreateAssignment(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Assignment Title</label>
+                    <input type="text" id="task-title" required placeholder="e.g., Chapter 5 Vocabulary Quiz" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Subject</label>
+                        <select id="task-subject" class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium">
+                            <!-- Injected programmatically from courses -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Category</label>
+                        <select id="task-type" class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium">
+                            <option value="Homework">Homework</option>
+                            <option value="Quiz">Quiz / Test</option>
+                            <option value="Project">Project</option>
+                            <option value="Reading">Reading</option>
+                            <option value="Lab">Lab Work</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Due Date</label>
+                    <input type="date" id="task-due" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium">
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('add-assignment-modal')" class="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-100 text-sm action-btn">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- GLOBAL COMPONENT MODAL: School Notification Drawer -->
+    <div id="notification-drawer" class="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-50 flex justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between transform translate-x-full transition-transform duration-350 ease-out">
+            <div>
+                <div class="flex justify-between items-center pb-5 border-b border-slate-100 mb-5">
+                    <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="bell" class="w-5 h-5 text-indigo-600"></i>
+                        School Alerts
+                    </h3>
+                    <button onclick="closeModal('notification-drawer')" class="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex gap-3.5">
+                        <div class="p-2 bg-orange-100 text-orange-600 rounded-xl h-fit"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">Severe Weather Notice</h4>
+                            <p class="text-xs text-slate-600 mt-1">Bus service may experience up to 15-minute delays today due to low visibility conditions.</p>
+                            <span class="text-[10px] text-slate-400 font-medium mt-2 block">10 minutes ago</span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-indigo-50/50 border border-indigo-100/30 rounded-2xl flex gap-3.5">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl h-fit"><i data-lucide="award" class="w-5 h-5"></i></div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">Science Fair Submission Open</h4>
+                            <p class="text-xs text-slate-600 mt-1">Submit your science exhibit abstracts online before Friday to qualify for early placement.</p>
+                            <span class="text-[10px] text-slate-400 font-medium mt-2 block">2 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="closeModal('notification-drawer')" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition-colors text-sm text-center">
+                Close Panel
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST POPUP (Toast Guardrail instead of Alert) -->
+    <div id="toast-wrapper" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- APPLICATION SCRIPTS & RECONCILIATION -->
+    <script>
+        // --- CENTRAL STATE ---
+        const state = {
+            activeTab: 'home',
+            theme: 'indigo', // indigo, crimson, emerald
+            student: {
+                name: "Alex Johnson",
+                grade: "11th Grade",
+                school: "Lincoln High School",
+                studentId: "94827104",
+                avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+                unweightedGpa: "3.84",
+                weightedGpa: "4.34"
+            },
+            schedule: [
+                { id: 1, subject: "AP Calculus AB", time: "08:00 AM - 08:50 AM", room: "Room 302", teacher: "Mr. Eugene Smith", color: "bg-blue-500", rawGrade: 94 },
+                { id: 2, subject: "US History Honors", time: "08:55 AM - 09:45 AM", room: "Room 105", teacher: "Ms. Sarah Davis", color: "bg-red-500", rawGrade: 88 },
+                { id: 3, subject: "Biology AP", time: "09:50 AM - 10:40 AM", room: "Lab Block 2", teacher: "Dr. Arthur Roberts", color: "bg-emerald-500", rawGrade: 91 },
+                { id: 4, subject: "Advisory/Lunch", time: "10:40 AM - 11:20 AM", room: "Cafeteria", teacher: "Staff Supervision", color: "bg-slate-400", rawGrade: null },
+                { id: 5, subject: "English Lit 11", time: "11:25 AM - 12:15 PM", room: "Room 201", teacher: "Mrs. Evelyn Clark", color: "bg-purple-500", rawGrade: 96 }
+            ],
+            assignments: [
+                { id: 1, title: "Chapter 4 Trigonometric Exercises", subject: "AP Calculus AB", dueDate: "2026-07-06", status: "pending", type: "Homework" },
+                { id: 2, title: "Cold War Interactive Essay Draft", subject: "US History Honors", dueDate: "2026-07-07", status: "pending", type: "Essay" },
+                { id: 3, title: "Cell Structure Lab Report Write-up", subject: "Biology AP", dueDate: "2026-07-09", status: "pending", type: "Lab" },
+                { id: 4, title: "Read The Great Gatsby Ch. 1-3", subject: "English Lit 11", dueDate: "2026-06-28", status: "completed", type: "Reading" }
+            ],
+            announcements: [
+                { id: 1, tag: "Sports", title: "Varsity Football Homecoming vs Central Prep", date: "Friday Night 7:00 PM", urgency: "high" },
+                { id: 2, tag: "Academic", title: "Afterschool AP Biology Tutoring Available", date: "Tues & Thurs in Lab 2", urgency: "normal" },
+                { id: 3, tag: "Clubs", title: "Yearbook Photo Re-takes Scheduling", date: "Library Computer Annex", urgency: "low" }
+            ]
+        };
+
+        // Theme configurations with deep shades & gradients
+        const themeConfigs = {
+            indigo: {
+                primary: 'text-indigo-600',
+                bg: 'bg-indigo-600',
+                border: 'border-indigo-600',
+                gradient: 'from-indigo-600 to-blue-600',
+                shadow: 'shadow-indigo-100',
+                ring: 'focus:ring-indigo-500/20',
+                logoBadge: 'bg-indigo-600'
+            },
+            crimson: {
+                primary: 'text-rose-600',
+                bg: 'bg-rose-600',
+                border: 'border-rose-600',
+                gradient: 'from-rose-600 to-orange-600',
+                shadow: 'shadow-rose-100',
+                ring: 'focus:ring-rose-500/20',
+                logoBadge: 'bg-rose-600'
+            },
+            emerald: {
+                primary: 'text-emerald-600',
+                bg: 'bg-emerald-600',
+                border: 'border-emerald-600',
+                gradient: 'from-emerald-600 to-teal-600',
+                shadow: 'shadow-emerald-100',
+                ring: 'focus:ring-emerald-500/20',
+                logoBadge: 'bg-emerald-600'
+            }
+        };
+
+        // Navigation links config
+        const navItems = [
+            { id: 'home', icon: 'home', label: 'Overview' },
+            { id: 'schedule', icon: 'calendar', label: 'Schedule' },
+            { id: 'assignments', icon: 'book-open', label: 'Tasks' },
+            { id: 'grades', icon: 'graduation-cap', label: 'GPA Hub' },
+            { id: 'profile', icon: 'user', label: 'Student ID' }
+        ];
+
+        // --- UTILITIES & APP LOGIC ---
+
+        function triggerToast(message, type = 'success') {
+            const container = document.getElementById('toast-wrapper');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-slate-900 text-white";
+            let icon = "check-circle";
+            if (type === 'error') {
+                bgClass = "bg-rose-600 text-white shadow-lg";
+                icon = "alert-circle";
+            } else if (type === 'info') {
+                bgClass = "bg-indigo-600 text-white shadow-lg";
+                icon = "info";
+            }
+
+            toast.className = `${bgClass} flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto text-sm font-semibold whitespace-nowrap`;
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            // Hide & Cleanup
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 2800);
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            
+            // Apply scale pop up to child elements
+            const inner = modal.firstElementChild;
+            if (inner) {
+                inner.classList.remove('scale-95', 'translate-x-full');
+                inner.classList.add('scale-100', 'translate-x-0');
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            
+            const inner = modal.firstElementChild;
+            if (inner) {
+                inner.classList.add('scale-95');
+                inner.classList.remove('scale-100');
+                if (id === 'notification-drawer') {
+                    inner.classList.add('translate-x-full');
+                    inner.classList.remove('translate-x-0');
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            state.activeTab = tabId;
+            renderNavigations();
+            renderActiveView();
+        }
+
+        function toggleIDBadgeFlip() {
+            const card = document.getElementById('digital-id-inner');
+            if (card) {
+                card.classList.toggle('flipped');
+            }
+        }
+
+        // Grade scale converting percentages to GPA points (unweighted + weighted)
+        function convertPercentToGrade(percent, isAP = false, isHonors = false) {
+            let letter = "F";
+            let gpaPoint = 0.0;
+            
+            if (percent >= 97) { letter = "A+"; gpaPoint = 4.0; }
+            else if (percent >= 93) { letter = "A"; gpaPoint = 4.0; }
+            else if (percent >= 90) { letter = "A-"; gpaPoint = 3.7; }
+            else if (percent >= 87) { letter = "B+"; gpaPoint = 3.3; }
+            else if (percent >= 83) { letter = "B"; gpaPoint = 3.0; }
+            else if (percent >= 80) { letter = "B-"; gpaPoint = 2.7; }
+            else if (percent >= 77) { letter = "C+"; gpaPoint = 2.3; }
+            else if (percent >= 73) { letter = "C"; gpaPoint = 2.0; }
+            else if (percent >= 70) { letter = "C-"; gpaPoint = 1.7; }
+            else if (percent >= 67) { letter = "D+"; gpaPoint = 1.3; }
+            else if (percent >= 60) { letter = "D"; gpaPoint = 1.0; }
+
+            let weightedPoint = gpaPoint;
+            if (isAP) weightedPoint += 1.0;
+            else if (isHonors) weightedPoint += 0.5;
+
+            return { letter, unweighted: gpaPoint, weighted: weightedPoint };
+        }
+
+        // Live calculation of cumulative unweighted & weighted GPA
+        function recalculateGPAs() {
+            let totalUnweighted = 0;
+            let totalWeighted = 0;
+            let countableClasses = 0;
+
+            state.schedule.forEach(course => {
+                if (course.rawGrade !== null) {
+                    const isAP = course.subject.includes("AP");
+                    const isHonors = course.subject.includes("Honors");
+                    const score = convertPercentToGrade(course.rawGrade, isAP, isHonors);
+                    totalUnweighted += score.unweighted;
+                    totalWeighted += score.weighted;
+                    countableClasses++;
+                }
+            });
+
+            if (countableClasses > 0) {
+                state.student.unweightedGpa = (totalUnweighted / countableClasses).toFixed(2);
+                state.student.weightedGpa = (totalWeighted / countableClasses).toFixed(2);
+            }
+        }
+
+        // Live update class grades
+        window.updateCourseGradeValue = function(courseId, newGrade) {
+            const course = state.schedule.find(c => c.id == courseId);
+            if (course) {
+                course.rawGrade = Math.min(100, Math.max(0, parseInt(newGrade) || 0));
+                recalculateGPAs();
+                
+                // Update numeric UI counters fast
+                const label = document.getElementById(`grade-display-num-${courseId}`);
+                if (label) {
+                    const isAP = course.subject.includes("AP");
+                    const isHonors = course.subject.includes("Honors");
+                    const conversion = convertPercentToGrade(course.rawGrade, isAP, isHonors);
+                    label.innerText = `${course.rawGrade}% (${conversion.letter})`;
+                }
+
+                // Update summary calculations in layout header
+                const valUnweighted = document.getElementById("gpa-unweighted-indicator");
+                const valWeighted = document.getElementById("gpa-weighted-indicator");
+                if (valUnweighted && valWeighted) {
+                    valUnweighted.innerText = state.student.unweightedGpa;
+                    valWeighted.innerText = state.student.weightedGpa;
+                }
+            }
+        };
+
+        // Mark individual tasks completed
+        window.toggleAssignmentState = function(id) {
+            state.assignments = state.assignments.map(task => 
+                task.id === id ? { ...task, status: task.status === 'pending' ? 'completed' : 'pending' } : task
+            );
+            triggerToast("Task updated successfully!");
+            renderActiveView();
+        };
+
+        // Open custom Create task modal with subject payload
+        window.openCreateAssignmentModal = function() {
+            const subjectSelect = document.getElementById("task-subject");
+            if (subjectSelect) {
+                // Filter only actual classes (not advisory/lunch)
+                const actualSubjects = state.schedule.filter(s => s.rawGrade !== null);
+                subjectSelect.innerHTML = actualSubjects.map(s => `<option value="${s.subject}">${s.subject}</option>`).join('');
+            }
+            openModal("add-assignment-modal");
+        };
+
+        // Handle raw submission of assignments
+        window.handleCreateAssignment = function(e) {
+            e.preventDefault();
+            const title = document.getElementById("task-title").value;
+            const subject = document.getElementById("task-subject").value;
+            const type = document.getElementById("task-type").value;
+            const rawDue = document.getElementById("task-due").value;
+
+            // Formulate date string display
+            const daysArr = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const monthsArr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const targetDate = new Date(rawDue + "T00:00:00");
+            const finalDateStr = `${monthsArr[targetDate.getMonth()]} ${targetDate.getDate()}, ${targetDate.getFullYear()}`;
+
+            const newId = state.assignments.length ? Math.max(...state.assignments.map(a => a.id)) + 1 : 1;
+            state.assignments.unshift({
+                id: newId,
+                title,
+                subject,
+                type,
+                dueDate: finalDateStr,
+                status: "pending"
+            });
+
+            closeModal("add-assignment-modal");
+            document.getElementById("assignment-form").reset();
+            triggerToast("Created Assignment successfully!");
+            renderActiveView();
+        };
+
+        window.changeTheme = function(themeName) {
+            state.theme = themeName;
+            triggerToast(`Theme switched to ${themeName.charAt(0).toUpperCase() + themeName.slice(1)}!`);
+            applyThemeSystem();
+            renderActiveView();
+            renderNavigations();
+        };
+
+
+        // --- RENDERING ROUTINES ---
+
+        function applyThemeSystem() {
+            const currentTheme = themeConfigs[state.theme];
+            
+            // Apply theme modifications to layout highlights
+            document.querySelectorAll('.logo-badge').forEach(badge => {
+                badge.className = `w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all logo-badge ${currentTheme.bg} ${currentTheme.shadow}`;
+            });
+        }
+
+        function renderNavigations() {
+            const currentTheme = themeConfigs[state.theme];
+
+            // Render Sidebar
+            const desktopNav = document.getElementById("desktop-nav");
+            desktopNav.innerHTML = navItems.map(item => {
+                const isActive = state.activeTab === item.id;
+                const activeClasses = isActive 
+                    ? `bg-slate-50 ${currentTheme.primary} font-bold border-l-4 ${currentTheme.border}` 
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50/50 font-medium";
+
+                return `
+                    <button onclick="switchTab('${item.id}')" class="w-full flex items-center space-x-3.5 px-4 py-3.5 rounded-xl transition-all ${activeClasses}">
+                        <i data-lucide="${item.icon}" class="w-5 h-5"></i>
+                        <span class="text-sm">${item.label}</span>
+                    </button>
+                `;
+            }).join('');
+
+            // Render Mobile Navbar
+            const mobileNav = document.getElementById("mobile-nav");
+            mobileNav.innerHTML = navItems.map(item => {
+                const isActive = state.activeTab === item.id;
+                const activeClasses = isActive 
+                    ? `${currentTheme.primary} font-bold` 
+                    : "text-slate-400 hover:text-slate-600";
+
+                return `
+                    <button onclick="switchTab('${item.id}')" class="flex flex-col items-center justify-center w-14 py-1 transition-all ${activeClasses}">
+                        <div class="p-1 rounded-xl relative ${isActive ? 'bg-indigo-50/10' : ''}">
+                            <i data-lucide="${item.icon}" class="w-5.5 h-5.5"></i>
+                        </div>
+                        <span class="text-[9.5px] tracking-tight mt-0.5">${item.label}</span>
+                    </button>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // Dynamic view content builder
+        function renderActiveView() {
+            const viewContainer = document.getElementById("active-viewport");
+            const currentTheme = themeConfigs[state.theme];
+
+            if (state.activeTab === 'home') {
+                const pendingTasks = state.assignments.filter(a => a.status === 'pending');
+                const nextCls = state.schedule[0]; // calculus
+
+                viewContainer.innerHTML = `
+                    <div class="space-y-8 fade-in">
+                        <!-- Custom Welcome Board -->
+                        <div class="bg-gradient-to-br ${currentTheme.gradient} text-white rounded-3xl p-6 sm:p-8 shadow-xl ${currentTheme.shadow} relative overflow-hidden">
+                            <div class="absolute right-0 bottom-0 top-0 w-1/3 bg-white/5 skew-x-12 transform origin-bottom-right"></div>
+                            <div class="relative z-10 max-w-xl">
+                                <span class="bg-white/20 text-white font-bold text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest backdrop-blur-md">Academic Progress Live</span>
+                                <h2 class="text-3xl sm:text-4xl font-extrabold mt-4 tracking-tight leading-tight">Welcome back, ${state.student.name}!</h2>
+                                <p class="text-indigo-100/90 text-sm sm:text-base mt-2.5 font-medium">You have ${pendingTasks.length} pending academic assignments due this week. Your current GPA stands excellent.</p>
+                            </div>
+                        </div>
+
+                        <!-- Grid Overview: Up Next & Key Metrics -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            
+                            <!-- Up Next Period Details -->
+                            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full">First Block Period</span>
+                                    <div class="p-2 bg-slate-50 text-slate-500 rounded-xl"><i data-lucide="clock" class="w-5 h-5"></i></div>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold tracking-wider text-slate-400 uppercase">Upcoming Lecture</p>
+                                    <h3 class="text-xl font-bold text-slate-900 mt-1">${nextCls.subject}</h3>
+                                    <p class="text-sm font-semibold text-slate-500 mt-0.5">${nextCls.teacher}</p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between text-xs font-bold text-slate-400">
+                                    <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ${nextCls.room}</span>
+                                    <span>${nextCls.time.split(' - ')[0]}</span>
+                                </div>
+                            </div>
+
+                            <!-- GPA tracker card -->
+                            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full">Live Academic Performance</span>
+                                    <div class="p-2 bg-slate-50 text-slate-500 rounded-xl"><i data-lucide="trending-up" class="w-5 h-5"></i></div>
+                                </div>
+                                <div class="flex items-baseline gap-4">
+                                    <div>
+                                        <p class="text-xs font-bold tracking-wider text-slate-400 uppercase">Weighted GPA</p>
+                                        <h3 class="text-3xl font-extrabold text-slate-900 mt-1">${state.student.weightedGpa}</h3>
+                                    </div>
+                                    <div class="border-l border-slate-100 pl-4">
+                                        <p class="text-xs font-bold tracking-wider text-slate-400 uppercase">Unweighted</p>
+                                        <h3 class="text-xl font-extrabold text-slate-500 mt-1">${state.student.unweightedGpa}</h3>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-4">Based on weighted values including Advanced Placement (+1.0) and Honors (+0.5) classes.</p>
+                            </div>
+
+                            <!-- Assignments status card -->
+                            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full">To-Do Queue</span>
+                                    <div class="p-2 bg-slate-50 text-slate-500 rounded-xl"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold tracking-wider text-slate-400 uppercase">Unfinished Tasks</p>
+                                    <h3 class="text-3xl font-extrabold text-slate-900 mt-1">${pendingTasks.length}</h3>
+                                    <p class="text-sm font-semibold text-slate-500 mt-0.5">Tasks needing immediate completion</p>
+                                </div>
+                                <button onclick="switchTab('assignments')" class="w-full mt-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5">
+                                    Browse Tracker <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bulletins & School Feed Section -->
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-4">School Bulletins</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                ${state.announcements.map(item => {
+                                    let tagBg = 'bg-slate-100 text-slate-700';
+                                    if (item.tag === 'Sports') tagBg = 'bg-rose-50 text-rose-700';
+                                    if (item.tag === 'Academic') tagBg = 'bg-sky-50 text-sky-700';
+                                    if (item.tag === 'Clubs') tagBg = 'bg-emerald-50 text-emerald-700';
+
+                                    return `
+                                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-slate-200/80 transition-all">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${tagBg}">${item.tag}</span>
+                                                <i data-lucide="bookmark" class="w-4 h-4 text-slate-300 hover:text-slate-500 cursor-pointer transition-colors"></i>
+                                            </div>
+                                            <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-2">${item.title}</h4>
+                                            <p class="text-xs text-slate-400 font-semibold mt-4 flex items-center gap-1.5">
+                                                <i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${item.date}
+                                            </p>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+            
+            else if (state.activeTab === 'schedule') {
+                viewContainer.innerHTML = `
+                    <div class="space-y-6 fade-in max-w-2xl mx-auto">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900">Today's Class Schedule</h2>
+                                <p class="text-sm font-medium text-slate-500 mt-0.5">Lincoln High operates on standard block schedule rotations.</p>
+                            </div>
+                            <span class="px-3.5 py-1.5 bg-indigo-50 ${currentTheme.primary} text-xs font-bold rounded-xl border border-indigo-100/30">Standard B-Day</span>
+                        </div>
+
+                        <div class="relative pl-6 sm:pl-8 space-y-6">
+                            <!-- Timeline trace line -->
+                            <div class="absolute left-10 sm:left-12 top-6 bottom-6 w-0.5 bg-slate-200"></div>
+
+                            ${state.schedule.map((course, index) => {
+                                const isClass = course.rawGrade !== null;
+                                return `
+                                    <div class="flex gap-4 relative">
+                                        <!-- Index Dot indicator -->
+                                        <div class="flex-shrink-0 z-10">
+                                            <div class="w-8 h-8 rounded-full ${course.color} text-white flex items-center justify-center font-extrabold text-xs shadow-md border-4 border-slate-50">
+                                                ${index + 1}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Main Period Card -->
+                                        <div class="bg-white flex-1 rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-slate-200 transition-all">
+                                            <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
+                                                <div>
+                                                    <h3 class="font-bold text-slate-800 text-base">${course.subject}</h3>
+                                                    ${isClass ? `
+                                                        <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mt-1">
+                                                            <i data-lucide="user" class="w-3.5 h-3.5"></i> ${course.teacher}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                                <span class="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg h-fit w-fit">${course.time}</span>
+                                            </div>
+
+                                            <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center text-xs font-bold text-slate-400">
+                                                <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ${course.room}</span>
+                                                ${isClass ? `
+                                                    <span class="text-emerald-600 flex items-center gap-1">
+                                                        <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> Active Course
+                                                    </span>
+                                                ` : `
+                                                    <span class="text-slate-400">Recess Interval</span>
+                                                `}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } 
+            
+            else if (state.activeTab === 'assignments') {
+                const pending = state.assignments.filter(t => t.status === 'pending');
+                const completed = state.assignments.filter(t => t.status === 'completed');
+
+                viewContainer.innerHTML = `
+                    <div class="space-y-6 fade-in max-w-3xl mx-auto">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900">Task Tracker</h2>
+                                <p class="text-sm font-medium text-slate-500">Organize homework, laboratory write-ups, and exams.</p>
+                            </div>
+                            <button onclick="openCreateAssignmentModal()" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg ${currentTheme.shadow} flex items-center gap-1.5">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add Task
+                            </button>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- Pending Tasks -->
+                            <div>
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">To-Do (${pending.length})</h3>
+                                <div class="space-y-3">
+                                    ${pending.length === 0 ? `
+                                        <div class="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                                            <i data-lucide="smile" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                                            <p class="text-sm text-slate-500 font-semibold">Everything done! Excellent work.</p>
+                                        </div>
+                                    ` : pending.map(task => `
+                                        <div onclick="toggleAssignmentState(${task.id})" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hover:border-slate-200 transition-all flex items-start gap-4 cursor-pointer group">
+                                            <button class="mt-0.5 text-slate-300 group-hover:text-indigo-600 transition-colors">
+                                                <i data-lucide="circle" class="w-5.5 h-5.5"></i>
+                                            </button>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex justify-between items-start gap-2">
+                                                    <h4 class="font-bold text-slate-800 text-sm group-hover:text-indigo-900 truncate">${task.title}</h4>
+                                                    <span class="text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-0.5 rounded-full flex-shrink-0">
+                                                        Due: ${task.dueDate}
+                                                    </span>
+                                                </div>
+                                                <p class="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1.5">
+                                                    <span>${task.subject}</span> • <span>${task.type}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Completed Section -->
+                            <div class="pt-4 border-t border-slate-100">
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Completed (${completed.length})</h3>
+                                <div class="space-y-3">
+                                    ${completed.map(task => `
+                                        <div onclick="toggleAssignmentState(${task.id})" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-50 opacity-60 hover:opacity-85 transition-opacity flex items-start gap-4 cursor-pointer">
+                                            <button class="mt-0.5 text-green-600">
+                                                <i data-lucide="check-circle" class="w-5.5 h-5.5"></i>
+                                            </button>
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="font-bold text-slate-500 text-sm line-through decoration-slate-300 truncate">${task.title}</h4>
+                                                <p class="text-xs text-slate-400 font-medium mt-1">${task.subject} • Completed</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+            
+            else if (state.activeTab === 'grades') {
+                viewContainer.innerHTML = `
+                    <div class="space-y-6 fade-in max-w-3xl mx-auto">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-6 border-b border-slate-100">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900">GPA Hub & Grade Simulator</h2>
+                                <p class="text-sm font-medium text-slate-500">Live simulation of overall school grades and automatic GPA generation.</p>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                                    <p class="text-[10px] font-extrabold text-slate-400 uppercase">Weighted</p>
+                                    <h4 id="gpa-weighted-indicator" class="text-xl font-extrabold text-indigo-600">${state.student.weightedGpa}</h4>
+                                </div>
+                                <div class="bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                                    <p class="text-[10px] font-extrabold text-slate-400 uppercase">Unweighted</p>
+                                    <h4 id="gpa-unweighted-indicator" class="text-xl font-extrabold text-slate-500">${state.student.unweightedGpa}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Banner explaining weighted boosts -->
+                        <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/30 flex gap-3 text-xs font-semibold text-indigo-950/80 leading-normal">
+                            <i data-lucide="info" class="w-5 h-5 text-indigo-600 flex-shrink-0"></i>
+                            <div>
+                                <p class="font-bold">Weighted Grade Point Average Calculation:</p>
+                                <p class="font-normal mt-0.5 text-slate-500">AP courses automatically receive a +1.0 honor point boost. Honor level courses receive a +0.5 honor point boost on the classic unweighted 4.0 system scale.</p>
+                            </div>
+                        </div>
+
+                        <!-- Class simulator interface -->
+                        <div class="space-y-4">
+                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Dynamic Course List</h3>
+                            ${state.schedule.filter(c => c.rawGrade !== null).map(course => {
+                                const isAP = course.subject.includes("AP");
+                                const isHonors = course.subject.includes("Honors");
+                                const evaluation = convertPercentToGrade(course.rawGrade, isAP, isHonors);
+
+                                return `
+                                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-sm sm:text-base">${course.subject}</h4>
+                                                <p class="text-xs text-slate-400 font-medium mt-0.5">${course.teacher}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span id="grade-display-num-${course.id}" class="text-lg font-extrabold text-slate-900">${course.rawGrade}% (${evaluation.letter})</span>
+                                                <p class="text-[10px] font-bold text-indigo-600 uppercase mt-0.5">${isAP ? "AP Boost (+1.0)" : isHonors ? "Honors Boost (+0.5)" : "Standard Grade"}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Realtime Grade Slider Simulator -->
+                                        <div class="flex items-center gap-4">
+                                            <i data-lucide="minus" class="w-4 h-4 text-slate-300"></i>
+                                            <input 
+                                                type="range" 
+                                                min="50" 
+                                                max="100" 
+                                                value="${course.rawGrade}" 
+                                                oninput="updateCourseGradeValue(${course.id}, this.value)" 
+                                                class="flex-1 accent-indigo-600 bg-slate-100 h-1.5 rounded-full outline-none"
+                                            >
+                                            <i data-lucide="plus" class="w-4 h-4 text-slate-300"></i>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } 
+            
+            else if (state.activeTab === 'profile') {
+                viewContainer.innerHTML = `
+                    <div class="space-y-8 fade-in max-w-xl mx-auto">
+                        <div class="text-center sm:text-left">
+                            <h2 class="text-2xl font-bold text-slate-900">Digital Student ID</h2>
+                            <p class="text-sm font-medium text-slate-500 mt-0.5">Interact with card badge to reveal backend credentials & emergency details.</p>
+                        </div>
+
+                        <!-- Premium 3D Interactive Badge Flip -->
+                        <div class="card-perspective w-full h-[240px] cursor-pointer" onclick="toggleIDBadgeFlip()">
+                            <div id="digital-id-inner" class="card-inner w-full h-full relative">
+                                
+                                <!-- FRONT OF ID -->
+                                <div class="card-front bg-slate-950 rounded-3xl p-1 shadow-xl overflow-hidden">
+                                    <!-- Embedded fluid background decorations -->
+                                    <div class="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-950 to-indigo-900 opacity-90"></div>
+                                    <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-indigo-500/10 blur-2xl"></div>
+                                    <div class="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-blue-500/10 blur-2xl"></div>
+
+                                    <div class="relative z-10 border border-white/10 rounded-[22px] p-5 h-full flex flex-col justify-between">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">${state.student.school}</span>
+                                                <h4 class="text-white font-extrabold text-sm tracking-tight">Active ID Credentials</h4>
+                                            </div>
+                                            <div class="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center border border-white/10">
+                                                <i data-lucide="graduation-cap" class="w-5 h-5 text-indigo-300"></i>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-4 mt-2">
+                                            <img src="${state.student.avatar}" class="w-20 h-20 rounded-xl object-cover border-2 border-white/20 shadow-md flex-shrink-0" alt="Avatar">
+                                            <div class="min-w-0">
+                                                <h3 class="text-white font-bold text-lg tracking-tight truncate">${state.student.name}</h3>
+                                                <p class="text-slate-300 text-xs font-semibold mt-0.5">${state.student.grade}</p>
+                                                <span class="inline-block mt-2 px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-mono rounded border border-indigo-500/20">ID: ${state.student.studentId}</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex justify-between items-center text-[10px] text-slate-400 font-semibold pt-3 border-t border-white/5">
+                                            <span>MEMBER CLASS OF 2027</span>
+                                            <span class="text-indigo-400">TAP TO ROTATE ID</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- BACK OF ID -->
+                                <div class="card-back bg-slate-900 rounded-3xl p-1 shadow-xl overflow-hidden">
+                                    <div class="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-950 to-slate-900 opacity-90"></div>
+                                    <div class="relative z-10 border border-white/10 rounded-[22px] p-5 h-full flex flex-col justify-between">
+                                        
+                                        <div class="pb-3 border-b border-white/5 flex justify-between items-center">
+                                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Lincoln High School System</span>
+                                            <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/10">Authorized ID</span>
+                                        </div>
+
+                                        <div class="space-y-2 mt-2">
+                                            <div class="flex justify-between text-xs font-semibold text-slate-400">
+                                                <span>Library Access:</span>
+                                                <span class="text-white">Granted / Level 1</span>
+                                            </div>
+                                            <div class="flex justify-between text-xs font-semibold text-slate-400">
+                                                <span>Authorized Transport:</span>
+                                                <span class="text-white">Bus Route 14</span>
+                                            </div>
+                                            <div class="flex justify-between text-xs font-semibold text-slate-400">
+                                                <span>Emergency Contact:</span>
+                                                <span class="text-white">(555) 019-3829</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Barcode block -->
+                                        <div class="bg-white/95 rounded-lg p-2.5 mt-3 h-14 flex items-center justify-center">
+                                            <div class="barcode w-full h-8 opacity-90"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Themes and Personalization preferences -->
+                        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Personalize Theme</h3>
+                                <p class="text-xs font-medium text-slate-400 mt-0.5">Customize your portal interface styling matches.</p>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <button onclick="changeTheme('indigo')" class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border ${state.theme === 'indigo' ? 'border-indigo-600' : 'border-slate-100'} transition-all text-center flex flex-col items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-indigo-600"></div>
+                                    <span class="text-xs font-bold text-slate-700">Royal Indigo</span>
+                                </button>
+                                <button onclick="changeTheme('crimson')" class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border ${state.theme === 'crimson' ? 'border-rose-600' : 'border-slate-100'} transition-all text-center flex flex-col items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-rose-600"></div>
+                                    <span class="text-xs font-bold text-slate-700">Crimson High</span>
+                                </button>
+                                <button onclick="changeTheme('emerald')" class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border ${state.theme === 'emerald' ? 'border-emerald-600' : 'border-slate-100'} transition-all text-center flex flex-col items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-emerald-600"></div>
+                                    <span class="text-xs font-bold text-slate-700">Emerald Prep</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Institutional information list -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div class="p-4 bg-slate-50 border-b border-slate-100">
+                                <h4 class="font-bold text-slate-900 text-sm">System Diagnostics</h4>
+                            </div>
+                            <div class="p-4 space-y-3.5 text-xs font-bold text-slate-500">
+                                <div class="flex justify-between">
+                                    <span>Lincoln High School Identity:</span>
+                                    <span class="text-slate-800">LHS-948271</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Portal Version:</span>
+                                    <span class="text-slate-800">v4.1.8-Stable</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>System Operations:</span>
+                                    <span class="text-emerald-600">Online & Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Sync user details across elements safely
+            const sideAvatar = document.getElementById("side-user-avatar");
+            const sideName = document.getElementById("side-user-name");
+            const sideGrade = document.getElementById("side-user-grade");
+            const mobileAvatar = document.getElementById("mobile-user-avatar");
+
+            if (sideAvatar) sideAvatar.src = state.student.avatar;
+            if (mobileAvatar) mobileAvatar.src = state.student.avatar;
+            if (sideName) sideName.innerText = state.student.name;
+            if (sideGrade) sideGrade.innerText = state.student.grade;
+
+            lucide.createIcons();
+        }
+
+        // --- GLOBAL TRIGGERS ---
+        window.openNotificationDrawer = function() {
+            openModal("notification-drawer");
+        }
+
+        // Initial launch configuration
+        function initializeApp() {
+            recalculateGPAs();
+            applyThemeSystem();
+            renderNavigations();
+            renderActiveView();
+        }
+
+        document.addEventListener("DOMContentLoaded", initializeApp);
+    </script>
+</body>
+</html>
+
+
